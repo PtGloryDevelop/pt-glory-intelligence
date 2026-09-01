@@ -46,7 +46,8 @@ begin
   ] loop
     execute format($f$
       create policy %1$s_read on public.%1$s
-        for select to authenticated using (true);
+        for select to authenticated
+        using (public.current_user_role() is not null);
       create policy %1$s_write on public.%1$s
         for insert to authenticated
         with check (public.current_user_role() in ('analyst','admin'));

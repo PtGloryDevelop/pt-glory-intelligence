@@ -13,7 +13,8 @@
     "test:db": "node --experimental-strip-types --test tests/db/**/*.test.ts",
     "check:imports": "node scripts/check-privileged-imports.mjs",
     "verify": "npm run lint && npm run typecheck && npm run check:imports && npm test && npm run build",
-    "migrate": "node scripts/migrate.mjs"
+    "migrate": "node scripts/migrate.mjs",
+    "verify:gate-a": "node scripts/verify-gate-a.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.2",
