@@ -1,0 +1,2 @@
+-- Extensions are shared infrastructure; dropping them could break other schemas.
+-- Intentionally a no-op.

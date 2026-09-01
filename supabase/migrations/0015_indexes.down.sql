@@ -1,0 +1,15 @@
+drop index if exists public.ad_obs_body_trgm;
+drop index if exists public.page_obs_categories_gin;
+drop index if exists public.ads_platform_gin;
+drop index if exists public.quarantine_run_idx;
+drop index if exists public.dataset_quality_dataset_idx;
+drop index if exists public.datasets_category_idx;
+drop index if exists public.dataset_ads_ad_idx;
+drop index if exists public.page_obs_history_idx;
+drop index if exists public.ad_obs_history_idx;
+drop index if exists public.page_obs_run_page_idx;
+drop index if exists public.ad_obs_run_ad_idx;
+drop index if exists public.ads_active_idx;
+drop index if exists public.ads_first_seen_idx;
+drop index if exists public.ads_start_date_idx;
+drop index if exists public.ads_page_ref_idx;

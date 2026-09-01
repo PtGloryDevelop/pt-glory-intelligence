@@ -1,0 +1,14 @@
+node_modules/
+.next/
+out/
+build/
+next-env.d.ts
+*.tsbuildinfo
+
+# secrets — DATABASE_URL and service-role key must never be committed
+.env
+.env.local
+.env*.local
+
+.DS_Store
+*.log

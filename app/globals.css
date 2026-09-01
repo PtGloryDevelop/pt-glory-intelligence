@@ -1,0 +1,25 @@
+:root {
+  --paper: #fbf8f3;
+  --surface: #ffffff;
+  --ink: #241f1a;
+  --muted: #6f6459;
+  --line: #e6ded2;
+  --gold: #a9863f;
+  --gold-deep: #7d6229;
+  --focus: #1d4ed8;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Noto Sans Thai", "Leelawadee UI", system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+a { color: var(--gold-deep); }
+
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }

@@ -1,0 +1,22 @@
+create table public.ad_observations (
+  id bigserial primary key,
+  ad_ref uuid not null references public.ads(id) on delete cascade,
+  collection_run_id uuid not null references public.collection_runs(id) on delete cascade,
+  observed_at timestamptz not null,
+  record_key text,
+  is_active boolean,
+  collation_count int,
+  display_format text,
+  publisher_platform text[],
+  cta_type text,
+  cta_text text,
+  title text,
+  body_text text,
+  caption text,
+  link_url text,
+  link_description text,
+  start_date_raw text,
+  network_end_date_raw text,
+  media jsonb,
+  collector_meta jsonb
+);
