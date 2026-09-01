@@ -138,6 +138,44 @@ test("the validator rejects forbidden metrics before the normalizer sees them", 
   }
 });
 
+test("500 real ads plus one row with no ad_archive_id commits as partial", () => {
+  // The T06/T12 reconciliation, end to end: the file validates, counts include
+  // the extra row, and only the bad row is quarantined.
+  const file = goldenExport();
+  const ads = file.ads as Record<string, unknown>[];
+  ads.push({ ...structuredClone(ads[0]), ad_archive_id: null, record_key: null });
+  file.source_rows = 501;
+  file.unresolved_count = 1;
+
+  const result = validate(file);
+  assert.equal(result.ok, true, result.ok ? "" : `${result.reason}: ${result.detail}`);
+  if (!result.ok) return;
+
+  assert.equal(result.computed.sourceRows, 501);
+  assert.equal(result.computed.uniqueAds, 500);
+  assert.equal(result.computed.unresolvedCount, 1);
+
+  const output = normalize(result.file);
+  assert.equal(output.ads.length, 500, "the bad row must not become an ad");
+  assert.equal(output.adObservations.length, 500);
+  assert.equal(output.quarantine.length, 1);
+  assert.equal(output.quarantine[0].reason, "missing_ad_archive_id");
+});
+
+test("normalize() refuses a row that skipped validation", () => {
+  // page_id is guaranteed by the validator for every row carrying an
+  // ad_archive_id. Neither quarantine reason describes its absence, so the
+  // normalizer fails loudly rather than filing it under the wrong label.
+  assert.throws(
+    () => normalize({
+      schema_version: "v", generated_at: "2026-08-28T00:00:00.000Z",
+      source: { collection_method: "network_response_observation" },
+      ads: [syntheticAd({ page_id: null })], unresolved_ads: [],
+    } as never),
+    /without page_id; run validate\(\) first/,
+  );
+});
+
 test("normalizing the golden export twice gives identical output", () => {
   assert.deepEqual(normalizedGolden(), normalizedGolden());
 });

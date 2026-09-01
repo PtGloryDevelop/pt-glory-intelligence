@@ -43,8 +43,15 @@ export const AD_KEYS = [
   "title", "videos",
 ] as const;
 
-/** Present in every row of the reference export; absence means a broken file. */
-export const REQUIRED_AD_KEYS = ["ad_archive_id", "page_id", "start_date"] as const;
+/**
+ * Required on rows that carry an ad_archive_id, because those become ads and
+ * cannot exist without a page or a start date.
+ *
+ * ad_archive_id itself is deliberately absent from this list: a row without one
+ * is quarantined as missing_ad_archive_id while the rest of the file commits,
+ * so its absence is an import outcome rather than a broken file.
+ */
+export const REQUIRED_AD_KEYS = ["page_id", "start_date"] as const;
 
 /**
  * Names that must never reach canonical data, whatever a future collector

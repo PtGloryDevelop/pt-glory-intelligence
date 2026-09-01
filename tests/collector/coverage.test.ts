@@ -5,10 +5,25 @@ import { normalize } from "../../lib/collector/normalize.ts";
 import { validate } from "../../lib/collector/validate.ts";
 import { goldenExport } from "../fixtures/load.ts";
 
-test("isPresent treats every empty shape as absent", () => {
-  for (const value of [null, undefined, "", "   ", [], {}]) {
-    assert.equal(isPresent(value), false, `${JSON.stringify(value)} must be absent`);
-  }
+test("a read value is present even when it is falsy", () => {
+  // is_active = false is a state the collector read. page_like_count = 0 is a
+  // real count. Treating either as missing would under-report coverage and let
+  // a known value be reported as unknown.
+  assert.equal(isPresent(false), true, "false is known data");
+  assert.equal(isPresent(0), true, "0 is known data");
+  assert.equal(isPresent("0"), true);
+  assert.equal(isPresent(-1), true);
+  assert.equal(isPresent(true), true);
+});
+
+test("nothing-there values are absent", () => {
+  assert.equal(isPresent(null), false);
+  assert.equal(isPresent(undefined), false);
+  assert.equal(isPresent(""), false);
+  assert.equal(isPresent("   "), false, "whitespace-only is blank");
+  assert.equal(isPresent("\n\t "), false);
+  assert.equal(isPresent([]), false);
+  assert.equal(isPresent({}), false);
 });
 
 test("an object of only nulls is absent", () => {
@@ -17,12 +32,24 @@ test("an object of only nulls is absent", () => {
   // check called that 100% covered.
   assert.equal(isPresent({ impressions_text: null, impressions_index: null }), false);
   assert.equal(isPresent({ impressions_text: null, impressions_index: -1 }), true);
+  assert.equal(isPresent({ a: undefined }), false);
 });
 
-test("is_active null is unknown, not false", () => {
-  assert.equal(isPresent(null), false);
-  assert.equal(isPresent(false), true, "a read false is a real value");
-  assert.equal(isPresent(0), true);
+test("array presence recurses into its elements", () => {
+  // The array-shaped version of the null-object problem: a list that only
+  // contains empty things is not coverage.
+  assert.equal(isPresent([null]), false);
+  assert.equal(isPresent([{}]), false);
+  assert.equal(isPresent([{}, {}]), false);
+  assert.equal(isPresent([{ url: null }]), false);
+  assert.equal(isPresent([""]), false);
+  assert.equal(isPresent([[]]), false);
+
+  assert.equal(isPresent([{ url: "https://example.test/a.jpg" }]), true);
+  assert.equal(isPresent([null, { url: "x" }]), true, "one real element is enough");
+  assert.equal(isPresent(["x"]), true);
+  assert.equal(isPresent([0]), true, "a list containing 0 holds a read value");
+  assert.equal(isPresent([false]), true);
 });
 
 test("tier thresholds follow the 80/50 rule", () => {

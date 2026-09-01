@@ -86,12 +86,35 @@ test("more than 25 MB is rejected before parsing", () => {
   assert.equal(reasonOf(validateRaw(oversized)), "size_limit_exceeded");
 });
 
-test("a resolved ad missing a required field is rejected", () => {
-  for (const key of ["ad_archive_id", "page_id", "start_date"]) {
+test("a row that will become an ad must have page_id and start_date", () => {
+  for (const key of ["page_id", "start_date"]) {
     const row = syntheticAd();
     row[key] = null;
     assert.equal(reasonOf(validate(syntheticExport({}, [row]))), "schema_mismatch", key);
   }
+});
+
+test("a missing ad_archive_id is a row-level issue, not a file rejection", () => {
+  // T12 quarantines the row and commits the rest as partial, so validation
+  // must let the file through.
+  for (const missing of [null, undefined, ""]) {
+    const row = syntheticAd({ ad_archive_id: missing });
+    const file = syntheticExport({ source_rows: 1, unique_ads: 0, unresolved_count: 1 }, [row]);
+    assert.equal(reasonOf(validate(file)), "ok", `ad_archive_id=${String(missing)}`);
+  }
+});
+
+test("a present but malformed ad_archive_id is still a schema problem", () => {
+  for (const bad of ["   ", { id: 1 }, ["x"], true]) {
+    const file = syntheticExport({ unique_ads: 1 }, [syntheticAd({ ad_archive_id: bad })]);
+    assert.equal(reasonOf(validate(file)), "schema_mismatch", JSON.stringify(bad));
+  }
+});
+
+test("a quarantine-bound row is exempt from the other required fields", () => {
+  const row = syntheticAd({ ad_archive_id: null, page_id: null, start_date: null });
+  const file = syntheticExport({ source_rows: 1, unique_ads: 0, unique_pages: 0, unresolved_count: 1 }, [row]);
+  assert.equal(reasonOf(validate(file)), "ok");
 });
 
 test("optional fields may be null or empty", () => {

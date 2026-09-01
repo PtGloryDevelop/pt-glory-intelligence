@@ -121,12 +121,26 @@ export function validate(input: unknown): ValidationResult {
     }
   }
 
-  // Required ad fields apply to resolved ads only; unresolved rows are defined
-  // by the absence of ad_archive_id and are quarantined rather than imported.
+  // A missing ad_archive_id is a row-level condition, not a broken file: the
+  // row is quarantined as missing_ad_archive_id and the rest of the import
+  // still commits as partial. Only a malformed value is a schema problem.
+  //
+  // page_id and start_date are required on rows that will become ads, because
+  // an ad with neither cannot satisfy the schema. Rows heading for quarantine
+  // are exempt — their other fields are never read.
   for (const [index, row] of (input.ads as Record<string, unknown>[]).entries()) {
-    for (const key of REQUIRED_AD_KEYS) {
-      if (row[key] === undefined || row[key] === null || row[key] === "") {
-        return fail("schema_mismatch", `ads[${index}] missing required field: ${key}`);
+    const rawId = row.ad_archive_id;
+    if (rawId !== undefined && rawId !== null && rawId !== "") {
+      if (typeof rawId !== "string" && typeof rawId !== "number") {
+        return fail("schema_mismatch", `ads[${index}].ad_archive_id must be a string`);
+      }
+      if (String(rawId).trim() === "") {
+        return fail("schema_mismatch", `ads[${index}].ad_archive_id must not be blank`);
+      }
+      for (const key of REQUIRED_AD_KEYS) {
+        if (row[key] === undefined || row[key] === null || row[key] === "") {
+          return fail("schema_mismatch", `ads[${index}] missing required field: ${key}`);
+        }
       }
     }
   }

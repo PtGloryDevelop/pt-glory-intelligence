@@ -33,13 +33,17 @@ export function normalize(file: CollectorExport): CanonicalImport {
     const adArchiveId = str(row.ad_archive_id);
     const pageId = str(row.page_id);
     if (!adArchiveId) {
+      // Row-level outcome, not a broken file: the import continues as partial.
       quarantine.push({ reason: "missing_ad_archive_id", payload: row });
       continue;
     }
     if (!pageId) {
-      // An ad with no page cannot satisfy the ads.page_ref foreign key.
-      quarantine.push({ reason: "missing_ad_archive_id", payload: row });
-      continue;
+      // The validator requires page_id on every row that has an ad_archive_id,
+      // so reaching here means validation was skipped. Neither quarantine
+      // reason describes it honestly, so fail loudly instead of mislabelling.
+      throw new Error(
+        `normalize() received ad ${adArchiveId} without page_id; run validate() first`,
+      );
     }
 
     if (!pages.has(pageId)) {

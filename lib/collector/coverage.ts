@@ -25,21 +25,27 @@ export type FieldCoverage = {
 };
 
 /**
- * Absent means: null, undefined, empty string, empty array, an object whose
- * values are all null/undefined, or an unknown boolean state.
+ * Absent means: null, undefined, a blank string, an empty array, an array whose
+ * every element is itself absent, or an object whose values are all null.
  *
- * `is_active = null` is unknown, not false — counting it as present would claim
- * we know a state the collector could not read.
+ * Present means a value the collector actually read. `false` and `0` are read
+ * values: `is_active = false` is a known state, `page_like_count = 0` is a known
+ * count. Only `null` is unknown.
+ *
+ * Arrays recurse for the same reason objects do — `[{}]` or `[null]` is the
+ * array-shaped version of the null-object problem, and calling it covered
+ * would repeat the `impressions_with_index` mistake one level up.
  */
 export function isPresent(value: unknown): boolean {
   if (value === null || value === undefined) return false;
   if (typeof value === "string") return value.trim().length > 0;
-  if (Array.isArray(value)) return value.length > 0;
+  if (Array.isArray(value)) return value.some(isPresent);
   if (typeof value === "object") {
     const values = Object.values(value as Record<string, unknown>);
     if (values.length === 0) return false;
     return values.some((entry) => entry !== null && entry !== undefined);
   }
+  // Numbers and booleans, including 0 and false.
   return true;
 }
 
