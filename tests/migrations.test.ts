@@ -106,6 +106,19 @@ test("nobody can write their own role row", () => {
   }
 });
 
+test("no separate hide-deleted policy is reintroduced", () => {
+  // Permissive SELECT policies OR together; a standalone deleted_at policy used
+  // to let any authenticated caller read every non-deleted row. The condition
+  // must stay inside the single read policy.
+  const sql = read("0016_rls_policies.sql");
+  assert.doesNotMatch(sql, /hide_deleted/, "fold deleted_at into the read policy instead");
+  assert.match(
+    sql,
+    /current_user_role\(\) is not null and deleted_at is null/,
+    "soft-delete tables must AND both conditions in one policy",
+  );
+});
+
 test("RLS is enabled on all 13 tables", () => {
   const sql = read("0016_rls_policies.sql");
   const enabled = [...sql.matchAll(/alter table public\.(\w+)\s+enable row level security/g)];

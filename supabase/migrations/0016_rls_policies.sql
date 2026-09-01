@@ -16,7 +16,7 @@ alter table public.import_quarantine enable row level security;
 alter table public.app_settings      enable row level security;
 alter table public.audit_logs        enable row level security;
 
--- user_roles: you may read your own row; only admins may read all or write any.
+-- user_roles: you may read your own row; admins may read all and write any.
 -- Nobody can change their own role, admins included, so a compromised admin
 -- session cannot quietly escalate or lock the last admin out.
 create policy user_roles_select_self on public.user_roles
@@ -36,18 +36,31 @@ create policy user_roles_admin_delete on public.user_roles
   for delete to authenticated
   using (public.current_user_role() = 'admin' and user_id <> auth.uid());
 
--- Business tables: everyone signed in reads; analyst and admin write.
-do $$
-declare t text;
+-- Business tables: signed-in accounts WITH a role row read; analyst and admin write.
+--
+-- Exactly one SELECT policy per table. RLS policies are permissive and OR
+-- together, so splitting "has a role" and "not soft-deleted" into two policies
+-- would let each one admit rows the other meant to hide.
+do $outer$
+declare
+  t text;
+  read_condition text;
 begin
   foreach t in array array[
     'categories','collection_runs','datasets','pages','page_observations',
     'ads','ad_observations','dataset_ads','dataset_quality','import_quarantine'
   ] loop
+    read_condition := case
+      when t in ('categories','datasets')
+        then 'public.current_user_role() is not null and deleted_at is null'
+      else 'public.current_user_role() is not null'
+    end;
+
+    execute format(
+      'create policy %1$s_read on public.%1$s for select to authenticated using (%2$s)',
+      t, read_condition);
+
     execute format($f$
-      create policy %1$s_read on public.%1$s
-        for select to authenticated
-        using (public.current_user_role() is not null);
       create policy %1$s_write on public.%1$s
         for insert to authenticated
         with check (public.current_user_role() in ('analyst','admin'));
@@ -60,13 +73,7 @@ begin
         using (public.current_user_role() = 'admin');
     $f$, t);
   end loop;
-end $$;
-
--- Soft-deleted rows disappear from every read.
-create policy categories_hide_deleted on public.categories
-  for select to authenticated using (deleted_at is null);
-create policy datasets_hide_deleted on public.datasets
-  for select to authenticated using (deleted_at is null);
+end $outer$;
 
 -- Admin-only surfaces.
 create policy app_settings_read on public.app_settings

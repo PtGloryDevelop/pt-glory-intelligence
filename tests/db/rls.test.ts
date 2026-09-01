@@ -36,6 +36,19 @@ async function asUser<T>(client: pg.Client, userId: string, fn: () => Promise<T>
   }
 }
 
+/**
+ * Runs a statement expected to be refused, inside a savepoint.
+ *
+ * A failed statement aborts the surrounding transaction, so anything after it
+ * dies with 25P02 instead of running its own assertion. The savepoint contains
+ * the damage and lets the case keep going.
+ */
+async function expectRejected(client: pg.Client, sql: string, pattern: RegExp) {
+  await client.query("savepoint expect_reject");
+  await assert.rejects(() => client.query(sql), pattern);
+  await client.query("rollback to savepoint expect_reject");
+}
+
 /** Anonymous caller: the `anon` role with no JWT claims at all. */
 async function asAnon<T>(client: pg.Client, fn: () => Promise<T>): Promise<T> {
   await client.query("BEGIN");
@@ -62,7 +75,6 @@ async function seedUser(client: pg.Client, role: Role | null, tag: string): Prom
 test("RLS matrix", { skip }, async (t) => {
   const client = new pg.Client({ connectionString });
   await client.connect();
-  t.after(() => client.end());
 
   const viewer = await seedUser(client, "viewer", "viewer");
   const analyst = await seedUser(client, "analyst", "analyst");
@@ -72,7 +84,23 @@ test("RLS matrix", { skip }, async (t) => {
   // A row every read case can look for.
   const seededCategory = `rls-seed-${Date.now()}`;
   await client.query("insert into public.categories (name) values ($1)", [seededCategory]);
-  t.after(() => client.query("delete from public.categories where name = $1", [seededCategory]));
+
+  // One teardown hook: `after` callbacks run in registration order, so a
+  // separate client.end() registered earlier would close the connection before
+  // the cleanup query could run.
+  t.after(async () => {
+    try {
+      await client.query("delete from public.categories where name = $1", [seededCategory]);
+      await client.query("delete from public.user_roles where user_id = any($1)", [
+        [viewer, analyst, admin, roleless],
+      ]);
+      await client.query("delete from auth.users where id = any($1)", [
+        [viewer, analyst, admin, roleless],
+      ]);
+    } finally {
+      await client.end();
+    }
+  });
 
   await t.test("unauthenticated sees nothing", async () => {
     await asAnon(client, async () => {
@@ -85,8 +113,9 @@ test("RLS matrix", { skip }, async (t) => {
 
   await t.test("unauthenticated cannot write", async () => {
     await asAnon(client, async () => {
-      await assert.rejects(
-        () => client.query("insert into public.categories (name) values ('anon-should-fail')"),
+      await expectRejected(
+        client,
+        "insert into public.categories (name) values ('anon-should-fail')",
         /row-level security|permission denied/i,
       );
     });
@@ -98,8 +127,9 @@ test("RLS matrix", { skip }, async (t) => {
         const { rowCount } = await client.query(`select * from public.${table}`);
         assert.equal(rowCount, 0, `a roleless account must not read ${table}`);
       }
-      await assert.rejects(
-        () => client.query("insert into public.categories (name) values ('norole-should-fail')"),
+      await expectRejected(
+        client,
+        "insert into public.categories (name) values ('norole-should-fail')",
         /row-level security/i,
       );
     });
@@ -117,8 +147,9 @@ test("RLS matrix", { skip }, async (t) => {
 
   await t.test("viewer cannot insert, update or delete", async () => {
     await asUser(client, viewer, async () => {
-      await assert.rejects(
-        () => client.query("insert into public.categories (name) values ('viewer-should-fail')"),
+      await expectRejected(
+        client,
+        "insert into public.categories (name) values ('viewer-should-fail')",
         /row-level security/i,
       );
       const updated = await client.query("update public.categories set slug = 'x' where name = $1", [
@@ -234,6 +265,33 @@ test("RLS matrix", { skip }, async (t) => {
       const { rows } = await client.query("select public.current_user_role() as role");
       assert.equal(rows[0].role, null);
     });
+  });
+
+  await t.test("each table has exactly one SELECT policy", async () => {
+    // Regression guard. Permissive policies OR together, so a second SELECT
+    // policy silently widens access: "not soft-deleted" alone once admitted
+    // roleless callers, and "has a role" alone once admitted deleted rows.
+    // Conditions belong in one policy, ANDed.
+    const { rows } = await client.query(
+      `select tablename, count(*)::int as n from pg_policies
+        where schemaname = 'public' and cmd = 'SELECT' and tablename = any($1)
+        group by tablename having count(*) > 1`,
+      [READ_TABLES],
+    );
+    assert.deepEqual(rows, [], "tables with more than one SELECT policy");
+  });
+
+  await t.test("soft-delete tables fold both conditions into one policy", async () => {
+    for (const table of ["categories", "datasets"]) {
+      const { rows } = await client.query(
+        `select qual from pg_policies
+          where schemaname = 'public' and tablename = $1 and cmd = 'SELECT'`,
+        [table],
+      );
+      assert.equal(rows.length, 1, `${table} must have one SELECT policy`);
+      assert.match(rows[0].qual, /current_user_role\(\)/, `${table} must check the role`);
+      assert.match(rows[0].qual, /deleted_at IS NULL/i, `${table} must hide soft-deleted rows`);
+    }
   });
 
   await t.test("privileged connection bypasses RLS", async () => {

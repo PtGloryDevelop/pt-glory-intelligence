@@ -16,11 +16,14 @@ import { createClient } from "@supabase/supabase-js";
  * creation. Skipped when the env is absent.
  */
 const url = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
-const anonKey = process.env.SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const anonKey =
+  process.env.SUPABASE_ANON_KEY ??
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SECRET_KEY;
 const skip = url && anonKey && serviceKey
   ? false
-  : "SUPABASE_URL / SUPABASE_ANON_KEY / SUPABASE_SERVICE_ROLE_KEY not set";
+  : "Supabase URL / publishable(anon) / secret(service-role) key not set";
 
 const PASSWORD = "gate-a-verification-pw";
 
@@ -104,14 +107,30 @@ test("Auth → JWT → auth.uid() → current_user_role() → RLS", { skip }, as
   });
 
   await t.test("auth.uid() resolves to the signed-in user", async () => {
-    const { client, userId } = await signIn(adminUser.email);
-    // user_roles is readable per-self, so the row that comes back is proof that
-    // auth.uid() inside the policy matched this JWT.
+    // Proven with a viewer, not an admin: the user_roles policy lets admins read
+    // every row, so an admin result could not distinguish "auth.uid() matched"
+    // from "the admin branch matched". A viewer only ever passes the
+    // `user_id = auth.uid()` branch, so exactly one row is the proof.
+    const { client, userId } = await signIn(viewer.email);
     const { data, error } = await client.from("user_roles").select("user_id, role");
     assert.ifError(error);
-    assert.equal(data?.length, 1);
+    assert.equal(data?.length, 1, "a viewer must see only its own role row");
     assert.equal(data?.[0].user_id, userId);
-    assert.equal(data?.[0].role, "admin");
+    assert.equal(data?.[0].role, "viewer");
+  });
+
+  await t.test("admin sees other people's role rows through the admin branch", async () => {
+    const { client } = await signIn(adminUser.email);
+    const { data, error } = await client.from("user_roles").select("user_id");
+    assert.ifError(error);
+    const seen = new Set((data ?? []).map((row) => row.user_id));
+    // Only the three role-holding users are asserted: `roleless` has no row by
+    // design, and counting rows would depend on leftovers from other runs.
+    for (const [label, id] of [
+      ["viewer", viewer.id], ["analyst", analystUser.id], ["admin", adminUser.id],
+    ] as const) {
+      assert.ok(seen.has(id), `admin should see the ${label} role row`);
+    }
   });
 
   await t.test("admin-only tables stay closed to analyst and open to admin", async () => {
