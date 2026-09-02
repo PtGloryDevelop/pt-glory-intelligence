@@ -47,9 +47,13 @@ async function assertCleanRollback() {
         where table_schema = 'public' and table_name = any($1)`,
       [TABLES],
     );
+    // Every function the migrations create, not just the first one that
+    // existed when this check was written.
     const { rows: fns } = await client.query(
       `select proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-        where n.nspname = 'public' and proname = 'current_user_role'`,
+        where n.nspname = 'public'
+          and proname = any($1)`,
+      [["current_user_role", "jsonb_text_array"]],
     );
     const { rows: policies } = await client.query(
       `select tablename, policyname from pg_policies

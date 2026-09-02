@@ -114,9 +114,15 @@ on conflict (page_id) do update set
 
 ---
 
-## กติกาเมื่อ `collected_at` เท่ากัน
+## กติกาเมื่อ `collected_at` เท่ากัน — ข้อยกเว้นที่บันทึกไว้ของ I2
 
-`>=` แปลว่า **incoming ชนะเมื่อเสมอ** ผลลัพธ์สุดท้ายจึงขึ้นกับลำดับ import เฉพาะกรณี timestamp เท่ากันเป๊ะเท่านั้น ซึ่งเป็นข้อยกเว้นที่ยอมรับไว้แล้ว
+| กรณี | ผล |
+|---|---|
+| `collected_at` **ต่างกัน** | master state สุดท้าย **ไม่ขึ้นกับลำดับ import** — พิสูจน์ด้วย T11.1/T11.2/T11.4 |
+| `collected_at` **เท่ากันเป๊ะ** และค่าขัดกัน | **run ที่ commit ทีหลังชนะ** เพราะ guard ใช้ `>=` |
+| ทั้งสองกรณี | **observation ของทุก run ถูกเก็บครบ** ไม่มีอันไหนหาย |
+
+รับเป็น edge case ของ Phase 1 **ไม่เพิ่ม tie-breaker ที่ซับซ้อนตอนนี้** — ถ้าวันหนึ่งต้องการลำดับที่แน่นอนเมื่อ timestamp ชนกัน ค่อยใช้ `collection_runs.created_at` เป็นตัวตัดสินรอง
 
 ---
 
@@ -128,9 +134,27 @@ on conflict (page_id) do update set
 
 **แก้ที่ชั้น import ไม่ใช่ที่ normalizer** เพราะ normalizer ถูก freeze ไปแล้วที่ Gate B และการ dedupe เป็นความรับผิดชอบของขั้นเขียน ไม่ใช่ขั้นแปลง
 
-- `ads` / `ad_observations` — dedupe ตาม `ad_archive_id` **เก็บรายการสุดท้าย** (ถือว่าอยู่หลังในไฟล์ = ใหม่กว่า)
-- `pages` / `page_observations` — dedupe ตาม `page_id` แบบเดียวกัน
-- `dataset_ads` — dedupe ตาม `(dataset_id, ad_ref)`
+### กติกาที่ freeze แล้ว: **first source occurrence ชนะ**
+
+ลำดับในไฟล์คือลำดับที่ collector ปล่อยออกมา (`_pt_glory.source_position` ไล่ขึ้นตามกัน) ผู้ชนะจึงเป็นคุณสมบัติของ **ไฟล์** ไม่ใช่ของลำดับที่แถวบังเอิญไปถึงฐานข้อมูล
+
+- `ads` / `ad_observations` — dedupe ตาม `ad_archive_id` เก็บ**รายการแรก**
+- `pages` / `page_observations` — dedupe ตาม `page_id` เก็บ**รายการแรก** (normalizer ทำแบบนี้อยู่แล้ว)
+- `dataset_ads` — `on conflict (dataset_id, ad_ref) do nothing`
+
+### ทำไมกติกานี้จำเป็นจริง ไม่ใช่กรณีสมมติ
+
+วัดจากไฟล์จริง 500 ads: **87 เพจปรากฏในมากกว่า 1 โฆษณา** และในนั้นขัดแย้งกันเอง
+
+| ฟิลด์ | จำนวนเพจที่ค่าไม่ตรงกันในรอบเดียว |
+|---|---|
+| `page_categories` | **22** — สลับภาษา เช่น `["Interest"]` กับ `["ความสนใจ"]` |
+| `page_like_count` | **8** — ยอดขยับระหว่าง crawl เช่น 894022 กับ 894021 |
+| `page_name` | **3** |
+| `page_profile_uri` | **3** |
+| `page_profile_numeric_id` | 0 |
+
+ถ้าไม่ตรึงกติกา ค่าที่ได้จะขึ้นกับลำดับที่ฐานข้อมูลประมวลผล ซึ่งเป็นกฎที่มองไม่เห็นและเปลี่ยนได้เอง
 
 ---
 

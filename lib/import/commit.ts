@@ -67,9 +67,18 @@ async function writeAll(
   const { run } = canonical;
   const collectedAt = run.collectedAt;
 
-  // The collector can repeat an identity within one file. The unique index on
-  // (collection_run_id, ad_ref) would abort the whole import, so collapse
-  // duplicates here — the last occurrence wins, being latest in the file.
+  // The collector can repeat an identity within one file, and the repeats can
+  // disagree — the real 500-ad export has 87 pages appearing on more than one
+  // ad, of which 22 disagree on page_categories, 8 on page_like_count and 3 on
+  // page_name. The unique index on (collection_run_id, ad_ref) would abort the
+  // import, so duplicates collapse here under one fixed rule:
+  //
+  //   the FIRST occurrence in source order wins.
+  //
+  // File order is the collector's own emission order (_pt_glory.source_position
+  // ascends with it), so the winner is a property of the file rather than of
+  // whatever order rows happen to reach the database. The normalizer already
+  // resolves pages the same way.
   const pages = dedupe(canonical.pages, (page) => page.pageId);
   const pageObservations = dedupe(canonical.pageObservations, (obs) => obs.pageId);
   const ads = dedupe(canonical.ads, (ad) => ad.adArchiveId);
@@ -332,9 +341,12 @@ async function writeAll(
   };
 }
 
-/** Keeps the last entry per key, matching "later in the file is newer". */
+/** Keeps the first entry per key, in source order. */
 function dedupe<T>(items: T[], keyOf: (item: T) => string): T[] {
   const byKey = new Map<string, T>();
-  for (const item of items) byKey.set(keyOf(item), item);
+  for (const item of items) {
+    const key = keyOf(item);
+    if (!byKey.has(key)) byKey.set(key, item);
+  }
   return [...byKey.values()];
 }

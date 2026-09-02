@@ -16,7 +16,7 @@ test("every up migration has a matching down migration", () => {
   }
 });
 
-test("migrations are numbered 0001..0016 with no gaps", () => {
+test("migrations are numbered 0001..0017 with no gaps", () => {
   const numbers = up.map((f) => Number(f.slice(0, 4)));
   assert.deepEqual(numbers, Array.from({ length: 17 }, (_, i) => i + 1));
 });
@@ -117,6 +117,19 @@ test("no separate hide-deleted policy is reintroduced", () => {
     /current_user_role\(\) is not null and deleted_at is null/,
     "soft-delete tables must AND both conditions in one policy",
   );
+});
+
+test("every function a migration creates is dropped by its rollback", () => {
+  const created = [...allUp.matchAll(/create function public\.(\w+)/g)].map((m) => m[1]).sort();
+  assert.deepEqual(created, ["current_user_role", "jsonb_text_array"]);
+
+  const allDown = files
+    .filter((f) => f.endsWith(".down.sql"))
+    .map(read)
+    .join("\n");
+  for (const fn of created) {
+    assert.match(allDown, new RegExp(`drop function if exists public\\.${fn}`), `${fn} must be dropped`);
+  }
 });
 
 test("RLS is enabled on all 13 tables", () => {
