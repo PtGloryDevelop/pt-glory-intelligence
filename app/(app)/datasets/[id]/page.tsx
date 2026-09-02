@@ -36,11 +36,15 @@ export default async function DatasetPage({ params }: { params: Promise<{ id: st
           { label: "เก็บเมื่อ", value: new Date(context.collected_at).toLocaleString("th-TH") },
           { label: "สถานะรอบ", value: context.run_status, testId: "context-status" },
           { label: "Ads", value: String(context.ads_in_dataset), testId: "context-ads" },
-          // Run-level, not dataset-level: this counts every page in the collection
-          // run, including pages that only appear on quarantined rows. The dataset
-          // list column counts pages reachable from this dataset's ads, so the two
-          // legitimately differ on a partial run and each says which it is.
-          { label: "Pages (รอบเก็บ)", value: String(context.computed_unique_pages), testId: "context-pages" },
+          { label: "Pages", value: String(context.pages_in_dataset), testId: "context-pages" },
+          // Run provenance, kept beside the dataset figure rather than instead of
+          // it: this counts every page the collector saw, including pages that
+          // only appear on quarantined rows, so on a partial run it is larger.
+          {
+            label: "Pages ที่พบในรอบเก็บ",
+            value: String(context.computed_unique_pages),
+            testId: "context-run-pages",
+          },
           { label: "กันไว้ตรวจ", value: String(context.quarantine_count), testId: "context-quarantine" },
           { label: "คุณภาพข้อมูล", value: <QualityBadge tier={worstTier(quality)} /> },
         ]}
@@ -57,11 +61,9 @@ export default async function DatasetPage({ params }: { params: Promise<{ id: st
 
       <KPIRow>
         <KPIStat label="Ads" value={context.ads_in_dataset} helper="ในชุดข้อมูลนี้" />
-        <KPIStat
-          label="Pages (รอบเก็บ)"
-          value={context.computed_unique_pages}
-          helper="นับทั้งรอบเก็บ รวมแถวที่กันไว้ตรวจ"
-        />
+        {/* The primary KPI describes the dataset. The run's own page count stays
+            in the context bar above as provenance, never swapped in here. */}
+        <KPIStat label="Pages" value={context.pages_in_dataset} helper="ในชุดข้อมูลนี้" />
         <KPIStat label="เก็บเมื่อ" value={new Date(context.collected_at).toLocaleString("th-TH")} />
         <KPIStat
           label="สถานะรอบ"

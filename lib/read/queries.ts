@@ -16,6 +16,8 @@ export type DatasetContext = {
   run_status: string; computed_unique_ads: number; computed_unique_pages: number;
   computed_source_rows: number; computed_unresolved_count: number;
   quarantine_count: number; ads_in_dataset: number;
+  /** Dataset membership truth. computed_unique_pages above is run provenance. */
+  pages_in_dataset: number;
 };
 
 /** Dataset list projection — migration 0020, handoff §7.3. */

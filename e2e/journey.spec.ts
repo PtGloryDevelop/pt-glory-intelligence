@@ -131,6 +131,14 @@ test.describe("import to explorer to drawer", () => {
     const banner = page.getByTestId("partial-banner");
     await expect(banner).toBeVisible();
     await expect(banner).toContainText("กันไว้ตรวจ 1 แถว");
+
+    // Pages is the dataset's own count; the run's larger count stays beside it
+    // as provenance. Neither is substituted for the other.
+    await expect(page.getByTestId("context-pages")).toHaveText("1");
+    await expect(page.getByTestId("context-run-pages")).toHaveText("2");
+    await page.goto("/datasets");
+    const row = page.getByTestId("dataset-list").locator("tbody tr").first();
+    await expect(row.locator("td").nth(7)).toHaveText("1");
   });
 
   test("the stepper follows the real phases and never claims a rejected file passed", async ({ page }) => {
