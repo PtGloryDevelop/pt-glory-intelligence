@@ -9,13 +9,13 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "node --env-file-if-exists=.env.local --experimental-strip-types --test tests/*.test.ts tests/collector/*.test.ts tests/db/*.test.ts",
-    "test:db": "node --env-file-if-exists=.env.local --experimental-strip-types --test tests/db/*.test.ts",
+    "test": "node --env-file-if-exists=.env.local --conditions=react-server --experimental-strip-types --test-concurrency=1 --test tests/*.test.ts tests/collector/*.test.ts tests/db/*.test.ts",
+    "test:db": "node --env-file-if-exists=.env.local --conditions=react-server --experimental-strip-types --test-concurrency=1 --test tests/db/*.test.ts",
     "check:imports": "node scripts/check-privileged-imports.mjs",
     "verify": "npm run lint && npm run typecheck && npm run check:imports && npm test && npm run build",
     "migrate": "node --env-file-if-exists=.env.local scripts/migrate.mjs",
     "verify:gate-a": "node --env-file-if-exists=.env.local scripts/verify-gate-a.mjs",
-    "test:unit": "node --env-file-if-exists=.env.local --experimental-strip-types --test tests/*.test.ts tests/collector/*.test.ts"
+    "test:unit": "node --env-file-if-exists=.env.local --conditions=react-server --experimental-strip-types --test tests/*.test.ts tests/collector/*.test.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.2",
@@ -23,7 +23,8 @@
     "next": "^16.3.0",
     "pg": "^8.13.1",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@types/node": "^22.9.0",
