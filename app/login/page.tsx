@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { dbUser } from "@/lib/db/user";
 import { getActor } from "@/lib/auth/roles";
+import { ErrorState } from "@/components/states/ErrorState";
+import styles from "./login.module.css";
 
 export const dynamic = "force-dynamic";
 
@@ -32,31 +34,32 @@ export default async function LoginPage({
   }
 
   return (
-    <main style={{ maxWidth: 380, margin: "0 auto", padding: "64px 24px" }}>
-      <h1 style={{ fontSize: 24 }}>เข้าสู่ระบบ</h1>
-      {message ? (
-        <p role="status" style={{ color: "var(--gold-deep)" }}>
-          {message}
-        </p>
-      ) : null}
-      <form action={signIn} style={{ display: "grid", gap: 12 }}>
-        <label>
-          อีเมล
-          <input name="email" type="email" required style={{ width: "100%", minHeight: 44 }} />
-        </label>
-        <label>
-          รหัสผ่าน
-          <input
-            name="password"
-            type="password"
-            required
-            style={{ width: "100%", minHeight: 44 }}
-          />
-        </label>
-        <button type="submit" style={{ minHeight: 48 }}>
-          เข้าสู่ระบบ
-        </button>
-      </form>
+    <main className={styles.wrap}>
+      <div className={styles.card}>
+        <div className={styles.brand}>
+          <span className={styles.mark} aria-hidden>PT</span>
+          <div>
+            <div className={styles.name}>PT Glory Intelligence</div>
+            <div className={styles.sub}>ระบบภายในบริษัท</div>
+          </div>
+        </div>
+
+        {message ? <ErrorState title={message} /> : null}
+
+        <form action={signIn} className={styles.form}>
+          <label className={styles.field}>
+            อีเมล
+            <input name="email" type="email" required autoComplete="email" />
+          </label>
+          <label className={styles.field}>
+            รหัสผ่าน
+            <input name="password" type="password" required autoComplete="current-password" />
+          </label>
+          <button type="submit" data-variant="primary" className={styles.submit}>
+            เข้าสู่ระบบ
+          </button>
+        </form>
+      </div>
     </main>
   );
 }

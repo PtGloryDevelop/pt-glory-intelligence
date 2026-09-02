@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { dash } from "./explorer";
+import { StatusBadge } from "@/components/StatusBadge";
+import { ErrorState } from "@/components/states/ErrorState";
+import { LoadingSkeleton } from "@/components/states/LoadingSkeleton";
 
 type Detail = {
   context: "dataset" | "master";
@@ -56,11 +59,13 @@ export function AdDrawer({ adArchiveId, datasetId, onClose }: {
         ปิด
       </button>
 
-      {state.status === "loading" ? <p role="status">กำลังโหลด…</p> : null}
+      {state.status === "loading" ? <LoadingSkeleton rows={5} /> : null}
       {state.status === "missing" ? (
-        <p role="status" data-testid="drawer-not-found">
-          ไม่พบโฆษณานี้ในชุดข้อมูลนี้ — ระบบไม่แสดงค่าล่าสุดแทน เพราะจะทำให้อ่านผิดว่าเป็นข้อมูลของรอบนั้น
-        </p>
+        <ErrorState
+          testId="drawer-not-found"
+          title="ไม่พบโฆษณานี้ในชุดข้อมูลนี้"
+          detail="ระบบไม่แสดงค่าล่าสุดแทน เพราะจะทำให้อ่านผิดว่าเป็นข้อมูลของรอบนั้น"
+        />
       ) : null}
 
       {state.status === "ready" ? (
@@ -121,7 +126,7 @@ function Body({ detail, history }: { detail: Detail; history: History[] }) {
               <tr key={`${row.collection_run_id}-${row.observed_at}`}>
                 <td>{row.observed_at}</td>
                 <td title={row.collection_run_id}>{row.collection_method}</td>
-                <td>{row.is_active === null ? "ไม่ทราบ" : row.is_active ? "Active" : "Inactive"}</td>
+                <td><StatusBadge isActive={row.is_active} /></td>
                 <td>{dash(row.display_format)}</td>
                 <td>{dash(row.cta_type)}</td>
                 <td>{dash(row.collation_count)}</td>

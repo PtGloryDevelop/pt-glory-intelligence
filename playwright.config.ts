@@ -24,7 +24,15 @@ export default defineConfig({
       name: "chromium",
       dependencies: ["setup"],
       use: { ...devices["Desktop Chrome"] },
-      testIgnore: /global\.setup\.ts/,
+      testIgnore: [/global\.setup\.ts/, /screenshots\.spec\.ts/],
+    },
+    {
+      // Opt-in: visual capture writes files, it does not assert, so it stays out
+      // of the default run. Use: npx playwright test --project=visual
+      name: "visual",
+      dependencies: ["setup"],
+      testMatch: /screenshots\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"] },
     },
   ],
   webServer: {

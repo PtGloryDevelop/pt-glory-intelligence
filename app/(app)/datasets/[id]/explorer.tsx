@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { AdDrawer } from "./drawer";
+import { StatusBadge } from "@/components/StatusBadge";
+import { EmptyState } from "@/components/states/EmptyState";
+import { LoadingSkeleton } from "@/components/states/LoadingSkeleton";
 
 type Row = {
   ad_archive_id: string; is_active: boolean | null; display_format: string | null;
@@ -91,16 +94,19 @@ export function Explorer({ datasetId }: { datasetId: string }) {
         {rows.length ? `–${offset + rows.length}` : ""} รายการที่แสดง
       </p>
 
-      {loading ? <p role="status">กำลังโหลด…</p> : null}
+      {loading ? <LoadingSkeleton rows={4} /> : null}
 
       {!loading && rows.length === 0 ? (
-        <div data-testid="explorer-empty">
-          <p>ไม่พบโฆษณาที่ตรงกับตัวกรองนี้</p>
-          <button type="button" data-testid="reset-filters"
-            onClick={() => { setFilters(EMPTY); setOffset(0); }} style={{ minHeight: 44 }}>
-            ล้างตัวกรองทั้งหมด
-          </button>
-        </div>
+        <EmptyState
+          testId="explorer-empty"
+          title="ไม่พบโฆษณาที่ตรงกับตัวกรองนี้"
+          action={
+            <button type="button" data-testid="reset-filters"
+              onClick={() => { setFilters(EMPTY); setOffset(0); }}>
+              ล้างตัวกรองทั้งหมด
+            </button>
+          }
+        />
       ) : null}
 
       {rows.length ? (
@@ -122,7 +128,7 @@ export function Explorer({ datasetId }: { datasetId: string }) {
                 </td>
                 <td>{dash(row.page_name)}</td>
                 <td data-testid={`active-${row.ad_archive_id}`}>
-                  {row.is_active === null ? "ไม่ทราบ" : row.is_active ? "Active" : "Inactive"}
+                  <StatusBadge isActive={row.is_active} />
                 </td>
                 <td>{dash(row.display_format)}</td>
                 <td>{dash(row.cta_type)}</td>

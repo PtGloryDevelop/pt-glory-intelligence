@@ -1,0 +1,26 @@
+/*
+ * One badge shape for every semantic state.
+ *
+ * Every variant is a tinted fill with charcoal-or-darker text — measured at
+ * 4.83:1 or better on cream. Colour never carries the meaning alone: each badge
+ * also renders its own word.
+ */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-meta);
+  font-weight: 600;
+  white-space: nowrap;
+  line-height: 1.7;
+}
+
+.dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+.ok { background: var(--ok-tint); color: var(--ok-ink); }
+.warn { background: var(--warn-tint); color: var(--warn-ink); }
+.danger { background: var(--danger-tint); color: var(--danger); }
+.neutral { background: var(--neutral-tint); color: var(--muted); }
+.brand { background: var(--brand-tint); color: var(--brand-ink); }

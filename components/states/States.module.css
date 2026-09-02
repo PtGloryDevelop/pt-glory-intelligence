@@ -1,0 +1,34 @@
+.box {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 28px var(--pad-card);
+  text-align: center;
+  color: var(--muted);
+}
+.title { color: var(--ink); font-weight: 600; margin-bottom: 4px; }
+.body { font-size: var(--fs-meta); margin-bottom: 14px; }
+
+/* Errors get the danger token, not the brand. An earlier build used the gold
+   accent for error text, which said "brand" where it meant "something failed". */
+.error {
+  background: var(--danger-tint);
+  border: 1px solid rgba(179, 38, 30, 0.25);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  color: var(--danger);
+  text-align: left;
+}
+.errorTitle { font-weight: 700; }
+.errorDetail { color: var(--ink); font-size: var(--fs-meta); margin: 4px 0 0; word-break: break-word; }
+
+.skeleton { display: grid; gap: 8px; }
+.bar {
+  height: 12px;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(90deg, var(--surface-sunken), var(--surface), var(--surface-sunken));
+  background-size: 200% 100%;
+  animation: shimmer 1.2s linear infinite;
+}
+@keyframes shimmer { to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .bar { animation: none; } }

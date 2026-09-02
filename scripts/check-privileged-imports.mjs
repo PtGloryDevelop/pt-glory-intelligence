@@ -10,7 +10,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 
 const ROOT = process.cwd();
-const SCAN = ["app", "lib", "tests"];
+const SCAN = ["app", "components", "lib", "tests"];
 const PRIVILEGED = /lib\/db\/privileged/;
 
 // Paths permitted to import the privileged client.

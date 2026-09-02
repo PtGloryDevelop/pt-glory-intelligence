@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { QualityBadge } from "@/components/QualityBadge";
+import { ErrorState } from "@/components/states/ErrorState";
 
 type Coverage = { field: string; presentCount: number; totalCount: number; coverage: number; tier: string };
 type Counts = {
@@ -100,11 +102,11 @@ export function ImportClient({ categories }: { categories: { id: string; name: s
       </button>
 
       {phase === "rejected" || phase === "failed" ? (
-        <p role="status" data-testid="import-error" style={{ color: "var(--gold-deep)" }}>
-          <strong>ไฟล์ถูกปฏิเสธ: {problem?.reason}</strong>
-          <br />
-          {problem?.detail}
-        </p>
+        <ErrorState
+          testId="import-error"
+          title={`ไฟล์ถูกปฏิเสธ: ${problem?.reason}`}
+          detail={problem?.detail}
+        />
       ) : null}
 
       {preview && (phase === "preview" || phase === "committing" || phase === "success") ? (
@@ -160,7 +162,7 @@ export function ImportClient({ categories }: { categories: { id: string; name: s
           </div>
 
           <button
-            type="button" data-testid="commit-button"
+            type="button" data-testid="commit-button" data-variant="primary"
             disabled={phase === "committing" || !datasetName || !categoryId}
             onClick={commit} style={{ minHeight: 48 }}
           >
@@ -186,9 +188,13 @@ export function CoverageTable({ rows }: { rows: Coverage[] }) {
             <td>{row.presentCount} / {row.totalCount}</td>
             <td>{(row.coverage * 100).toFixed(1)}%</td>
             <td>
-              {row.tier}
+              <QualityBadge tier={row.tier} />
               {row.tier === "low" ? (
-                <span data-testid={`warning-${row.field}`} title="ต่ำกว่า 50% — อ้างผลรวมทั้งชุดไม่ได้"> ⚠ ใช้ได้เฉพาะส่วนที่อ่านได้</span>
+                <span
+                  data-testid={`warning-${row.field}`}
+                  title="ต่ำกว่า 50% — อ้างผลรวมทั้งชุดไม่ได้"
+                  style={{ color: "var(--muted)", fontSize: "var(--fs-meta)" }}
+                > ใช้ได้เฉพาะส่วนที่อ่านได้</span>
               ) : null}
             </td>
           </tr>

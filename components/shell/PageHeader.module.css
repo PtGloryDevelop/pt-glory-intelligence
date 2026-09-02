@@ -1,0 +1,16 @@
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.text { min-width: 0; }
+.back {
+  display: inline-block;
+  font-size: var(--fs-meta);
+  margin-bottom: 6px;
+}
+.description { color: var(--muted); font-size: var(--fs-meta); margin: 4px 0 0; }
+.actions { display: flex; gap: 8px; align-items: center; }

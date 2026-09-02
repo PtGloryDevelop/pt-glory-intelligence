@@ -78,7 +78,7 @@ function sourceFiles(dir: string): string[] {
 
 test("no client component imports the privileged database module", () => {
   const offenders: string[] = [];
-  for (const path of [...sourceFiles("app"), ...sourceFiles("lib")]) {
+  for (const path of [...sourceFiles("app"), ...sourceFiles("components"), ...sourceFiles("lib")]) {
     const source = readFileSync(path, "utf8");
     const isClient = /^\s*["']use client["']/m.test(source);
     if (isClient && /db\/privileged/.test(source)) offenders.push(path);
@@ -88,7 +88,7 @@ test("no client component imports the privileged database module", () => {
 
 test("no client component reads process.env for a server secret", () => {
   const offenders: string[] = [];
-  for (const path of [...sourceFiles("app"), ...sourceFiles("lib")]) {
+  for (const path of [...sourceFiles("app"), ...sourceFiles("components"), ...sourceFiles("lib")]) {
     const source = readFileSync(path, "utf8");
     if (!/^\s*["']use client["']/m.test(source)) continue;
     for (const match of source.matchAll(/process\.env\.(\w+)/g)) {

@@ -1,12 +1,72 @@
+/*
+ * Design tokens — Amendment A1 (orange), 2026-09-02.
+ *
+ * Every colour pairing in here was measured rather than eyeballed. The rule that
+ * makes the palette hold together: bright colours are FILLS, charcoal is the text
+ * on top of them. Charcoal clears AA on every fill below (4.83 on orange through
+ * 10.41 on yellow). White does not — white on #F26522 is 3.15 — so there is no
+ * white-on-brand token here on purpose.
+ */
 :root {
-  --paper: #fbf8f3;
-  --surface: #ffffff;
-  --ink: #241f1a;
-  --muted: #6f6459;
-  --line: #e6ded2;
-  --gold: #a9863f;
-  --gold-deep: #7d6229;
+  /* Surfaces — large areas stay cream/warm white, never saturated */
+  --paper: #f5eedf;
+  --surface: #fff8f1;
+  --surface-pink: #f3e1e8;
+  --surface-sunken: #f0e7d8;
+
+  /* Text and lines */
+  --ink: #2c241f;
+  --muted: #6c5d54;
+  --line: #e8dccf;
+
+  /* Brand */
+  --brand: #f26522;
+  --brand-deep: #e95a1f;
+  --brand-ink: #a83c10;       /* orange AS TEXT; --brand is 2.73 on cream, unusable */
+  --brand-tint: rgba(242, 101, 34, 0.1);
+  --brand-tint-strong: rgba(242, 101, 34, 0.16);
+
+  /* Supporting accents — charts, tags, categorical groups. Fills only. */
+  --accent-coral: #ff7a66;
+  --accent-pink: #f2a3cc;
+  --accent-blue: #19a7f2;
+  --accent-green: #27c98b;
+  --accent-yellow: #f5d437;
+  --accent-lavender: #b8b4f5;
+  --accent-green-deep: #2f5d2e;
+
+  /* Semantic — these stay semantic and are never re-pointed at the brand */
+  --ok-ink: #2f5d2e;
+  --ok-tint: rgba(39, 201, 139, 0.16);
+  --warn-ink: #8a5a00;
+  --warn-tint: rgba(245, 212, 55, 0.28);
+  --danger: #b3261e;
+  --danger-tint: rgba(179, 38, 30, 0.1);
+  --neutral-tint: rgba(108, 93, 84, 0.12);
+
+  /* Focus is an accessibility affordance, not a brand colour. Orange at 2.73
+     cannot serve as a focus ring, so this stays blue. */
   --focus: #1d4ed8;
+
+  /* Type scale — handoff §4.3 */
+  --fs-page-title: 24px;
+  --fs-section: 16px;
+  --fs-body: 14px;
+  --fs-meta: 12.5px;
+
+  /* Shape and spacing — handoff §4.4 */
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-pill: 999px;
+  --gap-page: 24px;
+  --gap-section: 28px;
+  --pad-card: 18px;
+  --shadow: 0 1px 2px rgba(44, 36, 31, 0.04), 0 4px 14px rgba(44, 36, 31, 0.05);
+
+  /* Shell */
+  --sidebar-w: 228px;
+  --sidebar-w-rail: 68px;
+  --topbar-h: 56px;
 }
 
 * { box-sizing: border-box; }
@@ -16,10 +76,65 @@ body {
   background: var(--paper);
   color: var(--ink);
   font-family: "Noto Sans Thai", "Leelawadee UI", system-ui, sans-serif;
-  font-size: 15px;
+  font-size: var(--fs-body);
   line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
 }
 
-a { color: var(--gold-deep); }
+h1, h2, h3 { line-height: 1.35; margin: 0; }
+h1 { font-size: var(--fs-page-title); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: var(--fs-section); font-weight: 600; }
+h3 { font-size: var(--fs-body); font-weight: 600; }
+p { margin: 0 0 12px; }
 
-:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+/* Link hover thickens the underline rather than shifting the hue: --brand-deep
+   as text on cream is 3.06 and would make a link harder to read on hover. */
+a { color: var(--brand-ink); text-underline-offset: 2px; }
+a:hover { text-decoration-thickness: 2px; }
+
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+
+/* Form controls — the app has no component library, so the base elements carry
+   the token system directly. */
+input, select, textarea, button { font: inherit; color: inherit; }
+
+input[type="text"], input[type="email"], input[type="password"], select, textarea {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  min-height: 40px;
+}
+input:hover, select:hover { border-color: #d9c9b4; }
+
+button {
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  padding: 8px 14px;
+  cursor: pointer;
+}
+button:hover:not(:disabled) { background: var(--surface-sunken); }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Primary call to action: orange fill, charcoal label. Charcoal on #F26522 is
+   4.83:1; white would be 3.15 and fail. */
+button[data-variant="primary"] {
+  background: var(--brand);
+  border-color: var(--brand-deep);
+  color: var(--ink);
+  font-weight: 600;
+}
+/* Hover keeps the same fill on purpose: charcoal on --brand-deep measures 4.31
+   and would drop the label below AA the moment the pointer arrives. The state
+   change is carried by the ring and border instead. */
+button[data-variant="primary"]:hover:not(:disabled) {
+  background: var(--brand);
+  border-color: var(--brand-ink);
+  box-shadow: 0 0 0 3px var(--brand-tint-strong);
+}
+
+table { border-collapse: collapse; width: 100%; font-size: var(--fs-body); }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); }
+th { font-weight: 600; font-size: var(--fs-meta); color: var(--muted); background: var(--surface-sunken); }
+tbody tr:hover { background: var(--surface); }

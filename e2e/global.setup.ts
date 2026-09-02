@@ -51,7 +51,9 @@ setup("prepare database, fixtures and sessions", async ({ browser }) => {
     await page.getByLabel("อีเมล").fill(email);
     await page.getByLabel("รหัสผ่าน").fill(PASSWORD);
     await page.getByRole("button", { name: "เข้าสู่ระบบ" }).click();
-    await expect(page.getByText(`สิทธิ์ ${role}`)).toBeVisible();
+    // The shell footer is the stable place the signed-in role appears; the home
+    // page also prints it, so a bare text match now hits two elements.
+    await expect(page.getByTestId("shell-role")).toHaveText(`สิทธิ์ ${role}`);
     await context.storageState({ path: join(AUTH, `${role}.json`) });
     await context.close();
   }

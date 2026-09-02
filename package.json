@@ -16,7 +16,8 @@
     "migrate": "node --env-file-if-exists=.env.local scripts/migrate.mjs",
     "verify:gate-a": "node --env-file-if-exists=.env.local scripts/verify-gate-a.mjs",
     "test:unit": "node --env-file-if-exists=.env.local --conditions=react-server --experimental-strip-types --test tests/*.test.ts tests/collector/*.test.ts",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:visual": "playwright test --project=visual"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.2",
