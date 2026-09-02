@@ -72,3 +72,55 @@ export function activeFilter(raw: string | null): { ok: true; value: string | nu
     ? { ok: true, value }
     : { ok: false };
 }
+
+/**
+ * Sort keys the server is willing to order by.
+ *
+ * A key, never a column name: the SQL function maps these to expressions, so no
+ * client string ever reaches an ORDER BY. An unrecognised key is a bad request
+ * rather than a silent fallback — a shared research URL that quietly reorders
+ * itself is worse than one that says it is wrong.
+ */
+export const SORT_KEYS = [
+  "started_desc", "started_asc", "discovered_desc", "observed_desc",
+  "longest_running", "most_reused", "page_name",
+] as const;
+export const DEFAULT_SORT = "started_desc";
+
+export function sortKey(raw: string | null): { ok: true; value: string } | { ok: false } {
+  const value = filterValue(raw);
+  if (value === null) return { ok: true, value: DEFAULT_SORT };
+  return (SORT_KEYS as readonly string[]).includes(value) ? { ok: true, value } : { ok: false };
+}
+
+/**
+ * A yes/no filter that is genuinely three-valued: absent means "any", and only
+ * the two words below select. `?evergreen=maybe` is a bad request, not "any" —
+ * accepting it would silently return an unfiltered set.
+ */
+export function boolFilter(raw: string | null): { ok: true; value: boolean | null } | { ok: false } {
+  const value = filterValue(raw);
+  if (value === null) return { ok: true, value: null };
+  if (value === "true") return { ok: true, value: true };
+  if (value === "false") return { ok: true, value: false };
+  return { ok: false };
+}
+
+/** An ISO date or timestamp. Anything else is refused before it reaches SQL. */
+export function dateFilter(raw: string | null): { ok: true; value: string | null } | { ok: false } {
+  const value = filterValue(raw, 40);
+  if (value === null) return { ok: true, value: null };
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? { ok: false } : { ok: true, value: parsed.toISOString() };
+}
+
+export const MAX_INT_FILTER = 100_000;
+
+/** A non-negative whole number, clamped. Used for ad age and reuse counts. */
+export function intFilter(raw: string | null): { ok: true; value: number | null } | { ok: false } {
+  const value = filterValue(raw, 20);
+  if (value === null) return { ok: true, value: null };
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0) return { ok: false };
+  return { ok: true, value: Math.min(Math.trunc(parsed), MAX_INT_FILTER) };
+}

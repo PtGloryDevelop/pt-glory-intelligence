@@ -19,6 +19,15 @@ async function importFile(page: Page, file: string, datasetName: string) {
   return page.url();
 }
 
+/**
+ * Grid is the default research view. Analyst assertions below read the table,
+ * so they switch to it explicitly rather than assuming a default.
+ */
+async function showTable(page: Page) {
+  await page.getByTestId("view-table").click();
+  await expect(page.getByTestId("ads-table")).toBeVisible();
+}
+
 test.describe("import to explorer to drawer", () => {
   test.use(analyst);
 
@@ -61,7 +70,8 @@ test.describe("import to explorer to drawer", () => {
     const firstQuality = page.getByTestId("quality-strip").locator("tbody tr").first();
     await expect(firstQuality.locator("td").nth(1)).toContainText(" / 500");
 
-    await expect(page.getByTestId("ads-table")).toBeVisible();
+    // Grid is the default research view.
+    await expect(page.getByTestId("ads-grid")).toBeVisible();
     await expect(page.getByTestId("explorer-total")).toContainText("500");
 
     // Filters run server-side: the total changes, not just the visible rows.
@@ -73,6 +83,7 @@ test.describe("import to explorer to drawer", () => {
     await expect(page.getByTestId("explorer-total")).toContainText("พบ 500");
 
     // Pagination
+    await showTable(page);
     const firstId = await page.getByTestId("ads-table").locator("tbody tr").first()
       .getAttribute("data-testid");
     await page.getByTestId("next-page").click();
@@ -92,15 +103,83 @@ test.describe("import to explorer to drawer", () => {
     expect(datasetUrl).toContain("/datasets/");
   });
 
+  test("the explorer is a research tool: filters, chips, sort, views and a shareable URL", async ({ page }) => {
+    await importFile(page, GOLDEN, "e2e-explorer");
+    await expect(page.getByTestId("ads-grid")).toBeVisible();
+    const total = page.getByTestId("explorer-total");
+    await expect(total).toContainText("พบ 500");
+
+    // A primary filter narrows the set on the server and appears as a chip.
+    // Platform rather than status: every ad in the golden export is active, so
+    // filtering on status would prove nothing about where filtering happens.
+    await page.getByTestId("f-platform").selectOption("INSTAGRAM");
+    await expect(page.getByTestId("chip-platform")).toBeVisible();
+    await expect(total).not.toContainText("พบ 500");
+    const narrowed = await total.textContent();
+
+    // An advanced filter, from the panel, also runs on the server.
+    await page.getByTestId("advanced-toggle").click();
+    await expect(page.getByTestId("advanced-panel")).toBeVisible();
+    await page.getByTestId("f-has-destination").selectOption("true");
+    await expect(page.getByTestId("chip-hasDestination")).toBeVisible();
+    await expect(total).not.toHaveText(narrowed!);
+
+    // The URL carries the research state, so this view can be shared or reloaded.
+    expect(page.url()).toContain("platform=INSTAGRAM");
+    expect(page.url()).toContain("hasDestination=true");
+    await page.reload();
+    await expect(page.getByTestId("chip-platform")).toBeVisible();
+    await expect(page.getByTestId("chip-hasDestination")).toBeVisible();
+
+    // Removing one chip leaves the other applied.
+    await page.getByTestId("chip-hasDestination").click();
+    await expect(page.getByTestId("chip-hasDestination")).toHaveCount(0);
+    await expect(page.getByTestId("chip-platform")).toBeVisible();
+
+    // Sort is a key, and it survives in the URL too.
+    await page.getByTestId("sort-select").selectOption("most_reused");
+    expect(page.url()).toContain("sort=most_reused");
+    await expect(page.getByTestId("ads-grid")).toBeVisible();
+
+    // Back returns to the previous research state rather than leaving the page.
+    await page.goBack();
+    await expect(page.getByTestId("sort-select")).toHaveValue("started_desc");
+
+    // Clear all empties the chips and restores the full set.
+    await page.getByTestId("clear-all").click();
+    await expect(page.getByTestId("filter-chips")).toHaveCount(0);
+    await expect(total).toContainText("พบ 500");
+
+    // Table mode and back, without losing the result.
+    await showTable(page);
+    await expect(page.getByTestId("ads-grid")).toHaveCount(0);
+    await page.getByTestId("view-grid").click();
+    await expect(page.getByTestId("ads-grid")).toBeVisible();
+
+    // Search, then open the drawer from a filtered result.
+    await page.getByTestId("filter-search").fill("ลด");
+    await expect(page.getByTestId("chip-search")).toBeVisible();
+    const card = page.locator("[data-testid^='ad-card-']").first();
+    await expect(card).toBeVisible();
+    await card.getByRole("button").first().click();
+    await expect(page.getByTestId("ad-drawer")).toBeVisible();
+    await page.getByTestId("drawer-close").click();
+    // Closing the drawer leaves the filtered view exactly as it was.
+    await expect(page.getByTestId("chip-search")).toBeVisible();
+  });
+
   test("an old dataset keeps its snapshot after a newer import", async ({ page }) => {
     const oldUrl = await importFile(page, join(TMP, "small-old.json"), "e2e-old");
+    await showTable(page);
     await expect(page.getByTestId("ads-table")).toContainText("IMAGE");
 
     await importFile(page, join(TMP, "small-new.json"), "e2e-new");
+    await showTable(page);
     await expect(page.getByTestId("ads-table")).toContainText("VIDEO");
 
     // The proof: reopening the old dataset must not show the newer observation.
     await page.goto(oldUrl);
+    await showTable(page);
     const row = page.getByTestId("ads-table").locator("tbody tr").first();
     await expect(row).toContainText("IMAGE");
     await expect(row).toContainText("FACEBOOK");
@@ -184,6 +263,7 @@ test.describe("import to explorer to drawer", () => {
 
   test("unknown stays unknown and missing fields render as —", async ({ page }) => {
     await importFile(page, join(TMP, "small-unknown.json"), "e2e-unknown");
+    await showTable(page);
     const row = page.getByTestId("ads-table").locator("tbody tr").first();
     await expect(row).toContainText("ไม่ทราบ");
 
@@ -205,6 +285,7 @@ test.describe("import to explorer to drawer", () => {
       route.request().resourceType() === "image" ? route.abort() : route.continue(),
     );
     await importFile(page, GOLDEN, "e2e-media");
+    await showTable(page);
     await page.getByTestId("ads-table").locator("tbody tr").first().getByRole("button").click();
     await expect(page.getByTestId("ad-drawer")).toBeVisible();
     const media = page.getByTestId("media-unavailable").or(page.getByTestId("media-placeholder"));

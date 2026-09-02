@@ -88,6 +88,44 @@ test.describe("read API abuse cases", () => {
     await assertNoLeak(response);
   });
 
+  test("sort accepts allowlisted keys only, never a column name", async ({ page }) => {
+    for (const key of ["started_desc", "started_asc", "discovered_desc", "observed_desc",
+      "longest_running", "most_reused", "page_name"]) {
+      const response = await page.request.get(`/api/datasets/${datasetId}/ads?sort=${key}`);
+      expect(response.status(), key).toBe(200);
+      expect((await response.json()).sort, key).toBe(key);
+    }
+
+    for (const bad of ["start_date", "start_date desc", "1", "ad_archive_id; drop table ads", "'"]) {
+      const response = await page.request.get(
+        `/api/datasets/${datasetId}/ads?sort=${encodeURIComponent(bad)}`,
+      );
+      expect(response.status(), bad).toBe(400);
+      await assertNoLeak(response);
+    }
+
+    // Absent means the default, not "any ordering".
+    const bare = await page.request.get(`/api/datasets/${datasetId}/ads`);
+    expect((await bare.json()).sort).toBe("started_desc");
+  });
+
+  test("advanced filters are refused when unparseable, never widened to any", async ({ page }) => {
+    const bad = [
+      "evergreen=maybe", "hasVideo=1", "hasTitle=yes", "hasDestination=null",
+      "startedFrom=not-a-date", "firstSeenTo=2026-13-45", "ageMin=-1", "reuseMin=abc",
+    ];
+    for (const query of bad) {
+      const response = await page.request.get(`/api/datasets/${datasetId}/ads?${query}`);
+      expect(response.status(), query).toBe(400);
+      await assertNoLeak(response);
+    }
+
+    const good = await page.request.get(
+      `/api/datasets/${datasetId}/ads?evergreen=true&hasImage=false&ageMin=10&startedFrom=2020-01-01`,
+    );
+    expect(good.status()).toBe(200);
+  });
+
   test("a very long search query is answered, not crashed", async ({ page }) => {
     const response = await page.request.get(
       // Long enough to blow past MAX_SEARCH_LENGTH many times over, short
@@ -173,6 +211,8 @@ test.describe("untrusted file content", () => {
     await page.getByTestId("commit-button").click();
     await page.waitForURL(/\/datasets\/[0-9a-f-]{36}/);
 
+    // Grid is the default; this case reads the table.
+    await page.getByTestId("view-table").click();
     await page.getByTestId("ads-table").locator("tbody tr").first().getByRole("button").click();
     await expect(page.getByTestId("ad-drawer")).toBeVisible();
 

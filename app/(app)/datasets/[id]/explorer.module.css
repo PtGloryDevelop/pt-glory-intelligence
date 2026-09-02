@@ -1,0 +1,130 @@
+/*
+ * The toolbar carries six primary controls and stays readable at 1280. Everything
+ * else lives behind Advanced, because a wall of twenty filters is a worse tool
+ * than six filters and a door.
+ */
+.toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.label {
+  display: block;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.field, .sort { min-width: 0; }
+.field select, .sort select { min-height: 38px; max-width: 190px; }
+
+.search { flex: 1 1 240px; min-width: 200px; }
+.search input { width: 100%; min-height: 38px; }
+
+.pageFilter { display: grid; gap: 4px; }
+.pageFilter input { min-height: 32px; max-width: 190px; }
+.pageFilter select { min-height: 38px; max-width: 190px; }
+
+.advancedButton { min-height: 38px; font-weight: 600; }
+
+.viewToggle { display: flex; gap: 4px; margin-left: auto; }
+.viewToggle button { min-height: 38px; }
+.viewOn { background: var(--brand-tint-strong); border-color: var(--brand); font-weight: 600; }
+
+/* Applied filters, each removable, so the state of the query is never implicit. */
+.chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--brand);
+  background: var(--brand-tint);
+  font-size: var(--fs-meta);
+  font-weight: 600;
+  min-height: 30px;
+}
+.chip:hover { background: var(--brand-tint-strong); }
+.clearAll {
+  border: 0;
+  background: none;
+  color: var(--brand-ink);
+  font-size: var(--fs-meta);
+  font-weight: 600;
+  text-decoration: underline;
+  min-height: 30px;
+}
+
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+.advanced {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 14px;
+  margin-bottom: 12px;
+}
+.advancedGrid {
+  display: grid;
+  /* Groups size to their own content instead of stretching to the tallest. */
+  align-items: start;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 12px;
+}
+.group {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin: 0;
+}
+.group legend { font-size: var(--fs-meta); font-weight: 700; padding: 0 4px; }
+.group input, .group select { width: 100%; min-height: 36px; }
+
+.toggle { display: grid; gap: 4px; font-size: var(--fs-meta); }
+.hint { font-size: 11px; color: var(--muted); margin: 0; }
+
+.note { color: var(--muted); font-size: var(--fs-meta); }
+
+/* Grid is the research mode: 4 columns on a wide desktop, never 5. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 14px;
+}
+@media (max-width: 1439px) { .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 1023px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px)  { .grid { grid-template-columns: minmax(0, 1fr); } }
+
+.tableScroll { overflow-x: auto; }
+.copyCell {
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pager { display: flex; gap: 8px; margin-top: 12px; }
+.pager button { min-height: 44px; }
+
+@media (max-width: 640px) {
+  .toolbar { position: static; }
+  .viewToggle { margin-left: 0; }
+}

@@ -150,6 +150,74 @@ test.describe("visual capture", () => {
     await context.close();
   });
 
+  /** V3: the Explorer in every state a researcher works in. */
+  test("ads explorer", async ({ browser }) => {
+    await resetData();
+    const context = await browser.newContext({ storageState: join(AUTH, "analyst.json") });
+    const page = await context.newPage();
+    await page.setViewportSize({ width: 1440, height: 1000 });
+
+    const shoot = (name: string) =>
+      page.screenshot({ path: shot(name), fullPage: true, animations: "disabled" });
+
+    // The 500-ad export, so the grid is a real research surface.
+    await page.goto("/import");
+    await page.getByTestId("category-select").selectOption({ label: CATEGORY });
+    await page.getByTestId("file-input").setInputFiles("tests/fixtures/golden-500.json");
+    await page.getByTestId("preview-button").click();
+    await page.getByTestId("preview-panel").waitFor();
+    await page.getByTestId("dataset-name").fill("visual-explorer");
+    await page.getByTestId("commit-button").click();
+    await page.waitForURL(/\/datasets\/[0-9a-f-]{36}/);
+    const datasetUrl = page.url();
+
+    for (const viewport of VIEWPORTS) {
+      await page.setViewportSize(viewport);
+      await page.goto(datasetUrl);
+      await page.getByTestId("ads-grid").waitFor();
+      // A phone-width full-page shot of 30 stacked cards is 20,000px tall and
+      // unreadable, so narrow widths capture the grid itself in the viewport.
+      if (viewport.width < 768) await page.getByTestId("ads-grid").scrollIntoViewIfNeeded();
+      await page.screenshot({
+        path: shot(`explorer-grid-${viewport.name}`),
+        fullPage: viewport.width >= 768,
+        animations: "disabled",
+      });
+    }
+
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto(`${datasetUrl}?platform=INSTAGRAM&evergreen=true`);
+    await page.getByTestId("filter-chips").waitFor();
+    await shoot("explorer-filtered-1440");
+
+    await page.getByTestId("advanced-toggle").click();
+    await page.getByTestId("advanced-panel").waitFor();
+    await shoot("explorer-advanced-1440");
+
+    await page.goto(datasetUrl);
+    await page.getByTestId("view-table").click();
+    await page.getByTestId("ads-table").waitFor();
+    await shoot("explorer-table-1440");
+    await page.setViewportSize({ width: 375, height: 812 });
+    await shoot("explorer-table-375");
+
+    // Empty state: a filter combination the snapshot cannot satisfy.
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto(`${datasetUrl}?search=${encodeURIComponent("ไม่มีคำนี้อยู่จริง")}`);
+    await page.getByTestId("explorer-empty").waitFor();
+    await shoot("explorer-empty-1440");
+
+    // Media unavailable: block every image, so the grid shows placeholders.
+    await page.route("**/*", (route) =>
+      route.request().resourceType() === "image" ? route.abort() : route.continue());
+    await page.goto(datasetUrl);
+    await page.getByTestId("ads-grid").waitFor();
+    await shoot("explorer-media-unavailable-1440");
+    await page.unroute("**/*");
+
+    await context.close();
+  });
+
   test("viewer sees no import form", async ({ browser }) => {
     const context = await browser.newContext({
       storageState: join(AUTH, "viewer.json"),

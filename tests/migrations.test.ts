@@ -16,9 +16,9 @@ test("every up migration has a matching down migration", () => {
   }
 });
 
-test("migrations are numbered 0001..0021 with no gaps", () => {
+test("migrations are numbered 0001..0022 with no gaps", () => {
   const numbers = up.map((f) => Number(f.slice(0, 4)));
-  assert.deepEqual(numbers, Array.from({ length: 21 }, (_, i) => i + 1));
+  assert.deepEqual(numbers, Array.from({ length: 22 }, (_, i) => i + 1));
 });
 
 test("all 13 tables are created", () => {
@@ -126,7 +126,7 @@ test("every function a migration creates is dropped by its rollback", () => {
   const created = [...new Set(
     [...allUp.matchAll(/create function public\.(\w+)/g)].map((m) => m[1]),
   )].sort();
-  assert.deepEqual(created, ["ad_detail", "ad_observation_history", "current_user_role", "dataset_ads_facets", "dataset_ads_page", "dataset_context", "dataset_list", "jsonb_text_array"]);
+  assert.deepEqual(created, ["ad_detail", "ad_observation_history", "current_user_role", "dataset_ads_facets", "dataset_ads_page", "dataset_context", "dataset_list", "evergreen_threshold_days", "jsonb_text_array"]);
 
   const allDown = files
     .filter((f) => f.endsWith(".down.sql"))

@@ -40,10 +40,14 @@ export type ExplorerRow = {
   publisher_platform: string[]; cta_type: string | null; cta_text: string | null;
   title: string | null; body_text: string | null; page_id: string;
   page_name: string | null; page_categories: string[] | null;
-  start_date: string; collation_count: number | null; total_count: number;
+  start_date: string; collation_count: number | null;
+  first_seen_at: string; last_seen_at: string; ad_age_days: number;
+  /** Media observed in this dataset's own run. Never the latest observation. */
+  media: { images?: unknown[]; videos?: unknown[]; cards?: unknown[] } | null;
+  total_count: number;
 };
 
-export type Facet = { facet: string; value: string; n: number };
+export type Facet = { facet: string; value: string; label: string; n: number };
 
 export type AdDetail = {
   context: "dataset" | "master";
@@ -70,6 +74,16 @@ export type ObservationHistoryRow = {
 export type ExplorerFilters = {
   active?: string | null; format?: string | null; cta?: string | null;
   platform?: string | null; category?: string | null; search?: string | null;
+  page?: string | null;
+  startedFrom?: string | null; startedTo?: string | null;
+  firstSeenFrom?: string | null; firstSeenTo?: string | null;
+  lastSeenFrom?: string | null; lastSeenTo?: string | null;
+  ageMin?: number | null; ageMax?: number | null;
+  evergreen?: boolean | null;
+  reuseMin?: number | null;
+  hasVideo?: boolean | null; hasImage?: boolean | null;
+  hasTitle?: boolean | null; hasDestination?: boolean | null;
+  sort?: string | null;
   limit?: number; offset?: number;
 };
 
@@ -106,6 +120,24 @@ export async function getDatasetAds(
     p_search: filters.search ?? null,
     p_limit: filters.limit ?? 30,
     p_offset: filters.offset ?? 0,
+    p_page_id: filters.page ?? null,
+    p_started_from: filters.startedFrom ?? null,
+    p_started_to: filters.startedTo ?? null,
+    p_first_seen_from: filters.firstSeenFrom ?? null,
+    p_first_seen_to: filters.firstSeenTo ?? null,
+    p_last_seen_from: filters.lastSeenFrom ?? null,
+    p_last_seen_to: filters.lastSeenTo ?? null,
+    p_age_min: filters.ageMin ?? null,
+    p_age_max: filters.ageMax ?? null,
+    p_evergreen: filters.evergreen ?? null,
+    p_reuse_min: filters.reuseMin ?? null,
+    p_has_video: filters.hasVideo ?? null,
+    p_has_image: filters.hasImage ?? null,
+    p_has_title: filters.hasTitle ?? null,
+    p_has_destination: filters.hasDestination ?? null,
+    // The route validated this against the allowlist; the database never sees
+    // a column name from the client.
+    p_sort: filters.sort ?? "started_desc",
   });
   if (error) throw error;
   const rows = (data ?? []) as ExplorerRow[];

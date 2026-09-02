@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { dash } from "./explorer";
+import { mediaUrls } from "@/lib/media";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ErrorState } from "@/components/states/ErrorState";
 import { LoadingSkeleton } from "@/components/states/LoadingSkeleton";
@@ -148,25 +149,12 @@ function Row({ label, value, testId }: { label: string; value: unknown; testId?:
   );
 }
 
-function isHttpUrl(value: string): boolean {
-  try {
-    return ["http:", "https:"].includes(new URL(value).protocol);
-  } catch {
-    return false;
-  }
-}
-
 /** Media lives on Meta's CDN and its URLs expire, so a broken image is normal, not an error state. */
 function Media({ media }: { media: Detail["media"] }) {
   const [broken, setBroken] = useState<Record<number, boolean>>({});
-  const urls = [...(media?.images ?? []), ...(media?.videos ?? []), ...(media?.cards ?? [])]
-    .flatMap((item) => {
-      const record = item as Record<string, unknown>;
-      const url = record?.url ?? record?.previewUrl ?? record?.thumbnailUrl;
-      // The uploaded JSON is untrusted: a `javascript:` or `data:` value here
-      // would be a URL the page executes rather than an image it loads.
-      return typeof url === "string" && isHttpUrl(url) ? [url] : [];
-    });
+  // Scheme filtering lives in lib/media: the uploaded JSON is untrusted, and a
+  // `javascript:` value here would be a URL the page executes.
+  const urls = mediaUrls(media);
 
   if (urls.length === 0) {
     return <p data-testid="media-placeholder">ไม่มีสื่อที่บันทึกไว้สำหรับโฆษณานี้</p>;

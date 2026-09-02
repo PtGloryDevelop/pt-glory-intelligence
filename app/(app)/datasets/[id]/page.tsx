@@ -85,7 +85,14 @@ export default async function DatasetPage({ params }: { params: Promise<{ id: st
         }))}
       />
 
-      <Explorer datasetId={id} />
+      {/* Coverage travels with the filters so "มีลิงก์ปลายทาง" can say how many
+          ads the field was readable on, instead of implying the rest have none. */}
+      <Explorer
+        datasetId={id}
+        coverage={quality.map((row) => ({
+          field: row.field, present_count: row.present_count, total_count: row.total_count,
+        }))}
+      />
     </>
   );
 }

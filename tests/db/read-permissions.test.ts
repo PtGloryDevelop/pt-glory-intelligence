@@ -15,7 +15,8 @@ import { connect } from "./helpers.ts";
 
 const READ_FUNCTIONS = [
   "public.dataset_context(uuid)",
-  "public.dataset_ads_page(uuid, text, text, text, text, text, text, int, int)",
+  "public.dataset_ads_page(uuid, text, text, text, text, text, text, int, int, text, timestamptz, timestamptz, timestamptz, timestamptz, timestamptz, timestamptz, int, int, boolean, int, boolean, boolean, boolean, boolean, text)",
+  "public.evergreen_threshold_days()",
   "public.dataset_ads_facets(uuid)",
   "public.ad_detail(text, uuid)",
   "public.ad_observation_history(text)",
