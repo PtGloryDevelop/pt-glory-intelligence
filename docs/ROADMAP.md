@@ -9,7 +9,9 @@
 - schema/migration discipline
 - test harness
 
-## Phase 1 — Data Vertical Slice
+## Phase 1 — Data Vertical Slice — ✅ COMPLETE
+
+baseline `71577e2` · tag `v0.1.0-phase1` · บันทึกการปิดอยู่ที่ [PHASE1_RELEASE.md](PHASE1_RELEASE.md)
 
 - canonical schema
 - JSON import

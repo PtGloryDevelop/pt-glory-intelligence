@@ -2,7 +2,7 @@
 
 วันที่: 1 กันยายน 2569 · จาก `SPEC_2026-09-01_PHASE1.md` + `ARCHITECTURE_REVIEW_2026-09-01_PHASE1.md`
 
-**สถานะ: รออนุมัติ ยังไม่ implement**
+**สถานะ: COMPLETE — T01–T18 ปิดครบที่ baseline `71577e2`** · ดู [PHASE1_RELEASE.md](PHASE1_RELEASE.md)
 
 20 tickets · milestone ที่ระบบรันได้: หลัง T09, T13, T16
 

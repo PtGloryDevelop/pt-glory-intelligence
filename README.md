@@ -2,6 +2,13 @@
 
 ชุดไฟล์นี้ใช้เป็น Project Rules + Product Spec + Workflow Skills สำหรับสร้าง **PT Glory Intelligence** บน Claude Code แบบเป็นขั้นตอนและตรวจสอบได้
 
+## สถานะปัจจุบัน
+
+**Phase 1 — Data Vertical Slice: COMPLETE** · baseline `71577e2` · tag `v0.1.0-phase1`
+· migrations ถึง `0019` · บันทึกการปิดและความเสี่ยงที่เหลืออยู่ที่ [docs/PHASE1_RELEASE.md](docs/PHASE1_RELEASE.md)
+
+Phase 2 ยังไม่เริ่ม
+
 ## วิธีติดตั้ง
 
 1. แตกโฟลเดอร์นี้ไว้ที่ root ของโปรเจกต์
