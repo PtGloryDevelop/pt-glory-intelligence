@@ -8,13 +8,15 @@ import styles from "./Badge.module.css";
  * denominator is not something a reader can check, so callers pair this with
  * `present / total`.
  */
-const VARIANT = { normal: "ok", partial: "warn", low: "danger" } as const;
-const LABEL = { normal: "ปกติ", partial: "บางส่วน", low: "ต่ำ" } as const;
+const VARIANT = { normal: "ok", partial: "warn", low: "danger", unknown: "neutral" } as const;
+const LABEL = { normal: "ปกติ", partial: "บางส่วน", low: "ต่ำ", unknown: "ยังไม่วัด" } as const;
 
 export type Tier = keyof typeof VARIANT;
 
 export function QualityBadge({ tier }: { tier: Tier | string }) {
-  const key = (tier in VARIANT ? tier : "low") as Tier;
+  // An unrecognised tier is an unmeasured one, not a bad one: painting it
+  // danger would invent a quality claim the database never made.
+  const key = (tier in VARIANT ? tier : "unknown") as Tier;
   return (
     <span className={`${styles.badge} ${styles[VARIANT[key]]}`} data-tier={key}>
       {LABEL[key]}

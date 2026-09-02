@@ -19,6 +19,7 @@ const READ_FUNCTIONS = [
   "public.dataset_ads_facets(uuid)",
   "public.ad_detail(text, uuid)",
   "public.ad_observation_history(text)",
+  "public.dataset_list()",
   "public.current_user_role()",
 ];
 

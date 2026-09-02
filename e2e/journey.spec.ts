@@ -43,6 +43,16 @@ test.describe("import to explorer to drawer", () => {
     await expect(page.getByTestId("datasets-empty")).toBeVisible();
 
     const datasetUrl = await importFile(page, GOLDEN, "golden-journey");
+    const datasetId = datasetUrl.split("/").pop()!;
+
+    // The list carries the run's own counts, not a cached number on the dataset.
+    await page.goto("/datasets");
+    const listRow = page.getByTestId(`dataset-row-${datasetId}`);
+    await expect(listRow.locator("td").nth(6)).toHaveText("500");
+    await expect(listRow.locator("td").nth(7)).toHaveText("309");
+    await expect(listRow.locator("td").nth(8)).toHaveText("completed");
+    await page.goto(datasetUrl);
+
     await expect(page.getByTestId("context-ads")).toHaveText("500");
     await expect(page.getByTestId("context-pages")).toHaveText("309");
     await expect(page.getByTestId("context-status")).toHaveText("completed");

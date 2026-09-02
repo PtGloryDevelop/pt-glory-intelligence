@@ -18,6 +18,16 @@ export type DatasetContext = {
   quarantine_count: number; ads_in_dataset: number;
 };
 
+/** Dataset list projection — migration 0020, handoff §7.3. */
+export type DatasetListRow = {
+  dataset_id: string; dataset_name: string; created_at: string;
+  category_id: string; category_name: string;
+  collection_run_id: string; collection_method: string; source_product: string;
+  scope_query: string | null; scope_country: string | null; collected_at: string;
+  run_status: string; ads_in_dataset: number; pages_in_dataset: number;
+  quality_tier: "normal" | "partial" | "low" | "unknown";
+};
+
 export type QualityRow = {
   field: string; present_count: number; total_count: number;
   coverage: number; tier: "normal" | "partial" | "low";
@@ -139,14 +149,9 @@ export async function listCategories(): Promise<{ id: string; name: string }[]> 
   return (data ?? []) as { id: string; name: string }[];
 }
 
-export async function listDatasets(): Promise<
-  { id: string; name: string; created_at: string; category_id: string }[]
-> {
+export async function listDatasets(): Promise<DatasetListRow[]> {
   const supabase = await dbUser();
-  const { data, error } = await supabase
-    .from("datasets")
-    .select("id, name, created_at, category_id")
-    .order("created_at", { ascending: false });
+  const { data, error } = await supabase.rpc("dataset_list");
   if (error) throw error;
-  return (data ?? []) as { id: string; name: string; created_at: string; category_id: string }[];
+  return (data ?? []) as DatasetListRow[];
 }
