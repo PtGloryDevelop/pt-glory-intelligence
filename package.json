@@ -12,10 +12,11 @@
     "test": "node --env-file-if-exists=.env.local --conditions=react-server --experimental-strip-types --test-concurrency=1 --test tests/*.test.ts tests/collector/*.test.ts tests/db/*.test.ts",
     "test:db": "node --env-file-if-exists=.env.local --conditions=react-server --experimental-strip-types --test-concurrency=1 --test tests/db/*.test.ts",
     "check:imports": "node scripts/check-privileged-imports.mjs",
-    "verify": "npm run lint && npm run typecheck && npm run check:imports && npm test && npm run build",
+    "verify": "npm run lint && npm run typecheck && npm run check:imports && npm test && npm run build && npm run test:e2e",
     "migrate": "node --env-file-if-exists=.env.local scripts/migrate.mjs",
     "verify:gate-a": "node --env-file-if-exists=.env.local scripts/verify-gate-a.mjs",
-    "test:unit": "node --env-file-if-exists=.env.local --conditions=react-server --experimental-strip-types --test tests/*.test.ts tests/collector/*.test.ts"
+    "test:unit": "node --env-file-if-exists=.env.local --conditions=react-server --experimental-strip-types --test tests/*.test.ts tests/collector/*.test.ts",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.2",
@@ -27,6 +28,7 @@
     "server-only": "^0.0.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@types/node": "^22.9.0",
     "@types/pg": "^8.11.10",
     "@types/react": "^19.0.0",

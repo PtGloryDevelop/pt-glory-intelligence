@@ -53,7 +53,7 @@ async function assertCleanRollback() {
       `select proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
         where n.nspname = 'public'
           and proname = any($1)`,
-      [["current_user_role", "jsonb_text_array"]],
+      [["current_user_role", "jsonb_text_array", "dataset_context", "dataset_ads_page", "dataset_ads_facets", "ad_detail", "ad_observation_history"]],
     );
     const { rows: policies } = await client.query(
       `select tablename, policyname from pg_policies

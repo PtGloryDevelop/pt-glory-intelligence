@@ -16,9 +16,9 @@ test("every up migration has a matching down migration", () => {
   }
 });
 
-test("migrations are numbered 0001..0017 with no gaps", () => {
+test("migrations are numbered 0001..0018 with no gaps", () => {
   const numbers = up.map((f) => Number(f.slice(0, 4)));
-  assert.deepEqual(numbers, Array.from({ length: 17 }, (_, i) => i + 1));
+  assert.deepEqual(numbers, Array.from({ length: 18 }, (_, i) => i + 1));
 });
 
 test("all 13 tables are created", () => {
@@ -121,7 +121,7 @@ test("no separate hide-deleted policy is reintroduced", () => {
 
 test("every function a migration creates is dropped by its rollback", () => {
   const created = [...allUp.matchAll(/create function public\.(\w+)/g)].map((m) => m[1]).sort();
-  assert.deepEqual(created, ["current_user_role", "jsonb_text_array"]);
+  assert.deepEqual(created, ["ad_detail", "ad_observation_history", "current_user_role", "dataset_ads_facets", "dataset_ads_page", "dataset_context", "jsonb_text_array"]);
 
   const allDown = files
     .filter((f) => f.endsWith(".down.sql"))

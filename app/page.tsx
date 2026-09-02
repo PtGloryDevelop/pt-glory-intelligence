@@ -18,9 +18,12 @@ export default async function HomePage() {
           <Link href="/login">เข้าสู่ระบบ</Link>
         </p>
       )}
-      <p style={{ color: "var(--muted)" }}>
-        Phase 1 · Gate A — ยังไม่มีหน้าใช้งานจริงจนกว่าจะถึง T13
-      </p>
+      {actor ? (
+        <nav style={{ display: "grid", gap: 8, marginTop: 16 }}>
+          <Link href="/datasets">ชุดข้อมูล</Link>
+          <Link href="/import">นำเข้าข้อมูล</Link>
+        </nav>
+      ) : null}
     </main>
   );
 }

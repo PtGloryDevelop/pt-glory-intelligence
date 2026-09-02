@@ -1,0 +1,177 @@
+import { expect, test, type Page } from "@playwright/test";
+import { join } from "node:path";
+import { AUTH, CATEGORY, TMP } from "./constants.ts";
+
+const analyst = { storageState: join(AUTH, "analyst.json") };
+const GOLDEN = "tests/fixtures/golden-500.json";
+
+/** Upload → preview → confirm, returning the dataset URL the app lands on. */
+async function importFile(page: Page, file: string, datasetName: string) {
+  await page.goto("/import");
+  await page.getByTestId("category-select").selectOption({ label: CATEGORY });
+  await page.getByTestId("file-input").setInputFiles(file);
+  await page.getByTestId("preview-button").click();
+  await expect(page.getByTestId("preview-panel")).toBeVisible();
+  await page.getByTestId("dataset-name").fill(datasetName);
+  await page.getByTestId("commit-button").click();
+  await page.waitForURL(/\/datasets\/[0-9a-f-]{36}/);
+  return page.url();
+}
+
+test.describe("import to explorer to drawer", () => {
+  test.use(analyst);
+
+  test("the full journey on the real 500-ad export", async ({ page }) => {
+    await page.goto("/import");
+    await page.getByTestId("category-select").selectOption({ label: CATEGORY });
+    await page.getByTestId("file-input").setInputFiles(GOLDEN);
+    await page.getByTestId("preview-button").click();
+
+    // Preview must be a read: the server's own counts, no dataset yet.
+    await expect(page.getByTestId("preview-ads")).toHaveText("500");
+    await expect(page.getByTestId("preview-pages")).toHaveText("309");
+    await expect(page.getByTestId("preview-quarantine")).toHaveText("0");
+    await expect(page.getByTestId("preview-method")).toHaveText("network_response_observation");
+    await expect(page.getByTestId("coverage-table")).toBeVisible();
+    await page.goto("/datasets");
+    await expect(page.getByTestId("datasets-empty")).toBeVisible();
+
+    const datasetUrl = await importFile(page, GOLDEN, "golden-journey");
+    await expect(page.getByTestId("context-ads")).toHaveText("500");
+    await expect(page.getByTestId("context-pages")).toHaveText("309");
+    await expect(page.getByTestId("context-status")).toHaveText("completed");
+
+    // Quality never states a percentage without the pair it came from.
+    const firstQuality = page.getByTestId("quality-strip").locator("tbody tr").first();
+    await expect(firstQuality.locator("td").nth(1)).toContainText(" / 500");
+
+    await expect(page.getByTestId("ads-table")).toBeVisible();
+    await expect(page.getByTestId("explorer-total")).toContainText("500");
+
+    // Filters run server-side: the total changes, not just the visible rows.
+    await page.getByTestId("f-platform").selectOption("INSTAGRAM");
+    await expect(page.getByTestId("explorer-total")).not.toContainText("พบ 500");
+    await page.getByTestId("filter-search").fill("ไม่มีคำนี้อยู่จริงแน่นอน");
+    await expect(page.getByTestId("explorer-empty")).toBeVisible();
+    await page.getByTestId("reset-filters").click();
+    await expect(page.getByTestId("explorer-total")).toContainText("พบ 500");
+
+    // Pagination
+    const firstId = await page.getByTestId("ads-table").locator("tbody tr").first()
+      .getAttribute("data-testid");
+    await page.getByTestId("next-page").click();
+    await expect(page.getByTestId("ads-table").locator("tbody tr").first())
+      .not.toHaveAttribute("data-testid", firstId!);
+    await page.getByTestId("prev-page").click();
+
+    // Drawer
+    await page.getByTestId("ads-table").locator("tbody tr").first()
+      .getByRole("button").click();
+    const drawer = page.getByTestId("ad-drawer");
+    await expect(drawer.getByTestId("drawer-context")).toHaveText("สถานะตามรอบเก็บของชุดข้อมูลนี้");
+    await expect(drawer.getByTestId("observation-history")).toBeVisible();
+    await drawer.getByTestId("drawer-close").click();
+    await expect(page.getByTestId("ad-drawer")).toHaveCount(0);
+
+    expect(datasetUrl).toContain("/datasets/");
+  });
+
+  test("an old dataset keeps its snapshot after a newer import", async ({ page }) => {
+    const oldUrl = await importFile(page, join(TMP, "small-old.json"), "e2e-old");
+    await expect(page.getByTestId("ads-table")).toContainText("IMAGE");
+
+    await importFile(page, join(TMP, "small-new.json"), "e2e-new");
+    await expect(page.getByTestId("ads-table")).toContainText("VIDEO");
+
+    // The proof: reopening the old dataset must not show the newer observation.
+    await page.goto(oldUrl);
+    const row = page.getByTestId("ads-table").locator("tbody tr").first();
+    await expect(row).toContainText("IMAGE");
+    await expect(row).toContainText("FACEBOOK");
+    await expect(row).toContainText("Active");
+    await expect(row).not.toContainText("VIDEO");
+
+    await row.getByRole("button").click();
+    await expect(page.getByTestId("drawer-format")).toHaveText("IMAGE");
+    await expect(page.getByTestId("drawer-active")).toHaveText("Active");
+    // History carries both runs even though the snapshot shows one.
+    await expect(page.getByTestId("observation-history").locator("tbody tr")).toHaveCount(2);
+  });
+
+  test("a partial import says so instead of rounding it away", async ({ page }) => {
+    await page.goto("/import");
+    await page.getByTestId("category-select").selectOption({ label: CATEGORY });
+    await page.getByTestId("file-input").setInputFiles(join(TMP, "partial.json"));
+    await page.getByTestId("preview-button").click();
+    await expect(page.getByTestId("partial-warning")).toBeVisible();
+    await expect(page.getByTestId("preview-quarantine")).toHaveText("1");
+
+    await page.getByTestId("dataset-name").fill("e2e-partial");
+    await page.getByTestId("commit-button").click();
+    await page.waitForURL(/\/datasets\//);
+    await expect(page.getByTestId("context-status")).toHaveText("partial");
+    await expect(page.getByTestId("context-quarantine")).toHaveText("1");
+    await expect(page.getByTestId("partial-banner")).toBeVisible();
+  });
+
+  test("an unreadable file is rejected before anything is written", async ({ page }) => {
+    await page.goto("/import");
+    await page.getByTestId("file-input").setInputFiles(join(TMP, "invalid.json"));
+    await page.getByTestId("preview-button").click();
+    await expect(page.getByTestId("import-error")).toContainText("malformed_json");
+    await expect(page.getByTestId("preview-panel")).toHaveCount(0);
+  });
+
+  test("unknown stays unknown and missing fields render as —", async ({ page }) => {
+    await importFile(page, join(TMP, "small-unknown.json"), "e2e-unknown");
+    const row = page.getByTestId("ads-table").locator("tbody tr").first();
+    await expect(row).toContainText("ไม่ทราบ");
+
+    // Unknown is filterable in its own right, not folded into inactive.
+    await page.getByTestId("f-active").selectOption("inactive");
+    await expect(page.getByTestId("explorer-empty")).toBeVisible();
+    await page.getByTestId("f-active").selectOption("unknown");
+    await expect(page.getByTestId("ads-table").locator("tbody tr")).toHaveCount(1);
+
+    await page.getByTestId("ads-table").locator("tbody tr").first().getByRole("button").click();
+    await expect(page.getByTestId("drawer-format")).toHaveText("—");
+    await expect(page.getByTestId("drawer-active")).toHaveText("—");
+    await expect(page.getByTestId("media-placeholder")).toBeVisible();
+  });
+
+  test("media that will not load says so instead of showing a broken frame", async ({ page }) => {
+    // Meta's CDN URLs expire; the drawer must survive that, not blank out.
+    await page.route("**/*", (route) =>
+      route.request().resourceType() === "image" ? route.abort() : route.continue(),
+    );
+    await importFile(page, GOLDEN, "e2e-media");
+    await page.getByTestId("ads-table").locator("tbody tr").first().getByRole("button").click();
+    await expect(page.getByTestId("ad-drawer")).toBeVisible();
+    const media = page.getByTestId("media-unavailable").or(page.getByTestId("media-placeholder"));
+    await expect(media.first()).toBeVisible();
+  });
+
+  test("an ad outside the dataset is a 404, not the latest state", async ({ page }) => {
+    const oldUrl = await importFile(page, join(TMP, "small-old.json"), "e2e-404-a");
+    const datasetId = oldUrl.split("/").pop()!;
+    const response = await page.request.get(
+      `/api/ads/000000000000000?datasetId=${datasetId}`,
+    );
+    expect(response.status()).toBe(404);
+  });
+});
+
+test.describe("viewer", () => {
+  test.use({ storageState: join(AUTH, "viewer.json") });
+
+  test("cannot import, and the server refuses even without the form", async ({ page }) => {
+    await page.goto("/import");
+    await expect(page.getByTestId("viewer-notice")).toBeVisible();
+    await expect(page.getByTestId("file-input")).toHaveCount(0);
+
+    const response = await page.request.post("/api/imports/commit", {
+      multipart: { file: { name: "x.json", mimeType: "application/json", buffer: Buffer.from("{}") } },
+    });
+    expect(response.status()).toBe(403);
+  });
+});
