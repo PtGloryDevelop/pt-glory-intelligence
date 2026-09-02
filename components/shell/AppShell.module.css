@@ -58,7 +58,7 @@
   color: var(--muted);
   padding: 14px 10px 6px;
 }
-.rail .heading { text-align: center; padding-left: 0; padding-right: 0; font-size: 9px; }
+.rail .heading { text-align: center; padding-left: 0; padding-right: 0; font-size: 9px; overflow: hidden; }
 
 .item,
 .disabled {
@@ -152,7 +152,7 @@
   .sidebar .brandText,
   .sidebar .label { display: none; }
   .sidebar .item, .sidebar .disabled { justify-content: center; padding-left: 0; padding-right: 0; }
-  .sidebar .heading { text-align: center; padding-left: 0; padding-right: 0; font-size: 9px; }
+  .sidebar .heading { text-align: center; padding-left: 0; padding-right: 0; font-size: 9px; overflow: hidden; }
   .sidebar .footer { text-align: center; padding: 12px 4px; }
   .collapse { display: none; }
 }

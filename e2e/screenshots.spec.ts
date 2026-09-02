@@ -32,7 +32,7 @@ test.describe("visual capture", () => {
       await page.setViewportSize(viewport);
       await page.goto("/login");
       await page.waitForLoadState("networkidle");
-      await page.screenshot({ path: shot(`login-${viewport.name}`), fullPage: true });
+      await page.screenshot({ path: shot(`login-${viewport.name}`), fullPage: true, animations: "disabled" });
     }
   });
 
@@ -59,7 +59,7 @@ test.describe("visual capture", () => {
       ] as const) {
         await page.goto(url);
         await page.waitForLoadState("networkidle");
-        await page.screenshot({ path: shot(`${name}-${viewport.name}`), fullPage: true });
+        await page.screenshot({ path: shot(`${name}-${viewport.name}`), fullPage: true, animations: "disabled" });
       }
     }
 
@@ -67,12 +67,12 @@ test.describe("visual capture", () => {
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto("/datasets");
     await page.getByRole("button", { name: "« ย่อเมนู" }).click();
-    await page.screenshot({ path: shot("sidebar-rail-1440"), fullPage: false });
+    await page.screenshot({ path: shot("sidebar-rail-1440"), fullPage: false, animations: "disabled" });
 
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto("/datasets");
     await page.getByRole("button", { name: "เปิดเมนู" }).click();
-    await page.screenshot({ path: shot("sidebar-open-375"), fullPage: false });
+    await page.screenshot({ path: shot("sidebar-open-375"), fullPage: false, animations: "disabled" });
 
     await context.close();
   });
@@ -85,7 +85,7 @@ test.describe("visual capture", () => {
     const page = await context.newPage();
     await page.goto("/import");
     await page.getByTestId("viewer-notice").waitFor();
-    await page.screenshot({ path: shot("import-viewer-1440"), fullPage: true });
+    await page.screenshot({ path: shot("import-viewer-1440"), fullPage: true, animations: "disabled" });
     await context.close();
   });
 });

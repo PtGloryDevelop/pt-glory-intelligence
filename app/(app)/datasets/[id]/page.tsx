@@ -50,6 +50,7 @@ export default async function DatasetPage({ params }: { params: Promise<{ id: st
       ) : null}
 
       <h2>คุณภาพข้อมูล</h2>
+      <div style={{ overflowX: "auto" }}>
       <table data-testid="quality-strip">
         <thead>
           <tr><th>ฟิลด์</th><th>พบ / ทั้งหมด</th><th>สัดส่วน</th><th>ระดับ</th></tr>
@@ -73,6 +74,7 @@ export default async function DatasetPage({ params }: { params: Promise<{ id: st
           ))}
         </tbody>
       </table>
+      </div>
 
       <Explorer datasetId={id} />
     </>

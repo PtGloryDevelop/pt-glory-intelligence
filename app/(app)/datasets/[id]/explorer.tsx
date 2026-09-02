@@ -110,6 +110,9 @@ export function Explorer({ datasetId }: { datasetId: string }) {
       ) : null}
 
       {rows.length ? (
+        // Eight columns do not fit a phone, and without this the whole page
+        // scrolls sideways and drags the shell out of alignment with it.
+        <div style={{ overflowX: "auto" }}>
         <table data-testid="ads-table">
           <thead>
             <tr>
@@ -139,6 +142,7 @@ export function Explorer({ datasetId }: { datasetId: string }) {
             ))}
           </tbody>
         </table>
+        </div>
       ) : null}
 
       <div style={{ display: "flex", gap: 8, marginTop: 12 }}>

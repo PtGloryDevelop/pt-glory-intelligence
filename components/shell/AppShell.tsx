@@ -45,6 +45,10 @@ export function AppShell({ role, children }: { role: string; children: React.Rea
                     className={[styles.item, isActive(item.href) ? styles.active : ""].join(" ")}
                     aria-current={isActive(item.href) ? "page" : undefined}
                     data-testid={`nav-${item.href}`}
+                    // In rail mode the label is display:none, which would leave
+                    // the link with no accessible name and nothing but a dot to
+                    // identify it. The title carries both.
+                    title={item.label}
                     onClick={() => setOpen(false)}
                   >
                     <span className={styles.dot} aria-hidden />
@@ -57,7 +61,7 @@ export function AppShell({ role, children }: { role: string; children: React.Rea
                     key={item.label}
                     className={styles.disabled}
                     aria-disabled="true"
-                    title="ยังไม่เปิดใช้งานในเฟสนี้"
+                    title={`${item.label} — ยังไม่เปิดใช้งานในเฟสนี้`}
                   >
                     <span className={styles.dot} aria-hidden />
                     <span className={styles.label}>{item.label}</span>
