@@ -230,7 +230,7 @@ Main visual direction:
 
 - Thai-first language
 - warm cream/off-white background
-- gold accent
+- orange accent `#F26522` (Amendment A1, 2026-09-02 — replaces the former gold accent)
 - dark text
 - left sidebar
 - compact context bar

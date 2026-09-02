@@ -4,7 +4,7 @@
 
 - Light theme
 - warm cream/off-white background
-- gold accent
+- orange accent `#F26522` — see Amendment A1 in `docs/PT_GLORY_UI_HANDOFF.md` (gold retired 2026-09-02)
 - dark readable typography
 - rounded cards with restrained borders/shadows
 - dense analytical layout without decorative clutter

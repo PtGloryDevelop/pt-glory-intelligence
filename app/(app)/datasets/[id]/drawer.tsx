@@ -51,8 +51,8 @@ export function AdDrawer({ adArchiveId, datasetId, onClose }: {
       role="dialog" aria-label="รายละเอียดโฆษณา" data-testid="ad-drawer"
       style={{
         position: "fixed", top: 0, right: 0, bottom: 0, width: "min(520px, 100vw)",
-        overflowY: "auto", background: "var(--cream, #fdfaf3)",
-        borderLeft: "1px solid rgba(0,0,0,.12)", padding: 20, zIndex: 20,
+        overflowY: "auto", background: "var(--surface)",
+        borderLeft: "1px solid var(--line)", padding: 20, zIndex: 20,
       }}
     >
       <button type="button" data-testid="drawer-close" onClick={onClose} style={{ minHeight: 44 }}>
