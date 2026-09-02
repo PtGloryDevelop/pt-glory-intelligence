@@ -16,9 +16,9 @@ test("every up migration has a matching down migration", () => {
   }
 });
 
-test("migrations are numbered 0001..0018 with no gaps", () => {
+test("migrations are numbered 0001..0019 with no gaps", () => {
   const numbers = up.map((f) => Number(f.slice(0, 4)));
-  assert.deepEqual(numbers, Array.from({ length: 18 }, (_, i) => i + 1));
+  assert.deepEqual(numbers, Array.from({ length: 19 }, (_, i) => i + 1));
 });
 
 test("all 13 tables are created", () => {
@@ -136,4 +136,16 @@ test("RLS is enabled on all 13 tables", () => {
   const sql = read("0016_rls_policies.sql");
   const enabled = [...sql.matchAll(/alter table public\.(\w+)\s+enable row level security/g)];
   assert.equal(enabled.length, 13);
+});
+
+test("read functions are not left on Postgres defaults", () => {
+  // Both halves matter: PUBLIC gets EXECUTE from Postgres itself, and Supabase
+  // adds a per-role grant to anon that revoking from PUBLIC does not remove.
+  const sql = read("0019_read_function_permissions.sql");
+  assert.match(sql, /revoke all on function %s from public/);
+  assert.match(sql, /revoke all on function %s from anon/);
+  assert.match(sql, /revoke all on function public[.]current_user_role[(][)] from anon/);
+  assert.match(sql, /grant execute on function %s to authenticated/);
+  assert.match(sql, /alter function %s set search_path = public, pg_temp/);
+  assert.doesNotMatch(sql, /security definer/i, "these must stay SECURITY INVOKER");
 });

@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { commitImport } from "@/lib/import/commit";
 import { previewImport } from "@/lib/import/preview";
+import { readUpload } from "@/lib/import/upload";
+import { isUuid } from "@/lib/read/request";
 import { requireRole } from "@/lib/auth/roles";
 import { AuthorizationError } from "@/lib/auth/role-model";
 
@@ -20,17 +22,23 @@ export async function POST(request: NextRequest) {
   }
 
   const form = await request.formData();
-  const file = form.get("file");
   const categoryId = String(form.get("categoryId") ?? "");
   const datasetName = String(form.get("datasetName") ?? "").trim();
-  if (!(file instanceof File)) {
-    return NextResponse.json({ error: "file is required" }, { status: 400 });
-  }
+  const upload = await readUpload(form.get("file"));
+  if (!upload.ok) return upload.response;
   if (!categoryId || !datasetName) {
     return NextResponse.json({ error: "categoryId and datasetName are required" }, { status: 400 });
   }
+  // Checked here so a malformed id is a 400, not a database syntax error that
+  // the generic 500 below would flatten into "import failed".
+  if (!isUuid(categoryId)) {
+    return NextResponse.json({ error: "categoryId must be a UUID" }, { status: 400 });
+  }
+  if (datasetName.length > 200) {
+    return NextResponse.json({ error: "datasetName is too long" }, { status: 400 });
+  }
 
-  const preview = await previewImport(await file.text());
+  const preview = await previewImport(upload.text);
   if (!preview.ok) {
     return NextResponse.json({ reason: preview.reason, detail: preview.detail }, { status: 422 });
   }

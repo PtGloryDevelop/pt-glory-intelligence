@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { previewImport } from "@/lib/import/preview";
+import { readUpload } from "@/lib/import/upload";
 import { requireRole } from "@/lib/auth/roles";
 import { AuthorizationError } from "@/lib/auth/role-model";
 
@@ -17,12 +18,10 @@ export async function POST(request: NextRequest) {
   }
 
   const form = await request.formData();
-  const file = form.get("file");
-  if (!(file instanceof File)) {
-    return NextResponse.json({ error: "file is required" }, { status: 400 });
-  }
+  const upload = await readUpload(form.get("file"));
+  if (!upload.ok) return upload.response;
 
-  const result = await previewImport(await file.text());
+  const result = await previewImport(upload.text);
   if (!result.ok) {
     // The server owns the reject decision; the client only displays it.
     return NextResponse.json({ reason: result.reason, detail: result.detail }, { status: 422 });
@@ -30,5 +29,5 @@ export async function POST(request: NextRequest) {
 
   const { canonical, ...rest } = result;
   void canonical;
-  return NextResponse.json({ fileName: file.name, ...rest });
+  return NextResponse.json({ fileName: upload.name, ...rest });
 }

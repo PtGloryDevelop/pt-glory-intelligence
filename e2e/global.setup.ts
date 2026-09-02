@@ -114,6 +114,21 @@ function writeFixtures() {
     }),
   ));
 
+  // The uploaded JSON is untrusted. These values must reach the page as text
+  // and as a filtered-out media URL, never as markup or a navigable scheme.
+  writeFileSync(join(TMP, "xss.json"), JSON.stringify(
+    single("2026-08-14T00:00:00.000Z", {
+      ad_archive_id: "700000000000004",
+      title: "<script>window.__pwned = 'title'</script>",
+      body_text: "<img src=x onerror=\"window.__pwned='body'\">ลดน้ำหนัก",
+      caption: "<svg onload=\"window.__pwned='caption'\">",
+      link_url: "javascript:window.__pwned='link'",
+      cta_text: "</td></tr><script>window.__pwned='cta'</script>",
+      images: [{ url: "javascript:window.__pwned='img'" }, { url: "data:text/html,<script>1</script>" }],
+      videos: [], cards: [],
+    }),
+  ));
+
   // One row without an ad_archive_id: importable in part, so the run lands as partial.
   const noId: Record<string, unknown> = { ...template, page_id: "999888777666" };
   delete noId.ad_archive_id;

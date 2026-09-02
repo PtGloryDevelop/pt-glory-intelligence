@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { join } from "node:path";
 import { AUTH, CATEGORY, TMP } from "./constants.ts";
+import { resetData } from "./db.ts";
 
 const analyst = { storageState: join(AUTH, "analyst.json") };
 const GOLDEN = "tests/fixtures/golden-500.json";
@@ -20,6 +21,11 @@ async function importFile(page: Page, file: string, datasetName: string) {
 
 test.describe("import to explorer to drawer", () => {
   test.use(analyst);
+
+  // Other spec files import into the same database; this journey asserts on
+  // absolute state ("no datasets yet", "exactly two observations"), so it needs
+  // its own floor rather than whatever ran before it.
+  test.beforeAll(resetData);
 
   test("the full journey on the real 500-ad export", async ({ page }) => {
     await page.goto("/import");

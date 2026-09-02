@@ -1,5 +1,7 @@
-import { NextResponse, type NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
 import { getAdDetail, getObservationHistory } from "@/lib/read/queries";
+import { badRequest, notFound, readRoute } from "@/lib/read/guard";
+import { isAdArchiveId, isUuid } from "@/lib/read/request";
 
 export const runtime = "nodejs";
 
@@ -10,11 +12,16 @@ export async function GET(
   const { adArchiveId } = await params;
   const datasetId = request.nextUrl.searchParams.get("datasetId");
 
-  const detail = await getAdDetail(adArchiveId, datasetId);
-  // Asking for an ad in a dataset it does not belong to is a wrong request, not
-  // one to guess at. Falling back to master state here would quietly show
-  // latest values under a snapshot heading.
-  if (!detail) return NextResponse.json({ error: "not found" }, { status: 404 });
+  return readRoute(async () => {
+    if (!isAdArchiveId(adArchiveId)) return badRequest("ad id must be numeric");
+    if (datasetId !== null && !isUuid(datasetId)) return badRequest("datasetId must be a UUID");
 
-  return NextResponse.json({ detail, history: await getObservationHistory(adArchiveId) });
+    const detail = await getAdDetail(adArchiveId, datasetId);
+    // Asking for an ad in a dataset it does not belong to is a wrong request,
+    // not one to guess at. Falling back to master state here would quietly show
+    // latest values under a snapshot heading.
+    if (!detail) return notFound();
+
+    return { detail, history: await getObservationHistory(adArchiveId) };
+  });
 }
