@@ -1,0 +1,58 @@
+.stepper {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 6px;
+  list-style: none;
+  margin: 0 0 var(--gap-section);
+  padding: 0;
+}
+
+.done, .current, .todo, .error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  font-size: var(--fs-meta);
+  font-weight: 600;
+  color: var(--muted);
+  min-width: 0;
+}
+
+/* Current step is the orange fill with a charcoal label — the same primary
+   treatment the CTA uses, because it is the step the user is on. */
+.current { background: var(--brand-tint-strong); border-color: var(--brand); color: var(--ink); }
+.done { background: var(--ok-tint); border-color: rgba(47, 93, 46, 0.25); color: var(--ok-ink); }
+.error { background: var(--danger-tint); border-color: rgba(179, 38, 30, 0.3); color: var(--danger); }
+
+.mark {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  border-radius: 50%;
+  background: rgba(44, 36, 31, 0.08);
+  font-size: 11px;
+  font-weight: 700;
+}
+.current .mark { background: var(--brand); color: var(--ink); }
+
+.label { white-space: nowrap; }
+
+/* Visible to assistive tech only: the step state must not live in colour alone. */
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .stepper { gap: 6px 4px; }
+  .done, .current, .todo, .error { padding: 6px 10px; }
+}

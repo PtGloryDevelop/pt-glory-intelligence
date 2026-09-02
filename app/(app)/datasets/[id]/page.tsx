@@ -1,9 +1,12 @@
 import { notFound } from "next/navigation";
-import { getDatasetContext, getDatasetQuality, type QualityRow } from "@/lib/read/queries";
+import { getDatasetContext, getDatasetQuality } from "@/lib/read/queries";
 import { PageHeader } from "@/components/shell/PageHeader";
 import { ContextBar } from "@/components/ContextBar";
 import { QualityBadge } from "@/components/QualityBadge";
-import { ErrorState } from "@/components/states/ErrorState";
+import { QualityStrip } from "@/components/QualityStrip";
+import { worstTier } from "@/lib/domain/quality-tier";
+import { KPIRow, KPIStat } from "@/components/KPIStat";
+import { PartialBanner } from "@/components/PartialBanner";
 import { Explorer } from "./explorer";
 
 export const dynamic = "force-dynamic";
@@ -33,63 +36,55 @@ export default async function DatasetPage({ params }: { params: Promise<{ id: st
           { label: "เก็บเมื่อ", value: new Date(context.collected_at).toLocaleString("th-TH") },
           { label: "สถานะรอบ", value: context.run_status, testId: "context-status" },
           { label: "Ads", value: String(context.ads_in_dataset), testId: "context-ads" },
-          { label: "Pages", value: String(context.computed_unique_pages), testId: "context-pages" },
+          // Run-level, not dataset-level: this counts every page in the collection
+          // run, including pages that only appear on quarantined rows. The dataset
+          // list column counts pages reachable from this dataset's ads, so the two
+          // legitimately differ on a partial run and each says which it is.
+          { label: "Pages (รอบเก็บ)", value: String(context.computed_unique_pages), testId: "context-pages" },
           { label: "กันไว้ตรวจ", value: String(context.quarantine_count), testId: "context-quarantine" },
           { label: "คุณภาพข้อมูล", value: <QualityBadge tier={worstTier(quality)} /> },
         ]}
       />
 
+      {/* Both numbers come from the run itself; nothing here is counted in the
+          browser, and the banner is amber because a partial run is readable. */}
       {context.run_status === "partial" ? (
-        <div style={{ marginBottom: "var(--gap-section)" }}>
-          <ErrorState
-            testId="partial-banner"
-            title={`รอบนี้นำเข้าได้บางส่วน — มี ${context.quarantine_count} แถวที่กันไว้ตรวจ`}
-            detail={`ตัวเลขทั้งหมดด้านล่างนับเฉพาะ ${context.ads_in_dataset} โฆษณาที่นำเข้าสำเร็จ`}
-          />
-        </div>
+        <PartialBanner
+          importedAds={Number(context.ads_in_dataset)}
+          quarantined={Number(context.quarantine_count)}
+        />
       ) : null}
 
+      <KPIRow>
+        <KPIStat label="Ads" value={context.ads_in_dataset} helper="ในชุดข้อมูลนี้" />
+        <KPIStat
+          label="Pages (รอบเก็บ)"
+          value={context.computed_unique_pages}
+          helper="นับทั้งรอบเก็บ รวมแถวที่กันไว้ตรวจ"
+        />
+        <KPIStat label="เก็บเมื่อ" value={new Date(context.collected_at).toLocaleString("th-TH")} />
+        <KPIStat
+          label="สถานะรอบ"
+          value={context.run_status}
+          helper={`กันไว้ตรวจ ${context.quarantine_count} แถว`}
+          status={<QualityBadge tier={worstTier(quality)} />}
+        />
+      </KPIRow>
+
       <h2>คุณภาพข้อมูล</h2>
-      <div style={{ overflowX: "auto" }}>
-      <table data-testid="quality-strip">
-        <thead>
-          <tr><th>ฟิลด์</th><th>พบ / ทั้งหมด</th><th>สัดส่วน</th><th>ระดับ</th></tr>
-        </thead>
-        <tbody>
-          {quality.map((row) => (
-            <tr key={row.field} data-testid={`quality-${row.field}`}>
-              <td>{row.field}</td>
-              {/* Denominator always travels with the percentage. */}
-              <td>{row.present_count} / {row.total_count}</td>
-              <td>{(Number(row.coverage) * 100).toFixed(1)}%</td>
-              <td>
-                <QualityBadge tier={row.tier} />
-                {row.tier !== "normal" ? (
-                  <span data-testid={`quality-warning-${row.field}`} style={{ color: "var(--muted)", fontSize: "var(--fs-meta)" }}>
-                    {" "}อ้างได้เฉพาะในกลุ่มที่อ่านค่าได้ ไม่ใช่ทั้งชุดข้อมูล
-                  </span>
-                ) : null}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      </div>
+      <QualityStrip
+        testId="quality-strip"
+        rows={quality.map((row) => ({
+          field: row.field,
+          presentCount: row.present_count,
+          totalCount: row.total_count,
+          coverage: Number(row.coverage),
+          tier: row.tier,
+        }))}
+      />
 
       <Explorer datasetId={id} />
     </>
   );
 }
 
-/**
- * The context bar's single quality chip.
- *
- * Deliberately the worst tier present, not an average: averaging coverage across
- * fields would invent a number that describes no field, and a dataset is only as
- * trustworthy as its weakest measured field.
- */
-function worstTier(quality: QualityRow[]): "normal" | "partial" | "low" {
-  if (quality.some((row) => row.tier === "low")) return "low";
-  if (quality.some((row) => row.tier === "partial")) return "partial";
-  return "normal";
-}

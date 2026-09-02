@@ -77,6 +77,79 @@ test.describe("visual capture", () => {
     await context.close();
   });
 
+  /**
+   * V2 surfaces: every import phase that has its own presentation, and the
+   * dataset detail in both completed and partial shape.
+   */
+  test("import phases and the partial dataset", async ({ browser }) => {
+    await resetData();
+    const context = await browser.newContext({ storageState: join(AUTH, "analyst.json") });
+    const page = await context.newPage();
+    await page.setViewportSize({ width: 1440, height: 1000 });
+
+    const shoot = (name: string) =>
+      page.screenshot({ path: shot(name), fullPage: true, animations: "disabled" });
+
+    // idle — the drop zone before a file is chosen.
+    await page.goto("/import");
+    await shoot("import-phase-idle-1440");
+
+    // rejected — validation refused the file.
+    await page.getByTestId("file-input").setInputFiles(join(TMP, "invalid.json"));
+    await page.getByTestId("preview-button").click();
+    await page.getByTestId("import-error").waitFor();
+    await shoot("import-phase-rejected-1440");
+
+    // preview — the panel with stats, counts and the quality strip.
+    await page.getByTestId("category-select").selectOption({ label: CATEGORY });
+    await page.getByTestId("file-input").setInputFiles(join(TMP, "small-old.json"));
+    await page.getByTestId("preview-button").click();
+    await page.getByTestId("preview-panel").waitFor();
+    await shoot("import-phase-preview-1440");
+    for (const viewport of VIEWPORTS) {
+      await page.setViewportSize(viewport);
+      await shoot(`import-preview-${viewport.name}`);
+    }
+
+    // A completed dataset, then the same page for a partial run.
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.getByTestId("dataset-name").fill("visual-completed");
+    await page.getByTestId("commit-button").click();
+    await page.waitForURL(/\/datasets\/[0-9a-f-]{36}/);
+    const completedUrl = page.url();
+
+    await page.goto("/import");
+    await page.getByTestId("category-select").selectOption({ label: CATEGORY });
+    await page.getByTestId("file-input").setInputFiles(join(TMP, "partial.json"));
+    await page.getByTestId("preview-button").click();
+    await page.getByTestId("partial-warning").waitFor();
+    await shoot("import-preview-partial-1440");
+    await page.getByTestId("dataset-name").fill("visual-partial");
+    await page.getByTestId("commit-button").click();
+    await page.waitForURL(/\/datasets\/[0-9a-f-]{36}/);
+    const partialUrl = page.url();
+
+    for (const viewport of VIEWPORTS) {
+      await page.setViewportSize(viewport);
+      await page.goto(completedUrl);
+      await page.getByTestId("quality-strip").waitFor();
+      await shoot(`dataset-completed-${viewport.name}`);
+      await page.goto(partialUrl);
+      await page.getByTestId("partial-banner").waitFor();
+      await shoot(`dataset-partial-${viewport.name}`);
+      await page.goto("/datasets");
+      await shoot(`dataset-list-${viewport.name}`);
+    }
+
+    // The full field table, opened.
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto(completedUrl);
+    await page.getByTestId("quality-strip-more").locator("summary").click();
+    await shoot("quality-strip-expanded-1440");
+
+    await context.close();
+  });
+
   test("viewer sees no import form", async ({ browser }) => {
     const context = await browser.newContext({
       storageState: join(AUTH, "viewer.json"),

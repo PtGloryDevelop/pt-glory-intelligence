@@ -1,0 +1,16 @@
+/*
+ * Amber, from the same warning tokens the "partial" quality tier uses, so one
+ * meaning has one colour across the app. Charcoal-dark text on the tint, never
+ * amber text on cream.
+ */
+.banner {
+  background: var(--warn-tint);
+  border: 1px solid rgba(138, 90, 0, 0.3);
+  border-left: 4px solid var(--warn-ink);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  margin-bottom: var(--gap-section);
+}
+
+.title { color: var(--warn-ink); display: block; }
+.body { color: var(--ink); font-size: var(--fs-meta); margin: 4px 0 0; }

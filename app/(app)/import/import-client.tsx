@@ -1,9 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { QualityBadge } from "@/components/QualityBadge";
+import { ImportStepper, type ImportPhase } from "@/components/ImportStepper";
+import { KPIRow, KPIStat } from "@/components/KPIStat";
+import { PartialBanner } from "@/components/PartialBanner";
+import { QualityStrip, type QualityItem } from "@/components/QualityStrip";
 import { ErrorState } from "@/components/states/ErrorState";
+import styles from "./import.module.css";
 
 type Coverage = { field: string; presentCount: number; totalCount: number; coverage: number; tier: string };
 type Counts = {
@@ -19,18 +23,26 @@ type Preview = {
   coverage: Coverage[];
   willBePartial: boolean;
 };
-type Phase = "idle" | "validating" | "preview" | "committing" | "success" | "rejected" | "failed";
 
 const FIELD = { display: "grid", gap: 6, marginBottom: 12 } as const;
 
 export function ImportClient({ categories }: { categories: { id: string; name: string }[] }) {
   const router = useRouter();
-  const [phase, setPhase] = useState<Phase>("idle");
+  const [phase, setPhase] = useState<ImportPhase>("idle");
   const [file, setFile] = useState<File | null>(null);
   const [categoryId, setCategoryId] = useState(categories[0]?.id ?? "");
   const [datasetName, setDatasetName] = useState("");
   const [preview, setPreview] = useState<Preview | null>(null);
   const [problem, setProblem] = useState<{ reason: string; detail: string } | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  function take(next: File | null) {
+    setFile(next);
+    setPhase("idle");
+    setPreview(null);
+    setProblem(null);
+  }
 
   async function runPreview() {
     if (!file) return;
@@ -67,12 +79,18 @@ export function ImportClient({ categories }: { categories: { id: string; name: s
       setPhase(response.status === 422 ? "rejected" : "failed");
       return;
     }
-    setPhase("success");
+    // The run's own status decides this, not the preview's guess.
+    setPhase(payload.status === "partial" ? "partial" : "success");
     router.push(`/datasets/${payload.datasetId}`);
   }
 
+  const showPreview = preview
+    && (phase === "preview" || phase === "committing" || phase === "success" || phase === "partial");
+
   return (
     <div data-testid="import-surface">
+      <ImportStepper phase={phase} />
+
       <div style={FIELD}>
         <label htmlFor="category">หมวดหมู่</label>
         <select
@@ -86,12 +104,33 @@ export function ImportClient({ categories }: { categories: { id: string; name: s
         </select>
       </div>
 
-      <div style={FIELD}>
-        <label htmlFor="file">ไฟล์ JSON จาก Extension</label>
+      {/*
+        Drop zone presentation over the same native input. The input is still a
+        real <input type="file"> in the DOM, so the file dialog, keyboard access
+        and the existing upload path are all unchanged.
+      */}
+      <div
+        className={`${styles.drop} ${dragging ? styles.dropActive : ""}`}
+        data-testid="file-dropzone"
+        onDragOver={(event) => { event.preventDefault(); setDragging(true); }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={(event) => {
+          event.preventDefault();
+          setDragging(false);
+          take(event.dataTransfer.files?.[0] ?? null);
+        }}
+        onClick={() => inputRef.current?.click()}
+      >
+        <div className={styles.dropTitle}>ลากไฟล์ JSON มาวางที่นี่</div>
+        <div className={styles.dropHint}>หรือกดเพื่อเลือกไฟล์จากเครื่อง · ไฟล์จาก PT Glory Extension เท่านั้น</div>
+        <label htmlFor="file" className={styles.dropLabel}>ไฟล์ JSON จาก Extension</label>
         <input
-          id="file" data-testid="file-input" type="file" accept="application/json"
-          onChange={(event) => { setFile(event.target.files?.[0] ?? null); setPhase("idle"); setPreview(null); }}
+          id="file" ref={inputRef} data-testid="file-input" type="file" accept="application/json"
+          className={styles.dropInput}
+          onClick={(event) => event.stopPropagation()}
+          onChange={(event) => take(event.target.files?.[0] ?? null)}
         />
+        {file ? <div className={styles.dropFile} data-testid="chosen-file">{file.name}</div> : null}
       </div>
 
       <button
@@ -109,49 +148,65 @@ export function ImportClient({ categories }: { categories: { id: string; name: s
         />
       ) : null}
 
-      {preview && (phase === "preview" || phase === "committing" || phase === "success") ? (
+      {showPreview && preview ? (
         <section data-testid="preview-panel" style={{ marginTop: 20 }}>
           <h2>ผลการตรวจ (ยังไม่บันทึกลงฐานข้อมูล)</h2>
+
+          {/* Server-computed counts only. The component does no arithmetic. */}
+          <KPIRow testId="preview-stats">
+            <KPIStat label="Ads" value={<span data-testid="preview-ads">{preview.counts.ads}</span>} />
+            <KPIStat label="Pages" value={<span data-testid="preview-pages">{preview.counts.pages}</span>} />
+            <KPIStat label="ใหม่ / เคยมีอยู่แล้ว"
+              value={<span data-testid="preview-new">{preview.counts.newAds}</span>}
+              helper={<>เคยมีอยู่แล้ว <span data-testid="preview-existing">{preview.counts.existingAds}</span></>} />
+            <KPIStat label="กันไว้ตรวจ"
+              value={<span data-testid="preview-quarantine">{preview.counts.quarantine}</span>}
+              helper="แถวที่นำเข้าไม่ได้" />
+          </KPIRow>
+
           <dl style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 16px" }}>
             <dt>ไฟล์</dt><dd data-testid="preview-filename">{preview.fileName}</dd>
             <dt>คำค้น</dt><dd>{preview.scope.query ?? "—"}</dd>
             <dt>ประเทศ</dt><dd>{preview.scope.country ?? "—"}</dd>
             <dt>วิธีเก็บ</dt><dd data-testid="preview-method">{preview.scope.collectionMethod}</dd>
             <dt>เก็บเมื่อ</dt><dd>{preview.scope.collectedAt}</dd>
-            <dt>Ads</dt><dd data-testid="preview-ads">{preview.counts.ads}</dd>
-            <dt>Pages</dt><dd data-testid="preview-pages">{preview.counts.pages}</dd>
-            <dt>เคยมีอยู่แล้ว</dt><dd data-testid="preview-existing">{preview.counts.existingAds}</dd>
-            <dt>ใหม่</dt><dd data-testid="preview-new">{preview.counts.newAds}</dd>
-            <dt>กันไว้ตรวจ (quarantine)</dt><dd data-testid="preview-quarantine">{preview.counts.quarantine}</dd>
           </dl>
 
           <h3>ตัวเลขที่ collector รายงาน เทียบกับที่เซิร์ฟเวอร์นับเอง</h3>
-          <table data-testid="counts-table">
-            <thead><tr><th>ฟิลด์</th><th>collector รายงาน</th><th>เซิร์ฟเวอร์นับได้</th></tr></thead>
-            <tbody>
-              {Object.keys(preview.computed).map((key) => (
-                <tr key={key}>
-                  <td>{key}</td>
-                  <td>{preview.reported[key]}</td>
-                  <td><strong>{preview.computed[key]}</strong></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div style={{ overflowX: "auto" }}>
+            <table data-testid="counts-table">
+              <thead><tr><th>ฟิลด์</th><th>collector รายงาน</th><th>เซิร์ฟเวอร์นับได้</th></tr></thead>
+              <tbody>
+                {Object.keys(preview.computed).map((key) => (
+                  <tr key={key}>
+                    <td>{key}</td>
+                    <td>{preview.reported[key]}</td>
+                    <td><strong>{preview.computed[key]}</strong></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           <p style={{ color: "var(--muted)", fontSize: 13 }}>
             ตัวเลขของระบบคือคอลัมน์ขวา · ถ้าสองฝั่งไม่ตรงกัน เซิร์ฟเวอร์จะปฏิเสธไฟล์ตั้งแต่ขั้นตรวจ
           </p>
 
           {preview.willBePartial ? (
-            <p role="status" data-testid="partial-warning">
-              มีแถวที่นำเข้าไม่ได้ {preview.counts.quarantine} แถว
-              ({Object.entries(preview.counts.quarantineReasons).map(([reason, n]) => `${reason} ${n}`).join(" · ")})
-              — แถวที่เหลือยังนำเข้าได้ และรอบนี้จะถูกบันทึกเป็นสถานะ <strong>partial</strong>
-            </p>
+            <PartialBanner
+              testId="partial-warning"
+              importedAds={preview.counts.ads}
+              quarantined={preview.counts.quarantine}
+              reasons={preview.counts.quarantineReasons}
+            />
           ) : null}
 
           <h3>ความครอบคลุมของข้อมูล</h3>
-          <CoverageTable rows={preview.coverage} />
+          <QualityStrip
+            testId="coverage-table"
+            rowPrefix="coverage"
+            warningPrefix="warning"
+            rows={preview.coverage as QualityItem[]}
+          />
 
           <div style={FIELD}>
             <label htmlFor="dataset-name">ชื่อชุดข้อมูล</label>
@@ -171,35 +226,5 @@ export function ImportClient({ categories }: { categories: { id: string; name: s
         </section>
       ) : null}
     </div>
-  );
-}
-
-export function CoverageTable({ rows }: { rows: Coverage[] }) {
-  return (
-    <table data-testid="coverage-table">
-      <thead>
-        <tr><th>ฟิลด์</th><th>พบ / ทั้งหมด</th><th>สัดส่วน</th><th>ระดับ</th></tr>
-      </thead>
-      <tbody>
-        {rows.map((row) => (
-          <tr key={row.field} data-testid={`coverage-${row.field}`}>
-            <td>{row.field}</td>
-            {/* A percentage without its denominator is not a fact anyone can check. */}
-            <td>{row.presentCount} / {row.totalCount}</td>
-            <td>{(row.coverage * 100).toFixed(1)}%</td>
-            <td>
-              <QualityBadge tier={row.tier} />
-              {row.tier === "low" ? (
-                <span
-                  data-testid={`warning-${row.field}`}
-                  title="ต่ำกว่า 50% — อ้างผลรวมทั้งชุดไม่ได้"
-                  style={{ color: "var(--muted)", fontSize: "var(--fs-meta)" }}
-                > ใช้ได้เฉพาะส่วนที่อ่านได้</span>
-              ) : null}
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
   );
 }

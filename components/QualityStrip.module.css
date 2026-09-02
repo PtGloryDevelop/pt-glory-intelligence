@@ -1,0 +1,64 @@
+.wrap { margin-bottom: var(--gap-section); }
+
+.scroll { overflow-x: auto; }
+
+.table { background: var(--surface); border-radius: var(--radius); }
+.field { font-variant-numeric: tabular-nums; word-break: break-all; }
+
+.warning {
+  display: inline-block;
+  margin-left: 8px;
+  color: var(--muted);
+  font-size: var(--fs-meta);
+}
+
+.more { margin-top: 10px; }
+.more summary {
+  cursor: pointer;
+  color: var(--brand-ink);
+  font-size: var(--fs-meta);
+  font-weight: 600;
+  padding: 6px 0;
+}
+.more summary:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+/*
+ * Below 640px the four columns squeeze the warning sentence into a two-word
+ * ribbon, so each row becomes its own block with the header text moved into a
+ * label. The markup stays a real table: screen readers and the route tests both
+ * keep working.
+ */
+@media (max-width: 640px) {
+  .table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .table, .table tbody, .table tr, .table td { display: block; width: 100%; }
+
+  .table tr {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    background: var(--surface);
+  }
+
+  .table td {
+    border: 0;
+    padding: 3px 0;
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    gap: 10px;
+    align-items: baseline;
+    /* Otherwise the tier badge stretches the full column and reads as a bar. */
+    justify-items: start;
+  }
+
+  .table td::before {
+    content: attr(data-label);
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  .warning { display: block; margin: 4px 0 0; }
+}

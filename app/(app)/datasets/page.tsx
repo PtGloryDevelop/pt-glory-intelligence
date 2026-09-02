@@ -31,7 +31,7 @@ export default async function DatasetsPage() {
           <thead>
             <tr>
               <th>ชุดข้อมูล</th><th>หมวดหมู่</th><th>คำค้น</th><th>ประเทศ</th>
-              <th>แหล่งข้อมูล</th><th>เก็บเมื่อ</th><th>Ads</th><th>Pages</th>
+              <th>แหล่งข้อมูล</th><th>เก็บเมื่อ</th><th>Ads</th><th>Pages (ในชุดข้อมูล)</th>
               <th>สถานะรอบ</th><th>คุณภาพข้อมูล</th>
             </tr>
           </thead>

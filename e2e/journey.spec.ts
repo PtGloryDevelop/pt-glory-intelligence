@@ -127,7 +127,43 @@ test.describe("import to explorer to drawer", () => {
     await page.waitForURL(/\/datasets\//);
     await expect(page.getByTestId("context-status")).toHaveText("partial");
     await expect(page.getByTestId("context-quarantine")).toHaveText("1");
-    await expect(page.getByTestId("partial-banner")).toBeVisible();
+    // The banner states both real numbers: what landed and what did not.
+    const banner = page.getByTestId("partial-banner");
+    await expect(banner).toBeVisible();
+    await expect(banner).toContainText("กันไว้ตรวจ 1 แถว");
+  });
+
+  test("the stepper follows the real phases and never claims a rejected file passed", async ({ page }) => {
+    await page.goto("/import");
+    const stepper = page.getByTestId("import-stepper");
+    await expect(stepper).toHaveAttribute("data-phase", "idle");
+
+    await page.getByTestId("category-select").selectOption({ label: CATEGORY });
+    await page.getByTestId("file-input").setInputFiles(join(TMP, "small-old.json"));
+    await page.getByTestId("preview-button").click();
+    await expect(page.getByTestId("preview-panel")).toBeVisible();
+    await expect(stepper).toHaveAttribute("data-phase", "preview");
+    await expect(page.getByTestId("step-upload")).toHaveAttribute("data-state", "done");
+    await expect(page.getByTestId("step-preview")).toHaveAttribute("data-state", "current");
+    await expect(page.getByTestId("step-done")).toHaveAttribute("data-state", "todo");
+
+    // A rejected file must not leave the stepper standing on a later step.
+    await page.getByTestId("file-input").setInputFiles(join(TMP, "invalid.json"));
+    await expect(stepper).toHaveAttribute("data-phase", "idle");
+    await page.getByTestId("preview-button").click();
+    await expect(page.getByTestId("import-error")).toBeVisible();
+    await expect(stepper).toHaveAttribute("data-phase", "rejected");
+    await expect(page.getByTestId("step-validate")).toHaveAttribute("data-state", "error");
+    await expect(page.getByTestId("step-done")).toHaveAttribute("data-state", "todo");
+  });
+
+  test("the quality strip leads with the fields that carry the copy", async ({ page }) => {
+    const url = await importFile(page, join(TMP, "small-old.json"), "e2e-quality-order");
+    await page.goto(url);
+    const first = page.getByTestId("quality-strip").locator("tbody tr").first();
+    await expect(first.locator("td").first()).toHaveText("body_text");
+    // Everything else stays reachable rather than being dropped.
+    await expect(page.getByTestId("quality-strip-more")).toBeVisible();
   });
 
   test("an unreadable file is rejected before anything is written", async ({ page }) => {
