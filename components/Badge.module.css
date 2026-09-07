@@ -9,12 +9,13 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 2px 9px;
+  padding: 4px 10px;
   border-radius: var(--radius-pill);
   font-size: var(--fs-meta);
   font-weight: 600;
   white-space: nowrap;
-  line-height: 1.7;
+  /* Thai stacks marks above and below the line box; 1.7 clipped them. */
+  line-height: 1.9;
 }
 
 .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }

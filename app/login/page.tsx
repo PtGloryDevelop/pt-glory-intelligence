@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { dbUser } from "@/lib/db/user";
 import { getActor } from "@/lib/auth/roles";
 import { ErrorState } from "@/components/states/ErrorState";
+import { BrandLockup } from "@/components/BrandMark";
 import styles from "./login.module.css";
 
 export const dynamic = "force-dynamic";
@@ -36,29 +37,32 @@ export default async function LoginPage({
   return (
     <main className={styles.wrap}>
       <div className={styles.card}>
-        <div className={styles.brand}>
-          <span className={styles.mark} aria-hidden>PT</span>
-          <div>
-            <div className={styles.name}>PT Glory Intelligence</div>
-            <div className={styles.sub}>ระบบภายในบริษัท</div>
-          </div>
+        <div className={styles.head}>
+          <BrandLockup size="md" tagline="Competitive Ads Intelligence" />
         </div>
 
-        {message ? <ErrorState title={message} /> : null}
+        <div className={styles.body}>
+          <h1 className={styles.welcome}>เข้าสู่ระบบ</h1>
+          <p className={styles.sub}>ระบบภายในบริษัท · สำหรับทีม PT Glory เท่านั้น</p>
 
-        <form action={signIn} className={styles.form}>
-          <label className={styles.field}>
-            อีเมล
-            <input name="email" type="email" required autoComplete="email" />
-          </label>
-          <label className={styles.field}>
-            รหัสผ่าน
-            <input name="password" type="password" required autoComplete="current-password" />
-          </label>
-          <button type="submit" data-variant="primary" className={styles.submit}>
-            เข้าสู่ระบบ
-          </button>
-        </form>
+          {message ? <ErrorState title={message} /> : null}
+
+          <form action={signIn} className={styles.form} style={{ marginTop: 18 }}>
+            <label className={styles.field}>
+              อีเมล
+              <input name="email" type="email" required autoComplete="email" />
+            </label>
+            <label className={styles.field}>
+              รหัสผ่าน
+              <input name="password" type="password" required autoComplete="current-password" />
+            </label>
+            <button type="submit" data-variant="primary" className={styles.submit}>
+              เข้าสู่ระบบ
+            </button>
+          </form>
+
+          <p className={styles.foot}>ยังไม่ได้รับสิทธิ์ใช้งาน? ติดต่อผู้ดูแลระบบ</p>
+        </div>
       </div>
     </main>
   );

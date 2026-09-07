@@ -3,6 +3,7 @@ import { listDatasets } from "@/lib/read/queries";
 import { PageHeader } from "@/components/shell/PageHeader";
 import { EmptyState } from "@/components/states/EmptyState";
 import { QualityBadge } from "@/components/QualityBadge";
+import { Panel, PanelHead, TableWrap } from "@/components/Surface";
 
 export const dynamic = "force-dynamic";
 
@@ -12,9 +13,12 @@ export default async function DatasetsPage() {
   return (
     <>
       <PageHeader
+        eyebrow="Data"
         title="ชุดข้อมูล"
-        description={`${datasets.length} ชุด`}
-        actions={<Link href="/import">นำเข้าข้อมูล</Link>}
+        description="แต่ละชุดผูกกับรอบเก็บของตัวเอง ตัวเลขที่เห็นคือค่าของรอบนั้น ไม่ใช่ค่าล่าสุด"
+        actions={
+          <Link href="/import" data-cta>นำเข้าข้อมูล</Link>
+        }
       />
       {datasets.length === 0 ? (
         <EmptyState
@@ -24,9 +28,14 @@ export default async function DatasetsPage() {
           action={<Link href="/import">นำเข้าไฟล์แรก</Link>}
         />
       ) : (
-        // Ten columns do not fit a phone; the table scrolls inside itself
-        // rather than dragging the whole page sideways.
-        <div style={{ overflowX: "auto" }}>
+        <Panel>
+          <PanelHead
+            title="ชุดข้อมูลทั้งหมด"
+            meta={`${datasets.length} ชุด`}
+          />
+          {/* Ten columns do not fit a phone; the table scrolls inside its own
+              panel rather than dragging the whole page sideways. */}
+          <TableWrap>
         <table data-testid="dataset-list">
           <thead>
             <tr>
@@ -47,15 +56,16 @@ export default async function DatasetsPage() {
                 <td>{dataset.scope_country ?? "—"}</td>
                 <td>{dataset.source_product}</td>
                 <td>{new Date(dataset.collected_at).toLocaleString("th-TH")}</td>
-                <td>{dataset.ads_in_dataset}</td>
-                <td>{dataset.pages_in_dataset}</td>
+                <td data-numeral>{dataset.ads_in_dataset}</td>
+                <td data-numeral>{dataset.pages_in_dataset}</td>
                 <td>{dataset.run_status}</td>
                 <td><QualityBadge tier={dataset.quality_tier} /></td>
               </tr>
             ))}
           </tbody>
         </table>
-        </div>
+          </TableWrap>
+        </Panel>
       )}
     </>
   );

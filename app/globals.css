@@ -63,6 +63,19 @@
   --pad-card: 18px;
   --shadow: 0 1px 2px rgba(44, 36, 31, 0.04), 0 4px 14px rgba(44, 36, 31, 0.05);
 
+  /*
+   * Typography. --font-display and --font-ui are injected on <html> by
+   * next/font in app/layout.tsx; the fallbacks here are what renders if that
+   * ever fails to load, so Thai still has a real face to fall back to.
+   */
+  --display: var(--font-display), "Noto Sans Thai", system-ui, sans-serif;
+  --ui: var(--font-ui), "Noto Sans Thai", "Leelawadee UI", system-ui, sans-serif;
+
+
+  /* Layout — a sparse operational page should not stretch across 1440px */
+  --content-max: 1180px;
+  --content-max-wide: 1440px;
+
   /* Shell */
   --sidebar-w: 228px;
   --sidebar-w-rail: 68px;
@@ -75,17 +88,40 @@ body {
   margin: 0;
   background: var(--paper);
   color: var(--ink);
-  font-family: "Noto Sans Thai", "Leelawadee UI", system-ui, sans-serif;
+  font-family: var(--ui);
   font-size: var(--fs-body);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
 }
 
-h1, h2, h3 { line-height: 1.35; margin: 0; }
-h1 { font-size: var(--fs-page-title); font-weight: 700; letter-spacing: -0.01em; }
-h2 { font-size: var(--fs-section); font-weight: 600; }
+/*
+ * Personality lives in the product name, page titles, section headings and big
+ * numbers — and stops there. Tables and forms stay on the UI face, because a
+ * display face in a dense data table costs legibility for nothing.
+ */
+h1, h2, h3 { font-family: var(--display); line-height: 1.45; margin: 0; }
+h1 { font-size: var(--fs-page-title); font-weight: 600; letter-spacing: -0.015em; }
+h2 { font-size: var(--fs-section); font-weight: 600; letter-spacing: -0.01em; }
 h3 { font-size: var(--fs-body); font-weight: 600; }
 p { margin: 0 0 12px; }
+
+/* Large figures read as display type wherever they appear. */
+[data-numeral] {
+  font-family: var(--display);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* Section labels above a block of content. */
+[data-eyebrow] {
+  font-family: var(--ui);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--brand-ink);
+}
 
 /* Link hover thickens the underline rather than shifting the hue: --brand-deep
    as text on cream is 3.06 and would make a link harder to read on hover. */
@@ -135,6 +171,39 @@ button[data-variant="primary"]:hover:not(:disabled) {
 }
 
 table { border-collapse: collapse; width: 100%; font-size: var(--fs-body); }
-th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); }
-th { font-weight: 600; font-size: var(--fs-meta); color: var(--muted); background: var(--surface-sunken); }
-tbody tr:hover { background: var(--surface); }
+th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--line); }
+th {
+  font-weight: 600;
+  font-size: 11.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: var(--surface-sunken);
+  white-space: nowrap;
+}
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover { background: var(--brand-tint); }
+
+/*
+ * A link that acts as a page action. Uses the same fill and charcoal label as a
+ * primary button so the two never disagree about what 'primary' looks like.
+ */
+[data-cta] {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--brand);
+  border: 1px solid var(--brand-deep);
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  font-weight: 600;
+  font-size: var(--fs-body);
+  padding: 9px 16px;
+  min-height: 40px;
+  text-decoration: none;
+}
+[data-cta]:hover {
+  color: var(--ink);
+  border-color: var(--brand-ink);
+  box-shadow: 0 0 0 3px var(--brand-tint-strong);
+}

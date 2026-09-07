@@ -1,10 +1,17 @@
 .wrap { margin-bottom: var(--gap-section); }
 
-.scroll { overflow-x: auto; }
-
-.table { background: var(--surface); border-radius: var(--radius); }
+/* A level-1 surface, same treatment as every other operational table, so the
+   coverage figures sit on the product's own paper rather than the raw canvas. */
+.scroll {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  overflow-x: auto;
+}
+.table { background: transparent; }
+.table tbody tr:last-child td { border-bottom: 0; }
 .field { font-variant-numeric: tabular-nums; word-break: break-all; }
-
 .warning {
   display: inline-block;
   margin-left: 8px;

@@ -33,21 +33,11 @@
   min-height: var(--topbar-h);
 }
 
-.mark {
-  width: 30px;
-  height: 30px;
-  flex: 0 0 30px;
-  border-radius: var(--radius-sm);
-  background: var(--brand);
-  color: var(--ink);
-  font-weight: 700;
-  font-size: 13px;
-  display: grid;
-  place-items: center;
-}
-
-.brandText { font-weight: 700; font-size: 15px; white-space: nowrap; }
-.rail .brandText { display: none; }
+/* Two brand treatments, swapped by width rather than re-rendered. */
+.lockup { display: block; }
+.markOnly { display: none; }
+.rail .lockup { display: none; }
+.rail .markOnly { display: block; }
 
 .nav { padding: 10px 8px 20px; flex: 1; }
 
@@ -68,7 +58,7 @@
   padding: 8px 10px;
   border-radius: var(--radius-sm);
   font-size: 13.5px;
-  min-height: 36px;
+  min-height: 38px;
   border-left: 3px solid transparent;
   text-decoration: none;
 }
@@ -95,17 +85,20 @@
   cursor: not-allowed;
 }
 
-.dot {
-  width: 6px;
-  height: 6px;
-  flex: 0 0 6px;
-  border-radius: 50%;
-  background: currentColor;
-  opacity: 0.45;
+/* Icons inherit currentColor, so the nav tints them by state and nothing else. */
+.icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 18px;
+  color: var(--muted);
 }
-.active .dot { background: var(--brand); opacity: 1; }
+.item:hover .icon { color: var(--ink); }
+.active .icon { color: var(--brand); }
+.disabled .icon { color: var(--muted); }
 
-.label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* line-height leaves room for Thai marks; overflow:hidden would otherwise
+   crop them off the top and bottom of the label. */
+.label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.9; }
 .rail .label { display: none; }
 .rail .item, .rail .disabled { justify-content: center; padding-left: 0; padding-right: 0; }
 
@@ -141,7 +134,12 @@
   z-index: 30;
 }
 
-.content { padding: var(--gap-page); max-width: 1440px; width: 100%; }
+/*
+ * Operational pages get a reading width; the Explorer opts out with
+ * data-width="wide" because a research grid genuinely wants the canvas.
+ */
+.content { padding: var(--gap-page); width: 100%; max-width: var(--content-max); }
+.content[data-width="wide"] { max-width: var(--content-max-wide); }
 
 .scrim { display: none; }
 
@@ -149,7 +147,8 @@
 
 @media (max-width: 1439px) {
   .sidebar { width: var(--sidebar-w-rail); flex-basis: var(--sidebar-w-rail); }
-  .sidebar .brandText,
+  .sidebar .lockup { display: none; }
+  .sidebar .markOnly { display: block; }
   .sidebar .label { display: none; }
   .sidebar .item, .sidebar .disabled { justify-content: center; padding-left: 0; padding-right: 0; }
   .sidebar .heading { text-align: center; padding-left: 0; padding-right: 0; font-size: 9px; overflow: hidden; }
@@ -173,7 +172,9 @@
     transition: transform 0.18s ease;
     box-shadow: var(--shadow);
   }
-  .sidebar .brandText, .sidebar .label { display: block; }
+  .sidebar .lockup { display: block; }
+  .sidebar .markOnly { display: none; }
+  .sidebar .label { display: block; }
   .sidebar .item, .sidebar .disabled { justify-content: flex-start; padding-left: 10px; padding-right: 10px; }
   .sidebar .heading { text-align: left; padding-left: 10px; font-size: 10.5px; }
   .sidebar .footer { text-align: left; padding: 12px 14px; }

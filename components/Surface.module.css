@@ -1,0 +1,52 @@
+/*
+ * Three surface levels, so depth is a decision rather than an accident.
+ *
+ *   Level 0  the cream canvas (body) — not a class, it is the page
+ *   Level 1  warm-white operational surfaces: tables, panels, forms
+ *   Level 2  soft-pink / tinted highlight surfaces: callouts, secondary panels
+ *
+ * Deliberately not applied to every block. Handoff §4.4: do not wrap every
+ * section in a card.
+ */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.padded { padding: var(--pad-card); }
+.raised { box-shadow: var(--shadow); }
+
+.highlight {
+  background: var(--surface-pink);
+  border-color: #e6cdd7;
+}
+
+.tint {
+  background: var(--brand-tint);
+  border-color: rgba(242, 101, 34, 0.22);
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 14px var(--pad-card);
+  border-bottom: 1px solid var(--line);
+}
+.title { font-family: var(--display); font-weight: 600; font-size: 15px; }
+.meta { color: var(--muted); font-size: var(--fs-meta); }
+
+/* A table that lives inside a panel: the panel owns the border and radius, so
+   the table drops its own outer edge and scrolls inside instead of dragging the
+   page sideways. */
+.tableWrap { overflow-x: auto; }
+.tableWrap table { border: 0; }
+
+@media (max-width: 768px) {
+  .padded { padding: 14px; }
+  .head { padding: 12px 14px; }
+}

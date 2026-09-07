@@ -1,16 +1,53 @@
+/*
+ * Solves the empty-top problem without a marketing hero: an eyebrow anchors the
+ * page in the product, the title carries the display face, and a short thin
+ * accent rule gives the block a bottom edge so the content below has something
+ * to sit against.
+ */
 .header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
+  gap: 20px;
   flex-wrap: wrap;
-  margin-bottom: 18px;
+  padding-bottom: 16px;
+  margin-bottom: var(--gap-section);
+  border-bottom: 1px solid var(--line);
 }
-.text { min-width: 0; }
+
+.text { min-width: 0; flex: 1 1 320px; }
+
 .back {
   display: inline-block;
   font-size: var(--fs-meta);
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
-.description { color: var(--muted); font-size: var(--fs-meta); margin: 4px 0 0; }
-.actions { display: flex; gap: 8px; align-items: center; }
+
+.eyebrow { margin-bottom: 6px; }
+
+.titleRow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+/* A short brand rule under the title — restrained accent, not a banner. */
+.rule {
+  display: block;
+  width: 36px;
+  height: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--brand);
+  margin-top: 10px;
+}
+
+.description {
+  color: var(--muted);
+  font-size: var(--fs-body);
+  margin: 8px 0 0;
+  max-width: 62ch;
+}
+
+.actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+@media (max-width: 768px) {
+  .header { flex-direction: column; align-items: stretch; gap: 14px; }
+  .actions { width: 100%; }
+  .actions > * { flex: 1 1 auto; }
+}

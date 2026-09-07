@@ -1,3 +1,5 @@
+import type { IconName } from "./icons";
+
 /**
  * Sidebar information architecture — handoff §5.
  *
@@ -6,49 +8,49 @@
  * with no data behind it must never look available, and must never be populated
  * with facts the engine cannot support.
  */
-export type NavItem = { label: string; href?: string };
+export type NavItem = { label: string; icon: IconName; href?: string };
 export type NavSection = { heading: string; items: NavItem[] };
 
 export const NAV: NavSection[] = [
   {
     heading: "MAIN",
     items: [
-      { label: "หน้าหลัก", href: "/" },
-      { label: "Deep Search" },
+      { label: "หน้าหลัก", icon: "home", href: "/" },
+      { label: "Deep Search", icon: "search" },
     ],
   },
   {
     heading: "DATA",
     items: [
-      { label: "หมวดหมู่" },
-      { label: "Dataset", href: "/datasets" },
-      { label: "Ads Explorer" },
-      { label: "เพจ / แบรนด์" },
-      { label: "Creatives" },
+      { label: "หมวดหมู่", icon: "folder" },
+      { label: "Dataset", icon: "layers", href: "/datasets" },
+      { label: "Ads Explorer", icon: "grid" },
+      { label: "เพจ / แบรนด์", icon: "building" },
+      { label: "Creatives", icon: "image" },
     ],
   },
   {
     heading: "INTELLIGENCE",
     items: [
-      { label: "ภาพรวมตลาด" },
-      { label: "คู่แข่ง" },
-      { label: "Creative Intelligence" },
-      { label: "Pain Point / Hook / Offer" },
-      { label: "ราคา & Promotion" },
-      { label: "แนวโน้ม" },
-      { label: "Compare" },
-      { label: "Watchlist" },
+      { label: "ภาพรวมตลาด", icon: "chart" },
+      { label: "คู่แข่ง", icon: "swords" },
+      { label: "Creative Intelligence", icon: "sparkle" },
+      { label: "Pain Point / Hook / Offer", icon: "target" },
+      { label: "ราคา & Promotion", icon: "tag" },
+      { label: "แนวโน้ม", icon: "trend" },
+      { label: "Compare", icon: "compare" },
+      { label: "Watchlist", icon: "bookmark" },
     ],
   },
   {
     heading: "SYSTEM",
     items: [
-      { label: "นำเข้าข้อมูล", href: "/import" },
-      { label: "Collection Runs" },
-      { label: "Data Quality" },
-      { label: "AI Analysis History" },
-      { label: "Unmapped Pages" },
-      { label: "Settings" },
+      { label: "นำเข้าข้อมูล", icon: "upload", href: "/import" },
+      { label: "Collection Runs", icon: "history" },
+      { label: "Data Quality", icon: "shield" },
+      { label: "AI Analysis History", icon: "brain" },
+      { label: "Unmapped Pages", icon: "unlink" },
+      { label: "Settings", icon: "settings" },
     ],
   },
 ];

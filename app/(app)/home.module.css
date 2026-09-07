@@ -1,0 +1,51 @@
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: var(--gap-section);
+}
+
+/*
+ * Navigation surfaces, not KPI cards. Each one is a link with a real
+ * destination — nothing here is a metric, because Phase 1 has no metrics to put
+ * on a home screen and inventing one is the exact failure mode the project bans.
+ */
+.card {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 20px;
+  transition: border-color 0.12s ease, transform 0.12s ease;
+}
+.card:hover { border-color: var(--brand); transform: translateY(-2px); color: inherit; }
+
+.icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  display: grid;
+  place-items: center;
+  margin-bottom: 14px;
+}
+.iconBrand { background: var(--brand-tint); color: var(--brand-ink); }
+.iconBlue { background: rgba(25, 167, 242, 0.16); color: #0b5f8c; }
+
+.cardTitle { font-family: var(--display); font-weight: 600; font-size: 17px; }
+.cardBody { color: var(--muted); font-size: var(--fs-meta); margin: 6px 0 12px; }
+.cardGo { font-size: var(--fs-meta); font-weight: 600; color: var(--brand-ink); }
+
+.status { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+.stat { padding: 16px var(--pad-card); border-right: 1px solid var(--line); }
+.stat:last-child { border-right: 0; }
+.statLabel { color: var(--muted); font-size: var(--fs-meta); }
+.statValue { font-size: 22px; margin-top: 2px; }
+.statValueSm { font-size: 15px; font-family: var(--display); font-weight: 600; margin-top: 4px; }
+
+@media (max-width: 768px) {
+  .card { padding: 16px; }
+  .stat { border-right: 0; border-bottom: 1px solid var(--line); }
+  .stat:last-child { border-bottom: 0; }
+}

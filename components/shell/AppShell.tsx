@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { NAV } from "./nav.ts";
+import { Icon } from "./icons.tsx";
+import { BrandLockup, BrandMark } from "../BrandMark.tsx";
 import styles from "./AppShell.module.css";
 
 /**
@@ -18,6 +20,10 @@ export function AppShell({ role, children }: { role: string; children: React.Rea
   const [railed, setRailed] = useState(false);
   const [open, setOpen] = useState(false);
 
+  // A dataset page carries the research grid, which genuinely wants the canvas.
+  // Every other page reads better at a fixed measure.
+  const isWide = /^\/datasets\/[^/]+/.test(pathname);
+
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
@@ -29,8 +35,8 @@ export function AppShell({ role, children }: { role: string; children: React.Rea
         data-state={railed ? "rail" : "expanded"}
       >
         <div className={styles.brand}>
-          <span className={styles.mark} aria-hidden>PT</span>
-          <span className={styles.brandText}>PT Glory</span>
+          <span className={styles.lockup}><BrandLockup tagline="Ads Intelligence" /></span>
+          <span className={styles.markOnly}><BrandMark /></span>
         </div>
 
         <nav className={styles.nav} aria-label="เมนูหลัก">
@@ -46,12 +52,12 @@ export function AppShell({ role, children }: { role: string; children: React.Rea
                     aria-current={isActive(item.href) ? "page" : undefined}
                     data-testid={`nav-${item.href}`}
                     // In rail mode the label is display:none, which would leave
-                    // the link with no accessible name and nothing but a dot to
-                    // identify it. The title carries both.
+                    // the link with no accessible name and nothing but an icon
+                    // to identify it. The title carries the name.
                     title={item.label}
                     onClick={() => setOpen(false)}
                   >
-                    <span className={styles.dot} aria-hidden />
+                    <span className={styles.icon}><Icon name={item.icon} /></span>
                     <span className={styles.label}>{item.label}</span>
                   </Link>
                 ) : (
@@ -63,7 +69,7 @@ export function AppShell({ role, children }: { role: string; children: React.Rea
                     aria-disabled="true"
                     title={`${item.label} — ยังไม่เปิดใช้งานในเฟสนี้`}
                   >
-                    <span className={styles.dot} aria-hidden />
+                    <span className={styles.icon}><Icon name={item.icon} /></span>
                     <span className={styles.label}>{item.label}</span>
                   </span>
                 ),
@@ -88,9 +94,13 @@ export function AppShell({ role, children }: { role: string; children: React.Rea
       <div className={styles.main}>
         <div className={styles.topbar}>
           <button type="button" onClick={() => setOpen(true)} aria-label="เปิดเมนู">☰</button>
-          <strong>PT Glory</strong>
+          <BrandLockup />
         </div>
-        <div className={styles.content}>{children}</div>
+        {/* A dataset page carries the research grid, which genuinely wants the
+            canvas. Every other page reads better at a fixed measure. */}
+        <div className={styles.content} data-width={isWide ? "wide" : undefined}>
+          {children}
+        </div>
       </div>
     </div>
   );
