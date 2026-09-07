@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { dash } from "./explorer";
-import { mediaUrls } from "@/lib/media";
+import { mediaPresentation } from "@/lib/media";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ErrorState } from "@/components/states/ErrorState";
 import { LoadingSkeleton } from "@/components/states/LoadingSkeleton";
@@ -152,26 +152,42 @@ function Row({ label, value, testId }: { label: string; value: unknown; testId?:
 /** Media lives on Meta's CDN and its URLs expire, so a broken image is normal, not an error state. */
 function Media({ media }: { media: Detail["media"] }) {
   const [broken, setBroken] = useState<Record<number, boolean>>({});
-  // Scheme filtering lives in lib/media: the uploaded JSON is untrusted, and a
-  // `javascript:` value here would be a URL the page executes.
-  const urls = mediaUrls(media);
+  // Scheme filtering and source-key interpretation both live in lib/media: the
+  // uploaded JSON is untrusted, and two copies of that logic is how one of them
+  // ends up reading a key the collector never wrote.
+  const presentation = mediaPresentation(media);
 
-  if (urls.length === 0) {
-    return <p data-testid="media-placeholder">ไม่มีสื่อที่บันทึกไว้สำหรับโฆษณานี้</p>;
+  if (presentation.state !== "ready") {
+    return (
+      <p data-testid="media-placeholder" data-media-state={presentation.state}>
+        {presentation.state === "none"
+          ? "ไม่มีสื่อที่บันทึกไว้สำหรับโฆษณานี้"
+          : "ไม่สามารถแสดงตัวอย่างสื่อของโฆษณานี้"}
+      </p>
+    );
   }
 
   return (
     <div data-testid="media-strip" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
-      {urls.map((url, index) =>
+      {presentation.all.map((item, index) =>
         broken[index] ? (
-          <span key={url} data-testid="media-unavailable"
+          <span key={item.src} data-testid="media-unavailable"
             style={{ padding: 12, border: "1px dashed rgba(0,0,0,.3)" }}>
             สื่อโหลดไม่ได้ (ลิงก์จากต้นทางหมดอายุ)
           </span>
+        ) : item.kind === "video" ? (
+          // Controls, no autoplay: a drawer that starts playing sound on open is
+          // hostile, and the poster is the collector's own captured frame.
+          <video
+            key={item.src} src={item.src} poster={item.poster ?? undefined}
+            controls preload="none" width={220} data-testid="media-video"
+            onError={() => setBroken((current) => ({ ...current, [index]: true }))}
+          />
         ) : (
           // eslint-disable-next-line @next/next/no-img-element -- remote CDN host, no loader
           <img
-            key={url} src={url} alt="" width={160} loading="lazy"
+            key={item.src} src={item.src} alt="" width={160} loading="lazy"
+            data-testid="media-image"
             onError={() => setBroken((current) => ({ ...current, [index]: true }))}
           />
         ),

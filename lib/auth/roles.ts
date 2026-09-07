@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { dbUser } from "../db/user.ts";
 import { AuthorizationError, isRole, satisfies, type Actor, type Role } from "./role-model.ts";
 
@@ -30,5 +31,25 @@ export async function requireRole(required: Role): Promise<Actor> {
   if (!satisfies(actor.role, required)) {
     throw new AuthorizationError(403, `Requires ${required} role`);
   }
+  return actor;
+}
+
+/**
+ * The guard every authenticated page must await before it reads anything.
+ *
+ * The `(app)` layout also redirects, but a layout is not an ordering mechanism:
+ * Next renders layout and page concurrently, so a page that starts a query in
+ * its own body has already issued it by the time the layout's `redirect()`
+ * throws. That is how an unauthenticated `GET /datasets` came to answer 307
+ * while still logging `42501 permission denied for function dataset_list` — the
+ * grants stopped it, which is the last line of defence doing a job the request
+ * path should never have handed it.
+ *
+ * So each page awaits this first, and only then reads. The redirect here is the
+ * ordering; the grants stay exactly as strict as they are.
+ */
+export async function requireActorOrRedirect(): Promise<Actor> {
+  const actor = await getActor();
+  if (!actor) redirect("/login");
   return actor;
 }

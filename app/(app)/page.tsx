@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getActor } from "@/lib/auth/roles";
+import { requireActorOrRedirect } from "@/lib/auth/roles";
 import { listCategories, listDatasets } from "@/lib/read/queries";
 import { PageHeader } from "@/components/shell/PageHeader";
 import { Panel, PanelHead } from "@/components/Surface";
@@ -9,9 +9,12 @@ import styles from "./home.module.css";
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const [actor, datasets, categories] = await Promise.all([
-    getActor(), listDatasets(), listCategories(),
-  ]);
+  // Awaited before any read: layout and page render concurrently, so the
+  // layout's redirect cannot order this on the page's behalf.
+  const actor = await requireActorOrRedirect();
+
+  // Only now, with a real actor, do the reads run.
+  const [datasets, categories] = await Promise.all([listDatasets(), listCategories()]);
 
   // Every figure below is a count of rows the user can go and look at. There is
   // no engagement, reach or spend to show here, and a home screen is exactly
@@ -24,7 +27,7 @@ export default async function HomePage() {
         eyebrow="ยินดีต้อนรับ"
         title="PT Glory Intelligence"
         description="ระบบวิเคราะห์โฆษณาคู่แข่งภายใน · Phase 1 นำเข้าข้อมูลจาก Extension แล้วสำรวจ Dataset ได้"
-        badge={<span data-eyebrow>สิทธิ์ {actor?.role}</span>}
+        badge={<span data-eyebrow>สิทธิ์ {actor.role}</span>}
       />
 
       <div className={styles.cards}>

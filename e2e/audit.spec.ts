@@ -16,7 +16,7 @@ import { resetData } from "./db.ts";
  * Captures only. No assertions about how anything looks.
  */
 
-const OUT = join("test-artifacts", "visual", "v23-audit");
+const OUT = join("test-artifacts", "visual", process.env.VISUAL_SLICE ?? "v23-audit");
 const shot = (name: string) => join(OUT, `${name}.png`);
 
 const WIDE = { width: 1440, height: 1000 };
@@ -212,5 +212,68 @@ test.describe("v2/v3 audit capture", () => {
     await viewer.close();
 
     assertStyles();
+  });
+});
+
+/**
+ * The creative-filled state.
+ *
+ * The golden fixture carries the real URLs the collector recorded in August, and
+ * those Meta CDN links have long since expired — so a truthful capture of the
+ * real data shows "media exists, it will not load", which is exactly what the
+ * product should say and exactly what it now says.
+ *
+ * To see the composition the grid is actually built for, image responses are
+ * fulfilled locally. The URLs, their selection and every code path stay real;
+ * only the bytes at the far end are substituted. This is a render-path proof,
+ * not evidence about the data.
+ */
+const STUB_IMAGE = (label: string) => Buffer.from(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="750">
+     <rect width="600" height="750" fill="#f0e7d8"/>
+     <rect x="24" y="24" width="552" height="702" fill="#e8dccf"/>
+     <text x="300" y="380" font-family="sans-serif" font-size="34" fill="#6c5d54"
+       text-anchor="middle">${label}</text>
+   </svg>`, "utf8");
+
+test.describe("creative-filled render path", () => {
+  test.describe.configure({ mode: "serial" });
+
+  test("grid and drawer with media served", async ({ browser }) => {
+    const context = await browser.newContext({ storageState: join(AUTH, "analyst.json") });
+    const page = await context.newPage();
+
+    await page.route("**/*", async (route) => {
+      if (route.request().resourceType() !== "image") return route.continue();
+      return route.fulfill({
+        status: 200,
+        contentType: "image/svg+xml",
+        body: STUB_IMAGE("creative"),
+      });
+    });
+
+    // Imports its own dataset so the capture stands alone rather than depending
+    // on whichever test ran before it.
+    await page.setViewportSize(WIDE);
+    await resetData();
+    await toPreview(page, join("tests", "fixtures", "golden-500.json"));
+    const href = await commitAs(page, "c1-media");
+
+    for (const viewport of VIEWPORTS) {
+      await page.setViewportSize(viewport);
+      await page.goto(href);
+      await page.getByTestId("ads-grid").waitFor();
+      await page.locator('[data-testid="card-media"]').first().waitFor();
+      await capture(page, `media-grid-${viewport.name}`);
+    }
+
+    await page.setViewportSize(WIDE);
+    await page.goto(href);
+    await page.getByTestId("ads-grid").waitFor();
+    await page.locator('[data-testid^="open-ad-"]').first().click();
+    await page.getByTestId("ad-drawer").waitFor();
+    await capture(page, "media-drawer-1440");
+
+    await context.close();
   });
 });

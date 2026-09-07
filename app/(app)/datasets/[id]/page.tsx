@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { requireActorOrRedirect } from "@/lib/auth/roles";
 import { getDatasetContext, getDatasetQuality } from "@/lib/read/queries";
 import { PageHeader } from "@/components/shell/PageHeader";
 import { ContextBar } from "@/components/ContextBar";
@@ -13,6 +14,10 @@ export const dynamic = "force-dynamic";
 
 export default async function DatasetPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+
+  // Awaited before any read: layout and page render concurrently, so the
+  // layout's redirect cannot order this on the page's behalf.
+  await requireActorOrRedirect();
 
   const context = await getDatasetContext(id);
   if (!context) notFound();

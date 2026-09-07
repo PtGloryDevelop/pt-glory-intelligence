@@ -125,6 +125,19 @@
 .pager button { min-height: 44px; }
 
 @media (max-width: 640px) {
-  .toolbar { position: static; }
   .viewToggle { margin-left: 0; }
+}
+
+/*
+ * Below 900px the shell shows its own sticky topbar (z-index 30) at top: 0, and
+ * a second sticky layer at the same offset simply slides underneath it.
+ *
+ * The toolbar drops out of sticky rather than adopting an offset: on a tablet or
+ * phone the toolbar is tall enough that pinning it would eat the screen the
+ * results need, and an offset would couple this file to the shell's topbar
+ * height forever. 900px is the shell's own topbar breakpoint, not a number
+ * chosen to satisfy a screenshot.
+ */
+@media (max-width: 900px) {
+  .toolbar { position: static; }
 }

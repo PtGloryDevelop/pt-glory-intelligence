@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { requireActorOrRedirect } from "@/lib/auth/roles";
 import { listDatasets } from "@/lib/read/queries";
 import { PageHeader } from "@/components/shell/PageHeader";
 import { EmptyState } from "@/components/states/EmptyState";
@@ -8,6 +9,9 @@ import { Panel, PanelHead, TableWrap } from "@/components/Surface";
 export const dynamic = "force-dynamic";
 
 export default async function DatasetsPage() {
+  // Awaited before any read: layout and page render concurrently, so the
+  // layout's redirect cannot order this on the page's behalf.
+  await requireActorOrRedirect();
   const datasets = await listDatasets();
 
   return (

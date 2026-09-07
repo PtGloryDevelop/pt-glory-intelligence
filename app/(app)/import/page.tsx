@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getActor } from "@/lib/auth/roles";
+import { requireActorOrRedirect } from "@/lib/auth/roles";
 import { listCategories } from "@/lib/read/queries";
 import { PageHeader } from "@/components/shell/PageHeader";
 import { EmptyState } from "@/components/states/EmptyState";
@@ -8,11 +8,13 @@ import { ImportClient } from "./import-client";
 export const dynamic = "force-dynamic";
 
 export default async function ImportPage() {
-  const actor = await getActor();
+  // Awaited before any read: layout and page render concurrently, so the
+  // layout's redirect cannot order this on the page's behalf.
+  const actor = await requireActorOrRedirect();
 
   // Hiding the form is a convenience, not the control: the commit route checks
   // the role again and answers 403 regardless of what the browser sends.
-  if (actor?.role === "viewer") {
+  if (actor.role === "viewer") {
     return (
       <>
         <PageHeader title="นำเข้าข้อมูล" />

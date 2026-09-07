@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { mediaUrls, type Media } from "@/lib/media";
+import { mediaPresentation, type Media } from "@/lib/media";
 import { StatusBadge } from "./StatusBadge";
 import styles from "./AdCard.module.css";
 
@@ -84,28 +84,47 @@ export function AdCard({ ad, onOpen }: { ad: AdCardData; onOpen: () => void }) {
  * Media lives on Meta's CDN and those URLs expire, so a creative that will not
  * load is normal rather than an error. The placeholder stays neutral: inventing
  * artwork for an ad whose creative we never captured would be a fabrication.
+ *
+ * Three distinct facts, three distinct messages. Saying "nothing was captured"
+ * about an ad whose creative we did capture is a claim the stored rows
+ * contradict, so the empty case and the unusable case never share wording.
  */
 function Preview({ media }: { media: Media }) {
   const [broken, setBroken] = useState(false);
-  const url = mediaUrls(media)[0];
+  const presentation = mediaPresentation(media);
 
-  if (!url || broken) {
+  if (presentation.state !== "ready" || broken) {
+    const message =
+      broken ? "สื่อโหลดไม่ได้ (ลิงก์ต้นทางหมดอายุ)"
+      : presentation.state === "none" ? "ไม่มีสื่อที่บันทึกไว้"
+      : "ไม่สามารถแสดงตัวอย่างสื่อ";
     return (
-      <div className={styles.placeholder} data-testid="card-media-placeholder">
-        {url ? "สื่อโหลดไม่ได้ (ลิงก์ต้นทางหมดอายุ)" : "ไม่มีสื่อที่บันทึกไว้"}
+      <div
+        className={styles.placeholder}
+        data-testid="card-media-placeholder"
+        data-media-state={broken ? "broken" : presentation.state}
+      >
+        {message}
       </div>
     );
   }
+
+  // A card shows a still even for a video: the poster is the frame the collector
+  // captured, and a grid of autoplaying video is not a research tool.
+  const src = presentation.primary.kind === "video"
+    ? presentation.primary.poster ?? presentation.primary.src
+    : presentation.primary.src;
 
   return (
     // eslint-disable-next-line @next/next/no-img-element -- remote CDN host, no loader
     <img
       className={styles.media}
-      src={url}
+      src={src}
       alt=""
       loading="lazy"
       onError={() => setBroken(true)}
       data-testid="card-media"
+      data-media-kind={presentation.primary.kind}
     />
   );
 }
