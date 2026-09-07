@@ -15,7 +15,18 @@
   border-bottom: 1px solid var(--line);
 }
 
-.text { min-width: 0; flex: 1 1 320px; }
+/*
+ * The 320px is a minimum COLUMN width, expressed as min-width rather than
+ * flex-basis on purpose.
+ *
+ * As `flex: 1 1 320px` it was correct only while .header was a row. The mobile
+ * rule below flips the header to `flex-direction: column`, and flex-basis
+ * follows the main axis — so on a phone the basis became a 320px reserved
+ * HEIGHT, and the title block rendered as a ~337px box holding ~90px of text.
+ * min-width has no meaning on the block axis, so this reads the same in both
+ * directions and needs no breakpoint-specific override.
+ */
+.text { flex: 1 1 auto; min-width: min(320px, 100%); }
 
 .back {
   display: inline-block;
