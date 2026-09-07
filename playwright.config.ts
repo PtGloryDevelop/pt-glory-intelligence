@@ -24,7 +24,7 @@ export default defineConfig({
       name: "chromium",
       dependencies: ["setup"],
       use: { ...devices["Desktop Chrome"] },
-      testIgnore: [/global\.setup\.ts/, /screenshots\.spec\.ts/],
+      testIgnore: [/global\.setup\.ts/, /screenshots\.spec\.ts/, /audit\.spec\.ts/],
     },
     {
       // Opt-in: visual capture writes files, it does not assert, so it stays out
@@ -33,6 +33,15 @@ export default defineConfig({
       dependencies: ["setup"],
       testMatch: /screenshots\.spec\.ts/,
       use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      // The V2/V3 audit capture matrix. Also opt-in — it is evidence gathering,
+      // not a gate. Use: npx playwright test --project=audit
+      name: "audit",
+      dependencies: ["setup"],
+      testMatch: /audit\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"] },
+      timeout: 300_000,
     },
   ],
   webServer: {
