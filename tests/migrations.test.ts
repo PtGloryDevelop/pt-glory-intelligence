@@ -16,22 +16,23 @@ test("every up migration has a matching down migration", () => {
   }
 });
 
-test("migrations are numbered 0001..0022 with no gaps", () => {
+test("migrations are numbered 0001..0024 with no gaps", () => {
   const numbers = up.map((f) => Number(f.slice(0, 4)));
-  assert.deepEqual(numbers, Array.from({ length: 22 }, (_, i) => i + 1));
+  assert.deepEqual(numbers, Array.from({ length: 24 }, (_, i) => i + 1));
 });
 
-test("all 13 tables are created", () => {
+test("all 14 tables are created", () => {
   const expected = [
     "user_roles", "categories", "collection_runs", "datasets", "pages",
     "page_observations", "ads", "ad_observations", "dataset_ads",
     "dataset_quality", "import_quarantine", "app_settings", "audit_logs",
+    "media_assets",
   ];
   for (const table of expected) {
     assert.match(allUp, new RegExp(`create table public\\.${table}\\b`), `missing ${table}`);
   }
   const created = [...allUp.matchAll(/create table public\.(\w+)/g)].map((m) => m[1]);
-  assert.equal(created.length, 13, `expected 13 tables, found ${created.length}`);
+  assert.equal(created.length, 14, `expected 14 tables, found ${created.length}`);
 });
 
 test("ads.ad_archive_id is NOT NULL UNIQUE and is_active stays nullable", () => {
@@ -153,4 +154,37 @@ test("read functions are not left on Postgres defaults", () => {
   assert.match(sql, /grant execute on function %s to authenticated/);
   assert.match(sql, /alter function %s set search_path = public, pg_temp/);
   assert.doesNotMatch(sql, /security definer/i, "these must stay SECURITY INVOKER");
+});
+
+test("media_assets owns the observation, not the ad", () => {
+  // Keying an archive by ad_archive_id would let a newer run overwrite the
+  // creative an older dataset shows — invariant I1 broken through the media
+  // layer instead of through the observation layer.
+  const sql = read("0023_media_assets.sql");
+  assert.match(sql, /ad_observation_id bigint not null\s+references public\.ad_observations\(id\)/);
+  assert.doesNotMatch(sql, /references public\.ads\(/, "archives belong to observations");
+  assert.match(sql, /unique \(ad_observation_id, asset_role\)/);
+});
+
+test("the archive status model keeps none and unusable apart", () => {
+  const sql = read("0023_media_assets.sql");
+  assert.match(sql, /check \(archive_status in \('pending', 'archived', 'none', 'unusable', 'failed'\)\)/);
+});
+
+test("media_assets has RLS with no client write policy", () => {
+  const sql = read("0023_media_assets.sql");
+  assert.match(sql, /alter table public\.media_assets enable row level security/);
+  assert.match(sql, /create policy media_assets_read on public\.media_assets/);
+  // Writes belong to the privileged archival path, which bypasses RLS. An
+  // authenticated session must not be able to forge or repoint an archive row.
+  assert.doesNotMatch(sql, /for (insert|update|delete) to authenticated/);
+});
+
+test("recreating a read function restores its grants", () => {
+  // CREATE FUNCTION resets the ACL to the Postgres default, so 0024 has to
+  // re-do 0019's work or it silently undoes it.
+  const sql = read("0024_media_assets_read.sql");
+  assert.match(sql, /revoke all on function %s from anon/);
+  assert.match(sql, /grant execute on function %s to authenticated/);
+  assert.match(sql, /must not be executable by anon/);
 });

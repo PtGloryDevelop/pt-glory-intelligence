@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { commitImport } from "@/lib/import/commit";
 import { previewImport } from "@/lib/import/preview";
 import { readUpload } from "@/lib/import/upload";
+import { enqueueRun } from "@/lib/media/archive";
 import { isUuid } from "@/lib/read/request";
 import { requireRole } from "@/lib/auth/roles";
 import { AuthorizationError } from "@/lib/auth/role-model";
@@ -47,7 +48,20 @@ export async function POST(request: NextRequest) {
     const result = await commitImport({
       canonical: preview.canonical, categoryId, datasetName, actorId: actor.userId,
     });
-    return NextResponse.json(result);
+    // AFTER the transaction has committed. Archival state is recorded on its
+    // own connection so that a media problem can never roll back a dataset that
+    // imported correctly — and it is recorded in the database, not held in a
+    // promise that dies with the process.
+    let archiveQueued = 0;
+    try {
+      archiveQueued = (await enqueueRun(result.collectionRunId)).queued;
+    } catch (error) {
+      // The dataset is already valid and usable. Failing to write the queue is
+      // worth logging and retrying later, not worth failing the import over.
+      console.error("archive enqueue failed", { collectionRunId: result.collectionRunId }, error);
+    }
+
+    return NextResponse.json({ ...result, archiveQueued });
   } catch (error) {
     // Never surface a raw database error: it can carry connection details.
     console.error("import commit failed", error);

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { dash } from "./explorer";
 import { mediaPresentation } from "@/lib/media";
+import { resolveMedia } from "@/lib/media/resolve";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ErrorState } from "@/components/states/ErrorState";
 import { LoadingSkeleton } from "@/components/states/LoadingSkeleton";
@@ -18,6 +19,7 @@ type Detail = {
   title: string | null; body_text: string | null; caption: string | null;
   link_url: string | null; link_description: string | null; collation_count: number | null;
   media: { images?: unknown[]; videos?: unknown[]; cards?: unknown[] } | null;
+  archive_url?: string | null; archive_status?: string | null;
   observed_at: string | null;
 };
 type History = {
@@ -86,7 +88,7 @@ function Body({ detail, history }: { detail: Detail; history: History[] }) {
           : "สถานะล่าสุดจากทุกรอบ"}
       </p>
 
-      <Media media={detail.media} />
+      <Media detail={detail} />
 
       <dl style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 12px" }}>
         <Row label="เพจ" value={detail.page_name} testId="drawer-page-name" />
@@ -150,8 +152,27 @@ function Row({ label, value, testId }: { label: string; value: unknown; testId?:
 }
 
 /** Media lives on Meta's CDN and its URLs expire, so a broken image is normal, not an error state. */
-function Media({ media }: { media: Detail["media"] }) {
+function Media({ detail }: { detail: Detail }) {
+  const media = detail.media;
   const [broken, setBroken] = useState<Record<number, boolean>>({});
+
+  // Archive first. A dataset older than about four days has nothing else left,
+  // and the archived object is ours rather than the CDN's.
+  const archived = resolveMedia(detail.display_format, media, {
+    archivePath: null,
+    archiveStatus: detail.archive_status ?? null,
+    presentationUrl: detail.archive_url ?? null,
+  });
+  if (archived.state === "archived") {
+    return (
+      <div data-testid="media-strip" data-media-source="archived" style={{ marginBottom: 12 }}>
+        {/* eslint-disable-next-line @next/next/no-img-element -- signed storage URL, no loader */}
+        <img src={archived.src} alt="" width={220} data-testid="media-archived"
+          data-media-kind={archived.kind} />
+      </div>
+    );
+  }
+
   // Scheme filtering and source-key interpretation both live in lib/media: the
   // uploaded JSON is untrusted, and two copies of that logic is how one of them
   // ends up reading a key the collector never wrote.

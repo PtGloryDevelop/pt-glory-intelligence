@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { getAdDetail, getObservationHistory } from "@/lib/read/queries";
 import { badRequest, notFound, readRoute } from "@/lib/read/guard";
+import { signArchivedPreviews } from "@/lib/media/presentation";
 import { isAdArchiveId, isUuid } from "@/lib/read/request";
 
 export const runtime = "nodejs";
@@ -22,6 +23,13 @@ export async function GET(
     // latest values under a snapshot heading.
     if (!detail) return notFound();
 
-    return { detail, history: await getObservationHistory(adArchiveId) };
+    const signed = await signArchivedPreviews([detail]);
+    return {
+      detail: {
+        ...detail,
+        archive_url: detail.archive_path ? signed.get(detail.archive_path) ?? null : null,
+      },
+      history: await getObservationHistory(adArchiveId),
+    };
   });
 }

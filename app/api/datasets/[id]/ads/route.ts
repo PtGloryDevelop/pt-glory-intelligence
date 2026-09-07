@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { getDatasetAds, getDatasetFacets, type ExplorerFilters } from "@/lib/read/queries";
 import { badRequest, readRoute } from "@/lib/read/guard";
+import { signArchivedPreviews } from "@/lib/media/presentation";
 import {
   activeFilter, boolFilter, dateFilter, filterValue, intFilter, isUuid,
   pageOffset, pageSize, searchValue, sortKey,
@@ -89,8 +90,15 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     const { rows, total } = await getDatasetAds(id, filters);
 
+    // One signing round trip for the page. The URL is short-lived; the object
+    // it points at is the durable part.
+    const signed = await signArchivedPreviews(rows);
+
     return {
-      rows: rows.map(({ total_count, ...row }) => { void total_count; return row; }),
+      rows: rows.map(({ total_count, ...row }) => {
+        void total_count;
+        return { ...row, archive_url: row.archive_path ? signed.get(row.archive_path) ?? null : null };
+      }),
       total,
       limit,
       offset,

@@ -17,6 +17,7 @@ import styles from "./explorer.module.css";
 type Row = AdCardData & {
   cta_text: string | null; page_id: string; page_categories: string[] | null;
   first_seen_at: string; last_seen_at: string; media: Media;
+  archive_url?: string | null; archive_status?: string | null;
 };
 type Facet = { facet: string; value: string; label: string; n: number };
 type Coverage = { field: string; present_count: number; total_count: number };

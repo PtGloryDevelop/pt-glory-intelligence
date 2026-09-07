@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { mediaPresentation, type Media } from "@/lib/media";
+import { type Media } from "@/lib/media";
+import { resolveMedia } from "@/lib/media/resolve";
 import { StatusBadge } from "./StatusBadge";
 import styles from "./AdCard.module.css";
 
@@ -27,6 +28,9 @@ export type AdCardData = {
   ad_age_days: number;
   collation_count: number | null;
   media: Media;
+  /** Short-lived delivery URL for the archived preview, when one exists. */
+  archive_url?: string | null;
+  archive_status?: string | null;
 };
 
 export function AdCard({ ad, onOpen }: { ad: AdCardData; onOpen: () => void }) {
@@ -39,7 +43,7 @@ export function AdCard({ ad, onOpen }: { ad: AdCardData; onOpen: () => void }) {
         onClick={onOpen}
         aria-label={`เปิดรายละเอียดโฆษณา ${ad.ad_archive_id}`}
       >
-        <Preview media={ad.media} />
+        <Preview ad={ad} />
       </button>
 
       <div className={styles.body}>
@@ -89,20 +93,24 @@ export function AdCard({ ad, onOpen }: { ad: AdCardData; onOpen: () => void }) {
  * about an ad whose creative we did capture is a claim the stored rows
  * contradict, so the empty case and the unusable case never share wording.
  */
-function Preview({ media }: { media: Media }) {
+function Preview({ ad }: { ad: AdCardData }) {
   const [broken, setBroken] = useState(false);
-  const presentation = mediaPresentation(media);
+  const resolved = resolveMedia(ad.display_format, ad.media, {
+    archivePath: null,
+    archiveStatus: ad.archive_status ?? null,
+    presentationUrl: ad.archive_url ?? null,
+  });
 
-  if (presentation.state !== "ready" || broken) {
+  if (resolved.state === "none" || resolved.state === "unusable" || broken) {
     const message =
       broken ? "สื่อโหลดไม่ได้ (ลิงก์ต้นทางหมดอายุ)"
-      : presentation.state === "none" ? "ไม่มีสื่อที่บันทึกไว้"
+      : resolved.state === "none" ? "ไม่มีสื่อที่บันทึกไว้"
       : "ไม่สามารถแสดงตัวอย่างสื่อ";
     return (
       <div
         className={styles.placeholder}
         data-testid="card-media-placeholder"
-        data-media-state={broken ? "broken" : presentation.state}
+        data-media-state={broken ? "broken" : resolved.state}
       >
         {message}
       </div>
@@ -110,21 +118,19 @@ function Preview({ media }: { media: Media }) {
   }
 
   // A card shows a still even for a video: the poster is the frame the collector
-  // captured, and a grid of autoplaying video is not a research tool.
-  const src = presentation.primary.kind === "video"
-    ? presentation.primary.poster ?? presentation.primary.src
-    : presentation.primary.src;
-
+  // captured, and a grid of autoplaying video is not a research tool. `kind`
+  // reports what the AD is, which is a different fact from what the file is.
   return (
     // eslint-disable-next-line @next/next/no-img-element -- remote CDN host, no loader
     <img
       className={styles.media}
-      src={src}
+      src={resolved.src}
       alt=""
       loading="lazy"
       onError={() => setBroken(true)}
       data-testid="card-media"
-      data-media-kind={presentation.primary.kind}
+      data-media-kind={resolved.kind}
+      data-media-source={resolved.state}
     />
   );
 }

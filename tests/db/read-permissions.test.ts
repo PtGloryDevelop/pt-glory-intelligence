@@ -113,3 +113,15 @@ test("an anonymous caller reaches nothing through PostgREST", { skip: anonSkip }
   const table = await anon.from("ads").select("ad_archive_id").limit(1);
   assert.deepEqual(table.data ?? [], [], "anon must not read ads directly either");
 });
+
+test("anon cannot read archive metadata", { skip: anonSkip }, async () => {
+  // media_assets carries storage paths. RLS is the boundary; this proves the
+  // policy added in 0023 actually denies rather than merely existing.
+  const anon = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_ANON_KEY!,
+    { auth: { persistSession: false } },
+  );
+  const result = await anon.from("media_assets").select("storage_path").limit(1);
+  assert.deepEqual(result.data ?? [], [], "anon must not read archive rows");
+});

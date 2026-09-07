@@ -24,7 +24,11 @@ export default defineConfig({
       name: "chromium",
       dependencies: ["setup"],
       use: { ...devices["Desktop Chrome"] },
-      testIgnore: [/global\.setup\.ts/, /screenshots\.spec\.ts/, /audit\.spec\.ts/],
+      testIgnore: [
+        /global\.setup\.ts/, /screenshots\.spec\.ts/, /audit\.spec\.ts/,
+        // Needs FRESH_EXPORT and live network; it has its own project.
+        /durable-media\.spec\.ts/,
+      ],
     },
     {
       // Opt-in: visual capture writes files, it does not assert, so it stays out
@@ -35,8 +39,16 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
     },
     {
-      // The V2/V3 audit capture matrix. Also opt-in — it is evidence gathering,
-      // not a gate. Use: npx playwright test --project=audit
+      // Real archival proof against live signed URLs. Needs FRESH_EXPORT and
+      // network access, so it is opt-in: npx playwright test --project=durable
+      name: "durable",
+      dependencies: ["setup"],
+      testMatch: /durable-media.spec.ts/,
+      use: { ...devices["Desktop Chrome"] },
+      timeout: 300_000,
+    },
+    {
+      // The V2/V3 audit capture matrix. Opt-in evidence gathering, not a gate.
       name: "audit",
       dependencies: ["setup"],
       testMatch: /audit\.spec\.ts/,

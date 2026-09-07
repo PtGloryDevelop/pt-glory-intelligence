@@ -44,6 +44,8 @@ export type ExplorerRow = {
   first_seen_at: string; last_seen_at: string; ad_age_days: number;
   /** Media observed in this dataset's own run. Never the latest observation. */
   media: { images?: unknown[]; videos?: unknown[]; cards?: unknown[] } | null;
+  /** Durable preview belonging to this observation, when one has been archived. */
+  archive_path: string | null; archive_status: string | null;
   total_count: number;
 };
 
@@ -61,6 +63,7 @@ export type AdDetail = {
   body_text: string | null; caption: string | null; link_url: string | null;
   link_description: string | null; collation_count: number | null;
   media: { images?: unknown[]; videos?: unknown[]; cards?: unknown[] } | null;
+  archive_path: string | null; archive_status: string | null;
   observed_at: string | null; collection_run_id: string | null;
 };
 
