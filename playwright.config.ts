@@ -30,6 +30,7 @@ export default defineConfig({
         /durable-media\.spec\.ts/,
         // Needs the seeded c2-explorer dataset with archived previews.
         /c2\.spec\.ts/,
+        /v4.spec.ts/,
       ],
     },
     {
@@ -63,6 +64,13 @@ export default defineConfig({
       name: "c3",
       dependencies: ["setup"],
       testMatch: /c3.spec.ts/,
+      use: { ...devices["Desktop Chrome"] },
+      timeout: 300_000,
+    },
+    {
+      // V4 drawer. Needs the seeded c2-explorer dataset with archived previews.
+      name: "v4",
+      testMatch: /v4.spec.ts/,
       use: { ...devices["Desktop Chrome"] },
       timeout: 300_000,
     },

@@ -4,6 +4,7 @@ import { listDatasets } from "@/lib/read/queries";
 import { PageHeader } from "@/components/shell/PageHeader";
 import { EmptyState } from "@/components/states/EmptyState";
 import { QualityBadge } from "@/components/QualityBadge";
+import { thaiDateTime } from "@/lib/format/date";
 import { Panel, PanelHead, TableWrap } from "@/components/Surface";
 
 export const dynamic = "force-dynamic";
@@ -59,7 +60,7 @@ export default async function DatasetsPage() {
                 <td>{dataset.scope_query ?? "—"}</td>
                 <td>{dataset.scope_country ?? "—"}</td>
                 <td>{dataset.source_product}</td>
-                <td>{new Date(dataset.collected_at).toLocaleString("th-TH")}</td>
+                <td>{thaiDateTime(dataset.collected_at)}</td>
                 <td data-numeral>{dataset.ads_in_dataset}</td>
                 <td data-numeral>{dataset.pages_in_dataset}</td>
                 <td>{dataset.run_status}</td>

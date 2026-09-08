@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { requireActorOrRedirect } from "@/lib/auth/roles";
+import { thaiDateTime } from "@/lib/format/date";
 import { getDatasetContext, getDatasetQuality } from "@/lib/read/queries";
 import { PageHeader } from "@/components/shell/PageHeader";
 import { ContextBar } from "@/components/ContextBar";
@@ -47,7 +48,7 @@ export default async function DatasetPage({ params }: { params: Promise<{ id: st
           { label: "คำค้น", value: context.scope_query ?? "—" },
           { label: "ประเทศ", value: context.scope_country ?? "—" },
           { label: "วิธีเก็บ", value: context.collection_method, testId: "context-method" },
-          { label: "เก็บเมื่อ", value: new Date(context.collected_at).toLocaleString("th-TH") },
+          { label: "เก็บเมื่อ", value: thaiDateTime(context.collected_at) },
           { label: "สถานะรอบ", value: context.run_status, testId: "context-status" },
           // Run provenance sits with run identity rather than in a card of its
           // own: it describes the collection, not the dataset. "Pages พบในรอบเก็บ"

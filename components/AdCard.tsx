@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { type Media } from "@/lib/media";
 import { resolveMedia } from "@/lib/media/resolve";
+import { thaiDate } from "@/lib/format/date";
 import { StatusBadge } from "./StatusBadge";
 import styles from "./AdCard.module.css";
 
@@ -96,7 +97,7 @@ export function AdCard({ ad, onOpen }: { ad: AdCardData; onOpen: () => void }) {
 
           <div className={styles.foot}>
             <span>
-              เริ่ม {new Date(ad.start_date).toLocaleDateString("th-TH")} · {ad.ad_age_days} วัน
+              เริ่ม {thaiDate(ad.start_date)} · {ad.ad_age_days} วัน
             </span>
             {reused ? <span className={styles.reuseInline}>ใช้ซ้ำ {reused}</span> : null}
           </div>

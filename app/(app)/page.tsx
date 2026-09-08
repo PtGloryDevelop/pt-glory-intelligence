@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireActorOrRedirect } from "@/lib/auth/roles";
+import { thaiDateTime } from "@/lib/format/date";
 import { listCategories, listDatasets } from "@/lib/read/queries";
 import { PageHeader } from "@/components/shell/PageHeader";
 import { Panel, PanelHead } from "@/components/Surface";
@@ -66,7 +67,7 @@ export default async function HomePage() {
           <div className={styles.stat}>
             <div className={styles.statLabel}>นำเข้าล่าสุด</div>
             <div className={styles.statValueSm}>
-              {latest ? new Date(latest.created_at).toLocaleString("th-TH") : "—"}
+              {thaiDateTime(latest?.created_at)}
             </div>
           </div>
           <div className={styles.stat}>

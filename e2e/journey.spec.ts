@@ -95,7 +95,9 @@ test.describe("import to explorer to drawer", () => {
     await page.getByTestId("ads-table").locator("tbody tr").first()
       .getByRole("button").click();
     const drawer = page.getByTestId("ad-drawer");
-    await expect(drawer.getByTestId("drawer-context")).toHaveText("สถานะตามรอบเก็บของชุดข้อมูลนี้");
+    // V4 states which snapshot, rather than only that it is one.
+    await expect(drawer.getByTestId("drawer-context")).toContainText("ข้อมูลใน Dataset นี้");
+    await expect(drawer.getByTestId("drawer-context")).toHaveAttribute("data-context", "dataset");
     await expect(drawer.getByTestId("observation-history")).toBeVisible();
     await drawer.getByTestId("drawer-close").click();
     await expect(page.getByTestId("ad-drawer")).toHaveCount(0);
@@ -190,7 +192,10 @@ test.describe("import to explorer to drawer", () => {
     await expect(page.getByTestId("drawer-format")).toHaveText("IMAGE");
     await expect(page.getByTestId("drawer-active")).toHaveText("Active");
     // History carries both runs even though the snapshot shows one.
-    await expect(page.getByTestId("observation-history").locator("tbody tr")).toHaveCount(2);
+    await expect(page.getByTestId("observation-row")).toHaveCount(2);
+    // ...and exactly one of them is the observation this dataset is pinned to,
+    // so the newer run above it cannot read as the drawer's primary truth.
+    await expect(page.locator('[data-testid="observation-row"][data-current="true"]')).toHaveCount(1);
   });
 
   test("a partial import says so instead of rounding it away", async ({ page }) => {
@@ -286,6 +291,10 @@ test.describe("import to explorer to drawer", () => {
     );
     await importFile(page, GOLDEN, "e2e-media");
     await showTable(page);
+    // An IMAGE ad specifically: a VIDEO renders a player, and a player with an
+    // unreachable poster is not the broken frame this test is about.
+    await page.getByTestId("f-format").selectOption("IMAGE");
+    await expect(page.getByTestId("ads-table").locator("tbody tr").first()).toBeVisible();
     await page.getByTestId("ads-table").locator("tbody tr").first().getByRole("button").click();
     await expect(page.getByTestId("ad-drawer")).toBeVisible();
     const media = page.getByTestId("media-unavailable").or(page.getByTestId("media-placeholder"));

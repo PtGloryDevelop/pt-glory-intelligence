@@ -7,6 +7,7 @@ import { KPIRow, KPIStat } from "@/components/KPIStat";
 import { PartialBanner } from "@/components/PartialBanner";
 import { QualityStrip, type QualityItem } from "@/components/QualityStrip";
 import { ErrorState } from "@/components/states/ErrorState";
+import { thaiDateTime } from "@/lib/format/date";
 import styles from "./import.module.css";
 
 type Coverage = { field: string; presentCount: number; totalCount: number; coverage: number; tier: string };
@@ -182,7 +183,7 @@ export function ImportClient({ categories }: { categories: { id: string; name: s
             <dt>คำค้น</dt><dd>{preview.scope.query ?? "—"}</dd>
             <dt>ประเทศ</dt><dd>{preview.scope.country ?? "—"}</dd>
             <dt>วิธีเก็บ</dt><dd data-testid="preview-method">{preview.scope.collectionMethod}</dd>
-            <dt>เก็บเมื่อ</dt><dd>{preview.scope.collectedAt}</dd>
+            <dt>เก็บเมื่อ</dt><dd>{thaiDateTime(preview.scope.collectedAt)}</dd>
           </dl>
 
           <h3>ตัวเลขที่ collector รายงาน เทียบกับที่เซิร์ฟเวอร์นับเอง</h3>

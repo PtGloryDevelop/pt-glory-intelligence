@@ -13,6 +13,7 @@ import {
   type FilterKey, type Filters,
 } from "@/lib/explorer/filters";
 import type { Media } from "@/lib/media";
+import { thaiDate } from "@/lib/format/date";
 import styles from "./explorer.module.css";
 
 type Row = AdCardData & {
@@ -279,7 +280,7 @@ export function Explorer({ datasetId, coverage = [] }: {
                   <td>{dash(row.cta_type)}</td>
                   <td className={styles.platformCell}>{dash(row.publisher_platform)}</td>
                   <td className={styles.numCell}>
-                    {new Date(row.start_date).toLocaleDateString("th-TH")}
+                    {thaiDate(row.start_date)}
                   </td>
                   <td className={styles.numCell}>{dash(row.ad_age_days)}</td>
                   <td data-testid={`active-${row.ad_archive_id}`}>
