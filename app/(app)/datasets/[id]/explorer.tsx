@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AdDrawer } from "./drawer";
+import { AdDrawer } from "@/components/AdDrawer";
 import { AdCard, type AdCardData } from "@/components/AdCard";
 import { AdThumb } from "@/components/AdThumb";
 import { StatusBadge } from "@/components/StatusBadge";

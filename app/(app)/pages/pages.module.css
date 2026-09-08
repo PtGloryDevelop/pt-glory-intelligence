@@ -1,0 +1,76 @@
+/*
+ * Page Intelligence list.
+ *
+ * Same toolbar grammar as the Explorer — uppercase label above the control,
+ * search takes the room first — so the two research surfaces do not feel like
+ * two products.
+ */
+
+.basis {
+  margin: 0 0 12px;
+  font-size: var(--fs-meta);
+  color: var(--muted);
+}
+
+.toolbar {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.label {
+  display: block;
+  font-size: var(--fs-label);
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.field { min-width: 0; }
+.field select { min-height: 38px; width: 100%; min-width: 9rem; max-width: 15rem; }
+.search { flex: 2 1 280px; min-width: 200px; }
+.search input { width: 100%; min-height: 40px; font-size: var(--fs-body); }
+.toolbar button { min-height: 38px; }
+
+/* Three state badges in one cell; they wrap rather than widen the column. */
+.states { display: flex; gap: 4px; flex-wrap: wrap; }
+
+/* Multi-value, so it can be long. It never pushes the numeric columns around. */
+.categories { max-width: 18rem; color: var(--muted); font-size: var(--fs-meta); }
+
+.pager {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 12px;
+  font-size: var(--fs-meta);
+}
+
+/* ---------- Scope chooser ---------- */
+
+.scopeGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.scopeHeading { font-size: var(--fs-subhead); margin-bottom: 4px; }
+.scopeAll { margin-top: 22px; }
+.scopeNote { color: var(--muted); font-size: var(--fs-meta); margin: 0 0 10px; }
+
+.scopeList { list-style: none; margin: 0 0 4px; padding: 0; display: grid; gap: 10px; }
+.scopeList li { display: grid; gap: 2px; }
+.scopeMeta { color: var(--muted); font-size: var(--fs-meta); }
+
+@media (max-width: 640px) {
+  .toolbar { padding: 10px; }
+  .field select, .search input { max-width: none; }
+  .categories { max-width: 12rem; }
+}

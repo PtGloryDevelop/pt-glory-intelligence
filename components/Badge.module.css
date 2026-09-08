@@ -25,3 +25,6 @@
 .danger { background: var(--danger-tint); color: var(--danger); }
 .neutral { background: var(--neutral-tint); color: var(--muted); }
 .brand { background: var(--brand-tint); color: var(--brand-ink); }
+
+/* A count beside the state word, when the badge summarises a set of ads. */
+.count { font-size: var(--fs-meta); opacity: 0.85; }

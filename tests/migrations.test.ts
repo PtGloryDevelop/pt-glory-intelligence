@@ -16,9 +16,9 @@ test("every up migration has a matching down migration", () => {
   }
 });
 
-test("migrations are numbered 0001..0025 with no gaps", () => {
+test("migrations are numbered 0001..0026 with no gaps", () => {
   const numbers = up.map((f) => Number(f.slice(0, 4)));
-  assert.deepEqual(numbers, Array.from({ length: 25 }, (_, i) => i + 1));
+  assert.deepEqual(numbers, Array.from({ length: 26 }, (_, i) => i + 1));
 });
 
 test("all 14 tables are created", () => {
@@ -127,7 +127,15 @@ test("every function a migration creates is dropped by its rollback", () => {
   const created = [...new Set(
     [...allUp.matchAll(/create function public\.(\w+)/g)].map((m) => m[1]),
   )].sort();
-  assert.deepEqual(created, ["ad_detail", "ad_observation_history", "current_user_role", "dataset_ads_facets", "dataset_ads_page", "dataset_context", "dataset_list", "evergreen_threshold_days", "jsonb_text_array", "run_media_archive_drain"]);
+  assert.deepEqual(created, [
+    "ad_detail", "ad_observation_history", "current_user_role",
+    "dataset_ads_facets", "dataset_ads_page", "dataset_context", "dataset_list",
+    "evergreen_threshold_days", "jsonb_text_array",
+    // Page Intelligence (0026). Read-only, like every function above it.
+    "page_activity", "page_ads", "page_creative_mix", "page_detail",
+    "page_like_history", "page_list", "page_scope_observations",
+    "run_media_archive_drain",
+  ]);
 
   const allDown = files
     .filter((f) => f.endsWith(".down.sql"))

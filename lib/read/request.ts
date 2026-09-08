@@ -124,3 +124,12 @@ export function intFilter(raw: string | null): { ok: true; value: number | null 
   if (!Number.isFinite(parsed) || parsed < 0) return { ok: false };
   return { ok: true, value: Math.min(Math.trunc(parsed), MAX_INT_FILTER) };
 }
+
+/**
+ * Meta page ids are numeric strings, like ad archive ids. Validated in
+ * TypeScript so a malformed one is a 400 rather than a database error whose
+ * text names a column type.
+ */
+export function isPageId(value: string): boolean {
+  return /^\d{1,32}$/.test(value);
+}

@@ -37,6 +37,8 @@ export default defineConfig({
         /durable-media\.spec\.ts/,
         // Need the seeded c2-explorer dataset with archived previews.
         /c2\.spec\.ts/, /v4\.spec\.ts/, /v5\.spec\.ts/,
+        // Imports its own fixture and needs the seeded sessions; own project.
+        /p2-pages\.spec\.ts/,
       ],
     },
     {
@@ -85,6 +87,15 @@ export default defineConfig({
       // dataset, because the captures must show real archived media.
       name: "v5",
       testMatch: [GUARD, /v5\.spec\.ts/],
+      use: { ...devices["Desktop Chrome"] },
+      timeout: 300_000,
+    },
+    {
+      // P2.1 Page Intelligence. Imports its own fixture through the real flow,
+      // so it needs the shared login sessions and nothing else.
+      name: "p2",
+      dependencies: ["setup"],
+      testMatch: [GUARD, /p2-pages.spec.ts/],
       use: { ...devices["Desktop Chrome"] },
       timeout: 300_000,
     },

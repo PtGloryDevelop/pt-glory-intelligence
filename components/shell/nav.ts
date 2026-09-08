@@ -25,7 +25,10 @@ export const NAV: NavSection[] = [
       { label: "หมวดหมู่", icon: "folder" },
       { label: "Dataset", icon: "layers", href: "/datasets" },
       { label: "Ads Explorer", icon: "grid" },
-      { label: "เพจ / แบรนด์", icon: "building" },
+      // Page Intelligence (P2.1). The label keeps the product's planned wording,
+      // but what exists behind it is pages: a Page is not a Brand, and nothing
+      // in here maps one to the other.
+      { label: "เพจ / แบรนด์", icon: "building", href: "/pages" },
       { label: "Creatives", icon: "image" },
     ],
   },

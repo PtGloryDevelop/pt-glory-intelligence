@@ -1,0 +1,32 @@
+.figure { margin: 0; }
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-size: var(--fs-meta);
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.key { display: inline-flex; align-items: center; gap: 6px; }
+.swatch { width: 10px; height: 10px; border-radius: 2px; }
+.firstSeen { background: var(--brand); }
+.started { background: var(--accent-blue); }
+.unit { margin-left: auto; }
+
+/* A long history scrolls inside the figure rather than dragging the page. */
+.scroll { overflow-x: auto; }
+.svg { display: block; }
+
+.axis { stroke: var(--line); stroke-width: 1; }
+.firstSeenBar { fill: var(--brand); }
+.startedBar { fill: var(--accent-blue); }
+
+.range {
+  margin: 6px 0 0;
+  font-size: var(--fs-meta);
+  color: var(--muted);
+}
+
+.empty { color: var(--muted); font-size: var(--fs-meta); margin: 0; }

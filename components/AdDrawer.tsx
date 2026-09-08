@@ -8,7 +8,7 @@ import { thaiDate, thaiDateTime } from "@/lib/format/date";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ErrorState } from "@/components/states/ErrorState";
 import { LoadingSkeleton } from "@/components/states/LoadingSkeleton";
-import styles from "./drawer.module.css";
+import styles from "./AdDrawer.module.css";
 
 /**
  * One ad, inspected.

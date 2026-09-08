@@ -1,0 +1,66 @@
+.block { margin-bottom: var(--gap-section); }
+
+.head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.title { font-size: var(--fs-title-sm); }
+.pair { color: var(--muted); font-size: var(--fs-meta); font-variant-numeric: tabular-nums; }
+
+.qualifier {
+  margin: 2px 0 10px;
+  font-size: var(--fs-meta);
+  color: var(--muted);
+}
+/* A low-coverage caveat is a warning about what may be claimed, so it reads as
+   one rather than as grey small print. */
+.qualifier[data-tier="low"], .qualifier[data-tier="partial"] { color: var(--warn-ink); font-weight: 600; }
+
+.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(6rem, 12rem) 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-meta);
+}
+
+.track {
+  height: 10px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-sunken);
+  overflow: hidden;
+}
+.fill { display: block; height: 100%; background: var(--brand); }
+
+.count { font-size: var(--fs-meta); min-width: 2.5rem; text-align: right; }
+.share {
+  font-size: var(--fs-meta);
+  color: var(--muted);
+  min-width: 3.5rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.empty { color: var(--muted); font-size: var(--fs-meta); margin: 0; }
+
+@media (max-width: 640px) {
+  /* The bar is the first thing to go: at this width the name and the two
+     numbers are the readable part, and a 40px track says nothing. */
+  .row { grid-template-columns: 1fr auto auto; }
+  .track { display: none; }
+  .name { max-width: none; }
+}

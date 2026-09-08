@@ -144,5 +144,51 @@ function writeFixtures() {
     unresolved_ads: [noId],
   }));
 
+  /*
+   * One page, five ads, built so the Page surfaces have something real to say:
+   * three active / one stopped / one unreadable, only two of five with a
+   * readable CTA, and a spread of formats and platforms. The 40% CTA coverage
+   * is the point — it is what makes the low-coverage wording appear instead of
+   * a confident percentage.
+   */
+  const PAGE = { page_id: "710000000000001" };
+  const variants = [
+    { id: "710000000000101", is_active: true,  display_format: "VIDEO", cta_type: "MESSAGE_PAGE",
+      publisher_platform: ["FACEBOOK", "INSTAGRAM"], collation_count: 4, start: "2020-03-01T00:00:00.000Z" },
+    { id: "710000000000102", is_active: true,  display_format: "IMAGE", cta_type: "LEARN_MORE",
+      publisher_platform: ["FACEBOOK"], collation_count: 2, start: "2026-08-25T00:00:00.000Z" },
+    { id: "710000000000103", is_active: true,  display_format: "IMAGE", cta_type: null,
+      publisher_platform: ["INSTAGRAM", "MESSENGER"], collation_count: 1, start: "2026-07-01T00:00:00.000Z" },
+    { id: "710000000000104", is_active: false, display_format: "MULTI_IMAGES", cta_type: null,
+      publisher_platform: ["FACEBOOK"], collation_count: 1, start: "2021-05-01T00:00:00.000Z" },
+    { id: "710000000000105", is_active: null,  display_format: null, cta_type: null,
+      publisher_platform: [], collation_count: 1, start: "2019-11-01T00:00:00.000Z" },
+  ];
+
+  writeFileSync(join(TMP, "pages-mixed.json"), JSON.stringify({
+    ...golden,
+    generated_at: "2026-09-01T00:00:00.000Z",
+    source_rows: variants.length, unique_ads: variants.length, unique_pages: 1, unresolved_count: 0,
+    quality_summary: {
+      ...golden.quality_summary, resolved_records: variants.length, unresolved_records: 0,
+    },
+    ads: variants.map((variant) => ({
+      ...template, ...PAGE,
+      ad_archive_id: variant.id,
+      page_name: "คลินิกทดสอบ P2",
+      page_categories: ["Medical Center", "Health/beauty"],
+      page_like_count: 4321,
+      is_active: variant.is_active,
+      display_format: variant.display_format,
+      cta_type: variant.cta_type,
+      cta_text: variant.cta_type === null ? null : "ทัก",
+      publisher_platform: variant.publisher_platform,
+      collation_count: variant.collation_count,
+      start_date: variant.start,
+      images: [], videos: [], cards: [],
+    })),
+    unresolved_ads: [],
+  }));
+
   writeFileSync(join(TMP, "invalid.json"), "{ this is not json");
 }
