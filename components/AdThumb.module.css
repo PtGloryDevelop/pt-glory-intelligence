@@ -1,0 +1,41 @@
+.wrap {
+  position: relative;
+  display: block;
+  width: 48px;
+  height: 60px;
+  flex: none;
+}
+
+/* 4:5, the same frame the grid uses, so a row and a card crop identically. */
+.thumb {
+  width: 48px;
+  height: 60px;
+  object-fit: cover;
+  display: block;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+}
+
+.videoBadge {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  display: grid;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: rgba(44, 36, 31, 0.75);
+  color: #fff;
+}
+
+.placeholder {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 60px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  color: var(--muted);
+  font-size: var(--fs-meta);
+}

@@ -8,11 +8,13 @@ import styles from "./AdCard.module.css";
 
 /**
  * One ad in the research grid. The creative dominates; everything else is
- * supporting metadata in a fixed reading order.
+ * supporting metadata in a fixed reading order:
  *
- * Every field is a stored observation from the dataset's own run. Nothing on
- * this card is a performance figure, because the source has none — no
- * engagement, no reach, no spend, and no "winning ad" score derived from them.
+ *   creative → page + status → copy → CTA/platforms → started/age → reuse
+ *
+ * Every field is a stored observation from the dataset's own run. Nothing here
+ * is a performance figure, because the source has none — no engagement, no
+ * reach, no spend, and no "winning ad" score derived from them.
  */
 
 export type AdCardData = {
@@ -33,65 +35,91 @@ export type AdCardData = {
   archive_status?: string | null;
 };
 
+/** What the ad IS. Read from display_format, never from the archived file's type. */
+function formatIdentity(displayFormat: string | null): { label: string; isVideo: boolean } | null {
+  const format = (displayFormat ?? "").toUpperCase();
+  if (format === "VIDEO") return { label: "Video", isVideo: true };
+  if (format === "IMAGE") return { label: "Image", isVideo: false };
+  if (format === "MULTI_IMAGES") return { label: "Images", isVideo: false };
+  if (format === "CAROUSEL") return { label: "Carousel", isVideo: false };
+  if (format === "DCO") return { label: "DCO", isVideo: false };
+  return format ? { label: format, isVideo: false } : null;
+}
+
 export function AdCard({ ad, onOpen }: { ad: AdCardData; onOpen: () => void }) {
+  const identity = formatIdentity(ad.display_format);
+  const reused = ad.collation_count && ad.collation_count > 1 ? ad.collation_count : null;
+
   return (
     <article className={styles.card} data-testid={`ad-card-${ad.ad_archive_id}`}>
+      {/* The whole card opens the drawer, not just the image. */}
       <button
         type="button"
         className={styles.hit}
         data-testid={`open-ad-${ad.ad_archive_id}`}
         onClick={onOpen}
-        aria-label={`เปิดรายละเอียดโฆษณา ${ad.ad_archive_id}`}
+        aria-label={`เปิดรายละเอียดโฆษณาของ ${ad.page_name ?? "เพจที่ไม่ทราบชื่อ"}`}
       >
-        <Preview ad={ad} />
-      </button>
-
-      <div className={styles.body}>
-        <div className={styles.head}>
-          <span className={styles.page} title={ad.page_name ?? undefined}>
-            {ad.page_name ?? "—"}
-          </span>
-          <StatusBadge isActive={ad.is_active} />
-        </div>
-
-        {/* Copy preview, clamped. The full text lives in the drawer. */}
-        <p className={styles.copy} data-testid={`card-copy-${ad.ad_archive_id}`}>
-          {ad.body_text ?? ad.title ?? "—"}
-        </p>
-
-        <div className={styles.meta}>
-          <span className={styles.tag}>{ad.display_format ?? "—"}</span>
-          <span className={styles.tag}>{ad.cta_type ?? "—"}</span>
-        </div>
-
-        <div className={styles.platforms}>
-          {ad.publisher_platform?.length ? ad.publisher_platform.join(" · ") : "—"}
-        </div>
-
-        <div className={styles.foot}>
-          <span>
-            เริ่ม {new Date(ad.start_date).toLocaleDateString("th-TH")} · {ad.ad_age_days} วัน
-          </span>
-          {/* Reuse is a stored collation count, not a popularity signal. */}
-          {ad.collation_count && ad.collation_count > 1 ? (
+        <div className={styles.frame}>
+          <Preview ad={ad} />
+          {identity ? (
+            <span className={styles.formatTag} data-testid={`card-format-${ad.ad_archive_id}`}>
+              {identity.isVideo ? <VideoGlyph /> : null}
+              {identity.label}
+            </span>
+          ) : null}
+          {reused ? (
             <span className={styles.reuse} data-testid={`card-reuse-${ad.ad_archive_id}`}>
-              ใช้ซ้ำ {ad.collation_count}
+              ใช้ซ้ำ {reused}
             </span>
           ) : null}
         </div>
-      </div>
+
+        <div className={styles.body}>
+          <div className={styles.head}>
+            <span className={styles.page} title={ad.page_name ?? undefined}>
+              {ad.page_name ?? "—"}
+            </span>
+            <StatusBadge isActive={ad.is_active} />
+          </div>
+
+          <p className={styles.copy} data-testid={`card-copy-${ad.ad_archive_id}`}>
+            {ad.body_text ?? ad.title ?? "—"}
+          </p>
+
+          <div className={styles.meta}>
+            {ad.cta_type ? <span className={styles.cta}>{ad.cta_type}</span> : null}
+            <span className={styles.platforms}>
+              {ad.publisher_platform?.length ? ad.publisher_platform.join(" · ") : "—"}
+            </span>
+          </div>
+
+          <div className={styles.foot}>
+            <span>
+              เริ่ม {new Date(ad.start_date).toLocaleDateString("th-TH")} · {ad.ad_age_days} วัน
+            </span>
+            {reused ? <span className={styles.reuseInline}>ใช้ซ้ำ {reused}</span> : null}
+          </div>
+        </div>
+      </button>
     </article>
   );
 }
 
+function VideoGlyph() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden focusable="false">
+      <path d="M8 5v14l11-7z" />
+    </svg>
+  );
+}
+
 /**
- * Media lives on Meta's CDN and those URLs expire, so a creative that will not
- * load is normal rather than an error. The placeholder stays neutral: inventing
- * artwork for an ad whose creative we never captured would be a fabrication.
+ * Four distinct media states, four distinct messages.
  *
- * Three distinct facts, three distinct messages. Saying "nothing was captured"
- * about an ad whose creative we did capture is a claim the stored rows
- * contradict, so the empty case and the unusable case never share wording.
+ * "Nothing was captured" and "captured but not displayable" are different facts
+ * about the data, and an expired CDN link with no archive is a third. Collapsing
+ * them would have the product assert something its own rows contradict.
  */
 function Preview({ ad }: { ad: AdCardData }) {
   const [broken, setBroken] = useState(false);
@@ -103,25 +131,26 @@ function Preview({ ad }: { ad: AdCardData }) {
 
   if (resolved.state === "none" || resolved.state === "unusable" || broken) {
     const message =
-      broken ? "สื่อโหลดไม่ได้ (ลิงก์ต้นทางหมดอายุ)"
+      // Only a source URL can go stale on us; an archived object cannot.
+      broken ? "สื่อต้นทางหมดอายุ"
       : resolved.state === "none" ? "ไม่มีสื่อที่บันทึกไว้"
       : "ไม่สามารถแสดงตัวอย่างสื่อ";
     return (
       <div
         className={styles.placeholder}
         data-testid="card-media-placeholder"
-        data-media-state={broken ? "broken" : resolved.state}
+        data-media-state={broken ? "expired" : resolved.state}
       >
-        {message}
+        <MediaGlyph />
+        <span>{message}</span>
       </div>
     );
   }
 
-  // A card shows a still even for a video: the poster is the frame the collector
-  // captured, and a grid of autoplaying video is not a research tool. `kind`
-  // reports what the AD is, which is a different fact from what the file is.
+  // A still even for a video: the poster is the frame the collector captured,
+  // and a grid of autoplaying video is not a research tool.
   return (
-    // eslint-disable-next-line @next/next/no-img-element -- remote CDN host, no loader
+    // eslint-disable-next-line @next/next/no-img-element -- remote CDN / signed storage, no loader
     <img
       className={styles.media}
       src={resolved.src}
@@ -132,5 +161,19 @@ function Preview({ ad }: { ad: AdCardData }) {
       data-media-kind={resolved.kind}
       data-media-source={resolved.state}
     />
+  );
+}
+
+function MediaGlyph() {
+  return (
+    <svg
+      className={styles.placeholderIcon} width="22" height="22" viewBox="0 0 24 24"
+      fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"
+      strokeLinejoin="round" aria-hidden focusable="false"
+    >
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <circle cx="8.5" cy="9.5" r="1.5" />
+      <path d="m21 15-5-5L5 21" />
+    </svg>
   );
 }

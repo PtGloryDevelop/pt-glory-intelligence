@@ -28,6 +28,8 @@ export default defineConfig({
         /global\.setup\.ts/, /screenshots\.spec\.ts/, /audit\.spec\.ts/,
         // Needs FRESH_EXPORT and live network; it has its own project.
         /durable-media\.spec\.ts/,
+        // Needs the seeded c2-explorer dataset with archived previews.
+        /c2\.spec\.ts/,
       ],
     },
     {
@@ -44,6 +46,14 @@ export default defineConfig({
       name: "durable",
       dependencies: ["setup"],
       testMatch: /durable-media.spec.ts/,
+      use: { ...devices["Desktop Chrome"] },
+      timeout: 300_000,
+    },
+    {
+      // C2 explorer capture and geometry. Needs the seeded c2-explorer dataset
+      // with archived previews, so it runs on its own rather than in the gate.
+      name: "c2",
+      testMatch: /c2.spec.ts/,
       use: { ...devices["Desktop Chrome"] },
       timeout: 300_000,
     },

@@ -1,3 +1,13 @@
+/*
+ * The creative is the card. Everything else is a caption under it.
+ *
+ * Frame is 4:5, chosen from the archived previews rather than by taste: 58 real
+ * creatives measured 45% square (600×600 image renditions) and 55% portrait
+ * (1080×1920 video posters), no landscape at all, and a median aspect of exactly
+ * 0.80. A single 4:5 frame therefore sits between the two clusters and crops the
+ * least across the real mix, while keeping every card in a row the same height
+ * so a page can be scanned rather than read.
+ */
 .card {
   display: flex;
   flex-direction: column;
@@ -6,86 +16,196 @@
   border-radius: var(--radius);
   overflow: hidden;
   min-width: 0;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
 }
-.card:hover { border-color: var(--brand); }
+.card:hover { border-color: var(--brand); box-shadow: var(--shadow); }
 
-/* The creative is the card: a 4:5 block the rest of the content sits under. */
+/*
+ * The whole card is the hit target, not just the image. Research browsing is a
+ * lot of clicking, and aiming at a thumbnail is a tax on every one of them.
+ */
 .hit {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  text-align: left;
   width: 100%;
   padding: 0;
   border: 0;
   border-radius: 0;
-  background: var(--surface-sunken);
+  background: none;
   cursor: pointer;
+  min-width: 0;
+}
+.hit:hover { background: none; }
+.hit:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; }
+
+.frame {
+  position: relative;
+  width: 100%;
   aspect-ratio: 4 / 5;
+  background: var(--surface-sunken);
   overflow: hidden;
+  flex: none;
 }
 
 .media { width: 100%; height: 100%; object-fit: cover; display: block; }
 
-/* Neutral on purpose — an unavailable creative must not be dressed up as one. */
+/*
+ * Neutral on purpose. An unavailable creative must not be dressed up as one —
+ * no gradient, no stock artwork, nothing that could be mistaken for the ad.
+ */
 .placeholder {
   width: 100%;
   height: 100%;
   display: grid;
   place-items: center;
-  padding: 12px;
+  align-content: center;
+  gap: 6px;
+  padding: 14px;
   text-align: center;
   color: var(--muted);
   font-size: var(--fs-meta);
   background: var(--surface-sunken);
 }
+.placeholderIcon { opacity: 0.5; }
 
-.body { display: grid; gap: 6px; padding: 10px 12px 12px; min-width: 0; }
-
-.head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.page {
-  font-weight: 600;
+/*
+ * Format identity, which is a fact about the AD and not about the file we
+ * archived. A video's durable preview is a JPEG poster; the badge is what stops
+ * that reading as an image ad.
+ */
+.formatTag {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+  background: rgba(44, 36, 31, 0.72);
+  color: #fff;
   font-size: var(--fs-meta);
+  font-weight: 600;
+  line-height: 1.5;
+  backdrop-filter: blur(2px);
+}
+
+/* Reuse is a stored collation count, never a popularity or performance signal. */
+.reuse {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--brand);
+  color: var(--ink);
+  font-size: var(--fs-meta);
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.body { display: grid; gap: 7px; padding: 11px 12px 12px; min-width: 0; }
+
+.head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
+.head > :not(.page) { flex: none; }
+.page {
+  flex: 0 1 auto;
+  font-weight: 600;
+  font-size: var(--fs-body);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
 }
 
+/* Two to three readable lines. The rest of the copy lives in the drawer. */
 .copy {
   margin: 0;
   font-size: var(--fs-meta);
-  color: var(--ink);
+  line-height: 1.55;
+  color: var(--muted);
   display: -webkit-box;
   -webkit-line-clamp: 3;
   line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  min-height: 3.4em;
+  min-height: calc(3 * 1.55em);
 }
 
-.meta { display: flex; gap: 6px; flex-wrap: wrap; }
-.tag {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 8px;
+/*
+ * One metadata line, not a wall of chips. CTA is the only thing badged here;
+ * format lives on the creative and platforms read as plain text, because three
+ * competing pill styles in a 270px card is noise rather than hierarchy.
+ */
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: var(--fs-meta);
+  color: var(--muted);
+  min-width: 0;
+  overflow: hidden;
+}
+.cta {
+  padding: 1px 7px;
   border-radius: var(--radius-pill);
   background: var(--neutral-tint);
   color: var(--muted);
+  font-weight: 600;
+  white-space: nowrap;
 }
-
-.platforms { font-size: 11px; color: var(--muted); }
+.platforms { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 
 .foot {
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  font-size: 11px;
+  font-size: var(--fs-meta);
   color: var(--muted);
   border-top: 1px solid var(--line);
   padding-top: 8px;
 }
 
-.reuse {
-  font-weight: 700;
-  color: var(--brand-ink);
-  white-space: nowrap;
+/* ---------------------------------------------------------------------------
+ * Phone: recomposed, not shrunk.
+ *
+ * A full-width 4:5 creative plus a caption is about 550px per card, so thirty
+ * records became a 23,000px scroll — a vertical report rather than something to
+ * browse. Below 640 the card turns on its side: a fixed thumbnail beside the
+ * text, roughly 120px per row, which is a list a thumb can actually move
+ * through. Nothing needed to understand the ad is dropped.
+ */
+@media (max-width: 640px) {
+  .hit { flex-direction: row; align-items: stretch; gap: 12px; }
+
+  .frame {
+    width: 104px;
+    flex: 0 0 104px;
+    aspect-ratio: 4 / 5;
+    border-radius: var(--radius-sm);
+    margin: 10px 0 10px 10px;
+  }
+
+  /* The overlays need the room they no longer have on a 104px thumbnail. */
+  .formatTag { left: 4px; bottom: 4px; padding: 1px 6px; font-size: 11px; gap: 3px; }
+  .reuse { display: none; }
+  .placeholder { padding: 6px; font-size: 11px; }
+  .placeholderIcon { display: none; }
+
+  .body { padding: 10px 12px 10px 0; gap: 5px; align-content: start; min-width: 0; overflow: hidden; }
+  .body > * { min-width: 0; max-width: 100%; }
+  .foot { flex-wrap: wrap; gap: 4px 8px; }
+  .copy { -webkit-line-clamp: 2; line-clamp: 2; min-height: 0; }
+  .foot { border-top: 0; padding-top: 0; }
+  /* Reuse moves into the footer line, where there is space for it. */
+  .reuseInline { color: var(--brand-ink); font-weight: 700; white-space: nowrap; }
 }
+
+/* Above the phone breakpoint the inline reuse is redundant with the overlay. */
+.reuseInline { display: none; }
+@media (max-width: 640px) { .reuseInline { display: inline; } }

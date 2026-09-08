@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AdDrawer } from "./drawer";
 import { AdCard, type AdCardData } from "@/components/AdCard";
+import { AdThumb } from "@/components/AdThumb";
 import { StatusBadge } from "@/components/StatusBadge";
 import { EmptyState } from "@/components/states/EmptyState";
 import { LoadingSkeleton } from "@/components/states/LoadingSkeleton";
@@ -198,26 +199,42 @@ export function Explorer({ datasetId, coverage = [] }: {
         />
       ) : null}
 
-      <p className={styles.note}>
-        แพลตฟอร์มและหมวดเพจเป็นฟิลด์หลายค่า — โฆษณาหนึ่งชิ้นนับได้มากกว่าหนึ่งค่า ผลรวมจึงไม่เท่ากับ 100%
-      </p>
-      <p data-testid="explorer-total">
-        พบ {total} จาก {total === 0 ? 0 : offset + 1}
-        {rows.length ? `–${offset + rows.length}` : ""} รายการที่แสดง
-      </p>
+      {/* Count, position and view mode read as one line so the results start
+          immediately rather than after a stack of separate paragraphs. */}
+      <div className={styles.resultBar}>
+        <p className={styles.resultCount} data-testid="explorer-total">
+          พบ <strong>{total}</strong> รายการ
+          {total > 0 ? ` · แสดง ${offset + 1}–${offset + rows.length}` : ""}
+        </p>
+        <p className={styles.note}>
+          แพลตฟอร์มและหมวดเพจเป็นฟิลด์หลายค่า — ผลรวมจึงเกิน 100% ได้
+        </p>
+      </div>
 
       {loading ? <LoadingSkeleton rows={4} /> : null}
 
+      {/* "This dataset is empty" and "your filters matched nothing" are
+          different answers. Showing the filter version for an empty dataset
+          would send someone hunting for a filter they never set. */}
       {!loading && rows.length === 0 ? (
-        <EmptyState
-          testId="explorer-empty"
-          title="ไม่พบโฆษณาที่ตรงกับตัวกรองนี้"
-          action={
-            <button type="button" data-testid="reset-filters" onClick={clearAll}>
-              ล้างตัวกรองทั้งหมด
-            </button>
-          }
-        />
+        applied.length === 0 ? (
+          <EmptyState
+            testId="explorer-empty"
+            title="ชุดข้อมูลนี้ยังไม่มีโฆษณา"
+            body="รอบเก็บนี้ไม่ได้บันทึกโฆษณาไว้เลย"
+          />
+        ) : (
+          <EmptyState
+            testId="explorer-empty"
+            title="ไม่พบโฆษณาที่ตรงกับตัวกรองนี้"
+            body={`ตัวกรองที่ใช้อยู่: ${applied.map(({ key: name, value }) => chipLabel(name, value, name === "page" ? facetLabel("page", value) : undefined)).join(" · ")}`}
+            action={
+              <button type="button" data-testid="reset-filters" data-variant="primary" onClick={clearAll}>
+                ล้างตัวกรองทั้งหมด
+              </button>
+            }
+          />
+        )
       ) : null}
 
       {!loading && rows.length && view === "grid" ? (
@@ -235,26 +252,36 @@ export function Explorer({ datasetId, coverage = [] }: {
           <table data-testid="ads-table">
             <thead>
               <tr>
-                <th>ครีเอทีฟ</th><th>เพจ</th><th>ข้อความ</th><th>รูปแบบ</th>
-                <th>CTA</th><th>แพลตฟอร์ม</th><th>เริ่มแสดง</th><th>อายุ (วัน)</th><th>สถานะ</th>
+                <th className={styles.thCreative}>ครีเอทีฟ</th>
+                <th>เพจ</th><th>ข้อความ</th><th>รูปแบบ</th>
+                <th>CTA</th><th>แพลตฟอร์ม</th>
+                <th className={styles.thNum}>เริ่มแสดง</th>
+                <th className={styles.thNum}>อายุ (วัน)</th>
+                <th>สถานะ</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((row) => (
                 <tr key={row.ad_archive_id} data-testid={`ad-row-${row.ad_archive_id}`}>
-                  <td>
-                    <button type="button" data-testid={`open-ad-${row.ad_archive_id}`}
+                  {/* The creative leads the row: an analyst scans by picture,
+                      not by a 16-digit id. The id lives in the drawer. */}
+                  <td className={styles.creativeCell}>
+                    <button type="button" className={styles.thumbButton}
+                      data-testid={`open-ad-${row.ad_archive_id}`}
+                      aria-label={`เปิดรายละเอียดโฆษณาของ ${row.page_name ?? "เพจที่ไม่ทราบชื่อ"}`}
                       onClick={() => setSelected(row.ad_archive_id)}>
-                      {row.ad_archive_id}
+                      <AdThumb ad={row} />
                     </button>
                   </td>
-                  <td>{dash(row.page_name)}</td>
+                  <td className={styles.pageCell}>{dash(row.page_name)}</td>
                   <td className={styles.copyCell}>{dash(row.body_text)}</td>
                   <td>{dash(row.display_format)}</td>
                   <td>{dash(row.cta_type)}</td>
-                  <td>{dash(row.publisher_platform)}</td>
-                  <td>{dash(row.start_date)}</td>
-                  <td>{dash(row.ad_age_days)}</td>
+                  <td className={styles.platformCell}>{dash(row.publisher_platform)}</td>
+                  <td className={styles.numCell}>
+                    {new Date(row.start_date).toLocaleDateString("th-TH")}
+                  </td>
+                  <td className={styles.numCell}>{dash(row.ad_age_days)}</td>
                   <td data-testid={`active-${row.ad_archive_id}`}>
                     <StatusBadge isActive={row.is_active} />
                   </td>
