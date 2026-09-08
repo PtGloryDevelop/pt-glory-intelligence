@@ -252,7 +252,7 @@ export async function PageTimeline({ scope, pageId, datasetId, query, pageName }
               body="ช่วงเวลาที่เลือกไม่มีโฆษณาของเพจนี้"
             />
           ) : (
-            <BucketEvidence rows={selection.rows} datasetId={datasetId} />
+            <BucketEvidence rows={selection.rows} datasetId={datasetId} testId="bucket-evidence" />
           )}
 
           {selection.total > EVIDENCE_SIZE ? (

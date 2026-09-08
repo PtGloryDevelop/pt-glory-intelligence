@@ -10,7 +10,7 @@ import { connect, resetTables } from "../tests/db/helpers.ts";
  * hand-made cookie.
  */
 
-import { ACCOUNTS, AUTH, CATEGORY, PASSWORD, TMP } from "./constants.ts";
+import { ACCOUNTS, AUTH, CATEGORY, CATEGORY_WORKSPACE, PASSWORD, TMP } from "./constants.ts";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 // Same order as tests/db/auth-chain.test.ts: the JWT service-role key is what
@@ -32,7 +32,13 @@ setup("prepare database, fixtures and sessions", async ({ browser, baseURL }) =>
   const client = await connect();
   try {
     await resetTables(client);
-    await client.query("insert into public.categories (name) values ($1)", [CATEGORY]);
+    // Two research categories: the shared one every spec imports into, and one
+    // the category workspace owns, so its aggregates cannot be shifted by an
+    // unrelated spec importing first.
+    await client.query(
+      "insert into public.categories (name) values ($1), ($2)",
+      [CATEGORY, CATEGORY_WORKSPACE],
+    );
     for (const { id, role } of users) {
       await client.query(
         `insert into public.user_roles (user_id, role) values ($1, $2)
@@ -240,6 +246,71 @@ function writeFixtures() {
       { id: "720000000000106", is_active: true, display_format: "VIDEO", cta_type: "MESSAGE_PAGE",
         publisher_platform: ["FACEBOOK", "INSTAGRAM"], collation_count: 3,
         start: "2026-09-02T00:00:00.000Z" },
+    ],
+  })));
+
+  /*
+   * The category-workspace pair: two pages, two runs, its own page ids.
+   *
+   * A category ranks pages against each other, so one page would prove nothing;
+   * and it aggregates every dataset in its category, so it gets ids of its own
+   * rather than sharing them with the page and timeline specs.
+   *
+   * Between the runs one ad stops, one becomes unreadable, one is new, and the
+   * query changes — which is what makes the comparability caveat appear.
+   */
+  const categoryAds = (prefix: string): PageAd[] => mixedAds.map((ad) => ({
+    ...ad, id: ad.id.replace(/^710/, prefix),
+  }));
+
+  const twoPageExport = (options: {
+    generatedAt: string; query: string;
+    pages: { pageId: string; pageName: string; ads: PageAd[] }[];
+  }) => {
+    const parts = options.pages.map((entry) => pageExport({
+      pageId: entry.pageId, pageName: entry.pageName, likeCount: 3200,
+      generatedAt: options.generatedAt, query: options.query, ads: entry.ads,
+    }));
+    const ads = parts.flatMap((part) => part.ads);
+    return {
+      ...parts[0],
+      ads,
+      source_rows: ads.length, unique_ads: ads.length,
+      unique_pages: options.pages.length,
+      quality_summary: {
+        ...golden.quality_summary, resolved_records: ads.length, unresolved_records: 0,
+      },
+    };
+  };
+
+  const catPageA = categoryAds("731");
+  const catPageB = categoryAds("732").slice(0, 3);
+
+  writeFileSync(join(TMP, "category-run-a.json"), JSON.stringify(twoPageExport({
+    generatedAt: "2026-09-01T00:00:00.000Z", query: "คลินิกทดสอบ",
+    pages: [
+      { pageId: "730000000000001", pageName: "คลินิกหมวด A", ads: catPageA },
+      { pageId: "730000000000002", pageName: "คลินิกหมวด B", ads: catPageB },
+    ],
+  })));
+
+  writeFileSync(join(TMP, "category-run-b.json"), JSON.stringify(twoPageExport({
+    generatedAt: "2026-09-06T00:00:00.000Z", query: "ฟิลเลอร์ทดสอบ",
+    pages: [
+      {
+        pageId: "730000000000001", pageName: "คลินิกหมวด A",
+        ads: [
+          { ...catPageA[0], is_active: false },
+          catPageA[1],
+          { ...catPageA[2], is_active: null, display_format: null },
+          catPageA[3],
+          catPageA[4],
+          { id: "731000000000106", is_active: true, display_format: "VIDEO",
+            cta_type: "MESSAGE_PAGE", publisher_platform: ["FACEBOOK", "INSTAGRAM"],
+            collation_count: 3, start: "2026-09-02T00:00:00.000Z" },
+        ],
+      },
+      { pageId: "730000000000002", pageName: "คลินิกหมวด B", ads: catPageB },
     ],
   })));
 

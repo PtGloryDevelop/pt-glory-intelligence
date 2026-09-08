@@ -16,9 +16,9 @@ test("every up migration has a matching down migration", () => {
   }
 });
 
-test("migrations are numbered 0001..0027 with no gaps", () => {
+test("migrations are numbered 0001..0028 with no gaps", () => {
   const numbers = up.map((f) => Number(f.slice(0, 4)));
-  assert.deepEqual(numbers, Array.from({ length: 27 }, (_, i) => i + 1));
+  assert.deepEqual(numbers, Array.from({ length: 28 }, (_, i) => i + 1));
 });
 
 test("all 14 tables are created", () => {
@@ -128,7 +128,12 @@ test("every function a migration creates is dropped by its rollback", () => {
     [...allUp.matchAll(/create function public\.(\w+)/g)].map((m) => m[1]),
   )].sort();
   assert.deepEqual(created, [
-    "ad_detail", "ad_observation_history", "current_user_role",
+    "ad_detail", "ad_observation_history",
+    // Category workspace (0028). Read-only, like every function here.
+    "category_activity", "category_creative_mix", "category_datasets",
+    "category_detail", "category_evidence", "category_list", "category_pages",
+    "category_run_history",
+    "current_user_role",
     "dataset_ads_facets", "dataset_ads_page", "dataset_context", "dataset_list",
     "evergreen_threshold_days", "jsonb_text_array",
     // Page Intelligence (0026) and its timeline (0027). Read-only, like every

@@ -1,0 +1,13 @@
+/*
+ * Same grid geometry as the Explorer: the card is the frozen one, so a research
+ * surface it sits in should not have its own idea of how wide a creative is.
+ */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(228px, 1fr));
+  gap: 14px;
+}
+
+@media (max-width: 640px) {
+  .grid { grid-template-columns: 1fr; }
+}

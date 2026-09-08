@@ -22,7 +22,8 @@ export const NAV: NavSection[] = [
   {
     heading: "DATA",
     items: [
-      { label: "หมวดหมู่", icon: "folder" },
+      // The internal research grouping (P2.3). Not Meta's page categories.
+      { label: "หมวดหมู่", icon: "folder", href: "/categories" },
       { label: "Dataset", icon: "layers", href: "/datasets" },
       { label: "Ads Explorer", icon: "grid" },
       // Page Intelligence (P2.1). The label keeps the product's planned wording,
