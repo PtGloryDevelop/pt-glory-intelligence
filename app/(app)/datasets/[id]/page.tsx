@@ -9,6 +9,7 @@ import { worstTier } from "@/lib/domain/quality-tier";
 import { KPIRow, KPIStat } from "@/components/KPIStat";
 import { PartialBanner } from "@/components/PartialBanner";
 import { Explorer } from "./explorer";
+import styles from "./dataset.module.css";
 
 export const dynamic = "force-dynamic";
 
@@ -25,13 +26,21 @@ export default async function DatasetPage({ params }: { params: Promise<{ id: st
 
   return (
     <>
+      <div className={styles.operational}>
       <PageHeader
         title={context.dataset_name}
         back={{ href: "/datasets", label: "ชุดข้อมูลทั้งหมด" }}
       />
 
-      {/* Every value here comes from the run this dataset was built from, not
-          from the master ads table, so it stays fixed when a newer run lands. */}
+      {/*
+        * The context bar answers "which dataset am I looking at?" and nothing
+        * else. It used to also carry Ads, Pages, quality and the run status,
+        * which the KPI row below then repeated — the same five facts stated
+        * twice, one on top of the other.
+        *
+        * Every value still comes from the run this dataset was built from, not
+        * from the master ads table, so it stays fixed when a newer run lands.
+        */}
       <ContextBar
         items={[
           { label: "หมวดหมู่", value: context.category_name },
@@ -40,18 +49,21 @@ export default async function DatasetPage({ params }: { params: Promise<{ id: st
           { label: "วิธีเก็บ", value: context.collection_method, testId: "context-method" },
           { label: "เก็บเมื่อ", value: new Date(context.collected_at).toLocaleString("th-TH") },
           { label: "สถานะรอบ", value: context.run_status, testId: "context-status" },
-          { label: "Ads", value: String(context.ads_in_dataset), testId: "context-ads" },
-          { label: "Pages", value: String(context.pages_in_dataset), testId: "context-pages" },
-          // Run provenance, kept beside the dataset figure rather than instead of
-          // it: this counts every page the collector saw, including pages that
-          // only appear on quarantined rows, so on a partial run it is larger.
+          // Run provenance sits with run identity rather than in a card of its
+          // own: it describes the collection, not the dataset. "Pages พบในรอบเก็บ"
+          // counts every page the collector saw — including pages that appear
+          // only on quarantined rows — so on a partial run it is legitimately
+          // larger than the dataset's own Pages above.
           {
-            label: "Pages ที่พบในรอบเก็บ",
+            label: "Pages พบในรอบเก็บ",
             value: String(context.computed_unique_pages),
             testId: "context-run-pages",
           },
-          { label: "กันไว้ตรวจ", value: String(context.quarantine_count), testId: "context-quarantine" },
-          { label: "คุณภาพข้อมูล", value: <QualityBadge tier={worstTier(quality)} /> },
+          {
+            label: "กันไว้ตรวจ",
+            value: String(context.quarantine_count),
+            testId: "context-quarantine",
+          },
         ]}
       />
 
@@ -64,21 +76,34 @@ export default async function DatasetPage({ params }: { params: Promise<{ id: st
         />
       ) : null}
 
+      {/*
+        * The KPI row answers "what is inside this dataset?" — three real facts
+        * rather than four cards padded out with values the bar above already
+        * shows. The testids ride on the values so an assertion reads the number
+        * and not the label wrapped around it.
+        */}
       <KPIRow>
-        <KPIStat label="Ads" value={context.ads_in_dataset} helper="ในชุดข้อมูลนี้" />
-        {/* The primary KPI describes the dataset. The run's own page count stays
-            in the context bar above as provenance, never swapped in here. */}
-        <KPIStat label="Pages" value={context.pages_in_dataset} helper="ในชุดข้อมูลนี้" />
-        <KPIStat label="เก็บเมื่อ" value={new Date(context.collected_at).toLocaleString("th-TH")} />
         <KPIStat
-          label="สถานะรอบ"
-          value={context.run_status}
-          helper={`กันไว้ตรวจ ${context.quarantine_count} แถว`}
-          status={<QualityBadge tier={worstTier(quality)} />}
+          label="Ads"
+          value={<span data-testid="context-ads">{context.ads_in_dataset}</span>}
+          helper="ในชุดข้อมูลนี้"
+        />
+        {/* The dataset's own page count. The run's wider count is provenance and
+            lives in the line below, never swapped in here. */}
+        <KPIStat
+          label="Pages"
+          value={<span data-testid="context-pages">{context.pages_in_dataset}</span>}
+          helper="ในชุดข้อมูลนี้"
+        />
+        <KPIStat
+          label="คุณภาพข้อมูล"
+          value={<QualityBadge tier={worstTier(quality)} />}
+          helper="ระดับต่ำสุดของฟิลด์ที่วัดได้"
         />
       </KPIRow>
 
-      <h2>คุณภาพข้อมูล</h2>
+
+      <h2 className={styles.qualityHeading}>คุณภาพข้อมูล</h2>
       <QualityStrip
         testId="quality-strip"
         rows={quality.map((row) => ({
@@ -89,6 +114,8 @@ export default async function DatasetPage({ params }: { params: Promise<{ id: st
           tier: row.tier,
         }))}
       />
+
+      </div>
 
       {/* Coverage travels with the filters so "มีลิงก์ปลายทาง" can say how many
           ads the field was readable on, instead of implying the rest have none. */}

@@ -38,3 +38,64 @@
 .drop:focus-within { outline: 3px solid var(--focus); outline-offset: 2px; }
 
 .dropFile { font-weight: 600; font-size: var(--fs-meta); }
+
+/* The preview action, and the commit that follows it, never both look primary. */
+.previewButton { min-height: 44px; }
+
+/* Scope facts as a definition list; two columns on desktop, stacked on a phone. */
+.scope {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 16px;
+  margin: 0 0 var(--gap-page);
+  font-size: var(--fs-body);
+}
+.scope dt { color: var(--muted); font-size: var(--fs-meta); }
+.scope dd { margin: 0; overflow-wrap: anywhere; }
+
+.countsWrap {
+  overflow-x: auto;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.counts { background: transparent; }
+.counts td:last-child { font-variant-numeric: tabular-nums; }
+.countsNote { color: var(--muted); font-size: var(--fs-meta); margin-top: 8px; }
+
+/*
+ * Below 640 the reported-vs-computed table restacks. Three numeric columns plus
+ * Thai headers cannot fit 375px, and scrolling a three-column table sideways to
+ * compare two numbers is worse than reading them stacked.
+ */
+@media (max-width: 640px) {
+  .countsWrap { border: 0; background: none; overflow-x: visible; }
+  .counts thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .counts, .counts tbody, .counts tr, .counts td { display: block; width: 100%; }
+
+  .counts tr {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    margin-bottom: 10px;
+  }
+  .counts td {
+    border: 0;
+    padding: 3px 0;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: baseline;
+  }
+  .counts td::before {
+    content: attr(data-label);
+    font-size: var(--fs-eyebrow);
+    letter-spacing: 0.06em;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  .scope { grid-template-columns: 1fr; gap: 2px; }
+  .scope dd { margin-bottom: 10px; }
+}

@@ -39,6 +39,14 @@ export function QualityStrip({
   return (
     <div className={styles.wrap}>
       <Table rows={lead} testId={testId} rowPrefix={rowPrefix} warningPrefix={warningPrefix} />
+      {ordered.some((row) => row.tier !== "normal") ? (
+        <p className={styles.footnote}>
+          {ordered.some((row) => row.tier === "unknown")
+            ? "ฟิลด์ระดับ “ยังไม่วัด” คือยังไม่ได้วัดความครอบคลุม ไม่ใช่ค่าที่วัดแล้วได้ผลแย่ · "
+            : ""}
+          ฟิลด์ที่ไม่ใช่ระดับปกติ อ้างได้เฉพาะในกลุ่มที่อ่านค่าได้ ไม่ใช่ทั้งชุดข้อมูล
+        </p>
+      ) : null}
       {rest.length ? (
         <details className={styles.more} data-testid={`${testId}-more`}>
           <summary>ดู Data Quality ทั้งหมด ({ordered.length} ฟิลด์)</summary>
@@ -92,6 +100,11 @@ function Warning({ tier, testId }: { tier: string; testId: string }) {
     tier === "unknown"
       ? "ยังไม่ได้วัดความครอบคลุมของฟิลด์นี้"
       : "อ้างได้เฉพาะในกลุ่มที่อ่านค่าได้ ไม่ใช่ทั้งชุดข้อมูล";
-  return <span data-testid={testId} className={styles.warning}>{text}</span>;
+  // The sentence stays on the row for assistive technology and for the tests,
+  // but it is no longer repeated as visible text five times over — printed on
+  // every non-normal row it wrapped, and six rows of it was 413px of screen
+  // before the user reached a single ad. The visible version is one footnote
+  // under the table.
+  return <span data-testid={testId} className={styles.warning} title={text}>{text}</span>;
 }
 

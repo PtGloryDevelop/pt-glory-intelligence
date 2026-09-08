@@ -53,6 +53,16 @@
   --fs-section: 16px;
   --fs-body: 14px;
   --fs-meta: 12.5px;
+  /*
+   * Two label roles, not three sizes invented per component. The audit found
+   * 10.5 / 11 / 11.5px competing across ContextBar, KPIStat, the shell and the
+   * Explorer, all meaning "small label".
+   *
+   *   --fs-eyebrow  uppercase section and stat labels, letter-spaced
+   *   --fs-label    form labels and table headers, sentence case
+   */
+  --fs-eyebrow: 11px;
+  --fs-label: 11.5px;
 
   /* Shape and spacing — handoff §4.4 */
   --radius: 12px;
@@ -116,7 +126,7 @@ p { margin: 0 0 12px; }
 /* Section labels above a block of content. */
 [data-eyebrow] {
   font-family: var(--ui);
-  font-size: 11px;
+  font-size: var(--fs-eyebrow);
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -151,7 +161,26 @@ button {
   cursor: pointer;
 }
 button:hover:not(:disabled) { background: var(--surface-sunken); }
-button:disabled { opacity: 0.5; cursor: not-allowed; }
+/*
+ * Disabled at 0.5 opacity measured 3.06:1 — legible but faint. Keeping the text
+ * at full strength and dimming only the surface says "this control exists and
+ * is unavailable" rather than "this control is fading away", and it cannot be
+ * mistaken for a loading state.
+ */
+button:disabled {
+  cursor: not-allowed;
+  background: var(--surface-sunken);
+  border-color: var(--line);
+  color: var(--muted);
+  opacity: 1;
+}
+button[data-variant="primary"]:disabled {
+  background: var(--surface-sunken);
+  border-color: var(--line);
+  color: var(--muted);
+  box-shadow: none;
+  font-weight: 600;
+}
 
 /* Primary call to action: orange fill, charcoal label. Charcoal on #F26522 is
    4.83:1; white would be 3.15 and fail. */
@@ -174,7 +203,7 @@ table { border-collapse: collapse; width: 100%; font-size: var(--fs-body); }
 th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--line); }
 th {
   font-weight: 600;
-  font-size: 11.5px;
+  font-size: var(--fs-label);
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--muted);

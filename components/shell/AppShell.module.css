@@ -42,7 +42,7 @@
 .nav { padding: 10px 8px 20px; flex: 1; }
 
 .heading {
-  font-size: 10.5px;
+  font-size: var(--fs-eyebrow);
   letter-spacing: 0.09em;
   font-weight: 700;
   color: var(--muted);
@@ -176,7 +176,7 @@
   .sidebar .markOnly { display: none; }
   .sidebar .label { display: block; }
   .sidebar .item, .sidebar .disabled { justify-content: flex-start; padding-left: 10px; padding-right: 10px; }
-  .sidebar .heading { text-align: left; padding-left: 10px; font-size: 10.5px; }
+  .sidebar .heading { text-align: left; padding-left: 10px; font-size: var(--fs-eyebrow); }
   .sidebar .footer { text-align: left; padding: 12px 14px; }
 
   .open { transform: translateX(0); }

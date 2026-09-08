@@ -1,0 +1,27 @@
+/*
+ * Dataset detail reads top to bottom as: which dataset → what is in it → how
+ * trustworthy is it → the ads. This file's job is getting to the last one
+ * quickly, without hiding any of the first three.
+ */
+
+/*
+ * Two working widths on one page.
+ *
+ * Context, KPIs and the quality strip are read, so they keep a comfortable
+ * measure. The Explorer below is a research canvas and takes the full width the
+ * shell allows. Both start at the same left gutter, so the page widens without
+ * appearing to jump.
+ */
+.operational { max-width: var(--content-max); }
+
+.qualityHeading { margin-bottom: 10px; }
+
+/*
+ * A tighter rhythm than the page default inside the operational block.
+ *
+ * Four blocks at the global 28px section gap spend 112px on whitespace before
+ * the working surface. This area is dense reference material read as one unit,
+ * so it gets its own spacing rather than the general page rhythm.
+ */
+.operational > * { margin-bottom: 18px; }
+.operational .qualityHeading { margin-bottom: 8px; }

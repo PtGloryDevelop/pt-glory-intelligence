@@ -20,7 +20,7 @@
 
 .label {
   display: block;
-  font-size: 11.5px;
+  font-size: var(--fs-label);
   letter-spacing: 0.06em;
   font-weight: 700;
   color: var(--muted);
@@ -29,15 +29,25 @@
 }
 
 .field, .sort { min-width: 0; }
-.field select, .sort select { min-height: 38px; max-width: 190px; }
+/*
+ * Sized to content within a range rather than pinned at one width. The old hard
+ * 190px cap clipped longer Thai option labels while leaving short ones adrift in
+ * empty space, and the same number was repeated in four places.
+ */
+.field select, .sort select {
+  min-height: 38px;
+  width: 100%;
+  min-width: 9rem;
+  max-width: 15rem;
+}
 
 /* Search is the primary research control, so it takes the room first. */
 .search { flex: 2 1 300px; min-width: 220px; }
 .search input { width: 100%; min-height: 40px; font-size: var(--fs-body); }
 
 .pageFilter { display: grid; gap: 4px; }
-.pageFilter input { min-height: 32px; max-width: 190px; }
-.pageFilter select { min-height: 38px; max-width: 190px; }
+.pageFilter input { min-height: 34px; width: 100%; min-width: 9rem; max-width: 15rem; }
+.pageFilter select { min-height: 38px; width: 100%; min-width: 9rem; max-width: 15rem; }
 
 .advancedButton { min-height: 38px; font-weight: 600; }
 
@@ -112,7 +122,7 @@
 .group input, .group select { width: 100%; min-height: 36px; }
 
 .toggle { display: grid; gap: 4px; font-size: var(--fs-meta); }
-.hint { font-size: 11px; color: var(--muted); margin: 0; }
+.hint { font-size: var(--fs-eyebrow); color: var(--muted); margin: 0; }
 
 .note { color: var(--muted); font-size: var(--fs-meta); margin: 0; }
 
@@ -196,7 +206,7 @@
 }
 
 .platformCell {
-  max-width: 190px;
+  max-width: 15rem;
   font-size: var(--fs-meta);
   color: var(--muted);
   white-space: normal;
@@ -208,6 +218,9 @@
 
 @media (max-width: 640px) {
   .viewToggle { margin-left: 0; }
+  /* Full width on a phone: a capped control beside empty space helps nobody. */
+  .field, .sort, .pageFilter { flex: 1 1 100%; }
+  .field select, .sort select, .pageFilter input, .pageFilter select { max-width: none; }
 }
 
 /*

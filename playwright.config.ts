@@ -58,6 +58,15 @@ export default defineConfig({
       timeout: 300_000,
     },
     {
+      // C3 dataset and import corrections. Imports its own fixtures, so it needs
+      // the shared login sessions but nothing else.
+      name: "c3",
+      dependencies: ["setup"],
+      testMatch: /c3.spec.ts/,
+      use: { ...devices["Desktop Chrome"] },
+      timeout: 300_000,
+    },
+    {
       // The V2/V3 audit capture matrix. Opt-in evidence gathering, not a gate.
       name: "audit",
       dependencies: ["setup"],

@@ -1,4 +1,5 @@
 .wrap { margin-bottom: var(--gap-section); }
+.more { margin-top: 8px; }
 
 /* A level-1 surface, same treatment as every other operational table, so the
    coverage figures sit on the product's own paper rather than the raw canvas. */
@@ -12,12 +13,30 @@
 .table { background: transparent; }
 .table tbody tr:last-child td { border-bottom: 0; }
 .field { font-variant-numeric: tabular-nums; word-break: break-all; }
+/*
+ * Visible only to assistive technology. The same sentence rendered on every
+ * non-normal row wrapped to two lines each and pushed the working surface off
+ * the screen; the badge already carries the tier visually, and the footnote
+ * below carries the meaning once.
+ */
 .warning {
-  display: inline-block;
-  margin-left: 8px;
-  color: var(--muted);
-  font-size: var(--fs-meta);
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
+
+.footnote {
+  margin: 8px 0 0;
+  font-size: var(--fs-meta);
+  color: var(--muted);
+}
+
+/* A compact row: this is a reference strip, not the main reading surface. */
+.table th, .table td { padding: 7px 14px; }
+.table td { font-variant-numeric: tabular-nums; }
 
 .more { margin-top: 10px; }
 .more summary {
@@ -60,7 +79,7 @@
 
   .table td::before {
     content: attr(data-label);
-    font-size: 10.5px;
+    font-size: var(--fs-eyebrow);
     letter-spacing: 0.06em;
     font-weight: 700;
     color: var(--muted);

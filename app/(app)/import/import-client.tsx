@@ -133,11 +133,24 @@ export function ImportClient({ categories }: { categories: { id: string; name: s
         {file ? <div className={styles.dropFile} data-testid="chosen-file">{file.name}</div> : null}
       </div>
 
+      {/*
+        * Once a file has been checked, "ตรวจไฟล์ก่อนบันทึก" is a stale
+        * instruction: it reads as though the user still has to do the thing they
+        * just did, while the real next action sits far below. After a preview
+        * the same button becomes the secondary "check it again", and primary
+        * moves to the commit at the bottom of the panel.
+        */}
       <button
-        type="button" data-testid="preview-button" disabled={!file || phase === "validating"}
-        onClick={runPreview} style={{ minHeight: 44 }}
+        type="button"
+        data-testid="preview-button"
+        data-variant={showPreview ? undefined : "primary"}
+        className={styles.previewButton}
+        disabled={!file || phase === "validating" || phase === "committing"}
+        onClick={runPreview}
       >
-        {phase === "validating" ? "กำลังตรวจไฟล์…" : "ตรวจไฟล์ก่อนบันทึก"}
+        {phase === "validating" ? "กำลังตรวจไฟล์…"
+          : showPreview ? "ตรวจไฟล์นี้อีกครั้ง"
+          : "ตรวจไฟล์ก่อนบันทึก"}
       </button>
 
       {phase === "rejected" || phase === "failed" ? (
@@ -164,7 +177,7 @@ export function ImportClient({ categories }: { categories: { id: string; name: s
               helper="แถวที่นำเข้าไม่ได้" />
           </KPIRow>
 
-          <dl style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 16px" }}>
+          <dl className={styles.scope}>
             <dt>ไฟล์</dt><dd data-testid="preview-filename">{preview.fileName}</dd>
             <dt>คำค้น</dt><dd>{preview.scope.query ?? "—"}</dd>
             <dt>ประเทศ</dt><dd>{preview.scope.country ?? "—"}</dd>
@@ -173,21 +186,28 @@ export function ImportClient({ categories }: { categories: { id: string; name: s
           </dl>
 
           <h3>ตัวเลขที่ collector รายงาน เทียบกับที่เซิร์ฟเวอร์นับเอง</h3>
-          <div style={{ overflowX: "auto" }}>
-            <table data-testid="counts-table">
+          {/*
+            * Three narrow columns of numbers do not survive a 375px screen, and
+            * shrinking the type until they fit would make the one number that
+            * matters unreadable. Below 640 each row restacks with its header as
+            * a label — the same treatment QualityStrip uses — while the markup
+            * stays a real table for screen readers and the route tests.
+            */}
+          <div className={styles.countsWrap}>
+            <table data-testid="counts-table" className={styles.counts}>
               <thead><tr><th>ฟิลด์</th><th>collector รายงาน</th><th>เซิร์ฟเวอร์นับได้</th></tr></thead>
               <tbody>
                 {Object.keys(preview.computed).map((key) => (
                   <tr key={key}>
-                    <td>{key}</td>
-                    <td>{preview.reported[key]}</td>
-                    <td><strong>{preview.computed[key]}</strong></td>
+                    <td data-label="ฟิลด์">{key}</td>
+                    <td data-label="collector รายงาน">{preview.reported[key]}</td>
+                    <td data-label="เซิร์ฟเวอร์นับได้"><strong>{preview.computed[key]}</strong></td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          <p style={{ color: "var(--muted)", fontSize: 13 }}>
+          <p className={styles.countsNote}>
             ตัวเลขของระบบคือคอลัมน์ขวา · ถ้าสองฝั่งไม่ตรงกัน เซิร์ฟเวอร์จะปฏิเสธไฟล์ตั้งแต่ขั้นตรวจ
           </p>
 

@@ -22,7 +22,7 @@ export function KPIStat({
   return (
     <div className={styles.stat} data-testid={testId}>
       <div className={styles.label}>{label}</div>
-      <div className={styles.value}>{value}</div>
+      <div className={styles.value} data-numeral>{value}</div>
       {helper ? <div className={styles.helper}>{helper}</div> : null}
       {status ? <div className={styles.status}>{status}</div> : null}
     </div>
