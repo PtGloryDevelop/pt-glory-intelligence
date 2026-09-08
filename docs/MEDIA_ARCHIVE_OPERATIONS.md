@@ -6,6 +6,41 @@
 **หลักการเดียวที่ต้องจำ:** URL ของสื่อจาก collector มีอายุประมาณ **105 ชั่วโมง**
 ถ้าไม่มีอะไรดึงมาเก็บภายในหน้าต่างนั้น ครีเอทีฟจะหายถาวร กู้ไม่ได้
 
+
+> ## ⚠️ สถานะจริงของ DEV ตอนนี้ (2026-09-08)
+>
+> **ตารางเวลาถูกปิดอยู่ · ยังไม่มี deployment ที่เข้าถึงได้จากภายนอก**
+>
+> โปรเจกต์นี้ยังไม่มี URL HTTPS สาธารณะ — ไม่มี git remote, ไม่มี config ของ
+> Vercel/Netlify/Docker, ไม่มีตัวแปร base URL ใน env — Supabase Cloud จึงยิงเข้ามา
+> ที่แอปไม่ได้
+>
+> ระหว่าง 2026-09-07 10:20 ถึง 2026-09-08 02:20 job ทำงานไป **109 ครั้ง** และ pg_net
+> ล้มเหลวทุกครั้งด้วย `Couldn't connect to server` เพราะ Vault ชี้ไปที่ `127.0.0.1:3000`
+>
+> จึงจัดการดังนี้ใน C1.9:
+>
+> - `cron.unschedule('media-archive-drain')` — หยุด noise ทุก 10 นาที
+> - ลบ secret `media_archive_url` และ `media_archive_token` ออกจาก Vault
+> - **migration 0025 ไม่ถูกแตะ** · ฟังก์ชัน `run_media_archive_drain()` ยังอยู่ครบ
+>   และยัง inert อยู่แล้วเมื่อไม่มี config
+>
+> **ผลคือ: การเก็บภาพตัวอย่างใน DEV ต้องสั่งเองตามข้อ 6** จนกว่าจะมี deployment จริง
+>
+> ### เปิดใช้อีกครั้งเมื่อมี URL จริง
+>
+> ```bash
+> # 1. ตั้ง MEDIA_ARCHIVE_TOKEN ใน env ของแอปที่ deploy แล้ว (แอปก่อน)
+> # 2. ใส่ค่าลง Vault (Vault ทีหลัง)
+> MEDIA_ARCHIVE_URL=https://<แอปจริง> MEDIA_ARCHIVE_TOKEN=<ค่าเดียวกัน> \
+>   node --env-file-if-exists=.env.local scripts/archive-schedule-config.mjs
+>
+> # 3. เปิดตารางเวลาใหม่
+> psql "$DATABASE_URL" -c "select cron.schedule('media-archive-drain','*/10 * * * *', \$\$select public.run_media_archive_drain()\$\$)"
+> ```
+>
+> จากนั้นตรวจว่า `net._http_response` ได้ `status_code = 200` จริง ไม่ใช่ error
+
 ---
 
 ## 1. อะไรเป็นตัวสั่งให้ทำงาน
