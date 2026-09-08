@@ -16,9 +16,9 @@ test("every up migration has a matching down migration", () => {
   }
 });
 
-test("migrations are numbered 0001..0026 with no gaps", () => {
+test("migrations are numbered 0001..0027 with no gaps", () => {
   const numbers = up.map((f) => Number(f.slice(0, 4)));
-  assert.deepEqual(numbers, Array.from({ length: 26 }, (_, i) => i + 1));
+  assert.deepEqual(numbers, Array.from({ length: 27 }, (_, i) => i + 1));
 });
 
 test("all 14 tables are created", () => {
@@ -131,9 +131,12 @@ test("every function a migration creates is dropped by its rollback", () => {
     "ad_detail", "ad_observation_history", "current_user_role",
     "dataset_ads_facets", "dataset_ads_page", "dataset_context", "dataset_list",
     "evergreen_threshold_days", "jsonb_text_array",
-    // Page Intelligence (0026). Read-only, like every function above it.
+    // Page Intelligence (0026) and its timeline (0027). Read-only, like every
+    // function above them.
     "page_activity", "page_ads", "page_creative_mix", "page_detail",
-    "page_like_history", "page_list", "page_scope_observations",
+    "page_like_history", "page_list", "page_run_history", "page_run_mix",
+    "page_scope_ads", "page_scope_observations", "page_timeline",
+    "page_timeline_evidence",
     "run_media_archive_drain",
   ]);
 

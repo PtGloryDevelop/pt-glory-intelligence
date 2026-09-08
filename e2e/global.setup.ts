@@ -145,14 +145,56 @@ function writeFixtures() {
   }));
 
   /*
+   * The Page Intelligence fixtures.
+   *
    * One page, five ads, built so the Page surfaces have something real to say:
    * three active / one stopped / one unreadable, only two of five with a
    * readable CTA, and a spread of formats and platforms. The 40% CTA coverage
    * is the point — it is what makes the low-coverage wording appear instead of
    * a confident percentage.
+   *
+   * The timeline fixtures below use their own page id, so the two specs cannot
+   * contribute collection runs to each other's history: a run-count assertion
+   * that depends on which other spec ran first is not an assertion.
    */
-  const PAGE = { page_id: "710000000000001" };
-  const variants = [
+  type PageAd = {
+    id: string; is_active: boolean | null; display_format: string | null;
+    cta_type: string | null; publisher_platform: string[];
+    collation_count: number; start: string;
+  };
+
+  const pageExport = (options: {
+    pageId: string; pageName: string; likeCount: number;
+    generatedAt: string; query?: string; ads: PageAd[];
+  }) => ({
+    ...golden,
+    generated_at: options.generatedAt,
+    scope: { ...golden.scope, query: options.query ?? golden.scope?.query ?? null },
+    source_rows: options.ads.length, unique_ads: options.ads.length,
+    unique_pages: 1, unresolved_count: 0,
+    quality_summary: {
+      ...golden.quality_summary, resolved_records: options.ads.length, unresolved_records: 0,
+    },
+    ads: options.ads.map((ad) => ({
+      ...template,
+      page_id: options.pageId,
+      ad_archive_id: ad.id,
+      page_name: options.pageName,
+      page_categories: ["Medical Center", "Health/beauty"],
+      page_like_count: options.likeCount,
+      is_active: ad.is_active,
+      display_format: ad.display_format,
+      cta_type: ad.cta_type,
+      cta_text: ad.cta_type === null ? null : "ทัก",
+      publisher_platform: ad.publisher_platform,
+      collation_count: ad.collation_count,
+      start_date: ad.start,
+      images: [], videos: [], cards: [],
+    })),
+    unresolved_ads: [],
+  });
+
+  const mixedAds: PageAd[] = [
     { id: "710000000000101", is_active: true,  display_format: "VIDEO", cta_type: "MESSAGE_PAGE",
       publisher_platform: ["FACEBOOK", "INSTAGRAM"], collation_count: 4, start: "2020-03-01T00:00:00.000Z" },
     { id: "710000000000102", is_active: true,  display_format: "IMAGE", cta_type: "LEARN_MORE",
@@ -165,30 +207,41 @@ function writeFixtures() {
       publisher_platform: [], collation_count: 1, start: "2019-11-01T00:00:00.000Z" },
   ];
 
-  writeFileSync(join(TMP, "pages-mixed.json"), JSON.stringify({
-    ...golden,
-    generated_at: "2026-09-01T00:00:00.000Z",
-    source_rows: variants.length, unique_ads: variants.length, unique_pages: 1, unresolved_count: 0,
-    quality_summary: {
-      ...golden.quality_summary, resolved_records: variants.length, unresolved_records: 0,
-    },
-    ads: variants.map((variant) => ({
-      ...template, ...PAGE,
-      ad_archive_id: variant.id,
-      page_name: "คลินิกทดสอบ P2",
-      page_categories: ["Medical Center", "Health/beauty"],
-      page_like_count: 4321,
-      is_active: variant.is_active,
-      display_format: variant.display_format,
-      cta_type: variant.cta_type,
-      cta_text: variant.cta_type === null ? null : "ทัก",
-      publisher_platform: variant.publisher_platform,
-      collation_count: variant.collation_count,
-      start_date: variant.start,
-      images: [], videos: [], cards: [],
-    })),
-    unresolved_ads: [],
+  writeFileSync(join(TMP, "pages-mixed.json"), JSON.stringify(pageExport({
+    pageId: "710000000000001", pageName: "คลินิกทดสอบ P2", likeCount: 4321,
+    generatedAt: "2026-09-01T00:00:00.000Z", ads: mixedAds,
+  })));
+
+  /*
+   * The timeline pair: the same page seen twice, days apart.
+   *
+   * Between the two runs one ad stops, one becomes unreadable and one appears
+   * for the first time — and the second run asked a different query, which is
+   * what the comparability caveat exists to point out.
+   */
+  const timelineAds: PageAd[] = mixedAds.map((ad) => ({
+    ...ad, id: ad.id.replace(/^71/, "72"),
   }));
+
+  writeFileSync(join(TMP, "pages-timeline-a.json"), JSON.stringify(pageExport({
+    pageId: "720000000000001", pageName: "คลินิกไทม์ไลน์ P2", likeCount: 5100,
+    generatedAt: "2026-09-01T00:00:00.000Z", query: "วิตามินทดสอบ", ads: timelineAds,
+  })));
+
+  writeFileSync(join(TMP, "pages-timeline-b.json"), JSON.stringify(pageExport({
+    pageId: "720000000000001", pageName: "คลินิกไทม์ไลน์ P2", likeCount: 5480,
+    generatedAt: "2026-09-06T00:00:00.000Z", query: "คอลลาเจนทดสอบ",
+    ads: [
+      { ...timelineAds[0], is_active: false },
+      timelineAds[1],
+      { ...timelineAds[2], is_active: null, display_format: null },
+      timelineAds[3],
+      timelineAds[4],
+      { id: "720000000000106", is_active: true, display_format: "VIDEO", cta_type: "MESSAGE_PAGE",
+        publisher_platform: ["FACEBOOK", "INSTAGRAM"], collation_count: 3,
+        start: "2026-09-02T00:00:00.000Z" },
+    ],
+  })));
 
   writeFileSync(join(TMP, "invalid.json"), "{ this is not json");
 }

@@ -75,3 +75,90 @@
   .grid { grid-template-columns: 1fr; }
   .mix { grid-template-columns: 1fr; }
 }
+
+/* ---------- P2.2 timeline ---------- */
+
+/* Two views of one page. Same tab grammar as the Explorer's view toggle. */
+.tabs { display: flex; gap: 6px; margin-bottom: var(--gap-page); }
+.tab, .tabOn {
+  padding: 8px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  text-decoration: none;
+  font-size: var(--fs-meta);
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+}
+.tabOn {
+  background: var(--brand-tint-strong);
+  border-color: var(--brand);
+  font-weight: 600;
+}
+
+.timelineControls {
+  display: grid;
+  gap: 6px 12px;
+  margin-bottom: var(--gap-section);
+  padding: 12px var(--pad-card);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.controlLabel {
+  font-size: var(--fs-label);
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+.controlRow { display: flex; gap: 6px; flex-wrap: wrap; }
+.control, .controlOn {
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--ink);
+  text-decoration: none;
+  font-size: var(--fs-meta);
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+}
+.controlOn { background: var(--brand-tint-strong); border-color: var(--brand); font-weight: 600; }
+.period { margin: 4px 0 0; font-size: var(--fs-meta); color: var(--muted); }
+
+/* What a series counts, said next to the series rather than in a footnote. */
+.sources { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 4px; }
+.sources li { font-size: var(--fs-meta); color: var(--muted); }
+
+/* A caveat about what a number can support. Not decorative small print. */
+.caveat {
+  margin: 8px 0 0;
+  font-size: var(--fs-meta);
+  color: var(--warn-ink);
+}
+
+.hint {
+  margin: 0 0 var(--gap-section);
+  font-size: var(--fs-meta);
+  color: var(--muted);
+}
+
+.runScope { color: var(--muted); font-size: var(--fs-meta); max-width: 16rem; }
+.runStates { display: flex; gap: 4px; flex-wrap: wrap; }
+.stateLink { text-decoration: none; }
+
+.runMix {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin: 12px 0 18px;
+}
+
+@media (max-width: 640px) {
+  .tabs { gap: 4px; }
+  .runMix { grid-template-columns: 1fr; }
+}

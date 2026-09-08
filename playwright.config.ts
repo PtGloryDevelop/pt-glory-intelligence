@@ -38,7 +38,7 @@ export default defineConfig({
         // Need the seeded c2-explorer dataset with archived previews.
         /c2\.spec\.ts/, /v4\.spec\.ts/, /v5\.spec\.ts/,
         // Imports its own fixture and needs the seeded sessions; own project.
-        /p2-pages\.spec\.ts/,
+        /p2-pages\.spec\.ts/, /p2-timeline\.spec\.ts/,
       ],
     },
     {
@@ -95,7 +95,7 @@ export default defineConfig({
       // so it needs the shared login sessions and nothing else.
       name: "p2",
       dependencies: ["setup"],
-      testMatch: [GUARD, /p2-pages.spec.ts/],
+      testMatch: [GUARD, /p2-pages.spec.ts/, /p2-timeline.spec.ts/],
       use: { ...devices["Desktop Chrome"] },
       timeout: 300_000,
     },

@@ -1,0 +1,64 @@
+.wrap { display: grid; gap: 10px; }
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-size: var(--fs-meta);
+  color: var(--muted);
+}
+.key { display: inline-flex; align-items: center; gap: 6px; }
+.swatch { width: 10px; height: 10px; border-radius: 2px; }
+/* Two series, two hues from the existing system. Neither is semantic: nothing
+   here is good or bad, so nothing here is green or red. */
+.started { background: var(--brand); }
+.firstSeen { background: var(--accent-blue); }
+.unit { margin-left: auto; }
+
+/* A long history scrolls inside the figure rather than dragging the page. */
+.scroll { overflow-x: auto; }
+.svg { display: block; }
+.axis { stroke: var(--line); stroke-width: 1; }
+.startedBar { fill: var(--brand); }
+.firstSeenBar { fill: var(--accent-blue); }
+
+.table { font-size: var(--fs-meta); }
+.caption {
+  caption-side: top;
+  text-align: left;
+  color: var(--muted);
+  font-size: var(--fs-meta);
+  padding-bottom: 6px;
+}
+.table th, .table td { padding: 6px 10px; }
+.bucketDate { font-weight: 600; white-space: nowrap; }
+
+.count {
+  display: inline-block;
+  min-width: 2.2rem;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--brand-tint);
+  color: var(--brand-ink);
+  text-decoration: none;
+  text-align: center;
+  font-weight: 600;
+}
+.count:hover { background: var(--brand-tint-strong); }
+.countOn {
+  background: var(--brand);
+  color: var(--ink);
+  border: 1px solid var(--brand-deep);
+}
+
+.zero { color: var(--muted); padding: 2px 8px; display: inline-block; min-width: 2.2rem; text-align: center; }
+
+.empty { color: var(--muted); font-size: var(--fs-meta); margin: 0; }
+
+@media (max-width: 640px) {
+  /* The drawing is the first thing to go: at this width the table is the
+     readable form, and it is the one that can be operated anyway. */
+  .scroll { display: none; }
+  .table th, .table td { padding: 6px; }
+}

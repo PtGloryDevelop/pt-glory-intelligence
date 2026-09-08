@@ -17,6 +17,7 @@ import { DistributionBars } from "@/components/DistributionBars";
 import { ActivityChart } from "@/components/ActivityChart";
 import { StatusBadge } from "@/components/StatusBadge";
 import { PageEvidence } from "./evidence";
+import { PageTimeline } from "./timeline";
 import styles from "./page-detail.module.css";
 
 export const dynamic = "force-dynamic";
@@ -38,7 +39,8 @@ export default async function PageDetailPage({ params, searchParams }: {
   if (!scope) notFound();
 
   const days = recentDays(one(query.recentDays));
-  const bucket = one(query.bucket) === "day" ? "day" : "week";
+  const bucket = one(query.activity) === "day" ? "day" : "week";
+  const view = one(query.view) === "timeline" ? "timeline" : "overview";
 
   const detail = await getPageDetail(scope, pageId, days);
   // No row means this page is not in this scope. The scope is not widened to
@@ -46,9 +48,9 @@ export default async function PageDetailPage({ params, searchParams }: {
   if (!detail) notFound();
 
   const [mix, activity, likes, scopeName] = await Promise.all([
-    getPageCreativeMix(scope, pageId),
-    getPageActivity(scope, pageId, bucket),
-    getPageLikeHistory(scope, pageId),
+    view === "overview" ? getPageCreativeMix(scope, pageId) : Promise.resolve([]),
+    view === "overview" ? getPageActivity(scope, pageId, bucket) : Promise.resolve([]),
+    view === "overview" ? getPageLikeHistory(scope, pageId) : Promise.resolve([]),
     nameOfScope(scope),
   ]);
 
@@ -98,6 +100,41 @@ export default async function PageDetailPage({ params, searchParams }: {
 
       <p className={styles.basis} data-testid="scope-basis">{scopeBasis(scope)}</p>
 
+      {/*
+        * Two views of one page, not two products. Overview answers "what is this
+        * page doing"; Timeline answers "what changed, and when did we see it".
+        */}
+      <nav className={styles.tabs} aria-label="มุมมอง" data-testid="page-tabs">
+        <Link
+          href={`/pages/${pageId}?scope=${scopeParam}`}
+          className={view === "overview" ? styles.tabOn : styles.tab}
+          aria-current={view === "overview" ? "page" : undefined}
+          data-testid="tab-overview"
+        >
+          ภาพรวม
+        </Link>
+        <Link
+          href={`/pages/${pageId}?scope=${scopeParam}&view=timeline`}
+          className={view === "timeline" ? styles.tabOn : styles.tab}
+          aria-current={view === "timeline" ? "page" : undefined}
+          data-testid="tab-timeline"
+        >
+          ไทม์ไลน์
+        </Link>
+      </nav>
+
+      {view === "timeline" ? (
+        <PageTimeline
+          scope={scope}
+          pageId={pageId}
+          pageName={detail.page_name ?? detail.page_id}
+          datasetId={scope.kind === "dataset" ? scope.id : null}
+          query={Object.fromEntries(
+            Object.entries(query).map(([key, value]) => [key, one(value)]),
+          )}
+        />
+      ) : (
+      <>
       <KPIRow>
         <KPIStat
           label="Ads ที่พบ" value={detail.observed_ads}
@@ -143,7 +180,7 @@ export default async function PageDetailPage({ params, searchParams }: {
         <PanelHead
           title="กิจกรรมของเพจ"
           meta={
-            <Link href={`/pages/${pageId}?scope=${scopeParam}&bucket=${bucket === "week" ? "day" : "week"}`}>
+            <Link href={`/pages/${pageId}?scope=${scopeParam}&activity=${bucket === "week" ? "day" : "week"}`}>
               ดูราย{bucket === "week" ? "วัน" : "สัปดาห์"}
             </Link>
           }
@@ -214,6 +251,8 @@ export default async function PageDetailPage({ params, searchParams }: {
           unknown: detail.unknown_ads,
         }}
       />
+      </>
+      )}
     </>
   );
 }

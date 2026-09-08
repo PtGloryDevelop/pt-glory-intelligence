@@ -208,3 +208,105 @@ export async function getPageAds(
   const rows = (data ?? []) as PageAdRow[];
   return { rows, total: rows[0] ? Number(rows[0].total_count) : 0 };
 }
+
+/* ------------------------------------------------------------- P2.2 timeline */
+
+export type TimelinePoint = {
+  bucket_start: string;
+  /** Distinct ads whose Meta start_date falls in this bucket. */
+  started_ads: number;
+  /** Distinct ads PT Glory first observed in this bucket. */
+  first_seen_ads: number;
+};
+
+export type RunHistoryRow = {
+  collection_run_id: string;
+  dataset_id: string;
+  dataset_name: string;
+  collected_at: string;
+  collection_method: string;
+  scope_query: string | null;
+  scope_country: string | null;
+  /** Ads of this page that this run observed. */
+  observed_ads: number;
+  active_ads: number;
+  inactive_ads: number;
+  unknown_ads: number;
+  /** Ads whose earliest observation WITHIN THIS SCOPE was this run. */
+  newly_encountered: number;
+};
+
+export async function getPageTimeline(
+  scope: PageScope,
+  pageId: string,
+  options: { bucket?: "day" | "week"; from?: string | null; to?: string | null } = {},
+): Promise<TimelinePoint[]> {
+  const supabase = await dbUser();
+  const { data, error } = await supabase.rpc("page_timeline", {
+    ...scopeArgs(scope),
+    p_page_id: pageId,
+    p_bucket: options.bucket ?? "week",
+    p_from: options.from ?? null,
+    p_to: options.to ?? null,
+  });
+  if (error) throw error;
+  return (data ?? []) as TimelinePoint[];
+}
+
+export async function getPageRunHistory(
+  scope: PageScope,
+  pageId: string,
+): Promise<RunHistoryRow[]> {
+  const supabase = await dbUser();
+  const { data, error } = await supabase.rpc("page_run_history", {
+    ...scopeArgs(scope), p_page_id: pageId,
+  });
+  if (error) throw error;
+  return (data ?? []) as RunHistoryRow[];
+}
+
+/** The creative mix as ONE run saw it, with that run's own coverage. */
+export async function getPageRunMix(
+  scope: PageScope,
+  pageId: string,
+  runId: string,
+): Promise<CreativeMixRow[]> {
+  const supabase = await dbUser();
+  const { data, error } = await supabase.rpc("page_run_mix", {
+    ...scopeArgs(scope), p_page_id: pageId, p_run_id: runId,
+  });
+  if (error) throw error;
+  return (data ?? []) as CreativeMixRow[];
+}
+
+export type TimelineEvidenceOptions = {
+  metric: "started" | "first_seen" | "run";
+  from?: string | null;
+  to?: string | null;
+  runId?: string | null;
+  status?: string | null;
+  limit?: number;
+  offset?: number;
+};
+
+export async function getPageTimelineEvidence(
+  scope: PageScope,
+  pageId: string,
+  options: TimelineEvidenceOptions,
+): Promise<{ rows: PageAdRow[]; total: number }> {
+  const supabase = await dbUser();
+  const { data, error } = await supabase.rpc("page_timeline_evidence", {
+    ...scopeArgs(scope),
+    p_page_id: pageId,
+    p_metric: options.metric,
+    p_from: options.from ?? null,
+    p_to: options.to ?? null,
+    p_run_id: options.runId ?? null,
+    p_status: options.status ?? null,
+    p_limit: options.limit ?? 24,
+    p_offset: options.offset ?? 0,
+  });
+  if (error) throw error;
+  const rows = (data ?? []) as PageAdRow[];
+  return { rows, total: rows[0] ? Number(rows[0].total_count) : 0 };
+}
