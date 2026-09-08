@@ -32,6 +32,9 @@ test("no server-only credential reaches the client bundle", { skip: buildSkip },
   const bundle = clientText();
   const secrets = [
     "DATABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_SECRET_KEY",
+    // The scheduler credential. It has no NEXT_PUBLIC_ prefix, so Next cannot
+    // inline it — this asserts that stays true.
+    "MEDIA_ARCHIVE_TOKEN",
   ] as const;
 
   for (const name of secrets) {

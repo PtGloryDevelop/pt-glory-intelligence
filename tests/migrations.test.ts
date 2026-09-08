@@ -16,9 +16,9 @@ test("every up migration has a matching down migration", () => {
   }
 });
 
-test("migrations are numbered 0001..0024 with no gaps", () => {
+test("migrations are numbered 0001..0025 with no gaps", () => {
   const numbers = up.map((f) => Number(f.slice(0, 4)));
-  assert.deepEqual(numbers, Array.from({ length: 24 }, (_, i) => i + 1));
+  assert.deepEqual(numbers, Array.from({ length: 25 }, (_, i) => i + 1));
 });
 
 test("all 14 tables are created", () => {
@@ -127,7 +127,7 @@ test("every function a migration creates is dropped by its rollback", () => {
   const created = [...new Set(
     [...allUp.matchAll(/create function public\.(\w+)/g)].map((m) => m[1]),
   )].sort();
-  assert.deepEqual(created, ["ad_detail", "ad_observation_history", "current_user_role", "dataset_ads_facets", "dataset_ads_page", "dataset_context", "dataset_list", "evergreen_threshold_days", "jsonb_text_array"]);
+  assert.deepEqual(created, ["ad_detail", "ad_observation_history", "current_user_role", "dataset_ads_facets", "dataset_ads_page", "dataset_context", "dataset_list", "evergreen_threshold_days", "jsonb_text_array", "run_media_archive_drain"]);
 
   const allDown = files
     .filter((f) => f.endsWith(".down.sql"))
@@ -187,4 +187,32 @@ test("recreating a read function restores its grants", () => {
   assert.match(sql, /revoke all on function %s from anon/);
   assert.match(sql, /grant execute on function %s to authenticated/);
   assert.match(sql, /must not be executable by anon/);
+});
+
+
+test("the archive drain is scheduled and unreachable from an app role", () => {
+  const sql = read("0025_media_archive_schedule.sql");
+  assert.match(sql, /cron[.]schedule[(]\s*'media-archive-drain'/);
+  // Ten minutes, because the window being raced is a ~105-hour signed URL and
+  // the shortest one measured in a fresh export was 28 hours.
+  assert.ok(sql.includes("'*/10 * * * *'"), "cadence must stay well inside the source lifetime");
+
+  // SECURITY DEFINER plus Vault access would be an SSRF primitive if an
+  // application session could invoke it.
+  for (const role of ["public", "anon", "authenticated"]) {
+    assert.ok(
+      sql.includes(`revoke all on function public.run_media_archive_drain() from ${role}`),
+      `${role} must not be able to execute the drain function`,
+    );
+  }
+
+  // Credentials come from Vault, never from a file in the repository.
+  assert.match(sql, /vault[.]decrypted_secrets/);
+  assert.doesNotMatch(sql, /Bearer [A-Za-z0-9]{16}/, "no literal token in a migration");
+});
+
+test("only retryable failures are eligible to be claimed again", () => {
+  const sql = read("0025_media_archive_schedule.sql");
+  assert.match(sql, /add column if not exists failure_retryable boolean/);
+  assert.match(sql, /where archive_status = 'pending'\s*\n\s*or \(archive_status = 'failed' and failure_retryable\)/);
 });

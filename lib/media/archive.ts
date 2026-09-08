@@ -52,6 +52,15 @@ const statusOf = (s: PreviewSelection) =>
 export const MAX_ATTEMPTS = 3;
 
 /**
+ * How long a claimed pending row stays off the queue.
+ *
+ * Long enough that a slow drain is not raced by the next tick, short enough that
+ * a process killed mid-fetch releases its work without an operator doing
+ * anything. The schedule runs every ten minutes; five is comfortably inside it.
+ */
+export const LEASE_SECONDS = 300;
+
+/**
  * Records archive state for every observation in a run.
  *
  * Runs AFTER the import transaction has committed, on its own connection. It
@@ -120,7 +129,13 @@ type QueueRow = {
  */
 export async function drainArchiveQueue(
   store: ArchiveStore,
-  options: { limit?: number; collectionRunId?: string; now?: Date } = {},
+  options: {
+    limit?: number;
+    collectionRunId?: string;
+    now?: Date;
+    /** How long a claimed row is considered in flight. Tests shorten it. */
+    leaseSeconds?: number;
+  } = {},
 ): Promise<ArchiveStats> {
   const started = Date.now();
   const limit = options.limit ?? 200;
@@ -131,7 +146,7 @@ export async function drainArchiveQueue(
     retryableRemaining: 0, expiredBeforeArchive: 0, bytesStored: 0, durationMs: 0,
   };
 
-  const claimed = await claim(limit, options.collectionRunId);
+  const claimed = await claim(limit, options.collectionRunId, options.leaseSeconds ?? LEASE_SECONDS);
   stats.queued = claimed.length;
 
   for (const row of claimed) {
@@ -208,7 +223,11 @@ export async function drainArchiveQueue(
  * the attempt counter is bumped inside the same transaction so a crash mid-fetch
  * still counts as an attempt rather than looping forever.
  */
-async function claim(limit: number, collectionRunId?: string): Promise<QueueRow[]> {
+async function claim(
+  limit: number,
+  collectionRunId: string | undefined,
+  leaseSeconds: number,
+): Promise<QueueRow[]> {
   return withTransaction(async (client: PoolClient) => {
     const { rows } = await client.query<QueueRow>(
       `with candidates as (
@@ -216,8 +235,25 @@ async function claim(limit: number, collectionRunId?: string): Promise<QueueRow[
            from public.media_assets m
            join public.ad_observations o on o.id = m.ad_observation_id
           where m.source_url is not null
-            and (m.archive_status = 'pending'
-                 or (m.archive_status = 'failed' and m.attempt_count < $2))
+            -- A terminal failure is never claimed again. Re-fetching an expired
+            -- source or a rejected host to be told the same thing three times is
+            -- work that cannot change its own outcome.
+            and (
+              -- Pending rows are leased. The claim transaction commits before
+              -- the fetch starts, so its row locks are gone while the work is
+              -- still running; without a lease a second drain starting in that
+              -- window claims the same row and downloads it twice. The lease is
+              -- last_attempt_at: recent means somebody is on it. A crashed run
+              -- releases its rows when the lease expires, with no cleanup step.
+              (m.archive_status = 'pending'
+               and (m.last_attempt_at is null
+                    or m.last_attempt_at < now() - make_interval(secs => $4)))
+              -- A failed row is not in flight, so the lease does not apply: the
+              -- next scheduled tick may retry it immediately.
+              or (m.archive_status = 'failed'
+                  and m.failure_retryable
+                  and m.attempt_count < $2)
+            )
             and ($3::uuid is null or o.collection_run_id = $3)
           order by m.source_expires_at asc nulls last
           limit $1
@@ -233,18 +269,28 @@ async function claim(limit: number, collectionRunId?: string): Promise<QueueRow[
                  m.attempt_count,
                  (select o.collection_run_id from public.ad_observations o
                    where o.id = m.ad_observation_id) as collection_run_id`,
-      [limit, MAX_ATTEMPTS, collectionRunId ?? null],
+      [limit, MAX_ATTEMPTS, collectionRunId ?? null, leaseSeconds],
     );
     return rows;
   });
 }
 
-/** Machine-readable reason only. A signed URL never reaches this column. */
+/**
+ * Machine-readable reason only. A signed URL never reaches this column.
+ *
+ * The retryable/terminal split is decided here, where the outcome is known, and
+ * stored — so the claim query filters on a recorded fact instead of re-deriving
+ * a judgement from a string later.
+ */
 async function recordFailure(row: QueueRow, reason: FailureReason | "storage_upload_failed") {
+  // A storage problem is our own infrastructure having a bad minute rather than
+  // a verdict about the source, so it is always worth another attempt.
+  const retryable = reason === "storage_upload_failed" ? true : !isTerminal(reason);
   await query(
     `update public.media_assets
-        set archive_status = 'failed', failure_reason = $2, updated_at = now()
+        set archive_status = 'failed', failure_reason = $2,
+            failure_retryable = $3, updated_at = now()
       where id = $1`,
-    [row.id, reason],
+    [row.id, reason, retryable],
   );
 }
