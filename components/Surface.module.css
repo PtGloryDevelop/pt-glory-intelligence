@@ -20,7 +20,7 @@
 
 .highlight {
   background: var(--surface-pink);
-  border-color: #e6cdd7;
+  border-color: var(--line-pink);
 }
 
 .tint {
@@ -37,7 +37,7 @@
   padding: 14px var(--pad-card);
   border-bottom: 1px solid var(--line);
 }
-.title { font-family: var(--display); font-weight: 600; font-size: 15px; }
+.title { font-family: var(--display); font-weight: 600; font-size: var(--fs-title-sm); }
 .meta { color: var(--muted); font-size: var(--fs-meta); }
 
 /* A table that lives inside a panel: the panel owns the border and radius, so

@@ -27,6 +27,8 @@
   border: 1.5px solid var(--surface);
 }
 
+/* The "PTG" glyph inside the square is sized to the square, not to the text
+   scale — these three are geometry, which is why they stay literals. */
 .sm { width: 32px; height: 32px; font-size: 11px; }
 .sm .dot { width: 9px; height: 9px; right: -3px; bottom: -3px; }
 
@@ -51,6 +53,6 @@
   line-height: 1.3;
   white-space: nowrap;
 }
-.nameSm { font-size: 15px; }
-.nameMd { font-size: 17px; }
-.nameLg { font-size: 21px; }
+.nameSm { font-size: var(--fs-title-sm); }
+.nameMd { font-size: var(--fs-subhead); }
+.nameLg { font-size: var(--fs-title); }

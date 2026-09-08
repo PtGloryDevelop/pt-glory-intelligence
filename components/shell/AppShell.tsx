@@ -98,7 +98,11 @@ export function AppShell({ role, children }: { role: string; children: React.Rea
         </div>
         {/* A dataset page carries the research grid, which genuinely wants the
             canvas. Every other page reads better at a fixed measure. */}
-        <div className={styles.content} data-width={isWide ? "wide" : undefined}>
+        <div
+          className={styles.content}
+          data-testid="shell-content"
+          data-width={isWide ? "wide" : undefined}
+        >
           {children}
         </div>
       </div>

@@ -14,10 +14,15 @@
 .table tbody tr:last-child td { border-bottom: 0; }
 .field { font-variant-numeric: tabular-nums; word-break: break-all; }
 /*
- * Visible only to assistive technology. The same sentence rendered on every
- * non-normal row wrapped to two lines each and pushed the working surface off
- * the screen; the badge already carries the tier visually, and the footnote
- * below carries the meaning once.
+ * Visible only to assistive technology, at every width. The same sentence
+ * rendered on every non-normal row wrapped to two lines each and pushed the
+ * working surface off the screen; the badge already carries the tier visually,
+ * and the footnote below carries the meaning once.
+ *
+ * The phone layout used to flip this to display:block while leaving the 1px box
+ * and the clip in place, so the sentence it meant to reveal rendered as a
+ * one-pixel sliver — hidden, but by accident rather than by decision. A caveat
+ * about what a percentage may be claimed for is not a thing to lose quietly.
  */
 .warning {
   position: absolute;
@@ -85,6 +90,4 @@
     color: var(--muted);
     text-transform: uppercase;
   }
-
-  .warning { display: block; margin: 4px 0 0; }
 }

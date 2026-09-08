@@ -18,6 +18,8 @@
   --ink: #2c241f;
   --muted: #6c5d54;
   --line: #e8dccf;
+  /* The line a pink surface needs: --line disappears against it. */
+  --line-pink: #e6cdd7;
 
   /* Brand */
   --brand: #f26522;
@@ -30,6 +32,7 @@
   --accent-coral: #ff7a66;
   --accent-pink: #f2a3cc;
   --accent-blue: #19a7f2;
+  --accent-blue-ink: #0b5f8c;  /* blue AS TEXT/glyph on a blue tint */
   --accent-green: #27c98b;
   --accent-yellow: #f5d437;
   --accent-lavender: #b8b4f5;
@@ -48,9 +51,29 @@
      cannot serve as a focus ring, so this stays blue. */
   --focus: #1d4ed8;
 
-  /* Type scale — handoff §4.3 */
+  /*
+   * Type scale — handoff §4.3, closed in V5.
+   *
+   * Nine roles, and every size in the product is one of them. The V5 sweep
+   * found 9, 13.5, 15, 17, 19, 21 and 22px living as literals in six modules,
+   * each one a local decision about the same handful of jobs. Naming the roles
+   * is what stops the tenth from being added.
+   *
+   *   --fs-page-title  page titles and large figures (the display role)
+   *   --fs-title       standalone card headline, brand name at large size
+   *   --fs-subhead     card and panel headline inside a page
+   *   --fs-section     section headings (h2)
+   *   --fs-title-sm    compact panel title, small figure
+   *   --fs-body        body, tables, navigation, controls
+   *   --fs-meta        metadata and helper text
+   *   --fs-label       form labels and table headers
+   *   --fs-eyebrow     uppercase section and stat labels
+   */
   --fs-page-title: 24px;
+  --fs-title: 19px;
+  --fs-subhead: 17px;
   --fs-section: 16px;
+  --fs-title-sm: 15px;
   --fs-body: 14px;
   --fs-meta: 12.5px;
   /*

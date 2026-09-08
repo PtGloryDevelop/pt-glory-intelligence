@@ -192,9 +192,9 @@
   }
 
   /* The overlays need the room they no longer have on a 104px thumbnail. */
-  .formatTag { left: 4px; bottom: 4px; padding: 1px 6px; font-size: 11px; gap: 3px; }
+  .formatTag { left: 4px; bottom: 4px; padding: 1px 6px; font-size: var(--fs-eyebrow); gap: 3px; }
   .reuse { display: none; }
-  .placeholder { padding: 6px; font-size: 11px; }
+  .placeholder { padding: 6px; font-size: var(--fs-eyebrow); }
   .placeholderIcon { display: none; }
 
   .body { padding: 10px 12px 10px 0; gap: 5px; align-content: start; min-width: 0; overflow: hidden; }

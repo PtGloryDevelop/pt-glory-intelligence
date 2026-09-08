@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { join } from "node:path";
 
 /**
  * Contrast guard for the Amendment A1 palette.
@@ -95,4 +96,58 @@ test("semantic tokens are not re-pointed at the brand", () => {
   for (const name of ["ok-ink", "warn-ink", "danger", "focus"]) {
     assert.notEqual(token(name).toLowerCase(), brand, `--${name} must stay semantic`);
   }
+});
+
+/*
+ * Tokens added after V1. Each one replaced a hex literal that had been sitting
+ * in a module where nothing measured it.
+ */
+
+test("--accent-blue-ink is readable on its own tint, and --accent-blue would not have been", () => {
+  // The tint is 16% blue over --surface; measuring against --surface is the
+  // conservative reading, since the tint lightens nothing.
+  const surface = token("surface");
+  assert.ok(
+    ratio(token("accent-blue-ink"), surface) >= AA,
+    "--accent-blue-ink must clear AA as a glyph colour on the blue tint",
+  );
+  assert.ok(
+    ratio(token("accent-blue"), surface) < AA,
+    "assumption behind this rule: --accent-blue is a fill, not an ink",
+  );
+});
+
+test("--line-pink is a visible edge on the pink surface", () => {
+  // A border need not clear AA, but it must be distinguishable from what it
+  // separates — --line disappears against --surface-pink, which is why this
+  // token exists at all.
+  const onPink = ratio(token("line-pink"), token("surface-pink"));
+  assert.ok(onPink >= 1.15, `--line-pink on --surface-pink is ${onPink.toFixed(2)}, invisible`);
+  assert.ok(
+    ratio(token("line"), token("surface-pink")) < onPink,
+    "assumption behind this rule: --line is the weaker edge on pink",
+  );
+});
+
+test("every colour the interface uses comes from a token", () => {
+  // The V5 sweep found #e6cdd7 and #0b5f8c living in two modules each. A hex in
+  // a module is a colour nothing in this file can measure.
+  const modules = ["app", "components"];
+  const offenders: string[] = [];
+  const walk = (dir: string) => {
+    for (const entry of readdirSync(dir)) {
+      const path = join(dir, entry);
+      if (statSync(path).isDirectory()) { walk(path); continue; }
+      if (!path.endsWith(".module.css")) continue;
+      const text = readFileSync(path, "utf8");
+      for (const [line] of text.matchAll(/^.*#[0-9a-fA-F]{3,8}\b.*$/gm)) {
+        // #000 and #fff are the letterbox and the label on top of a photograph:
+        // neither sits on a themed surface, so neither belongs to the palette.
+        if (/#000\b|#fff\b|#ffffff\b|#000000\b/.test(line)) continue;
+        offenders.push(`${path}: ${line.trim()}`);
+      }
+    }
+  };
+  for (const dir of modules) walk(dir);
+  assert.deepEqual(offenders, [], `hard-coded colours found:\n${offenders.join("\n")}`);
 });

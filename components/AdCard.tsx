@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { type Media } from "@/lib/media";
 import { resolveMedia } from "@/lib/media/resolve";
+import { formatIdentity } from "@/lib/media/format";
 import { thaiDate } from "@/lib/format/date";
 import { StatusBadge } from "./StatusBadge";
 import styles from "./AdCard.module.css";
@@ -35,17 +36,6 @@ export type AdCardData = {
   archive_url?: string | null;
   archive_status?: string | null;
 };
-
-/** What the ad IS. Read from display_format, never from the archived file's type. */
-function formatIdentity(displayFormat: string | null): { label: string; isVideo: boolean } | null {
-  const format = (displayFormat ?? "").toUpperCase();
-  if (format === "VIDEO") return { label: "Video", isVideo: true };
-  if (format === "IMAGE") return { label: "Image", isVideo: false };
-  if (format === "MULTI_IMAGES") return { label: "Images", isVideo: false };
-  if (format === "CAROUSEL") return { label: "Carousel", isVideo: false };
-  if (format === "DCO") return { label: "DCO", isVideo: false };
-  return format ? { label: format, isVideo: false } : null;
-}
 
 export function AdCard({ ad, onOpen }: { ad: AdCardData; onOpen: () => void }) {
   const identity = formatIdentity(ad.display_format);

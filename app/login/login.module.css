@@ -27,7 +27,7 @@
 
 .head {
   background: var(--surface-pink);
-  border-bottom: 1px solid #e6cdd7;
+  border-bottom: 1px solid var(--line-pink);
   padding: 26px 26px 22px;
 }
 
@@ -35,7 +35,7 @@
 
 .welcome {
   font-family: var(--display);
-  font-size: 19px;
+  font-size: var(--fs-title);
   font-weight: 600;
   letter-spacing: -0.015em;
   margin: 18px 0 4px;

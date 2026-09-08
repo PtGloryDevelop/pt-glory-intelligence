@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { type Media } from "@/lib/media";
 import { resolveMedia } from "@/lib/media/resolve";
+import { formatIdentity } from "@/lib/media/format";
 import styles from "./AdThumb.module.css";
 
 /**
@@ -26,7 +27,7 @@ export function AdThumb({ ad }: {
     archiveStatus: ad.archive_status ?? null,
     presentationUrl: ad.archive_url ?? null,
   });
-  const isVideo = (ad.display_format ?? "").toUpperCase() === "VIDEO";
+  const isVideo = formatIdentity(ad.display_format)?.isVideo ?? false;
 
   if (resolved.state === "none" || resolved.state === "unusable" || broken) {
     return (

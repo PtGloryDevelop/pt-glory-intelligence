@@ -32,7 +32,7 @@
  * nothing, so this is deliberately not applied there.
  */
 .value {
-  font-size: 24px;
+  font-size: var(--fs-page-title);
   line-height: 1.25;
   margin-top: 4px;
   overflow-wrap: anywhere;

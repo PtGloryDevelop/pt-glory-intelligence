@@ -50,7 +50,7 @@
 
 .pageName {
   font-family: var(--display);
-  font-size: 17px;
+  font-size: var(--fs-subhead);
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -248,10 +248,17 @@
 
 /* ---------- Responsive ---------- */
 
-/* Tablet: a wider sheet. Leaving a useless 150px strip of Explorer visible just
-   to still call it a side panel helps nobody. */
+/*
+ * Tablet: a wider sheet. Leaving a useless 150px strip of Explorer visible just
+ * to still call it a side panel helps nobody.
+ *
+ * 78vw was the rule until V5 measured it: at 768px it produced 599px, one pixel
+ * narrower than the desktop panel it was supposed to be wider than. The floor is
+ * what makes "wider on tablet" true at every width in the range, not just the
+ * top of it.
+ */
 @media (max-width: 1024px) {
-  .drawer { width: 78vw; }
+  .drawer { width: min(88vw, 680px); }
 }
 
 /* Phone: a full-screen sheet. A 600px panel does not belong on a 375px screen. */

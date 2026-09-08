@@ -17,7 +17,7 @@ const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 // this supabase-js version accepts on the admin API.
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SECRET_KEY!;
 
-setup("prepare database, fixtures and sessions", async ({ browser }) => {
+setup("prepare database, fixtures and sessions", async ({ browser, baseURL }) => {
   mkdirSync(TMP, { recursive: true });
   mkdirSync(AUTH, { recursive: true });
   writeFixtures();
@@ -45,9 +45,10 @@ setup("prepare database, fixtures and sessions", async ({ browser }) => {
   }
 
   for (const { role, email } of users) {
-    const context = await browser.newContext();
+    // baseURL rather than a literal port: the suite owns its own server now.
+    const context = await browser.newContext({ baseURL });
     const page = await context.newPage();
-    await page.goto("http://127.0.0.1:3000/login");
+    await page.goto("/login");
     await page.getByLabel("อีเมล").fill(email);
     await page.getByLabel("รหัสผ่าน").fill(PASSWORD);
     await page.getByRole("button", { name: "เข้าสู่ระบบ" }).click();

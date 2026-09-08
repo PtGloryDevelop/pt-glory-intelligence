@@ -136,7 +136,7 @@
   margin-bottom: 12px;
 }
 .resultCount { margin: 0; font-size: var(--fs-body); }
-.resultCount strong { font-size: 16px; }
+.resultCount strong { font-size: var(--fs-section); }
 
 /* Grid is the research mode: 4 columns on a wide desktop, never 5. */
 .grid {

@@ -107,3 +107,18 @@ test("the read layer never imports the privileged client", () => {
     assert.doesNotMatch(source, /db\/privileged/, `${path} must read through dbUser()`);
   }
 });
+
+test("a route crash never puts backend detail on the screen", () => {
+  // The error boundary is the one component that is handed the real exception.
+  // Rendering error.message or a stack would publish whatever the database,
+  // the driver or a fetch happened to say — connection strings included.
+  const boundary = join("app", "(app)", "error.tsx");
+  assert.ok(existsSync(boundary), "app/(app) has no error boundary; a failed read shows Next's own crash page");
+
+  const source = readFileSync(boundary, "utf8");
+  for (const leak of ["error.message", "error.stack", "{error}", "String(error)", "JSON.stringify(error"]) {
+    assert.ok(!source.includes(leak), `the error boundary renders ${leak}`);
+  }
+  // digest is Next's correlation id for the server-side log line, not content.
+  assert.match(source, /error\.digest/, "without the digest a report cannot be traced to a log line");
+});

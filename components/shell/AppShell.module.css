@@ -48,7 +48,16 @@
   color: var(--muted);
   padding: 14px 10px 6px;
 }
-.rail .heading { text-align: center; padding-left: 0; padding-right: 0; font-size: 9px; overflow: hidden; }
+/*
+ * Rail mode: the section name becomes a rule.
+ *
+ * It used to shrink to 9px with overflow hidden, which silently truncated
+ * "INTELLIGENCE" into an unreadable smear inside a 68px column. A divider says
+ * the same thing — these items are one group — and the text stays in the
+ * accessibility tree for anyone navigating by structure.
+ */
+.rail .heading { font-size: 0; padding: 12px 14px 6px; }
+.rail .heading::after { content: ""; display: block; height: 1px; background: var(--line); }
 
 .item,
 .disabled {
@@ -57,7 +66,7 @@
   gap: 10px;
   padding: 8px 10px;
   border-radius: var(--radius-sm);
-  font-size: 13.5px;
+  font-size: var(--fs-body);
   min-height: 38px;
   border-left: 3px solid transparent;
   text-decoration: none;
@@ -151,7 +160,8 @@
   .sidebar .markOnly { display: block; }
   .sidebar .label { display: none; }
   .sidebar .item, .sidebar .disabled { justify-content: center; padding-left: 0; padding-right: 0; }
-  .sidebar .heading { text-align: center; padding-left: 0; padding-right: 0; font-size: 9px; overflow: hidden; }
+  .sidebar .heading { font-size: 0; padding: 12px 14px 6px; }
+  .sidebar .heading::after { content: ""; display: block; height: 1px; background: var(--line); }
   .sidebar .footer { text-align: center; padding: 12px 4px; }
   .collapse { display: none; }
 }

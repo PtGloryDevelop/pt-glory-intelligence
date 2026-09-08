@@ -31,9 +31,9 @@
   margin-bottom: 14px;
 }
 .iconBrand { background: var(--brand-tint); color: var(--brand-ink); }
-.iconBlue { background: rgba(25, 167, 242, 0.16); color: #0b5f8c; }
+.iconBlue { background: rgba(25, 167, 242, 0.16); color: var(--accent-blue-ink); }
 
-.cardTitle { font-family: var(--display); font-weight: 600; font-size: 17px; }
+.cardTitle { font-family: var(--display); font-weight: 600; font-size: var(--fs-subhead); }
 .cardBody { color: var(--muted); font-size: var(--fs-meta); margin: 6px 0 12px; }
 .cardGo { font-size: var(--fs-meta); font-weight: 600; color: var(--brand-ink); }
 
@@ -41,8 +41,8 @@
 .stat { padding: 16px var(--pad-card); border-right: 1px solid var(--line); }
 .stat:last-child { border-right: 0; }
 .statLabel { color: var(--muted); font-size: var(--fs-meta); }
-.statValue { font-size: 22px; margin-top: 2px; }
-.statValueSm { font-size: 15px; font-family: var(--display); font-weight: 600; margin-top: 4px; }
+.statValue { font-size: var(--fs-page-title); margin-top: 2px; }
+.statValueSm { font-size: var(--fs-title-sm); font-family: var(--display); font-weight: 600; margin-top: 4px; }
 
 @media (max-width: 768px) {
   .card { padding: 16px; }

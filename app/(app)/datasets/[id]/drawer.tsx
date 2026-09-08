@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { mediaPresentation, type Media } from "@/lib/media";
 import { resolveMedia } from "@/lib/media/resolve";
+import { formatIdentity } from "@/lib/media/format";
 import { thaiDate, thaiDateTime } from "@/lib/format/date";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ErrorState } from "@/components/states/ErrorState";
@@ -284,8 +285,9 @@ function destinationLabel(url: string): string {
 function Creative({ detail }: { detail: Detail }) {
   const [sourceBroken, setSourceBroken] = useState(false);
   const [imageBroken, setImageBroken] = useState(false);
-  const isVideo = (detail.display_format ?? "").toUpperCase() === "VIDEO";
-  const formatLabel = formatIdentity(detail.display_format);
+  const identity = formatIdentity(detail.display_format);
+  const isVideo = identity?.isVideo ?? false;
+  const formatLabel = identity?.label ?? null;
 
   const resolved = resolveMedia(detail.display_format, detail.media, {
     archivePath: null,
@@ -388,15 +390,6 @@ function Creative({ detail }: { detail: Detail }) {
   );
 }
 
-function formatIdentity(displayFormat: string | null): string | null {
-  const format = (displayFormat ?? "").toUpperCase();
-  if (format === "VIDEO") return "Video";
-  if (format === "IMAGE") return "Image";
-  if (format === "MULTI_IMAGES") return "Images";
-  if (format === "CAROUSEL") return "Carousel";
-  if (format === "DCO") return "DCO";
-  return format || null;
-}
 
 /**
  * Observations, newest first.
