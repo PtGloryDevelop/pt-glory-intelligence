@@ -16,9 +16,9 @@ test("every up migration has a matching down migration", () => {
   }
 });
 
-test("migrations are numbered 0001..0030 with no gaps", () => {
+test("migrations are numbered 0001..0031 with no gaps", () => {
   const numbers = up.map((f) => Number(f.slice(0, 4)));
-  assert.deepEqual(numbers, Array.from({ length: 30 }, (_, i) => i + 1));
+  assert.deepEqual(numbers, Array.from({ length: 31 }, (_, i) => i + 1));
 });
 
 test("all 14 tables are created", () => {
