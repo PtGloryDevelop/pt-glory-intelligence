@@ -20,6 +20,14 @@ import { commitImport } from "../lib/import/commit.ts";
 import { closePool, withTransaction } from "../lib/db/privileged.ts";
 import { drainArchiveQueue, enqueueRun } from "../lib/media/archive.ts";
 import { ensurePreviewBucket, supabaseArchiveStore } from "../lib/media/store-supabase.ts";
+import { assertDestructiveAllowed } from "./destructive-guard.mjs";
+
+/*
+ * Additive rather than destructive — but this writes a synthetic capture
+ * dataset, and synthetic data in a real research environment is indistinguishable
+ * from a real import once it is in the list. Same guard, same refusal.
+ */
+assertDestructiveAllowed(process.env.DATABASE_URL, "seeding the synthetic explorer dataset");
 
 const [, , file, sizeArg] = process.argv;
 if (!file) {

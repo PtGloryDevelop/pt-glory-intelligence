@@ -1,4 +1,5 @@
 import { connect, resetTables } from "../tests/db/helpers.ts";
+import { assertDestructiveAllowed } from "../scripts/destructive-guard.mjs";
 import { CATEGORY } from "./constants.ts";
 
 /**
@@ -10,6 +11,9 @@ import { CATEGORY } from "./constants.ts";
  * the signed-in sessions from global setup must survive.
  */
 export async function resetData(): Promise<void> {
+  // Refuse before opening a connection, so a misconfigured run never even
+  // authenticates against the wrong database.
+  assertDestructiveAllowed(process.env.DATABASE_URL, "journey data reset");
   const client = await connect();
   try {
     await resetTables(client);

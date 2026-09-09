@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { connect, resetTables } from "../tests/db/helpers.ts";
+import { assertDestructiveAllowed } from "../scripts/destructive-guard.mjs";
 
 /**
  * Puts the DEV database into a known state and signs two roles in through the
@@ -22,6 +23,14 @@ const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SECRET_KEY!;
 
 setup("prepare database, fixtures and sessions", async ({ browser, baseURL }) => {
+  /*
+   * The first thing this setup does, before a single file is written or a user
+   * is created: prove the target database is disposable. Everything below is
+   * destructive in one way or another — it truncates, it seeds fixtures, and it
+   * assigns roles — and none of it belongs anywhere near real research data.
+   */
+  assertDestructiveAllowed(process.env.DATABASE_URL, "Playwright global setup");
+
   mkdirSync(TMP, { recursive: true });
   mkdirSync(AUTH, { recursive: true });
   writeFixtures();

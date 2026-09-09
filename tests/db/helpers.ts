@@ -1,4 +1,5 @@
 import pg from "pg";
+import { assertDestructiveAllowed } from "../../scripts/destructive-guard.mjs";
 import { normalize } from "../../lib/collector/normalize.ts";
 import { validate } from "../../lib/collector/validate.ts";
 import type { CanonicalImport } from "../../lib/domain/types.ts";
@@ -36,6 +37,15 @@ export function isInfrastructureError(error: unknown): boolean {
 }
 
 export async function connect(): Promise<pg.Client> {
+  /*
+   * Refuse before opening the socket, not only before the truncate.
+   *
+   * Every caller of this helper goes on to wipe and rebuild fixtures, so there
+   * is nothing here to protect by connecting first — and a guard that fires
+   * *after* the connection leaves an open client behind when it throws, which
+   * holds the event loop and turns a clear refusal into a hung test run.
+   */
+  assertDestructiveAllowed(process.env.DATABASE_URL, "opening a fixture database connection");
   const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
   try {
     await client.connect();
@@ -48,8 +58,15 @@ export async function connect(): Promise<pg.Client> {
   return client;
 }
 
-/** Wipes every table this gate writes to, so each case starts from zero. */
+/**
+ * Wipes every table this gate writes to, so each case starts from zero.
+ *
+ * Guarded before the first statement: a connection string is not authorization,
+ * and this function cannot tell a fixture database from one holding real
+ * research data. The guard can, and it refuses by default.
+ */
 export async function resetTables(client: pg.Client): Promise<void> {
+  assertDestructiveAllowed(process.env.DATABASE_URL, "truncate of the fixture tables");
   await client.query(`truncate table
     public.audit_logs, public.import_quarantine, public.dataset_quality,
     public.dataset_ads, public.ad_observations, public.ads,

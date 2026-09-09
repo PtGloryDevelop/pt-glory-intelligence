@@ -12,6 +12,7 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import pg from "pg";
+import { assertDestructiveAllowed } from "./destructive-guard.mjs";
 
 const DIR = join(process.cwd(), "supabase", "migrations");
 const command = process.argv[2] ?? "up";
@@ -49,6 +50,12 @@ try {
       console.log(`applied ${file}`);
     }
   } else if (command === "down") {
+    /*
+     * `up` is how PILOT gets its schema, so it stays open. `down` drops tables
+     * and takes their rows with them, which is the one thing a migration runner
+     * must never do to an environment holding real data.
+     */
+    assertDestructiveAllowed(connectionString, "migrate down");
     const targets = upFiles.filter((f) => applied.has(f)).reverse();
     const list = all ? targets : targets.slice(0, 1);
     if (list.length === 0) console.log("nothing to roll back");
