@@ -11,7 +11,8 @@ import { connect, resetTables } from "../tests/db/helpers.ts";
  */
 
 import {
-  ACCOUNTS, AUTH, CATEGORY, CATEGORY_COMPARE, CATEGORY_TRENDS, CATEGORY_WORKSPACE,
+  ACCOUNTS, AUTH, CATEGORY, CATEGORY_COMPARE, CATEGORY_TRENDS, CATEGORY_WATCH,
+  CATEGORY_WORKSPACE,
   PASSWORD, TMP,
 } from "./constants.ts";
 
@@ -35,12 +36,13 @@ setup("prepare database, fixtures and sessions", async ({ browser, baseURL }) =>
   const client = await connect();
   try {
     await resetTables(client);
-    // Four research categories: the shared one every spec imports into, plus
-    // one each for the category workspace, compare and trends — so their
-    // aggregates cannot be shifted by an unrelated spec importing first.
+    // Five research categories: the shared one every spec imports into, plus
+    // one each for the category workspace, compare, trends and the watchlist —
+    // so their aggregates cannot be shifted by an unrelated spec importing
+    // first.
     await client.query(
-      "insert into public.categories (name) values ($1), ($2), ($3), ($4)",
-      [CATEGORY, CATEGORY_WORKSPACE, CATEGORY_COMPARE, CATEGORY_TRENDS],
+      "insert into public.categories (name) values ($1), ($2), ($3), ($4), ($5)",
+      [CATEGORY, CATEGORY_WORKSPACE, CATEGORY_COMPARE, CATEGORY_TRENDS, CATEGORY_WATCH],
     );
     for (const { id, role } of users) {
       await client.query(
@@ -367,6 +369,29 @@ function writeFixtures() {
       },
       { pageId: "740000000000002", pageName: "แบรนด์แนวโน้ม B", ads: trendPageB },
     ],
+  })));
+
+  /*
+   * The watchlist baseline: one page, collected before any watch exists.
+   *
+   * Every ad here is IMAGE / LEARN_MORE on purpose. The spec saves a watch
+   * against this run and then imports a second one built at test time — so the
+   * later collection is genuinely after the baseline, which is the only way the
+   * signals can be exercised honestly. A fixture written now and imported later
+   * would sit before the baseline and prove nothing.
+   */
+  const watchAds: PageAd[] = [
+    { id: "750000000000101", is_active: true, display_format: "IMAGE", cta_type: "LEARN_MORE",
+      publisher_platform: ["FACEBOOK"], collation_count: 1, start: "2021-02-01T00:00:00.000Z" },
+    { id: "750000000000102", is_active: true, display_format: "IMAGE", cta_type: "LEARN_MORE",
+      publisher_platform: ["FACEBOOK"], collation_count: 2, start: "2026-06-01T00:00:00.000Z" },
+    { id: "750000000000103", is_active: true, display_format: "IMAGE", cta_type: null,
+      publisher_platform: ["INSTAGRAM"], collation_count: 1, start: "2026-07-15T00:00:00.000Z" },
+  ];
+
+  writeFileSync(join(TMP, "watch-old.json"), JSON.stringify(pageExport({
+    pageId: "750000000000001", pageName: "คลินิกติดตาม P2", likeCount: 2750,
+    generatedAt: daysAgo(30), query: "วิตามินผิวทดสอบ", ads: watchAds,
   })));
 
   writeFileSync(join(TMP, "invalid.json"), "{ this is not json");

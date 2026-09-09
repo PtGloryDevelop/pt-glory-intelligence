@@ -16,23 +16,26 @@ test("every up migration has a matching down migration", () => {
   }
 });
 
-test("migrations are numbered 0001..0031 with no gaps", () => {
+test("migrations are numbered 0001..0032 with no gaps", () => {
   const numbers = up.map((f) => Number(f.slice(0, 4)));
-  assert.deepEqual(numbers, Array.from({ length: 31 }, (_, i) => i + 1));
+  assert.deepEqual(numbers, Array.from({ length: 32 }, (_, i) => i + 1));
 });
 
-test("all 14 tables are created", () => {
+test("all 15 tables are created", () => {
   const expected = [
     "user_roles", "categories", "collection_runs", "datasets", "pages",
     "page_observations", "ads", "ad_observations", "dataset_ads",
     "dataset_quality", "import_quarantine", "app_settings", "audit_logs",
     "media_assets",
+    // Watchlist V1 (0032): saved targets only. There is deliberately no
+    // events, alerts or queue table — nothing evaluates these.
+    "watch_items",
   ];
   for (const table of expected) {
     assert.match(allUp, new RegExp(`create table public\\.${table}\\b`), `missing ${table}`);
   }
   const created = [...allUp.matchAll(/create table public\.(\w+)/g)].map((m) => m[1]);
-  assert.equal(created.length, 14, `expected 14 tables, found ${created.length}`);
+  assert.equal(created.length, 15, `expected 15 tables, found ${created.length}`);
 });
 
 test("ads.ad_archive_id is NOT NULL UNIQUE and is_active stays nullable", () => {
@@ -149,6 +152,10 @@ test("every function a migration creates is dropped by its rollback", () => {
     // Trends (0030). Read functions only; no cached trend, no stored value.
     "trend_context", "trend_evidence", "trend_mix", "trend_pages",
     "trend_state_scope", "trend_summary",
+    // Watchlist V1 (0032). Read functions plus one baseline write; no
+    // evaluator, and nothing that runs on a schedule.
+    "watch_scope_ads", "watchlist_list", "watchlist_reset_baseline",
+    "watchlist_signal_evidence", "watchlist_signal_summary",
   ]);
 
   const allDown = files

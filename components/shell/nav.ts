@@ -46,7 +46,9 @@ export const NAV: NavSection[] = [
       { label: "แนวโน้ม", icon: "trend", href: "/trends" },
       // Page vs Page (P2.4). Pages, never brands: no grouping, no fuzzy identity.
       { label: "Compare", icon: "compare", href: "/compare" },
-      { label: "Watchlist", icon: "bookmark" },
+      // Watchlist V1 (P2.7): saved targets and a manual baseline. Nothing
+      // evaluates these on a schedule — there are no alerts to miss.
+      { label: "Watchlist", icon: "bookmark", href: "/watchlist" },
     ],
   },
   {

@@ -26,6 +26,9 @@ import { DistributionBars } from "@/components/DistributionBars";
 import { TimelineChart } from "@/components/TimelineChart";
 import { EvidenceGrid } from "@/components/EvidenceGrid";
 import { EmptyState } from "@/components/states/EmptyState";
+import { WatchButton } from "@/components/WatchButton";
+import { listWatchItems } from "@/lib/read/watchlist";
+import { DEFAULT_CATEGORY_SIGNALS } from "@/lib/watchlist/contract";
 import styles from "./category.module.css";
 
 export const dynamic = "force-dynamic";
@@ -70,13 +73,18 @@ export default async function CategoryWorkspace({ params, searchParams }: {
   const grain = timelineGrain(one(query.grain), range);
   const window = rangeWindow(range);
 
-  const [datasets, runs, pages, mix, activity] = await Promise.all([
+  const [datasets, runs, pages, mix, activity, watches] = await Promise.all([
     getCategoryDatasets(id),
     getCategoryRunHistory(id),
     getCategoryPages(id, { recentDays: days, search: search || null, sort, limit: RANKING_SIZE, offset: rankOffset }),
     getCategoryCreativeMix(id),
     getCategoryActivity(id, { bucket: grain, from: window.from, to: window.to }),
+    listWatchItems(),
   ]);
+
+  // A category watch is always about its own category, so the match is exact.
+  const existingWatch = watches.find((row) =>
+    row.target_type === "category" && row.target_category_id === id)?.id ?? null;
 
   const comparable = datasetComparability(datasets);
   const selection = await resolveSelection(id, query, days, grain);
@@ -107,6 +115,14 @@ export default async function CategoryWorkspace({ params, searchParams }: {
         title={detail.category_name}
         back={{ href: "/categories", label: "หมวดหมู่ทั้งหมด" }}
         description="หมวดหมู่วิจัยของ PT Glory · จัดอันดับตามเพจ ยังไม่มีการจับคู่เป็นแบรนด์"
+        actions={
+          // A category watch is scoped to its own category — the one combination
+          // that means anything — so the scope is stated rather than inferred.
+          <WatchButton
+            targetType="category" categoryId={id} scope={`category:${id}`}
+            signals={DEFAULT_CATEGORY_SIGNALS} existingId={existingWatch}
+          />
+        }
       />
 
       <ContextBar

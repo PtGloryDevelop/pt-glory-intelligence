@@ -16,6 +16,9 @@ import { Panel, PanelHead } from "@/components/Surface";
 import { DistributionBars } from "@/components/DistributionBars";
 import { ActivityChart } from "@/components/ActivityChart";
 import { StatusBadge } from "@/components/StatusBadge";
+import { WatchButton } from "@/components/WatchButton";
+import { listWatchItems } from "@/lib/read/watchlist";
+import { DEFAULT_PAGE_SIGNALS } from "@/lib/watchlist/contract";
 import { PageEvidence } from "./evidence";
 import { PageTimeline } from "./timeline";
 import styles from "./page-detail.module.css";
@@ -47,12 +50,22 @@ export default async function PageDetailPage({ params, searchParams }: {
   // find something to show: that would answer a different question.
   if (!detail) notFound();
 
-  const [mix, activity, likes, scopeName] = await Promise.all([
+  const [mix, activity, likes, scopeName, watches] = await Promise.all([
     view === "overview" ? getPageCreativeMix(scope, pageId) : Promise.resolve([]),
     view === "overview" ? getPageActivity(scope, pageId, bucket) : Promise.resolve([]),
     view === "overview" ? getPageLikeHistory(scope, pageId) : Promise.resolve([]),
     nameOfScope(scope),
+    listWatchItems(),
   ]);
+
+  // Already watching this exact page in this exact scope? Then the control is a
+  // link to that watch, not a second copy of it.
+  const existingWatch = watches.find((row) =>
+    row.target_type === "page" && row.target_page_id === pageId
+    && row.scope_kind === scope.kind
+    && (scope.kind === "all"
+        || (scope.kind === "dataset" && row.scope_dataset_id === scope.id)
+        || (scope.kind === "category" && row.scope_category_id === scope.id)))?.id ?? null;
 
   const scopeParam = scopeToParam(scope);
   // Drilling into a number is a navigation, not a hidden panel state: the URL
@@ -74,11 +87,17 @@ export default async function PageDetailPage({ params, searchParams }: {
         back={{ href: `/pages?scope=${scopeParam}`, label: "เพจทั้งหมด" }}
         description="ข้อมูลระดับเพจ · ยังไม่ได้จับคู่เข้าเป็นแบรนด์"
         actions={
-          // Carries the scope: the comparison must be inside the same data the
-          // reader is already looking at, never silently widened to everything.
-          <Link href={`/compare?scope=${scopeParam}&a=${pageId}`} data-testid="compare-with">
-            เปรียบเทียบกับ…
-          </Link>
+          <span className={styles.headerActions}>
+            {/* Both carry the scope: a comparison and a watch must be inside the
+                same data the reader is already looking at. */}
+            <Link href={`/compare?scope=${scopeParam}&a=${pageId}`} data-testid="compare-with">
+              เปรียบเทียบกับ…
+            </Link>
+            <WatchButton
+              targetType="page" pageId={pageId} scope={scopeParam}
+              signals={DEFAULT_PAGE_SIGNALS} existingId={existingWatch}
+            />
+          </span>
         }
       />
 

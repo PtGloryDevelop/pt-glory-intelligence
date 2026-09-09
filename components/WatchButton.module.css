@@ -1,0 +1,4 @@
+.wrap { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.wrap button { min-height: 36px; }
+/* A duplicate is an answer, so it reads as information rather than an error. */
+.error { font-size: var(--fs-meta); color: var(--warn-ink); font-weight: 600; }

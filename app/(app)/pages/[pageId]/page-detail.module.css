@@ -162,3 +162,6 @@
   .tabs { gap: 4px; }
   .runMix { grid-template-columns: 1fr; }
 }
+
+/* Two header actions side by side: compare, and save to the watchlist. */
+.headerActions { display: inline-flex; align-items: center; gap: 12px; flex-wrap: wrap; }

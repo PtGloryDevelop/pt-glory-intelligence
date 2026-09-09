@@ -1,0 +1,86 @@
+/*
+ * Watchlist.
+ *
+ * Two panels the reader must never confuse: what is true now, and what has
+ * changed since the baseline. They are separate surfaces with separate headings
+ * for that reason — a lifetime total sitting under "since" would be the whole
+ * feature lying.
+ */
+
+.basis {
+  margin: 0 0 8px;
+  font-size: var(--fs-meta);
+  color: var(--muted);
+}
+
+.note { margin: 12px 0 0; font-size: var(--fs-meta); color: var(--muted); }
+
+/* A limit on what a number can support, not decorative small print. */
+.caveat {
+  margin: 0 0 12px;
+  font-size: var(--fs-meta);
+  color: var(--warn-ink);
+  font-weight: 600;
+}
+.caveatInline { color: var(--warn-ink); font-weight: 600; }
+
+.section { margin-bottom: var(--gap-section); }
+
+.scopeCell { display: grid; gap: 4px; }
+.snapshotTag, .unavailableTag {
+  display: inline-block;
+  width: fit-content;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-meta);
+  font-weight: 600;
+}
+.snapshotTag { background: var(--neutral-tint); color: var(--muted); }
+.unavailableTag { background: var(--warn-tint); color: var(--warn-ink); }
+
+.signalCell { color: var(--muted); font-size: var(--fs-meta); max-width: 22rem; }
+
+.states { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.stateNote { color: var(--muted); font-size: var(--fs-meta); }
+
+.signalLabel { display: grid; gap: 2px; text-align: left; }
+.signalHelper { display: block; font-weight: 400; color: var(--muted); font-size: var(--fs-meta); }
+/* Which question the row answers: an event, a comparison, or a first sighting. */
+.kind { color: var(--muted); font-size: var(--fs-meta); white-space: nowrap; }
+.signalNote { font-size: var(--fs-meta); max-width: 22rem; }
+
+.snapshotPanel { display: grid; gap: 6px; padding: 12px var(--pad-card); }
+.snapshotPanel p { margin: 0; font-size: var(--fs-meta); }
+
+.anchor { display: block; scroll-margin-top: 80px; }
+
+.signalPicker { border: 0; padding: 0; margin: 0 0 18px; display: grid; gap: 8px; }
+.legend {
+  font-size: var(--fs-label);
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  padding: 0;
+  margin-bottom: 4px;
+}
+.checkbox { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: start; }
+.checkbox input { margin-top: 3px; }
+.signalPicker button { min-height: 38px; width: fit-content; }
+
+.actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+.action { display: grid; gap: 8px; align-content: start; }
+.actionTitle { font-size: var(--fs-title-sm); }
+.actionRow { display: flex; gap: 8px; flex-wrap: wrap; }
+.action button { min-height: 38px; }
+
+@media (max-width: 640px) {
+  .signalCell, .signalNote { max-width: none; }
+  .actions { grid-template-columns: 1fr; }
+}
