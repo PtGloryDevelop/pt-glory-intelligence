@@ -48,31 +48,82 @@ const FORBIDDEN = [
   /ส่วนแบ่งตลาด/, /โฆษณาที่ชนะ/, /งบโฆษณา/,
 ];
 
+/**
+ * A refusal is not a claim.
+ *
+ * Some screens have to say outright that a number is NOT market share and NOT
+ * an ad budget — that sentence is the reason a reader does not invent one. A
+ * plain substring scan cannot tell "ส่วนแบ่งตลาด" from "ไม่ใช่ส่วนแบ่งตลาด", so
+ * the negations are removed first and everything left standing is a claim.
+ *
+ * Deliberately narrow: only a negation immediately in front of the term counts,
+ * so nothing can smuggle a metric in by denying it somewhere else on the page.
+ */
+const DENIALS =
+  /(ไม่ใช่|ไม่ได้บอก|ไม่มี|ไม่ได้แปลว่า)(ส่วนแบ่งตลาด|งบโฆษณา|ยอดขาย|การเข้าถึง|การมีส่วนร่วม|โฆษณาที่ชนะ)/g;
+
 test("no forbidden performance metric is named anywhere in the interface", () => {
   for (const { file, text } of renderedSource()) {
+    const claims = text.replace(DENIALS, " ");
     for (const pattern of FORBIDDEN) {
       assert.ok(
-        !pattern.test(text),
+        !pattern.test(claims),
         `${file} names ${pattern} — the source carries no such field, so the UI must not claim one`,
       );
     }
   }
 });
 
+/**
+ * The Brand mapping surfaces (P2.8), where a Brand is the subject rather than a
+ * claim about a Page. They exist because a reviewed mapping now does: a person
+ * created the Brand, attached the Page, and their name is on the row.
+ * Everywhere else the ban below still holds.
+ */
+const BRAND_SURFACES = [
+  join("app", "(app)", "brands"),
+  join("app", "(app)", "unmapped-pages"),
+  join("components", "brand"),
+  join("app", "api", "brands"),
+  join("app", "api", "brand-mappings"),
+];
+
 test("a Page is never presented as a Brand", () => {
   for (const { file, text } of renderedSource()) {
-    // The sidebar lists a future "เพจ / แบรนด์" route, disabled, with no data
-    // behind it. That is an unbuilt destination, not a claim about a page.
+    // The sidebar lists routes, some still unbuilt. A destination is not a
+    // claim about a page.
     if (file.endsWith(join("shell", "nav.ts"))) continue;
     // BrandMark is the product's own logo lockup.
     if (/BrandMark|BrandLockup/.test(file)) continue;
+    // The mapping surfaces are about Brands by definition.
+    if (BRAND_SURFACES.some((dir) => file.startsWith(dir))) continue;
 
     const claims = text.match(/[^\n]*\b(brand|แบรนด์)\b[^\n]*/gi) ?? [];
     for (const line of claims) {
       // The product's own visual identity tokens and classes are not a claim
       // that an advertiser page is a brand.
       if (/--brand|styles\.\w*[Bb]rand|iconBrand|BrandMark|BrandLockup/.test(line)) continue;
+      /*
+       * A Page surface may show the mapping, but only through the labelled
+       * constant — "Brand (จัดกลุ่มโดย PT Glory)" — which says who grouped it.
+       * An unlabelled brand name beside a page would read as something Meta
+       * reported.
+       */
+      if (/BRAND_ON_PAGE_LABEL|getPageBrand|MapPageControl|pageBrand|"page-brand"/.test(line)) {
+        continue;
+      }
       assert.fail(`${file} presents a Brand: ${line.trim()}\nA Page is not a Brand until a reviewed mapping exists.`);
     }
   }
+});
+
+test("the brand a page belongs to is always labelled as ours", () => {
+  const label = readFileSync(join("lib", "brands", "contract.ts"), "utf8");
+  assert.match(label, /BRAND_ON_PAGE_LABEL =\s*"Brand \(จัดกลุ่มโดย PT Glory\)"/);
+
+  // A Brand never replaces a Page's identity, however many Pages it holds: the
+  // page's own observed name stays the title of its page.
+  const detail = readFileSync(join("app", "(app)", "pages", "[pageId]", "page.tsx"), "utf8");
+  assert.match(detail, /title=\{detail\.page_name \?\? detail\.page_id\}/);
+  assert.ok(!/title=\{brand/.test(detail));
 });

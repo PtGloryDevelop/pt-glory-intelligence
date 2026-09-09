@@ -16,12 +16,12 @@ test("every up migration has a matching down migration", () => {
   }
 });
 
-test("migrations are numbered 0001..0032 with no gaps", () => {
+test("migrations are numbered 0001..0033 with no gaps", () => {
   const numbers = up.map((f) => Number(f.slice(0, 4)));
-  assert.deepEqual(numbers, Array.from({ length: 32 }, (_, i) => i + 1));
+  assert.deepEqual(numbers, Array.from({ length: 33 }, (_, i) => i + 1));
 });
 
-test("all 15 tables are created", () => {
+test("all 17 tables are created", () => {
   const expected = [
     "user_roles", "categories", "collection_runs", "datasets", "pages",
     "page_observations", "ads", "ad_observations", "dataset_ads",
@@ -30,12 +30,15 @@ test("all 15 tables are created", () => {
     // Watchlist V1 (0032): saved targets only. There is deliberately no
     // events, alerts or queue table — nothing evaluates these.
     "watch_items",
+    // Brand mapping (0033). The mapping is its own table, not a column on
+    // pages: a brand id written in place would erase the decision it replaced.
+    "brands", "brand_page_mappings",
   ];
   for (const table of expected) {
     assert.match(allUp, new RegExp(`create table public\\.${table}\\b`), `missing ${table}`);
   }
   const created = [...allUp.matchAll(/create table public\.(\w+)/g)].map((m) => m[1]);
-  assert.equal(created.length, 15, `expected 15 tables, found ${created.length}`);
+  assert.equal(created.length, 17, `expected 17 tables, found ${created.length}`);
 });
 
 test("ads.ad_archive_id is NOT NULL UNIQUE and is_active stays nullable", () => {
@@ -132,6 +135,11 @@ test("every function a migration creates is dropped by its rollback", () => {
   )].sort();
   assert.deepEqual(created, [
     "ad_detail", "ad_observation_history",
+    // Brand mapping (0033). One temporal rule, read by everything else here,
+    // plus the two mutations that have to be atomic.
+    "brand_detail", "brand_list", "brand_map_page", "brand_mapping_at",
+    "brand_mapping_history", "brand_normalized_name", "brand_pages",
+    "brand_unmap_page",
     // Category workspace (0028). Read-only, like every function here.
     "category_activity", "category_creative_mix", "category_datasets",
     "category_detail", "category_evidence", "category_list", "category_pages",
@@ -141,7 +149,7 @@ test("every function a migration creates is dropped by its rollback", () => {
     "evergreen_threshold_days", "jsonb_text_array",
     // Page Intelligence (0026) and its timeline (0027). Read-only, like every
     // function above them.
-    "page_activity", "page_ads",
+    "page_activity", "page_ads", "page_brand",
     // Compare (0029) projects the frozen page functions; it defines nothing.
     "page_compare_mix", "page_compare_summary", "page_compare_timeline",
     "page_creative_mix", "page_detail", "page_in_scope",
@@ -152,6 +160,8 @@ test("every function a migration creates is dropped by its rollback", () => {
     // Trends (0030). Read functions only; no cached trend, no stored value.
     "trend_context", "trend_evidence", "trend_mix", "trend_pages",
     "trend_state_scope", "trend_summary",
+    // The Brand review queue (0033): a Page with no active mapping.
+    "unmapped_pages",
     // Watchlist V1 (0032). Read functions plus one baseline write; no
     // evaluator, and nothing that runs on a schedule.
     "watch_scope_ads", "watchlist_list", "watchlist_reset_baseline",

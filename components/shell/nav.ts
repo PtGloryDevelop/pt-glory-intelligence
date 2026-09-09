@@ -30,6 +30,10 @@ export const NAV: NavSection[] = [
       // but what exists behind it is pages: a Page is not a Brand, and nothing
       // in here maps one to the other.
       { label: "เพจ / แบรนด์", icon: "building", href: "/pages" },
+      // Brand mapping (P2.8). The grouping itself, kept apart from the Page
+      // surfaces above: a Brand here is a decision somebody made and signed,
+      // never an identity the data implied.
+      { label: "แบรนด์", icon: "building", href: "/brands" },
       { label: "Creatives", icon: "image" },
     ],
   },
@@ -58,7 +62,8 @@ export const NAV: NavSection[] = [
       { label: "Collection Runs", icon: "history" },
       { label: "Data Quality", icon: "shield" },
       { label: "AI Analysis History", icon: "brain" },
-      { label: "Unmapped Pages", icon: "unlink" },
+      // The review queue behind Brand mapping (P2.8).
+      { label: "Unmapped Pages", icon: "unlink", href: "/unmapped-pages" },
       { label: "Settings", icon: "settings" },
     ],
   },

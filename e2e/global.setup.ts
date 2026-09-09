@@ -11,8 +11,8 @@ import { connect, resetTables } from "../tests/db/helpers.ts";
  */
 
 import {
-  ACCOUNTS, AUTH, CATEGORY, CATEGORY_COMPARE, CATEGORY_TRENDS, CATEGORY_WATCH,
-  CATEGORY_WORKSPACE,
+  ACCOUNTS, AUTH, CATEGORY, CATEGORY_BRAND, CATEGORY_COMPARE, CATEGORY_TRENDS,
+  CATEGORY_WATCH, CATEGORY_WORKSPACE,
   PASSWORD, TMP,
 } from "./constants.ts";
 
@@ -36,13 +36,14 @@ setup("prepare database, fixtures and sessions", async ({ browser, baseURL }) =>
   const client = await connect();
   try {
     await resetTables(client);
-    // Five research categories: the shared one every spec imports into, plus
-    // one each for the category workspace, compare, trends and the watchlist —
-    // so their aggregates cannot be shifted by an unrelated spec importing
-    // first.
+    // Six research categories: the shared one every spec imports into, plus one
+    // each for the category workspace, compare, trends, the watchlist and brand
+    // mapping — so their aggregates cannot be shifted by an unrelated spec
+    // importing first.
     await client.query(
-      "insert into public.categories (name) values ($1), ($2), ($3), ($4), ($5)",
-      [CATEGORY, CATEGORY_WORKSPACE, CATEGORY_COMPARE, CATEGORY_TRENDS, CATEGORY_WATCH],
+      "insert into public.categories (name) values ($1), ($2), ($3), ($4), ($5), ($6)",
+      [CATEGORY, CATEGORY_WORKSPACE, CATEGORY_COMPARE, CATEGORY_TRENDS, CATEGORY_WATCH,
+       CATEGORY_BRAND],
     );
     for (const { id, role } of users) {
       await client.query(
@@ -392,6 +393,30 @@ function writeFixtures() {
   writeFileSync(join(TMP, "watch-old.json"), JSON.stringify(pageExport({
     pageId: "750000000000001", pageName: "คลินิกติดตาม P2", likeCount: 2750,
     generatedAt: daysAgo(30), query: "วิตามินผิวทดสอบ", ads: watchAds,
+  })));
+
+  /*
+   * The brand-mapping fixture: three pages in one collection.
+   *
+   * Three, because the queue has to be a queue — one row proves nothing about
+   * ordering, and a Brand that holds two Pages is the case the whole feature
+   * exists for. Two of them share a display name on purpose: the mapper must
+   * disambiguate by page_id, never by what is on screen.
+   */
+  const brandAds = (prefix: string, count: number): PageAd[] =>
+    mixedAds.slice(0, count).map((ad) => ({ ...ad, id: ad.id.replace(/^710/, prefix) }));
+
+  writeFileSync(join(TMP, "brand-pages.json"), JSON.stringify(twoPageExport({
+    generatedAt: daysAgo(6), query: "กาแฟทดสอบ",
+    pages: [
+      { pageId: "760000000000001", pageName: "กาแฟกลอรี่ สาขาหลัก", ads: brandAds("761", 4) },
+      { pageId: "760000000000002", pageName: "กาแฟกลอรี่ สาขาหลัก", ads: brandAds("762", 3) },
+    ],
+  })));
+
+  writeFileSync(join(TMP, "brand-pages-2.json"), JSON.stringify(pageExport({
+    pageId: "760000000000003", pageName: "คู่แข่งกาแฟ ทดสอบ", likeCount: 1200,
+    generatedAt: daysAgo(4), query: "กาแฟทดสอบ", ads: brandAds("763", 2),
   })));
 
   writeFileSync(join(TMP, "invalid.json"), "{ this is not json");

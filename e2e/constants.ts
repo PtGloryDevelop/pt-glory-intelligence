@@ -11,5 +11,7 @@ export const CATEGORY_COMPARE = "อาหารคลีน (E2E)";
 export const CATEGORY_TRENDS = "ครีมกันแดด (E2E)";
 /** A fifth category, owned by the watchlist spec alone. */
 export const CATEGORY_WATCH = "วิตามินผิว (E2E)";
+/** A sixth category, owned by the brand-mapping spec alone. */
+export const CATEGORY_BRAND = "กาแฟลดน้ำหนัก (E2E)";
 export const PASSWORD = "e2e-journey-pw-2026";
 export const ACCOUNTS = { analyst: "e2e-analyst@example.test", viewer: "e2e-viewer@example.test" };

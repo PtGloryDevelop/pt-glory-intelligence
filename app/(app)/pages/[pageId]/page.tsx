@@ -17,8 +17,12 @@ import { DistributionBars } from "@/components/DistributionBars";
 import { ActivityChart } from "@/components/ActivityChart";
 import { StatusBadge } from "@/components/StatusBadge";
 import { WatchButton } from "@/components/WatchButton";
+import { MapPageControl } from "@/components/brand/MapPageControl";
 import { listWatchItems } from "@/lib/read/watchlist";
 import { DEFAULT_PAGE_SIGNALS } from "@/lib/watchlist/contract";
+import { getPageBrand } from "@/lib/read/brands";
+import { BRAND_ON_PAGE_LABEL } from "@/lib/brands/contract";
+import { satisfies } from "@/lib/auth/role-model";
 import { PageEvidence } from "./evidence";
 import { PageTimeline } from "./timeline";
 import styles from "./page-detail.module.css";
@@ -33,7 +37,7 @@ export default async function PageDetailPage({ params, searchParams }: {
   searchParams: Promise<Search>;
 }) {
   const { pageId } = await params;
-  await requireActorOrRedirect();
+  const actor = await requireActorOrRedirect();
   const query = await searchParams;
 
   const scope = parseScope(one(query.scope));
@@ -50,12 +54,15 @@ export default async function PageDetailPage({ params, searchParams }: {
   // find something to show: that would answer a different question.
   if (!detail) notFound();
 
-  const [mix, activity, likes, scopeName, watches] = await Promise.all([
+  const [mix, activity, likes, scopeName, watches, pageBrand] = await Promise.all([
     view === "overview" ? getPageCreativeMix(scope, pageId) : Promise.resolve([]),
     view === "overview" ? getPageActivity(scope, pageId, bucket) : Promise.resolve([]),
     view === "overview" ? getPageLikeHistory(scope, pageId) : Promise.resolve([]),
     nameOfScope(scope),
     listWatchItems(),
+    // PT Glory's own grouping, not a Meta field. It is shown as metadata beside
+    // the page, and it never replaces the page's identity.
+    getPageBrand(pageId),
   ]);
 
   // Already watching this exact page in this exact scope? Then the control is a
@@ -97,6 +104,11 @@ export default async function PageDetailPage({ params, searchParams }: {
               targetType="page" pageId={pageId} scope={scopeParam}
               signals={DEFAULT_PAGE_SIGNALS} existingId={existingWatch}
             />
+            <MapPageControl
+              pageId={pageId}
+              currentBrand={pageBrand ? { id: pageBrand.brand_id, name: pageBrand.brand_name } : null}
+              canEdit={satisfies(actor.role, "analyst")}
+            />
           </span>
         }
       />
@@ -105,6 +117,13 @@ export default async function PageDetailPage({ params, searchParams }: {
         items={[
           { label: "ขอบเขต", value: scopeLabel(scope, scopeName), testId: "scope-label" },
           { label: "Page ID", value: detail.page_id, testId: "page-identity" },
+          {
+            // Labelled so it cannot be read as something Meta reported. The page
+            // keeps its own name and its own numbers either way.
+            label: BRAND_ON_PAGE_LABEL,
+            value: pageBrand ? pageBrand.brand_name : "ยังไม่จับคู่",
+            testId: "page-brand",
+          },
           {
             label: "หมวดเพจ",
             value: detail.page_categories?.length ? detail.page_categories.join(" · ") : "—",

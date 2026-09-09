@@ -1,0 +1,78 @@
+.wrap { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.actions button { min-height: 36px; }
+
+.readonly { font-size: var(--fs-meta); color: var(--muted); }
+
+/* The mapper is a decision surface, so it gets its own enclosure rather than
+   floating inside a table cell. */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  max-width: 420px;
+}
+
+.field { display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-label); color: var(--muted); }
+.field input {
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--fs-body);
+}
+
+.results, .duplicates ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.results button, .duplicates button {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 34px;
+  text-align: start;
+}
+.picked { border-color: var(--brand); background: var(--brand-tint); }
+.meta { font-size: var(--fs-meta); color: var(--muted); }
+
+.empty { font-size: var(--fs-meta); color: var(--muted); margin: 0; }
+
+/* A name collision is information, not a failure: the existing Brand is offered
+   and never applied. */
+.duplicates {
+  font-size: var(--fs-meta);
+  color: var(--warn-ink);
+  background: var(--warn-tint);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.duplicates p { margin: 0; }
+
+.confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+  font-size: var(--fs-body);
+}
+.confirm p { margin: 0; }
+.move { display: flex; flex-direction: column; gap: 4px; }
+
+.hint { font-size: var(--fs-meta); color: var(--muted); margin: 0; }
+.close { align-self: flex-start; min-height: 32px; }
+.error { font-size: var(--fs-meta); color: var(--danger); font-weight: 600; margin: 0; }
+
+@media (max-width: 640px) {
+  .panel { max-width: none; }
+}
