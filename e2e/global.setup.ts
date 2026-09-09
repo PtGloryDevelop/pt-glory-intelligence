@@ -10,7 +10,9 @@ import { connect, resetTables } from "../tests/db/helpers.ts";
  * hand-made cookie.
  */
 
-import { ACCOUNTS, AUTH, CATEGORY, CATEGORY_WORKSPACE, PASSWORD, TMP } from "./constants.ts";
+import {
+  ACCOUNTS, AUTH, CATEGORY, CATEGORY_COMPARE, CATEGORY_WORKSPACE, PASSWORD, TMP,
+} from "./constants.ts";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 // Same order as tests/db/auth-chain.test.ts: the JWT service-role key is what
@@ -32,12 +34,12 @@ setup("prepare database, fixtures and sessions", async ({ browser, baseURL }) =>
   const client = await connect();
   try {
     await resetTables(client);
-    // Two research categories: the shared one every spec imports into, and one
-    // the category workspace owns, so its aggregates cannot be shifted by an
-    // unrelated spec importing first.
+    // Three research categories: the shared one every spec imports into, plus
+    // one each for the category workspace and compare — so their aggregates
+    // cannot be shifted by an unrelated spec importing first.
     await client.query(
-      "insert into public.categories (name) values ($1), ($2)",
-      [CATEGORY, CATEGORY_WORKSPACE],
+      "insert into public.categories (name) values ($1), ($2), ($3)",
+      [CATEGORY, CATEGORY_WORKSPACE, CATEGORY_COMPARE],
     );
     for (const { id, role } of users) {
       await client.query(

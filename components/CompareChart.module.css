@@ -1,0 +1,59 @@
+.wrap { display: grid; gap: 10px; }
+
+.clock { margin: 0; font-size: var(--fs-meta); color: var(--muted); }
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-size: var(--fs-meta);
+  color: var(--muted);
+}
+.key { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.swatch { width: 10px; height: 10px; border-radius: 2px; flex: none; }
+/* Two supporting hues. Neither is a verdict. */
+.a { background: var(--brand); }
+.b { background: var(--accent-blue); }
+.unit { margin-left: auto; }
+
+.scroll { overflow-x: auto; }
+.svg { display: block; }
+.axis { stroke: var(--line); stroke-width: 1; }
+.barA { fill: var(--brand); }
+.barB { fill: var(--accent-blue); }
+
+.table { font-size: var(--fs-meta); }
+.caption {
+  caption-side: top;
+  text-align: left;
+  color: var(--muted);
+  font-size: var(--fs-meta);
+  padding-bottom: 6px;
+}
+.table th, .table td { padding: 6px 10px; }
+.date { font-weight: 600; white-space: nowrap; }
+
+.count {
+  display: inline-block;
+  min-width: 2.2rem;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--brand-tint);
+  color: var(--brand-ink);
+  text-decoration: none;
+  text-align: center;
+  font-weight: 600;
+}
+.count:hover { background: var(--brand-tint-strong); }
+.on { background: var(--brand); color: var(--ink); border: 1px solid var(--brand-deep); }
+.zero { color: var(--muted); display: inline-block; min-width: 2.2rem; text-align: center; }
+.delta { color: var(--muted); white-space: nowrap; }
+
+.empty { color: var(--muted); font-size: var(--fs-meta); margin: 0; }
+
+@media (max-width: 640px) {
+  /* The table is the readable and operable form at this width. */
+  .scroll { display: none; }
+  .table th, .table td { padding: 6px; }
+}

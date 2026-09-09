@@ -73,6 +73,13 @@ export default async function PageDetailPage({ params, searchParams }: {
         title={detail.page_name ?? detail.page_id}
         back={{ href: `/pages?scope=${scopeParam}`, label: "เพจทั้งหมด" }}
         description="ข้อมูลระดับเพจ · ยังไม่ได้จับคู่เข้าเป็นแบรนด์"
+        actions={
+          // Carries the scope: the comparison must be inside the same data the
+          // reader is already looking at, never silently widened to everything.
+          <Link href={`/compare?scope=${scopeParam}&a=${pageId}`} data-testid="compare-with">
+            เปรียบเทียบกับ…
+          </Link>
+        }
       />
 
       <ContextBar

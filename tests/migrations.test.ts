@@ -16,9 +16,9 @@ test("every up migration has a matching down migration", () => {
   }
 });
 
-test("migrations are numbered 0001..0028 with no gaps", () => {
+test("migrations are numbered 0001..0029 with no gaps", () => {
   const numbers = up.map((f) => Number(f.slice(0, 4)));
-  assert.deepEqual(numbers, Array.from({ length: 28 }, (_, i) => i + 1));
+  assert.deepEqual(numbers, Array.from({ length: 29 }, (_, i) => i + 1));
 });
 
 test("all 14 tables are created", () => {
@@ -138,7 +138,10 @@ test("every function a migration creates is dropped by its rollback", () => {
     "evergreen_threshold_days", "jsonb_text_array",
     // Page Intelligence (0026) and its timeline (0027). Read-only, like every
     // function above them.
-    "page_activity", "page_ads", "page_creative_mix", "page_detail",
+    "page_activity", "page_ads",
+    // Compare (0029) projects the frozen page functions; it defines nothing.
+    "page_compare_mix", "page_compare_summary", "page_compare_timeline",
+    "page_creative_mix", "page_detail", "page_in_scope",
     "page_like_history", "page_list", "page_run_history", "page_run_mix",
     "page_scope_ads", "page_scope_observations", "page_timeline",
     "page_timeline_evidence",

@@ -42,7 +42,8 @@ export const NAV: NavSection[] = [
       { label: "Pain Point / Hook / Offer", icon: "target" },
       { label: "ราคา & Promotion", icon: "tag" },
       { label: "แนวโน้ม", icon: "trend" },
-      { label: "Compare", icon: "compare" },
+      // Page vs Page (P2.4). Pages, never brands: no grouping, no fuzzy identity.
+      { label: "Compare", icon: "compare", href: "/compare" },
       { label: "Watchlist", icon: "bookmark" },
     ],
   },
