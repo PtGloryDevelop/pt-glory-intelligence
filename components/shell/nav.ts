@@ -41,7 +41,9 @@ export const NAV: NavSection[] = [
       { label: "Creative Intelligence", icon: "sparkle" },
       { label: "Pain Point / Hook / Offer", icon: "target" },
       { label: "ราคา & Promotion", icon: "tag" },
-      { label: "แนวโน้ม", icon: "trend" },
+      // Trends (P2.5): the difference between two observed periods. Not a
+      // forecast, and not a claim about the market.
+      { label: "แนวโน้ม", icon: "trend", href: "/trends" },
       // Page vs Page (P2.4). Pages, never brands: no grouping, no fuzzy identity.
       { label: "Compare", icon: "compare", href: "/compare" },
       { label: "Watchlist", icon: "bookmark" },

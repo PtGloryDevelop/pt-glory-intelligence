@@ -39,6 +39,7 @@ export default defineConfig({
         /c2\.spec\.ts/, /v4\.spec\.ts/, /v5\.spec\.ts/,
         // Imports its own fixture and needs the seeded sessions; own project.
         /p2-pages\.spec\.ts/, /p2-timeline\.spec\.ts/, /p2-category\.spec\.ts/, /p2-compare\.spec\.ts/,
+        /p2-trends\.spec\.ts/,
       ],
     },
     {
@@ -97,7 +98,7 @@ export default defineConfig({
       dependencies: ["setup"],
       testMatch: [
         GUARD, /p2-pages\.spec\.ts/, /p2-timeline\.spec\.ts/,
-        /p2-category\.spec\.ts/, /p2-compare\.spec\.ts/,
+        /p2-category\.spec\.ts/, /p2-compare\.spec\.ts/, /p2-trends\.spec\.ts/,
       ],
       use: { ...devices["Desktop Chrome"] },
       timeout: 300_000,

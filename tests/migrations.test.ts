@@ -16,9 +16,9 @@ test("every up migration has a matching down migration", () => {
   }
 });
 
-test("migrations are numbered 0001..0029 with no gaps", () => {
+test("migrations are numbered 0001..0030 with no gaps", () => {
   const numbers = up.map((f) => Number(f.slice(0, 4)));
-  assert.deepEqual(numbers, Array.from({ length: 29 }, (_, i) => i + 1));
+  assert.deepEqual(numbers, Array.from({ length: 30 }, (_, i) => i + 1));
 });
 
 test("all 14 tables are created", () => {
@@ -146,6 +146,9 @@ test("every function a migration creates is dropped by its rollback", () => {
     "page_scope_ads", "page_scope_observations", "page_timeline",
     "page_timeline_evidence",
     "run_media_archive_drain",
+    // Trends (0030). Read functions only; no cached trend, no stored value.
+    "trend_context", "trend_evidence", "trend_mix", "trend_pages",
+    "trend_state_scope", "trend_summary",
   ]);
 
   const allDown = files

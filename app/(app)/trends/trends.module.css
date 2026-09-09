@@ -1,0 +1,99 @@
+/*
+ * Trends.
+ *
+ * Two periods, side by side, with the limits of the comparison stated before
+ * the numbers rather than after them. Nothing here is green for up or red for
+ * down: an increase in what we observed is not good news and a decrease is not
+ * bad news, and colouring them that way would be a judgement the data cannot
+ * support. Direction is carried by an arrow and by words.
+ */
+
+.chooser {
+  display: grid;
+  gap: 6px;
+  padding: 14px var(--pad-card);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  max-width: 34rem;
+}
+.field { display: grid; gap: 2px; }
+.field select { min-height: 40px; width: 100%; }
+
+.basis { margin: 0 0 8px; font-size: var(--fs-meta); color: var(--muted); }
+.note { margin: 0 0 12px; font-size: var(--fs-meta); color: var(--muted); }
+
+/* A limit on what the comparison can support, so it reads as one. */
+.caveat {
+  margin: 0 0 12px;
+  font-size: var(--fs-meta);
+  color: var(--warn-ink);
+  font-weight: 600;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: var(--gap-section);
+}
+.controlLabel {
+  font-size: var(--fs-label);
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+.controlRow { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+.control, .controlOn {
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--ink);
+  text-decoration: none;
+  font-size: var(--fs-meta);
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+}
+.controlOn { background: var(--brand-tint-strong); border-color: var(--brand); font-weight: 600; }
+.controlNote { margin: 0; font-size: var(--fs-meta); color: var(--muted); }
+
+.section { margin-bottom: var(--gap-section); }
+
+.rowLabel { display: grid; gap: 2px; text-align: left; }
+.rowHelper { font-weight: 400; color: var(--muted); font-size: var(--fs-meta); }
+/* Which question the row answers: an event in the window, or a state at its end. */
+.kind { color: var(--muted); font-size: var(--fs-meta); white-space: nowrap; }
+
+.delta { color: var(--ink); font-size: var(--fs-meta); }
+.percent { color: var(--muted); font-variant-numeric: tabular-nums; }
+.lowBase { color: var(--warn-ink); font-weight: 600; }
+
+.mix {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 16px;
+  margin-bottom: var(--gap-section);
+}
+
+.anchor { display: block; scroll-margin-top: 80px; }
+.source { margin: 0 0 12px; font-size: var(--fs-meta); color: var(--muted); }
+
+.contexts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+.contextGroup { min-width: 0; }
+.contextTitle { font-size: var(--fs-title-sm); margin-bottom: 8px; }
+.contextList { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.contextList li { display: grid; gap: 2px; }
+.contextMeta { color: var(--muted); font-size: var(--fs-meta); }
+
+@media (max-width: 640px) {
+  .mix { grid-template-columns: 1fr; }
+  .contexts { grid-template-columns: 1fr; }
+}

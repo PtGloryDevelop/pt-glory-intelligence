@@ -94,3 +94,19 @@ export async function getCompareTimeline(
   if (error) throw error;
   return (data ?? []) as CompareTimelinePoint[];
 }
+
+/**
+ * Whether a page is represented in a scope at all.
+ *
+ * `page_detail` answers with zeroes for a page the product knows from somewhere
+ * else, so presence of a row is not membership. Any surface that must tell "no
+ * ads here" from "not here" asks this instead.
+ */
+export async function isPageInScope(scope: PageScope, pageId: string): Promise<boolean> {
+  const supabase = await dbUser();
+  const { data, error } = await supabase.rpc("page_in_scope", {
+    ...scopeArgs(scope), p_page_id: pageId,
+  });
+  if (error) throw error;
+  return data === true;
+}

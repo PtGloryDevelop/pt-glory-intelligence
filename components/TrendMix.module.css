@@ -1,0 +1,46 @@
+.block { margin-bottom: var(--gap-section); }
+
+.head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.title { font-size: var(--fs-title-sm); }
+.pairs { color: var(--muted); font-size: var(--fs-meta); font-variant-numeric: tabular-nums; }
+
+.qualifier { margin: 2px 0 10px; font-size: var(--fs-meta); color: var(--muted); }
+/* A thin period is a limit on what may be claimed, so it reads as one. */
+.qualifier[data-tier="low"], .qualifier[data-tier="partial"] { color: var(--warn-ink); font-weight: 600; }
+
+.table { font-size: var(--fs-meta); width: 100%; }
+.table th, .table td { padding: 6px 10px; }
+.name {
+  text-align: left;
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cell { white-space: nowrap; }
+.share {
+  display: block;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * Percentage points, in the neutral text colour. A rise is not green and a fall
+ * is not red: change is not automatically good or bad, and colouring it that
+ * way would be a judgement this product has no basis for.
+ */
+.points { color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+.empty { color: var(--muted); font-size: var(--fs-meta); margin: 0; }
+
+@media (max-width: 640px) {
+  .table th, .table td { padding: 6px 4px; }
+  .name { max-width: 8rem; }
+}

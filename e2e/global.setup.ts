@@ -11,7 +11,8 @@ import { connect, resetTables } from "../tests/db/helpers.ts";
  */
 
 import {
-  ACCOUNTS, AUTH, CATEGORY, CATEGORY_COMPARE, CATEGORY_WORKSPACE, PASSWORD, TMP,
+  ACCOUNTS, AUTH, CATEGORY, CATEGORY_COMPARE, CATEGORY_TRENDS, CATEGORY_WORKSPACE,
+  PASSWORD, TMP,
 } from "./constants.ts";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -34,12 +35,12 @@ setup("prepare database, fixtures and sessions", async ({ browser, baseURL }) =>
   const client = await connect();
   try {
     await resetTables(client);
-    // Three research categories: the shared one every spec imports into, plus
-    // one each for the category workspace and compare — so their aggregates
-    // cannot be shifted by an unrelated spec importing first.
+    // Four research categories: the shared one every spec imports into, plus
+    // one each for the category workspace, compare and trends — so their
+    // aggregates cannot be shifted by an unrelated spec importing first.
     await client.query(
-      "insert into public.categories (name) values ($1), ($2), ($3)",
-      [CATEGORY, CATEGORY_WORKSPACE, CATEGORY_COMPARE],
+      "insert into public.categories (name) values ($1), ($2), ($3), ($4)",
+      [CATEGORY, CATEGORY_WORKSPACE, CATEGORY_COMPARE, CATEGORY_TRENDS],
     );
     for (const { id, role } of users) {
       await client.query(
@@ -313,6 +314,58 @@ function writeFixtures() {
         ],
       },
       { pageId: "730000000000002", pageName: "คลินิกหมวด B", ads: catPageB },
+    ],
+  })));
+
+  /*
+   * The trends pair: the same two pages, collected twice, far enough apart to
+   * land in two different comparison windows.
+   *
+   * These generated_at values are RELATIVE TO NOW, because a trend compares the
+   * last N days with the N before them — pinned dates would drift out of both
+   * windows within a month and the spec would be testing an empty screen.
+   *
+   * Between the two collections one ad stops, one becomes unreadable, one is
+   * new, and the query changes, so every part of the surface has something real
+   * to report.
+   */
+  const DAY = 86_400_000;
+  const daysAgo = (days: number) => new Date(Date.now() - days * DAY).toISOString();
+
+  const trendAds: PageAd[] = mixedAds.map((ad) => ({ ...ad, id: ad.id.replace(/^710/, "741") }));
+  const trendPageB: PageAd[] = mixedAds.slice(0, 2).map((ad) => ({
+    ...ad, id: ad.id.replace(/^710/, "742"),
+  }));
+
+  writeFileSync(join(TMP, "trends-old.json"), JSON.stringify(twoPageExport({
+    // Inside the previous window for every offered period length.
+    generatedAt: daysAgo(45), query: "กันแดดทดสอบ",
+    pages: [
+      { pageId: "740000000000001", pageName: "แบรนด์แนวโน้ม A", ads: trendAds },
+      { pageId: "740000000000002", pageName: "แบรนด์แนวโน้ม B", ads: trendPageB },
+    ],
+  })));
+
+  writeFileSync(join(TMP, "trends-new.json"), JSON.stringify(twoPageExport({
+    // Inside the current window for every offered period length.
+    generatedAt: daysAgo(2), query: "ครีมกันแดดทดสอบ",
+    pages: [
+      {
+        pageId: "740000000000001", pageName: "แบรนด์แนวโน้ม A",
+        ads: [
+          { ...trendAds[0], is_active: false },
+          trendAds[1],
+          { ...trendAds[2], is_active: null, display_format: null },
+          trendAds[3],
+          trendAds[4],
+          // Started and first seen inside the current window: an event in one
+          // period and in neither of the others.
+          { id: "741000000000106", is_active: true, display_format: "VIDEO",
+            cta_type: "MESSAGE_PAGE", publisher_platform: ["FACEBOOK", "INSTAGRAM"],
+            collation_count: 3, start: daysAgo(5) },
+        ],
+      },
+      { pageId: "740000000000002", pageName: "แบรนด์แนวโน้ม B", ads: trendPageB },
     ],
   })));
 
