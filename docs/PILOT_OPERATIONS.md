@@ -202,16 +202,35 @@ archived 611 · pending 0 · unusable 20 · failedRetryable 0 · failedTerminal 
 It took about 90 minutes of ticks, including the ten minutes lost to a
 deliberately induced failure. Nothing was lost and nothing needed re-importing.
 
-### The 20 unusable assets are the source, not the archiver
+### Second import, and what two runs unlocked
 
-All 20 are CAROUSEL (14) or DCO (6) observations whose media is `cards` only —
+The same keyword, re-collected on 2026-09-10 with an identical scope
+(`keyword_unordered`, TH, active): 500 ads, 206 pages, 481 assets queued.
+
+| | 7 Sep | 10 Sep |
+|---|---|---|
+| ads | 631 | 500 |
+| pages | 306 | 206 |
+
+The category now holds 882 distinct ads and 351 pages — 631 + 500 minus the 249
+that appear in both. A smaller second run does **not** mean the market shrank; it
+means that collection loaded less of the list. The `completeness_claim` in every
+export says so, and nothing in the product infers otherwise.
+
+Keeping the scope identical matters: the workspace warns when two runs used
+different queries, because a difference in counts would then be unattributable.
+
+### The unusable assets are the source, not the archiver
+
+All of them are CAROUSEL, DCO or DPA observations whose media is `cards` only —
 no `images`, no `videos`. Across 94 such cards, **none** carries
 `resized_image_url` or `original_image_url`; they hold `body`, `title`,
 `cta_text`, `cta_type`, `link_url`, `link_description`, `video_hd_url` and
 `video_sd_url`. There is no still to archive.
 
-That is 3.17% of the collection, against the 3.2% Phase 1 measured and wrote
-into `lib/media/select.ts`. `unusable` is the correct status — media exists but
+That was 3.17% of the first collection, against the 3.2% Phase 1 measured and
+wrote into `lib/media/select.ts`; the second import added 19 more of the same
+kind. `unusable` is the correct status — media exists but
 policy cannot turn it into a still — and it is distinct from `none`.
 `failure_reason` is null because these were never attempted: the status is
 decided when the row is queued, not after a failure.
@@ -234,7 +253,46 @@ of ticks, visible the whole way.
 
 ---
 
-## 6. Failure recovery
+## 6. Proving the pilot still tells the truth
+
+Three read-only scripts. None of them writes anything a person would see, and
+none uses the service-role key to make an assertion pass.
+
+```bash
+# every surface renders, at 1440 and 375, plus sign-out
+PT_GLORY_ENV=pilot PILOT_SMOKE_EMAIL=… PILOT_SMOKE_PASSWORD=…   node --env-file-if-exists=.env.local scripts/pilot-smoke.mjs
+
+# every number opens exactly the ads it counted, and the refusals refuse
+PT_GLORY_ENV=pilot PILOT_PROOF_EMAIL=… PILOT_PROOF_PASSWORD=…   node --env-file-if-exists=.env.local scripts/pilot-evidence-proof.mjs
+
+# the role contract: analyst/admin may, viewer may not, and neither reads the
+# other's Watchlist. Creates and then removes only its own editorial rows.
+PT_GLORY_ENV=pilot PILOT_PROOF_EMAIL=… PILOT_PROOF_PASSWORD=…   PILOT_PROOF_EMAIL_B=… PILOT_PROOF_PASSWORD_B=…   node --env-file-if-exists=.env.local scripts/pilot-role-proof.mjs
+```
+
+These are not a substitute for the DB and browser suites — they cover a fraction
+of what those do. They exist because the suites cannot run at all right now (§1),
+and because the deployed runtime is where a serialization or plumbing fault would
+appear even with correct SQL behind it.
+
+Run all three after any deployment.
+
+### Snapshot truth, proven on real pilot data
+
+With two runs of the same keyword, 249 ads appear in both and 20 of them were
+observed with a different `collation_count` the second time. Ad
+`1441020340962647` was seen as 1 on 7 Sep and 3 on 10 Sep:
+
+- opened inside the 7 Sep dataset → **1**
+- opened inside the 10 Sep dataset → **3**
+- opened with no dataset → 3, the newest observation
+
+The first dataset still totals 631 ads and 306 pages, unchanged. A report sent on
+7 Sep opens today with the same numbers on it.
+
+---
+
+## 7. Failure recovery
 
 | Symptom | Look at | Likely cause |
 |---|---|---|
@@ -251,7 +309,7 @@ recover archival.
 
 ---
 
-## 7. Boundaries this pilot must keep
+## 8. Boundaries this pilot must keep
 
 - **Watchlist is manual.** No evaluator, no schedule, no notification, no event
   history. Numbers are computed when somebody opens the page. Automatic
@@ -267,7 +325,7 @@ recover archival.
 
 ---
 
-## 8. Backups
+## 9. Backups
 
 The pilot runs on the Supabase plan attached to project `hufzfbqfwusfiaywtnvy`.
 **Confirm the backup policy in the dashboard before treating any pilot data as
@@ -281,7 +339,7 @@ whose source URLs have since expired. Keep the original collector exports.
 
 ---
 
-## 9. Known limitations at pilot start
+## 10. Known limitations at pilot start
 
 1. **DB and e2e suites cannot run** until a local Supabase stack exists — 18 DB
    files and 174 browser cases. Any fix is verified by lint, typecheck, unit
