@@ -32,10 +32,24 @@ Condition 3 cannot be overridden. The pilot project ref and every
 even read, and the pilot is recognised through the pooler too — its hostname
 names a region, and the project ref hides in the username.
 
-**Consequence:** the DB and end-to-end test suites cannot run at all until a
-local Supabase stack exists (it needs a container runtime — Docker Desktop,
-Podman, Rancher, or Docker Engine under WSL2). `lint`, `typecheck`,
-`check:imports`, the unit suites and `build` still run anywhere.
+**Consequence, and it is a real one:** the DB and end-to-end suites cannot run
+at all — 18 DB files plus 174 Playwright cases across `chromium`, `p2` and `c3`.
+They need Supabase's whole stack (Postgres **and** Auth **and** PostgREST,
+because the app signs in through one and reads through the other), which means a
+container runtime, which is not installed on the build machine.
+
+Until that exists, any change is verified by `lint`, `typecheck`,
+`check:imports`, the unit suites (277) and `build` — and nothing else. Say so
+plainly when reporting a fix. What those five cannot check is precisely what the
+missing suites cover: RLS boundaries, cross-user isolation, snapshot truth, and
+whether a displayed count still matches its evidence.
+
+**Deliberately accepted for the pilot**, on the reasoning that the deployed
+commit passed the full suite before the cutover and the pilot is read-heavy.
+Revisit before changing anything that touches RLS, role checks, or how a number
+is counted. Podman Desktop and Rancher Desktop are lighter than Docker Desktop
+and free without company-size conditions; Docker Engine under WSL2 needs no
+desktop app at all.
 
 `scripts/pilot-reset.mjs` is the deliberate inverse: it refuses *everything
 except* the pilot, and takes the project ref typed out as confirmation. Two
@@ -176,6 +190,36 @@ reported `succeeded` while pg_net recorded `Couldn't connect to server` — the
 scheduler fired perfectly into a URL that did not exist. Cron status says the
 job ran; only the response says anything was delivered.
 
+### First real import, for reference
+
+The 631-ad import of 2026-09-07 queued 611 assets and the scheduler drained
+every one of them without a manual call:
+
+```
+archived 611 · pending 0 · unusable 20 · failedRetryable 0 · failedTerminal 0
+```
+
+It took about 90 minutes of ticks, including the ten minutes lost to a
+deliberately induced failure. Nothing was lost and nothing needed re-importing.
+
+### The 20 unusable assets are the source, not the archiver
+
+All 20 are CAROUSEL (14) or DCO (6) observations whose media is `cards` only —
+no `images`, no `videos`. Across 94 such cards, **none** carries
+`resized_image_url` or `original_image_url`; they hold `body`, `title`,
+`cta_text`, `cta_type`, `link_url`, `link_description`, `video_hd_url` and
+`video_sd_url`. There is no still to archive.
+
+That is 3.17% of the collection, against the 3.2% Phase 1 measured and wrote
+into `lib/media/select.ts`. `unusable` is the correct status — media exists but
+policy cannot turn it into a still — and it is distinct from `none`.
+`failure_reason` is null because these were never attempted: the status is
+decided when the row is queued, not after a failure.
+
+Archiving them would mean downloading video to extract a frame, and `link_url`
+is advertiser-supplied and permanently barred from the fetch path. No fix is
+required or wanted.
+
 ### Batch size (found in pilot)
 
 One asset takes about 1.6 seconds on this deployment. The original batch of 200
@@ -239,9 +283,9 @@ whose source URLs have since expired. Keep the original collector exports.
 
 ## 9. Known limitations at pilot start
 
-1. **DB and e2e suites cannot run** until a local Supabase stack exists. Any
-   deployment fix is verified by lint, typecheck, unit tests and build only —
-   say so plainly when reporting one.
+1. **DB and e2e suites cannot run** until a local Supabase stack exists — 18 DB
+   files and 174 browser cases. Any fix is verified by lint, typecheck, unit
+   tests and build only; say so plainly when reporting one. See §1.
 2. **No custom domain.** The Vercel URL is the address.
 3. **No email transport.** Accounts are created confirmed; there is no
    self-service password reset.
