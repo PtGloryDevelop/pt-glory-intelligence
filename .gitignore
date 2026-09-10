@@ -25,3 +25,6 @@ next-env.d.ts
 
 # scratch watchers written during pilot operations
 *.tmp.mjs
+
+# local recovery dumps of the pilot editorial layer
+/backups

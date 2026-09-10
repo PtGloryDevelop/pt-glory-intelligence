@@ -328,14 +328,40 @@ recover archival.
 ## 9. Backups
 
 The pilot runs on the Supabase plan attached to project `hufzfbqfwusfiaywtnvy`.
-**Confirm the backup policy in the dashboard before treating any pilot data as
-durable** — free-tier projects have limited or no point-in-time recovery, and
-this document will not claim a capability that has not been verified.
+**The platform's backup policy has not been verified** — free-tier projects have
+limited or no point-in-time recovery, and this document will not claim a
+capability nobody has checked. Confirm it in the dashboard with the account that
+owns the project.
 
-What is reproducible without a backup: the schema (from `supabase/migrations`),
-and any dataset whose original export file still exists. What is **not**:
-editorial work — Brand mappings, Watchlists, categories, and the archived media
-whose source URLs have since expired. Keep the original collector exports.
+Rather than depend on that answer, take the recovery gap out of the equation:
+
+| Layer | Comes back from | Needs a backup? |
+|---|---|---|
+| Schema | `supabase/migrations`, 34 files | no |
+| Datasets, ads, observations | the original collector export files | no — **keep those files** |
+| Archived previews | re-archival, only while source URLs live (~4 days) | after that, no |
+| **Categories, Brands, mappings, Watchlists, roles** | **nothing** | **yes** |
+
+The last row is the one that matters. Those are decisions people made; no export
+contains them and no amount of re-importing recreates them.
+
+```bash
+PT_GLORY_ENV=pilot node --env-file-if-exists=.env.local scripts/pilot-backup.mjs
+```
+
+Writes a timestamped JSON to `backups/` (gitignored, mode 600) holding the
+editorial layer plus a dataset manifest that says which export rebuilds which
+dataset. Read-only, and deliberately not a dump of ads or media: those are large,
+reproducible, and copying them would create a second uncontrolled copy of the
+research data.
+
+Run it after any session of real mapping work, and before any migration or
+deployment that touches those tables. During the pilot, once a day is cheap.
+
+**Restoring** is a manual job on purpose — a restore script that ran against the
+wrong database would be the most expensive mistake available here. The file is
+plain JSON; rebuilding from it means inserting categories, brands, mappings,
+watch items and roles in that order.
 
 ---
 
