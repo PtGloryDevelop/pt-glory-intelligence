@@ -177,3 +177,15 @@
   font-size: var(--fs-meta);
   max-width: 78ch;
 }
+
+/* Reconciles the two clocks, directly under the numbers that need it. Reads as
+   an explanation rather than a warning: nothing here is wrong. */
+.clockNote {
+  margin: 12px 0 0;
+  padding: 10px 14px;
+  border-left: 3px solid var(--brand);
+  background: var(--brand-tint);
+  color: var(--ink);
+  font-size: var(--fs-meta);
+  max-width: 88ch;
+}

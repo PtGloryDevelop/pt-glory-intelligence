@@ -6,6 +6,7 @@ import {
   getScopeCollectionFilters,
 } from "@/lib/read/pages";
 import { statusFilterNote } from "@/lib/domain/collection-filters";
+import { twoClockNote } from "@/lib/domain/clocks";
 import { listCategories, listDatasets } from "@/lib/read/queries";
 import {
   parseScope, recentDays, scopeBasis, scopeLabel, scopeToParam, type PageScope,
@@ -208,6 +209,23 @@ export default async function PageDetailPage({ params, searchParams }: {
           testId="kpi-reused"
         />
       </KPIRow>
+
+      {/* The two clocks, reconciled where the reader meets them. "We just found
+          28" beside "15 have run over 90 days" reads as a contradiction until
+          somebody says which clock each number is on. */}
+      {(() => {
+        const note = twoClockNote({
+          observed: detail.observed_ads,
+          recentlyFound: detail.recently_found,
+          startedRecently: detail.started_recently,
+          evergreen: detail.evergreen_ads,
+          recentDays: days,
+          firstObservedAt: detail.first_observed_at,
+        }, thaiDate);
+        return note ? (
+          <p className={styles.clockNote} data-testid="two-clock-note">{note}</p>
+        ) : null;
+      })()}
 
       <Panel padded className={styles.section}>
         <h2 className={styles.sectionTitle}>สถานะโฆษณาในขอบเขตนี้</h2>
