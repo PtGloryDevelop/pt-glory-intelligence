@@ -180,6 +180,31 @@ for (const [label, path, shot] of [
   console.log(`${wide ? "FAIL" : "ok   "}        ${label}`);
 }
 
+/*
+ * Signing out, in a real browser.
+ *
+ * Clicking a button is not entering a credential, so this half can be proven
+ * here — the login half stays a human acceptance step. Three things have to be
+ * true, and only the third is about security: the click lands on /login, the
+ * session cookies are gone, and a protected route now refuses.
+ */
+await page.setViewportSize({ width: 1440, height: 1000 });
+await page.goto(`${BASE}/`, { waitUntil: "domcontentloaded" });
+const before = (await context.cookies()).filter((c) => c.name.startsWith("sb-")).length;
+await page.locator('[data-testid="sign-out"]').click();
+await page.waitForURL(/\/login/, { timeout: 20000 });
+const after = (await context.cookies()).filter((c) => c.name.startsWith("sb-")).length;
+
+await page.goto(`${BASE}/datasets`, { waitUntil: "domcontentloaded" });
+const refused = /\/login/.test(page.url());
+
+console.log(`
+sign-out  cookies ${before} -> ${after} | /datasets after logout -> ${page.url().replace(BASE, "")}`);
+if (after !== 0) failures.push(`sign-out left ${after} session cookie(s) behind`);
+if (!refused) failures.push("a protected route still rendered after signing out");
+results.push({ label: "sign out", path: "/", status: after === 0 && refused ? 200 : "error", ms: 0 });
+console.log(`${after === 0 && refused ? "ok   " : "FAIL "}        sign out clears the session and protected routes refuse`);
+
 await browser.close();
 
 console.log("\n--- server time per surface ---");
