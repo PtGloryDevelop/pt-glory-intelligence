@@ -16,9 +16,9 @@ test("every up migration has a matching down migration", () => {
   }
 });
 
-test("migrations are numbered 0001..0034 with no gaps", () => {
+test("migrations are numbered 0001..0035 with no gaps", () => {
   const numbers = up.map((f) => Number(f.slice(0, 4)));
-  assert.deepEqual(numbers, Array.from({ length: 34 }, (_, i) => i + 1));
+  assert.deepEqual(numbers, Array.from({ length: 35 }, (_, i) => i + 1));
 });
 
 test("all 17 tables are created", () => {
@@ -157,6 +157,9 @@ test("every function a migration creates is dropped by its rollback", () => {
     "page_scope_ads", "page_scope_observations", "page_timeline",
     "page_timeline_evidence",
     "run_media_archive_drain",
+    // What the collection asked for (0035). Reads what collection_runs has
+    // stored since 0004; changes no count and no existing function.
+    "scope_collection_filters",
     // Trends (0030). Read functions only; no cached trend, no stored value.
     "trend_context", "trend_evidence", "trend_mix", "trend_pages",
     "trend_state_scope", "trend_summary",

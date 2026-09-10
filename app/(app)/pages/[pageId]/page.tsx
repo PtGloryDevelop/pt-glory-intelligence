@@ -3,7 +3,9 @@ import { notFound } from "next/navigation";
 import { requireActorOrRedirect } from "@/lib/auth/roles";
 import {
   getPageActivity, getPageCreativeMix, getPageDetail, getPageLikeHistory,
+  getScopeCollectionFilters,
 } from "@/lib/read/pages";
+import { statusFilterNote } from "@/lib/domain/collection-filters";
 import { listCategories, listDatasets } from "@/lib/read/queries";
 import {
   parseScope, recentDays, scopeBasis, scopeLabel, scopeToParam, type PageScope,
@@ -54,7 +56,7 @@ export default async function PageDetailPage({ params, searchParams }: {
   // find something to show: that would answer a different question.
   if (!detail) notFound();
 
-  const [mix, activity, likes, scopeName, watches, pageBrand] = await Promise.all([
+  const [mix, activity, likes, scopeName, watches, pageBrand, filters] = await Promise.all([
     view === "overview" ? getPageCreativeMix(scope, pageId) : Promise.resolve([]),
     view === "overview" ? getPageActivity(scope, pageId, bucket) : Promise.resolve([]),
     view === "overview" ? getPageLikeHistory(scope, pageId) : Promise.resolve([]),
@@ -63,6 +65,9 @@ export default async function PageDetailPage({ params, searchParams }: {
     // PT Glory's own grouping, not a Meta field. It is shown as metadata beside
     // the page, and it never replaces the page's identity.
     getPageBrand(pageId),
+    // What the collection asked for. A status breakdown is only as wide as the
+    // search behind it, and until now the screen never said so.
+    getScopeCollectionFilters(scope),
   ]);
 
   // Already watching this exact page in this exact scope? Then the control is a
@@ -215,6 +220,13 @@ export default async function PageDetailPage({ params, searchParams }: {
             “ไม่ทราบ” คือรอบเก็บอ่านสถานะไม่ได้ ไม่ใช่หยุดแสดง
           </span>
         </div>
+        {/* The zero that would otherwise read as a finding about the advertiser
+            rather than a consequence of the search. */}
+        {statusFilterNote(filters) ? (
+          <p className={styles.filterNote} data-testid="status-filter-note">
+            {statusFilterNote(filters)}
+          </p>
+        ) : null}
         <p className={styles.range}>
           เริ่มแสดงเก่าสุด {thaiDate(detail.oldest_start_date)} ·
           ใหม่สุด {thaiDate(detail.newest_start_date)}

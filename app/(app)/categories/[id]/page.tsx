@@ -5,6 +5,8 @@ import {
   getCategoryActivity, getCategoryCreativeMix, getCategoryDatasets, getCategoryDetail,
   getCategoryEvidence, getCategoryPages, getCategoryRunHistory,
 } from "@/lib/read/categories";
+import { getScopeCollectionFilters } from "@/lib/read/pages";
+import { statusFilterNote } from "@/lib/domain/collection-filters";
 import { signArchivedPreviews } from "@/lib/media/presentation";
 import {
   CATEGORY_BASIS, CATEGORY_PAGE_SORTS, DEFAULT_CATEGORY_SORT,
@@ -73,13 +75,16 @@ export default async function CategoryWorkspace({ params, searchParams }: {
   const grain = timelineGrain(one(query.grain), range);
   const window = rangeWindow(range);
 
-  const [datasets, runs, pages, mix, activity, watches] = await Promise.all([
+  const [datasets, runs, pages, mix, activity, watches, filters] = await Promise.all([
     getCategoryDatasets(id),
     getCategoryRunHistory(id),
     getCategoryPages(id, { recentDays: days, search: search || null, sort, limit: RANKING_SIZE, offset: rankOffset }),
     getCategoryCreativeMix(id),
     getCategoryActivity(id, { bucket: grain, from: window.from, to: window.to }),
     listWatchItems(),
+    // What the collection asked for. A status breakdown is only as wide as the
+    // search behind it.
+    getScopeCollectionFilters({ kind: "category", id }),
   ]);
 
   // A category watch is always about its own category, so the match is exact.
@@ -190,6 +195,13 @@ export default async function CategoryWorkspace({ params, searchParams }: {
                 “ไม่ทราบ” คือรอบเก็บอ่านสถานะไม่ได้ ไม่ใช่หยุดแสดง
               </span>
             </div>
+            {/* What the collection asked for: an active-only search never had a
+                stopped ad to report, so its zero is not a finding. */}
+            {statusFilterNote(filters) ? (
+              <p className={styles.filterNote} data-testid="status-filter-note">
+                {statusFilterNote(filters)}
+              </p>
+            ) : null}
           </Panel>
 
           {/* ---------------------------------------------------- activity */}

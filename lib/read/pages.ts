@@ -1,5 +1,6 @@
 import { dbUser } from "../db/user.ts";
 import { scopeArgs, type PageScope, type PageSignal } from "../pages/scope.ts";
+import type { CollectionFilters } from "../domain/collection-filters.ts";
 
 /**
  * Page Intelligence read side.
@@ -309,4 +310,20 @@ export async function getPageTimelineEvidence(
   if (error) throw error;
   const rows = (data ?? []) as PageAdRow[];
   return { rows, total: rows[0] ? Number(rows[0].total_count) : 0 };
+}
+
+/**
+ * What the collection asked for, in this scope.
+ *
+ * Read alongside a status breakdown so a zero cannot be mistaken for a finding:
+ * an active-only search never had a stopped ad to report.
+ */
+export async function getScopeCollectionFilters(
+  scope: PageScope,
+): Promise<CollectionFilters | null> {
+  const supabase = await dbUser();
+  const { data, error } = await supabase.rpc("scope_collection_filters", scopeArgs(scope));
+  if (error) throw error;
+  const row = ((data ?? []) as CollectionFilters[])[0] ?? null;
+  return row && Number(row.runs) > 0 ? { ...row, runs: Number(row.runs) } : null;
 }

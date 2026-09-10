@@ -41,10 +41,22 @@ export function AppShell({ role, children }: { role: string; children: React.Rea
         </div>
 
         <nav className={styles.nav} aria-label="เมนูหลัก">
+          {/*
+            * Built first, unbuilt last.
+            *
+            * The menu used to interleave nine unbuilt destinations among eleven
+            * working ones, so finding a screen meant discovering by clicking
+            * which greyed-out entries were decoration. Each section now leads
+            * with what works; anything without a route sinks to the end of its
+            * section, still visible so the shape of the product is legible, but
+            * never in the way of the thing somebody came to open.
+            */}
           {NAV.map((section) => (
             <div key={section.heading}>
               <div className={styles.heading}>{section.heading}</div>
-              {section.items.map((item) =>
+              {[...section.items]
+                .sort((a, b) => Number(Boolean(b.href)) - Number(Boolean(a.href)))
+                .map((item) =>
                 item.href ? (
                   <Link
                     key={item.label}
@@ -72,6 +84,9 @@ export function AppShell({ role, children }: { role: string; children: React.Rea
                   >
                     <span className={styles.icon}><Icon name={item.icon} /></span>
                     <span className={styles.label}>{item.label}</span>
+                    {/* Said once, in place, rather than hidden in a tooltip
+                        nobody hovers on a phone. */}
+                    <span className={styles.soon}>เร็ว ๆ นี้</span>
                   </span>
                 ),
               )}

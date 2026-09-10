@@ -116,3 +116,15 @@
   .field select, .field input { max-width: none; }
   .runScope { max-width: 10rem; }
 }
+
+/* The search behind a status breakdown, in the same warn tone the page uses for
+   anything that limits what a number may mean. */
+.filterNote {
+  margin: 10px 0 0;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--warn-tint);
+  color: var(--warn-ink);
+  font-size: var(--fs-meta);
+  max-width: 78ch;
+}
