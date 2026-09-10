@@ -219,7 +219,7 @@
    a fact about the menu, not an advertisement. */
 .soon {
   margin-left: auto;
-  font-size: 10px;
+  font-size: var(--fs-eyebrow);
   letter-spacing: 0.02em;
   padding: 1px 6px;
   border-radius: var(--radius-pill);
