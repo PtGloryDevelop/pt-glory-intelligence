@@ -16,6 +16,9 @@ import styles from "./DistributionBars.module.css";
 
 export type DistributionItem = { value: string; n: number };
 
+/** Rows shown before the tail folds away. */
+const VISIBLE = 10;
+
 export function DistributionBars({
   title, items, covered, observed, exclusive, testId, evidenceHref,
 }: {
@@ -36,6 +39,15 @@ export function DistributionBars({
   const denominator = exclusive ? covered : observed;
   const top = [...items].sort((a, b) => b.n - a.n);
   const widest = top[0]?.n ?? 0;
+  /*
+   * A multi-value field can have sixty readable values, and page_category does.
+   * The long tail is real and stays reachable, but folded: sixty rows of 0.1%
+   * buried the panels under this one, and nobody scrolls a bar chart to find
+   * the row that matters. The fold is a <details>, so it works without script
+   * and prints open.
+   */
+  const head = top.slice(0, VISIBLE);
+  const tail = top.slice(VISIBLE);
 
   return (
     <section className={styles.block} data-testid={testId}>
@@ -59,30 +71,64 @@ export function DistributionBars({
       {top.length === 0 ? (
         <p className={styles.empty}>ไม่มีค่าที่อ่านได้ในขอบเขตนี้</p>
       ) : (
-        <ul className={styles.list}>
-          {top.map((item) => (
-            <li key={item.value} className={styles.row} data-testid={`${testId}-row`}>
-              <span className={styles.name} title={item.value}>
-                {/* The placeholder bucket is "the collector could not read this",
-                    which is not a value anything can be filtered by. */}
-                {evidenceHref && item.value !== "—" ? (
-                  <a href={evidenceHref(item.value)} data-testid={`${testId}-evidence-${item.value}`}>
-                    {item.value}
-                  </a>
-                ) : item.value}
-              </span>
-              <span className={styles.track} aria-hidden>
-                <span
-                  className={styles.fill}
-                  style={{ width: `${widest === 0 ? 0 : (item.n / widest) * 100}%` }}
-                />
-              </span>
-              <span className={styles.count} data-numeral>{item.n}</span>
-              <span className={styles.share}>{formatShare(item.n, denominator)}</span>
-            </li>
-          ))}
-        </ul>
+        <>
+          <ul className={styles.list}>
+            {head.map((item) => (
+              <Row
+                key={item.value} item={item} widest={widest} denominator={denominator}
+                testId={testId} evidenceHref={evidenceHref}
+              />
+            ))}
+          </ul>
+          {tail.length > 0 ? (
+            <details className={styles.more} data-testid={`${testId}-more`}>
+              <summary className={styles.moreSummary}>
+                ดูอีก {tail.length.toLocaleString("th-TH")} ค่า · ค่าละไม่เกิน{" "}
+                {formatShare(tail[0].n, denominator)}
+              </summary>
+              <ul className={styles.list}>
+                {tail.map((item) => (
+                  <Row
+                    key={item.value} item={item} widest={widest} denominator={denominator}
+                    testId={testId} evidenceHref={evidenceHref}
+                  />
+                ))}
+              </ul>
+            </details>
+          ) : null}
+        </>
       )}
     </section>
+  );
+}
+
+/** One value: its name, its bar, its count and its share of the stated base. */
+function Row({ item, widest, denominator, testId, evidenceHref }: {
+  item: DistributionItem;
+  widest: number;
+  denominator: number;
+  testId: string;
+  evidenceHref?: (value: string) => string;
+}) {
+  return (
+    <li className={styles.row} data-testid={`${testId}-row`}>
+      <span className={styles.name} title={item.value}>
+        {/* The placeholder bucket is "the collector could not read this",
+            which is not a value anything can be filtered by. */}
+        {evidenceHref && item.value !== "—" ? (
+          <a href={evidenceHref(item.value)} data-testid={`${testId}-evidence-${item.value}`}>
+            {item.value}
+          </a>
+        ) : item.value}
+      </span>
+      <span className={styles.track} aria-hidden>
+        <span
+          className={styles.fill}
+          style={{ width: `${widest === 0 ? 0 : (item.n / widest) * 100}%` }}
+        />
+      </span>
+      <span className={styles.count} data-numeral>{item.n}</span>
+      <span className={styles.share}>{formatShare(item.n, denominator)}</span>
+    </li>
   );
 }

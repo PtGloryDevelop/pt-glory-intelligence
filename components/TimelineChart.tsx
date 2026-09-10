@@ -82,10 +82,16 @@ export function TimelineChart({ points, grain, href, selected, testId = "timelin
         * The accessible, clickable form. Only buckets that contain something are
         * listed: a year of empty weeks is not information, and scrolling past it
         * is how a reader misses the week that matters.
+        *
+        * It scrolls inside its own box. Two years of weekly buckets is ninety
+        * rows, and an unbounded list of them pushed the page ranking — the
+        * reason most people open this screen — past three screenfuls of dates.
         */}
+      <div className={styles.tableScroll}>
       <table className={styles.table} data-testid={`${testId}-buckets`}>
         <caption className={styles.caption}>
-          ช่วงเวลาที่มีโฆษณา · แต่ละแถวเปิดดูโฆษณาที่นับไว้ได้
+          ช่วงเวลาที่มีโฆษณา {points.length.toLocaleString("th-TH")} ช่วง ·
+          แต่ละแถวเปิดดูโฆษณาที่นับไว้ได้ · เลื่อนดูในกรอบนี้
         </caption>
         <thead>
           <tr>
@@ -122,6 +128,7 @@ export function TimelineChart({ points, grain, href, selected, testId = "timelin
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

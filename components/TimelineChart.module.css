@@ -23,7 +23,24 @@
 .startedBar { fill: var(--brand); }
 .firstSeenBar { fill: var(--accent-blue); }
 
+/*
+ * A history is as long as the advertiser's, not as long as the page should be.
+ * The list keeps every row — it is the operable form of the chart — but inside
+ * a box, so what comes after the chart stays reachable.
+ */
+.tableScroll {
+  max-height: 340px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
 .table { font-size: var(--fs-meta); }
+.tableScroll thead th {
+  position: sticky;
+  top: 0;
+  background: var(--paper);
+  z-index: 1;
+}
 .caption {
   caption-side: top;
   text-align: left;

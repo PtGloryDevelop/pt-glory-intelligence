@@ -64,3 +64,14 @@
   .track { display: none; }
   .name { max-width: none; }
 }
+
+/* The folded tail. Closed it is one line; open it is the same list, so the
+   numbers a reader compares never change shape between the two states. */
+.more { margin-top: 6px; }
+.moreSummary {
+  cursor: pointer;
+  font-size: var(--fs-meta);
+  color: var(--muted);
+  padding: 4px 0;
+}
+.moreSummary:hover { color: var(--brand-ink); }
