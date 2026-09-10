@@ -106,6 +106,42 @@ if (datasetId) {
   await check("dataset detail + explorer", `/datasets/${datasetId}`, ["ads-grid"], "dataset-detail");
 }
 
+/*
+ * Archived media, proven on the hosted deployment.
+ *
+ * Two separate claims: the preview a card shows comes from our own private
+ * bucket through a signed URL minted for this request — not from Meta's CDN,
+ * which is exactly what expires — and the browser actually decoded it. A broken
+ * image and a missing image look identical in a screenshot.
+ */
+if (datasetId) {
+  const media = await page.evaluate(() => {
+    const images = [...document.querySelectorAll('[data-testid^="ad-card-"] img')];
+    const loaded = images.filter((img) => img.naturalWidth > 0);
+    return {
+      total: images.length,
+      loaded: loaded.length,
+      signed: loaded.filter((img) => img.currentSrc.includes("/storage/v1/object/sign/")).length,
+      fromMetaCdn: loaded.filter((img) => /fbcdn\.net|facebook\.com/.test(img.currentSrc)).length,
+      sample: loaded[0]?.currentSrc.split("?")[0] ?? null,
+    };
+  });
+  console.log(`media   images=${media.total} decoded=${media.loaded} signed=${media.signed} fromMetaCdn=${media.fromMetaCdn}`);
+  console.log(`        sample: ${media.sample}`);
+  /*
+   * A card whose asset is not archived YET still shows the source URL — that is
+   * the frozen behaviour, and it is why the queue exists. So the assertion is
+   * that archived media reaches the browser from our bucket, not that no source
+   * URL appears anywhere: with a queue still draining, some will.
+   */
+  if (media.signed === 0) {
+    failures.push("no archived preview was served from the private bucket");
+  }
+  if (media.fromMetaCdn > 0) {
+    console.log(`        ${media.fromMetaCdn} preview(s) still on the source CDN — expected while the queue drains`);
+  }
+}
+
 await check("categories", "/categories", ["category-list"], "categories");
 const categoryId = await page.locator('[data-testid^="category-row-"]').first()
   .getAttribute("data-testid").then((v) => v?.replace("category-row-", "") ?? null).catch(() => null);
