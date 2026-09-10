@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createClient } from "@supabase/supabase-js";
 import { connect } from "./helpers.ts";
+import { assertSupabaseTargetAllowed } from "../../scripts/destructive-guard.mjs";
 
 /**
  * The read API's permission surface, asserted against the live database rather
@@ -91,8 +92,26 @@ test("read function permissions", { skip }, async (t) => {
   });
 });
 
+/*
+ * These two cases go over HTTPS to a Supabase project rather than through
+ * DATABASE_URL, so the Postgres guard never sees them. They read nothing they
+ * are allowed to read — that is the point of them — but a test run must not
+ * reach a Cloud project at all, and "it was only a refused request" is how that
+ * invariant stops being provable. Local stack only.
+ */
+function anonTargetRefusal(): string | null {
+  try {
+    assertSupabaseTargetAllowed(
+      process.env.NEXT_PUBLIC_SUPABASE_URL, "anon permission probe",
+    );
+    return null;
+  } catch (error) {
+    return (error as Error).message.split("\n")[0];
+  }
+}
+
 const anonSkip = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_ANON_KEY
-  ? false
+  ? (anonTargetRefusal() ?? false)
   : "Supabase URL / anon key not set";
 
 test("an anonymous caller reaches nothing through PostgREST", { skip: anonSkip }, async () => {

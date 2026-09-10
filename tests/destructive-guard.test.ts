@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
 import {
   DestructiveRefusal, PILOT_PROJECT_REF, assertDestructiveAllowed,
-  describeTarget, isCloudDatabase, isPilotProject,
+  assertSupabaseTargetAllowed, describeTarget, isCloudDatabase, isPilotProject,
 } from "../scripts/destructive-guard.mjs";
 
 /**
@@ -129,22 +130,124 @@ test("a refusal names the database without leaking the credential", () => {
 /* ------------------------------------------------------------ the callers */
 
 test("every destructive path calls the guard", () => {
-  // A guard nothing calls is a comment. These are the paths that can wipe or
-  // fabricate data, and each one has to ask permission before its first write.
-  const guarded = [
-    "tests/db/helpers.ts",
-    "e2e/db.ts",
-    "e2e/global.setup.ts",
-    "scripts/seed-explorer-dataset.mjs",
-    "scripts/migrate.mjs",
-  ];
-  for (const file of guarded) {
+  /*
+   * A list of guarded files is only as good as the memory of whoever last
+   * added a file. This scans instead.
+   *
+   * Found the hard way: the previous version of this test named five files and
+   * passed, while tests/db/rls.test.ts built its own pg.Client and inserted
+   * into auth.users, and tests/db/auth-chain.test.ts created real accounts over
+   * HTTPS with the service-role key. Both ran against the PILOT on a normal
+   * `npm test`. Neither was on the list, so the list said everything was fine.
+   */
+  const GUARD_SYMBOLS = /assertDestructiveAllowed\(|assertSupabaseTargetAllowed\(|isPilotProject\(/;
+  // Reaching the database through a helper that guards is guarding.
+  const GUARDED_HELPERS = /from "\.\/helpers\.ts"|from "\.\.\/helpers\.ts"|from "\.\/db"|from "\.\/db\.ts"/;
+  // Builds a client that answers to no RLS policy.
+  const OPENS_A_DATABASE = /new pg\.(Client|Pool)\(|createClient\(/;
+
+  /*
+   * The pilot-* scripts are the intended, deliberate route to the Cloud project.
+   * Each one refuses unless PT_GLORY_ENV=pilot AND isPilotProject(DATABASE_URL),
+   * which is the opposite test from the one above and is checked separately.
+   */
+  const PILOT_OPERATIONS = /^pilot-/;
+
+  /*
+   * One more deliberate cloud path: archive-schedule-config writes the
+   * scheduler's credentials into Supabase Vault. It is an operations script run
+   * by hand once per environment, and it destroys no research data — it sets
+   * two secrets. Named here so the exemption is a decision, not a gap.
+   */
+  const OPERATIONS = new Set(["archive-schedule-config.mjs"]);
+
+  const walk = (dir: string): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory()) return walk(path);
+      return /\.(ts|mjs|js)$/.test(entry.name) ? [path] : [];
+    });
+
+  const unguarded: string[] = [];
+  for (const file of [...walk("tests"), ...walk("e2e"), ...walk("scripts")]) {
+    const name = file.split(/[/\\]/).at(-1) ?? "";
+    if (PILOT_OPERATIONS.test(name) || OPERATIONS.has(name)) continue;
+    if (file.includes("destructive-guard")) continue;
     const source = readFileSync(file, "utf8");
-    assert.match(source, /assertDestructiveAllowed\(/, `${file} must call the guard`);
+    if (!OPENS_A_DATABASE.test(source)) continue;
+    if (GUARD_SYMBOLS.test(source) || GUARDED_HELPERS.test(source)) continue;
+    unguarded.push(file);
   }
+
+  assert.deepEqual(
+    unguarded, [],
+    `these open a database without asking the guard first: ${unguarded.join(", ")}`,
+  );
 
   // `migrate up` is how PILOT gets its schema, so only `down` is guarded.
   const migrate = readFileSync("scripts/migrate.mjs", "utf8");
   const downBlock = migrate.slice(migrate.indexOf('command === "down"'));
   assert.match(downBlock.slice(0, 400), /assertDestructiveAllowed\(/);
+});
+
+/* --------------------------------------------- the HTTPS door to the same data */
+
+/**
+ * A Supabase project URL plus a service-role key is a second way into the same
+ * rows, and it never touches DATABASE_URL. These cases mirror the Postgres ones
+ * exactly, because the consequence is the same.
+ */
+
+const LOCAL_PROJECT = "http://127.0.0.1:54321";
+const PILOT_PROJECT = `https://${PILOT_PROJECT_REF}.supabase.co`;
+const OTHER_CLOUD_PROJECT = "https://someotherref.supabase.co";
+const OPEN = { PT_GLORY_ENV: "test", ALLOW_DESTRUCTIVE_DB_RESET: "1" };
+
+test("a local Supabase project with both switches on is allowed", () => {
+  assert.doesNotThrow(() => assertSupabaseTargetAllowed(LOCAL_PROJECT, "seed", OPEN));
+});
+
+test("the pilot project is refused over HTTPS however the environment is set", () => {
+  for (const env of [OPEN, { PT_GLORY_ENV: "pilot", ALLOW_DESTRUCTIVE_DB_RESET: "1" }, {}]) {
+    assert.throws(
+      () => assertSupabaseTargetAllowed(PILOT_PROJECT, "create users", env),
+      (error: Error) => error instanceof DestructiveRefusal
+        && error.message.includes(PILOT_PROJECT_REF),
+    );
+  }
+});
+
+test("any Supabase Cloud project is refused, not just the known one", () => {
+  assert.throws(
+    () => assertSupabaseTargetAllowed(OTHER_CLOUD_PROJECT, "create users", OPEN),
+    DestructiveRefusal,
+  );
+});
+
+test("a local Supabase project still needs both switches", () => {
+  assert.throws(
+    () => assertSupabaseTargetAllowed(LOCAL_PROJECT, "seed", { PT_GLORY_ENV: "test" }),
+    /ALLOW_DESTRUCTIVE_DB_RESET/,
+  );
+  assert.throws(
+    () => assertSupabaseTargetAllowed(LOCAL_PROJECT, "seed", { ALLOW_DESTRUCTIVE_DB_RESET: "1" }),
+    /PT_GLORY_ENV is not set/,
+  );
+  assert.throws(
+    () => assertSupabaseTargetAllowed(LOCAL_PROJECT, "seed", {
+      PT_GLORY_ENV: "pilot", ALLOW_DESTRUCTIVE_DB_RESET: "1",
+    }),
+    /not a disposable environment/,
+  );
+});
+
+test("an unreadable Supabase URL is refused, not waved through", () => {
+  assert.throws(
+    () => assertSupabaseTargetAllowed(undefined, "seed", OPEN),
+    /could not be identified/,
+  );
+  assert.throws(
+    () => assertSupabaseTargetAllowed("not-a-url", "seed", OPEN),
+    /could not be identified/,
+  );
 });

@@ -85,6 +85,68 @@ export function isCloudDatabase(connectionString) {
 }
 
 /**
+ * The same rule, for the OTHER way into the same data.
+ *
+ * `assertDestructiveAllowed` reads a Postgres connection string. A Supabase
+ * project URL plus a service-role key reaches the identical database over
+ * HTTPS, obeys no RLS, and can create auth users — and the DB guard never sees
+ * it, because there is no `DATABASE_URL` involved.
+ *
+ * Found by instrumenting the normal `npm test` run: two suites were reaching
+ * `hufzfbqfwusfiaywtnvy.supabase.co` on 443 and creating real accounts in the
+ * PILOT, with a password that is committed to this repository. Closing the
+ * Postgres door while this one stood open was not protection.
+ *
+ * @param {string | undefined} projectUrl  e.g. https://<ref>.supabase.co
+ * @param {string} action  what is being attempted, for the refusal message
+ * @param {NodeJS.ProcessEnv} [env]
+ */
+export function assertSupabaseTargetAllowed(projectUrl, action, env = process.env) {
+  let host = null;
+  try {
+    host = projectUrl ? new URL(projectUrl).hostname : null;
+  } catch {
+    host = null;
+  }
+  const label = host ?? "(unreadable Supabase URL)";
+  const refuse = (reason) => {
+    throw new DestructiveRefusal(
+      `${action} refused against ${label}: ${reason}
+` +
+      "Tests that create or modify Supabase data run only against a local " +
+      "stack, with PT_GLORY_ENV=dev|test and ALLOW_DESTRUCTIVE_DB_RESET=1.",
+    );
+  };
+
+  if (host && host.includes(PILOT_PROJECT_REF)) {
+    refuse(
+      `this is the PILOT Supabase project (${PILOT_PROJECT_REF}). ` +
+      "No environment variable can authorize this",
+    );
+  }
+  if (host && CLOUD_HOST.test(host)) {
+    refuse("this is a Supabase Cloud project. No environment variable can authorize this");
+  }
+
+  const environment = (env.PT_GLORY_ENV ?? "").trim().toLowerCase();
+  if (!environment) {
+    refuse("PT_GLORY_ENV is not set, and an unset environment is never treated as dev");
+  }
+  if (!DISPOSABLE.has(environment)) {
+    refuse(`PT_GLORY_ENV=${environment} is not a disposable environment`);
+  }
+  if ((env.ALLOW_DESTRUCTIVE_DB_RESET ?? "") !== "1") {
+    refuse("ALLOW_DESTRUCTIVE_DB_RESET=1 is not set");
+  }
+  if (!host) {
+    refuse("the project could not be identified from the Supabase URL");
+  }
+  if (!LOCAL_HOST.test(host)) {
+    refuse(`${host} is not a local Supabase host`);
+  }
+}
+
+/**
  * Throws unless this process may destroy data in the given database.
  *
  * @param {string | undefined} connectionString  the database about to be written

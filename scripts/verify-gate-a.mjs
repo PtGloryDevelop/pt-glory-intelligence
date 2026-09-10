@@ -14,6 +14,7 @@
  */
 import { spawnSync } from "node:child_process";
 import pg from "pg";
+import { assertDestructiveAllowed } from "./destructive-guard.mjs";
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
@@ -21,6 +22,13 @@ if (!connectionString) {
   console.error("Start a local stack with `supabase start`, then export its DB URL.");
   process.exit(1);
 }
+
+/*
+ * Step 3 of this script is `migrate down --all`. It runs the rollback against
+ * whatever DATABASE_URL is configured, so it asks permission before opening a
+ * connection — the same rule every other destructive path follows.
+ */
+assertDestructiveAllowed(connectionString, "gate A verification (migrate down --all)");
 
 const TABLES = [
   "user_roles", "categories", "collection_runs", "datasets", "pages",

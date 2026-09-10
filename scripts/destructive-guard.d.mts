@@ -31,3 +31,10 @@ export declare function assertDestructiveAllowed(
   action: string,
   env?: Record<string, string | undefined>,
 ): void;
+
+/** The same rule for a Supabase project URL, which never touches DATABASE_URL. */
+export declare function assertSupabaseTargetAllowed(
+  projectUrl: string | undefined,
+  action: string,
+  env?: Record<string, string | undefined>,
+): void;

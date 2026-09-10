@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createClient } from "@supabase/supabase-js";
+import { assertSupabaseTargetAllowed } from "../../scripts/destructive-guard.mjs";
 
 /**
  * End-to-end proof of the authorization chain through the real stack:
@@ -28,6 +29,13 @@ const skip = url && anonKey && serviceKey
 const PASSWORD = "gate-a-verification-pw";
 
 test("Auth → JWT → auth.uid() → current_user_role() → RLS", { skip }, async (t) => {
+  /*
+   * This suite creates real accounts with the service-role key, and PASSWORD
+   * below is committed to this repository. Against a Cloud project that is a
+   * public credential on live data, so the target is checked before the client
+   * that could do it is built.
+   */
+  assertSupabaseTargetAllowed(url, "creating auth users for the chain test");
   const admin = createClient(url!, serviceKey!, { auth: { persistSession: false } });
   const created: string[] = [];
 

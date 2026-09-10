@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import pg from "pg";
+import { connect } from "./helpers.ts";
 
 /**
  * RLS matrix against a real PostgreSQL database.
@@ -73,8 +74,14 @@ async function seedUser(client: pg.Client, role: Role | null, tag: string): Prom
 }
 
 test("RLS matrix", { skip }, async (t) => {
-  const client = new pg.Client({ connectionString });
-  await client.connect();
+  /*
+   * Through the guarded helper, not a bare pg.Client. This suite inserts into
+   * auth.users, public.user_roles and public.categories, so it is destructive
+   * by any definition — and until the guard was wired in here it would run
+   * against whatever DATABASE_URL happened to be configured, including the
+   * PILOT.
+   */
+  const client = await connect();
 
   const viewer = await seedUser(client, "viewer", "viewer");
   const analyst = await seedUser(client, "analyst", "analyst");
