@@ -223,10 +223,26 @@ export async function updateBrand(id: string, patch: {
     }
     return { ok: false, status: 400, message: "แก้ไขแบรนด์ไม่สำเร็จ" };
   }
-  // RLS turns "not allowed" into "no rows" on an update, so an empty result is
-  // not necessarily a missing brand. The role check above has already run.
   const rows = (data ?? []) as { id: string }[];
-  if (rows.length === 0) return { ok: false, status: 404, message: "ไม่พบแบรนด์นี้" };
+  if (rows.length === 0) {
+    /*
+     * Found in the hosted pilot: a viewer renaming a Brand got 404.
+     *
+     * RLS reports a forbidden UPDATE as zero rows rather than as an error — the
+     * row simply falls outside the policy's USING clause — so "no rows" cannot
+     * by itself tell a missing Brand from a refused one, and the comment that
+     * used to sit here claimed a role check that never ran on this path.
+     *
+     * A read settles it, because every role-holder may read Brands: the row is
+     * visible and the write was refused (403), or it genuinely does not exist
+     * (404). The refusal is RLS's either way; this only reports it honestly.
+     */
+    const { data: visible } = await supabase
+      .from("brands").select("id").eq("id", id).maybeSingle();
+    return visible
+      ? { ok: false, status: 403, message: "ต้องมีสิทธิ์ Analyst ขึ้นไป" }
+      : { ok: false, status: 404, message: "ไม่พบแบรนด์นี้" };
+  }
   return { ok: true, value: rows[0] };
 }
 
