@@ -14,6 +14,7 @@
  */
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
+import pg from "pg";
 import { chromium } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
@@ -130,15 +131,33 @@ if (datasetId) {
   console.log(`        sample: ${media.sample}`);
   /*
    * A card whose asset is not archived YET still shows the source URL — that is
-   * the frozen behaviour, and it is why the queue exists. So the assertion is
-   * that archived media reaches the browser from our bucket, not that no source
-   * URL appears anywhere: with a queue still draining, some will.
+   * the frozen behaviour, and it is why the queue exists. So "no signed preview"
+   * is only a failure when this dataset HAS archived assets to serve; on a
+   * dataset imported minutes ago it is the queue doing its job.
+   *
+   * The first version of this check failed a healthy run for exactly that
+   * reason, so it now asks the database what state the dataset's assets are in
+   * rather than assuming.
    */
-  if (media.signed === 0) {
-    failures.push("no archived preview was served from the private bucket");
+  const db = new pg.Client({ connectionString: process.env.DATABASE_URL });
+  await db.connect();
+  const { rows: assets } = await db.query(
+    `select count(*) filter (where m.archive_status = 'archived')::int archived,
+            count(*) filter (where m.archive_status = 'pending')::int pending
+       from public.media_assets m
+       join public.ad_observations o on o.id = m.ad_observation_id
+       join public.datasets d on d.collection_run_id = o.collection_run_id
+      where d.id = $1`,
+    [datasetId],
+  );
+  await db.end();
+  console.log(`        this dataset: ${assets[0].archived} archived, ${assets[0].pending} pending`);
+
+  if (assets[0].archived > 0 && media.signed === 0) {
+    failures.push("this dataset has archived previews, but none was served from the private bucket");
   }
-  if (media.fromMetaCdn > 0) {
-    console.log(`        ${media.fromMetaCdn} preview(s) still on the source CDN — expected while the queue drains`);
+  if (assets[0].archived === 0) {
+    console.log("        nothing archived yet for this dataset — the queue has not reached it");
   }
 }
 
