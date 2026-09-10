@@ -1,6 +1,7 @@
 import { test as setup, expect } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { randomBytes } from "node:crypto";
 import { join } from "node:path";
 import { connect, resetTables } from "../tests/db/helpers.ts";
 import { assertDestructiveAllowed } from "../scripts/destructive-guard.mjs";
@@ -13,9 +14,20 @@ import { assertDestructiveAllowed } from "../scripts/destructive-guard.mjs";
 
 import {
   ACCOUNTS, AUTH, CATEGORY, CATEGORY_BRAND, CATEGORY_COMPARE, CATEGORY_TRENDS,
-  CATEGORY_WATCH, CATEGORY_WORKSPACE,
-  PASSWORD, TMP,
+  CATEGORY_WATCH, CATEGORY_WORKSPACE, TMP,
 } from "./constants.ts";
+
+/*
+ * Generated here rather than exported from constants.ts, and generated per run.
+ *
+ * It was a literal in the shared constants module, which made it a working
+ * password for two confirmed accounts, committed to the repository. Keeping it
+ * in this file is also what keeps it correct: setup is the only place that
+ * creates these users and the only place that types the password into the login
+ * form. The specs never see it — they start from the storage state written
+ * below — so a value that lives and dies inside this process is enough.
+ */
+const PASSWORD = randomBytes(24).toString("base64url");
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 // Same order as tests/db/auth-chain.test.ts: the JWT service-role key is what

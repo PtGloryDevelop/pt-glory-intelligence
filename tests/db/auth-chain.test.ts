@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { randomBytes } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { assertSupabaseTargetAllowed } from "../../scripts/destructive-guard.mjs";
 
@@ -26,14 +27,24 @@ const skip = url && anonKey && serviceKey
   ? false
   : "Supabase URL / publishable(anon) / secret(service-role) key not set";
 
-const PASSWORD = "gate-a-verification-pw";
+/*
+ * Generated per run, never written down.
+ *
+ * It used to be a string literal in this file. Every account this suite creates
+ * is confirmed and can sign in, so a committed constant is a working credential
+ * for anything the suite failed to clean up — and against a Cloud project that
+ * is a public password on live data. 32 base64url characters from
+ * crypto.randomBytes is far past anything Supabase Auth requires, exists only
+ * in this process, and is never printed: a failing assertion reports the email
+ * and the auth error, never this.
+ */
+const PASSWORD = randomBytes(24).toString("base64url");
 
 test("Auth → JWT → auth.uid() → current_user_role() → RLS", { skip }, async (t) => {
   /*
-   * This suite creates real accounts with the service-role key, and PASSWORD
-   * below is committed to this repository. Against a Cloud project that is a
-   * public credential on live data, so the target is checked before the client
-   * that could do it is built.
+   * This suite creates real accounts with the service-role key. Even with an
+   * ephemeral password that is a mutation, so the target is checked before the
+   * client that could perform it is built.
    */
   assertSupabaseTargetAllowed(url, "creating auth users for the chain test");
   const admin = createClient(url!, serviceKey!, { auth: { persistSession: false } });

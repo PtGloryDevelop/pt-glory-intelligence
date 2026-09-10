@@ -122,3 +122,61 @@ test("a route crash never puts backend detail on the screen", () => {
   // digest is Next's correlation id for the server-side log line, not content.
   assert.match(source, /error\.digest/, "without the digest a report cannot be traced to a log line");
 });
+
+/**
+ * No test credential is a committed credential.
+ *
+ * `tests/db/auth-chain.test.ts` and `e2e/constants.ts` each carried a password
+ * literal, and both are used to create CONFIRMED accounts that can sign in. A
+ * literal there is not a fixture value — it is a working password for every
+ * account the run failed to clean up, published in the repository. Forty-two of
+ * them once survived in the pilot project.
+ *
+ * The rule is therefore about where the value comes from, not how strong it
+ * looks: a password handed to Supabase Auth is generated at runtime or read
+ * from the environment, never typed into a source file.
+ */
+test("no test file hard-codes a password", () => {
+  const sources = [...walkSource("tests"), ...walkSource("e2e")]
+    .filter((path) => /\.(ts|tsx|mjs)$/.test(path) && !path.includes("security.test"));
+
+  /** `password: "..."`, `password = "..."`, `PASSWORD = "..."` and friends. */
+  const LITERAL = /\b(?:password|passwd|pwd)\b\s*[:=]\s*(["'`])(?!\s*\1)[^"'`\n]{1,}\1/gi;
+
+  const offenders: string[] = [];
+  for (const path of sources) {
+    const source = readFileSync(path, "utf8");
+    for (const match of source.matchAll(LITERAL)) {
+      const line = source.slice(0, match.index).split("\n").length;
+      offenders.push(`${path}:${line}`);
+    }
+  }
+
+  assert.deepEqual(
+    offenders, [],
+    `a password literal is a committed credential — generate it at runtime: ${offenders.join(", ")}`,
+  );
+});
+
+/**
+ * The generated value must actually be generated. A test that replaced the
+ * literal with a constant expression would pass the scan above and change
+ * nothing, so the two files that create accounts are named and checked.
+ */
+test("the account-creating suites generate their password at runtime", () => {
+  for (const path of ["tests/db/auth-chain.test.ts", "e2e/global.setup.ts"]) {
+    const source = readFileSync(path, "utf8");
+    assert.match(
+      source, /randomBytes\(\d+\)\.toString\(/,
+      `${path} must derive its test password from crypto.randomBytes`,
+    );
+  }
+});
+
+/** Depth-first list of source files under a directory. */
+function walkSource(dir: string): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(dir, entry.name);
+    return entry.isDirectory() ? walkSource(path) : [path];
+  });
+}
