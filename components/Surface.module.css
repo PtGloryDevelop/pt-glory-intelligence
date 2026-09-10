@@ -44,7 +44,20 @@
    the table drops its own outer edge and scrolls inside instead of dragging the
    page sideways. */
 .tableWrap { overflow-x: auto; }
-.tableWrap table { border: 0; }
+
+/*
+ * A table inside a scrolling wrapper must be allowed to be wider than the
+ * wrapper, or the scrolling is pointless.
+ *
+ * The global `table { width: 100% }` was squeezing every table into 375px on a
+ * phone: columns collapsed to about forty pixels and content shattered a word
+ * at a time — "meta-ads-th-2026-09-10" came out as five stacked fragments. With
+ * max-content the table takes the width its contents need and the wrapper
+ * scrolls, which is what it was wrapped in a scroller for; min-width keeps it
+ * filling the panel on a desktop, where the contents are narrower than the
+ * space.
+ */
+.tableWrap table { border: 0; width: max-content; min-width: 100%; }
 
 @media (max-width: 768px) {
   .padded { padding: 14px; }

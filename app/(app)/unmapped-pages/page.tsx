@@ -132,13 +132,17 @@ export default async function UnmappedPagesPage({ searchParams }: { searchParams
           <TableWrap>
             <table data-testid="unmapped-table">
               <thead>
+                {/* Marked columns fold away below 640px so the decision — who
+                    is this page, how big is it, and the button — fits a phone
+                    without a sideways swipe. Nothing is lost: the page's own
+                    screen has all of it, and the note under the table says so. */}
                 <tr>
                   <th>เพจ</th>
-                  <th>หมวดเพจ (จาก Meta)</th>
+                  <th className={styles.secondary}>หมวดเพจ (จาก Meta)</th>
                   <th>Ads ที่พบ</th>
-                  <th>พบใหม่ 30 วัน</th>
-                  <th>เริ่มพบ</th>
-                  <th>สังเกตล่าสุด</th>
+                  <th className={styles.secondary}>พบใหม่ 30 วัน</th>
+                  <th className={styles.secondary}>เริ่มพบ</th>
+                  <th className={styles.secondary}>สังเกตล่าสุด</th>
                   <th>จับคู่</th>
                 </tr>
               </thead>
@@ -155,13 +159,13 @@ export default async function UnmappedPagesPage({ searchParams }: { searchParams
                         <span className={styles.pageId} data-numeral>{row.page_id}</span>
                       </span>
                     </td>
-                    <td className={styles.categories}>
+                    <td className={`${styles.categories} ${styles.secondary}`}>
                       {row.page_categories?.length ? row.page_categories.join(" · ") : "—"}
                     </td>
                     <td data-numeral>{row.observed_ads}</td>
-                    <td data-numeral>{row.recently_found}</td>
-                    <td>{thaiDate(row.first_observed_at)}</td>
-                    <td>{thaiDate(row.last_observed_at)}</td>
+                    <td className={styles.secondary} data-numeral>{row.recently_found}</td>
+                    <td className={styles.secondary}>{thaiDate(row.first_observed_at)}</td>
+                    <td className={styles.secondary}>{thaiDate(row.last_observed_at)}</td>
                     <td className={styles.mapCell}>
                       <MapPageControl
                         pageId={row.page_id} currentBrand={null} canEdit={canEdit}
@@ -183,6 +187,13 @@ export default async function UnmappedPagesPage({ searchParams }: { searchParams
           {page < lastPage ? <Link href={link({ page: String(page + 1) })}>ถัดไป</Link> : <span>ถัดไป</span>}
         </nav>
       ) : null}
+
+      {/* Said rather than left to be discovered: columns disappear on a phone,
+          and the reader is told where the rest of it lives. */}
+      <p className={styles.mobileNote} data-testid="unmapped-mobile-note">
+        บนจอเล็กแสดงเฉพาะคอลัมน์ที่ใช้ตัดสินใจ — หมวดเพจ วันที่พบ และวันที่สังเกตล่าสุด
+        ดูได้ในหน้าเพจ
+      </p>
 
       <p className={styles.note}>
         ตรวจเพจก่อนจับคู่ได้จากลิงก์ชื่อเพจ — หน้าเพจเดิมคือหลักฐานทั้งหมดที่ระบบมี

@@ -50,7 +50,9 @@
 }
 .sortOn { background: var(--brand-tint-strong); border-color: var(--brand); color: var(--brand-ink); font-weight: 600; }
 
-.pageCell { display: flex; flex-direction: column; gap: 2px; }
+/* Wraps a long name rather than stretching the table to fit it on one
+   line; the id below it is short enough to stay intact. */
+.pageCell { display: flex; flex-direction: column; gap: 2px; max-width: 34ch; }
 .pageId { font-size: var(--fs-meta); color: var(--muted); }
 .categories { font-size: var(--fs-meta); color: var(--muted); max-width: 22ch; }
 .mapCell { min-width: 200px; }
@@ -68,4 +70,26 @@
   .controls { flex-direction: column; align-items: stretch; }
   .search { flex-direction: column; align-items: stretch; }
   .search input { min-width: 0; width: 100%; }
+}
+
+/* Columns that are useful but not part of the decision. They fold away on a
+   phone so the name, the size and the button fit without a sideways swipe. */
+.mobileNote { display: none; }
+
+@media (max-width: 640px) {
+  .secondary { display: none; }
+  .mobileNote {
+    display: block;
+    margin: 12px 0 0;
+    font-size: var(--fs-meta);
+    color: var(--muted);
+  }
+  /*
+   * Keep the name capped on a phone too. Removing the cap let the longest name
+   * take the whole 375px and push the count and the button back off-screen —
+   * the very problem hiding the other columns was meant to solve.
+   */
+  .pageCell { max-width: 17ch; }
+  .mapCell { min-width: 0; }
+  .secondary + td, .secondary + th { border-left: 0; }
 }
