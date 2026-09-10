@@ -97,7 +97,7 @@ async function check(label, path, testIds, shot) {
 
 // Identity first: an unauthenticated session would redirect and every check
 // below would fail for one uninteresting reason.
-await check("home", "/", ["app-sidebar"], "home");
+await check("home", "/", ["app-sidebar", "sign-out"], "home");
 await check("datasets", "/datasets", ["dataset-list"], "datasets");
 
 const datasetId = await page.locator('[data-testid^="dataset-row-"]').first()

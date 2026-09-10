@@ -6,6 +6,7 @@ import { useState } from "react";
 import { NAV } from "./nav.ts";
 import { Icon } from "./icons.tsx";
 import { BrandLockup, BrandMark } from "../BrandMark.tsx";
+import { signOut } from "../../app/(app)/sign-out.ts";
 import styles from "./AppShell.module.css";
 
 /**
@@ -81,7 +82,16 @@ export function AppShell({ role, children }: { role: string; children: React.Rea
         <button type="button" className={styles.collapse} onClick={() => setRailed((v) => !v)}>
           {railed ? "»" : "« ย่อเมนู"}
         </button>
-        <div className={styles.footer} data-testid="shell-role">สิทธิ์ {role}</div>
+        <div className={styles.footer}>
+          <span data-testid="shell-role">สิทธิ์ {role}</span>
+          {/* A server action, not a click handler: the session is a cookie, and
+              only a server response can clear one. */}
+          <form action={signOut}>
+            <button type="submit" className={styles.signOut} data-testid="sign-out">
+              ออกจากระบบ
+            </button>
+          </form>
+        </div>
       </aside>
 
       {open ? (

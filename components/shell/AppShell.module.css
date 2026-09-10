@@ -117,7 +117,20 @@
   font-size: var(--fs-meta);
   color: var(--muted);
 }
-.rail .footer { text-align: center; padding: 12px 4px; }
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.rail .footer { text-align: center; padding: 12px 4px; flex-direction: column; gap: 6px; }
+
+.signOut {
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: var(--fs-meta);
+}
 
 .collapse {
   margin: 0 8px 10px;
