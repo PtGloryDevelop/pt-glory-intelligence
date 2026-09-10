@@ -156,3 +156,8 @@
 @media (max-width: 640px) {
   .field { flex-basis: 100%; }
 }
+
+/* What the chooser needs next, where there used to be empty space. */
+.help { margin-top: var(--gap-page); }
+.helpBody { margin: 8px 0 0; font-size: var(--fs-body); color: var(--ink); max-width: 82ch; }
+.helpAction { display: inline-block; margin-top: 12px; font-size: var(--fs-body); }

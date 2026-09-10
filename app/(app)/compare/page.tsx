@@ -5,8 +5,9 @@ import { getPageAds, getPageList, getPageTimelineEvidence } from "@/lib/read/pag
 import { listCategories, listDatasets } from "@/lib/read/queries";
 import { signArchivedPreviews } from "@/lib/media/presentation";
 import {
-  COMPARE_ROWS, REFUSAL_MESSAGE, compareClock, compareMetric, delta,
-  isComparablePageId, validateCompare, type CompareClock, type Side,
+  COMPARE_BASIS, COMPARE_ROWS, COMPARE_SCOPE_HINT, REFUSAL_MESSAGE, compareClock,
+  compareMetric, delta, isComparablePageId, validateCompare,
+  type CompareClock, type Side,
 } from "@/lib/compare/contract";
 import {
   RECENT_DAYS, parseScope, pageSignal, recentDays, scopeBasis, scopeLabel,
@@ -522,6 +523,8 @@ async function Chooser({ scope, pageA, pageB }: {
         title="เปรียบเทียบเพจ"
         description="เลือกขอบเขตข้อมูลหนึ่งขอบเขต แล้วเลือกสองเพจในขอบเขตนั้น"
       />
+      <p className={styles.basis} data-testid="compare-basis">{COMPARE_BASIS}</p>
+
       <CompareChooser
         scope={scope ? scopeToParam(scope) : ""}
         pageA={pageA ?? ""}
@@ -538,6 +541,43 @@ async function Chooser({ scope, pageA, pageB }: {
           label: `${row.page_name ?? row.page_id} · ${row.observed_ads} Ads`,
         }))}
       />
+
+      {/* Below the chooser, which used to be empty space: what to do next,
+          answered differently depending on how far the reader has got. */}
+      {!scope ? (
+        <Panel padded className={styles.help} testId="compare-scope-hint">
+          <PanelHead title="เลือกขอบเขตข้อมูลก่อน" />
+          <p className={styles.helpBody}>{COMPARE_SCOPE_HINT}</p>
+        </Panel>
+      ) : pages.length < 2 ? (
+        <EmptyState
+          testId="compare-not-enough-pages"
+          title="ขอบเขตนี้มีเพจไม่พอให้เทียบ"
+          body="ต้องมีอย่างน้อยสองเพจในขอบเขตเดียวกัน · เลือกขอบเขตอื่น หรือนำเข้าข้อมูลเพิ่ม"
+          action={<Link href="/datasets">ดูชุดข้อมูล</Link>}
+        />
+      ) : (
+        <Panel padded className={styles.help} testId="compare-start">
+          <PanelHead
+            title="เริ่มจากตรงไหนก็ได้"
+            meta={<Link href={`/pages?scope=${scopeToParam(scope)}`}>ดูรายชื่อเพจทั้งหมด →</Link>}
+          />
+          <p className={styles.helpBody}>
+            {/* A shortcut, not a recommendation: it states the rule it used
+                rather than implying these two are the interesting pair. */}
+            เพจในขอบเขตนี้เรียงตามจำนวน Ads ที่เราเก็บเจอ — สองอันดับแรกคือ{" "}
+            <strong>{pages[0].page_name ?? pages[0].page_id}</strong> ({pages[0].observed_ads} Ads) และ{" "}
+            <strong>{pages[1].page_name ?? pages[1].page_id}</strong> ({pages[1].observed_ads} Ads)
+          </p>
+          <Link
+            className={styles.helpAction}
+            data-testid="compare-top-two"
+            href={`/compare?scope=${scopeToParam(scope)}&a=${pages[0].page_id}&b=${pages[1].page_id}`}
+          >
+            เทียบสองเพจนี้ →
+          </Link>
+        </Panel>
+      )}
     </>
   );
 }

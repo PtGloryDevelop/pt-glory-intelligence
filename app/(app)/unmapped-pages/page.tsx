@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireActorOrRedirect } from "@/lib/auth/roles";
 import { satisfies } from "@/lib/auth/role-model";
 import { listUnmappedPages } from "@/lib/read/brands";
+import { getPageList } from "@/lib/read/pages";
 import { listCategories, listDatasets } from "@/lib/read/queries";
 import { parseScope, scopeBasis, scopeLabel, scopeToParam } from "@/lib/pages/scope";
 import {
@@ -40,13 +41,19 @@ export default async function UnmappedPagesPage({ searchParams }: { searchParams
   const page = Math.max(1, Number(one(query.page) ?? 1) || 1);
   const canEdit = satisfies(actor.role, "analyst");
 
-  const [queue, scopeName] = await Promise.all([
+  const [queue, scopeName, allPages] = await Promise.all([
     listUnmappedPages({
       scope, search: search || null, sort,
       limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE,
     }),
     nameOfScope(scope),
+    // Pages in this scope, mapped or not. The difference is what has been done,
+    // which a queue of 351 rows otherwise never shows.
+    getPageList(scope, { limit: 1 }),
   ]);
+
+  const inScope = allPages.total;
+  const mapped = Math.max(0, inScope - queue.total);
 
   const scopeParam = scopeToParam(scope);
   const link = (next: Record<string, string>) => {
@@ -71,6 +78,13 @@ export default async function UnmappedPagesPage({ searchParams }: { searchParams
         items={[
           { label: "ขอบเขตข้อมูล", value: scopeLabel(scope, scopeName), testId: "unmapped-scope" },
           { label: "เพจที่ยังไม่จับคู่", value: queue.total.toLocaleString("th-TH"), testId: "unmapped-total" },
+          {
+            // Progress, in the only terms that are true: pages this scope has
+            // seen, and how many of them somebody has already decided about.
+            label: "จับคู่แล้ว",
+            value: `${mapped.toLocaleString("th-TH")} จาก ${inScope.toLocaleString("th-TH")}`,
+            testId: "unmapped-progress",
+          },
           { label: "เรียงตาม", value: UNMAPPED_SORT_LABEL[sort], testId: "unmapped-sort-label" },
         ]}
       />

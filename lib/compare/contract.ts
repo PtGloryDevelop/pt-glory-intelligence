@@ -95,6 +95,24 @@ export function delta(a: number, b: number): {
  * Both sides always take the same one. A chart that put A's start dates beside
  * B's first sightings would be drawn correctly and mean nothing.
  */
+/**
+ * What a comparison answers, and the answer it refuses to give.
+ *
+ * Every other surface in this product opens with a sentence like this. Compare
+ * was the one screen without one: a chooser, then eight hundred pixels of
+ * nothing, and no way for a first-time reader to learn what putting two pages
+ * side by side is going to tell them — or, more importantly, what it will not.
+ */
+export const COMPARE_BASIS =
+  "เปรียบเทียบเพจสองเพจในขอบเขตข้อมูลเดียวกัน แสดงเป็นผลต่างของสิ่งที่เราเก็บมาได้ · " +
+  "ระบบไม่ตัดสินว่าใครดีกว่า เพราะข้อมูลที่มีบอกไม่ได้ — " +
+  "เพจที่เราเก็บเจอโฆษณามากกว่า ไม่ได้แปลว่าขายดีกว่า ใช้งบมากกว่า หรือได้ผลดีกว่า";
+
+/** Why the chooser needs a scope before it will show anything. */
+export const COMPARE_SCOPE_HINT =
+  "ต้องเลือกขอบเขตข้อมูลก่อน เพราะตัวเลขของเพจหนึ่งในหมวดหนึ่ง " +
+  "กับตัวเลขของเพจเดียวกันในอีกขอบเขต เป็นคนละคำถามและได้คนละคำตอบ";
+
 export const COMPARE_CLOCKS = ["started", "first_seen"] as const;
 export type CompareClock = (typeof COMPARE_CLOCKS)[number];
 
