@@ -7,7 +7,8 @@ import { getPageDetail } from "@/lib/read/pages";
 import { listCategories, listDatasets } from "@/lib/read/queries";
 import { signArchivedPreviews } from "@/lib/media/presentation";
 import {
-  DIRECTION_MARK, PERIOD_LENGTHS, changeOf, comparabilityOf, periodLength, trendPeriods,
+  DIRECTION_MARK, NOT_COLLECTED, PERIOD_LENGTHS, changeOf, comparabilityOf,
+  periodLength, trendPeriods,
 } from "@/lib/trends/periods";
 import {
   RANK_DIRECTIONS, RANK_LABEL, TREND_ROWS, metricRow, rankDirection, trendMetric,
@@ -324,13 +325,31 @@ export default async function TrendsPage({ searchParams }: { searchParams: Promi
                         </Link>
                       </td>
                       <td data-numeral>{row.current_value}</td>
-                      <td data-numeral>{row.previous_value}</td>
-                      {/* Ranked by arithmetic delta. No weighting, no score. */}
+                      <td data-numeral>
+                        {previousContext.length > 0
+                          ? row.previous_value
+                          : <span className={styles.absent}>{NOT_COLLECTED}</span>}
+                      </td>
+                      {/* Ranked by arithmetic delta. No weighting, no score —
+                          and no delta at all when the previous period was never
+                          collected, because "+28" would then describe our
+                          collection schedule rather than the page. */}
                       <td className={styles.delta} data-testid={`rank-change-${row.page_id}`}>
-                        <span aria-hidden>
-                          {row.change > 0 ? "▲" : row.change < 0 ? "▼" : "—"}
-                        </span>{" "}
-                        {row.change > 0 ? `+${row.change}` : String(row.change)}
+                        {previousContext.length > 0 ? (
+                          <>
+                            <span aria-hidden>
+                              {row.change > 0 ? "▲" : row.change < 0 ? "▼" : "—"}
+                            </span>{" "}
+                            {row.change > 0 ? `+${row.change}` : String(row.change)}
+                          </>
+                        ) : (
+                          <span
+                            className={styles.absent}
+                            title="ช่วงก่อนหน้าไม่มีรอบเก็บ จึงยังไม่มีอะไรให้เทียบ"
+                          >
+                            ยังเทียบไม่ได้
+                          </span>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -346,12 +365,14 @@ export default async function TrendsPage({ searchParams }: { searchParams: Promi
       <div className={styles.mix}>
         <Panel padded>
           <TrendMix
+            previousCollected={previousContext.length > 0}
             testId="mix-format" title="รูปแบบครีเอทีฟ" exclusive
             items={mixItems("display_format")}
             coverage={mixCoverage("display_format")}
             evidenceHref={(value, period) => link({ dim: "format", value, period, metric: null })}
           />
           <TrendMix
+            previousCollected={previousContext.length > 0}
             testId="mix-cta" title="ปุ่ม CTA" exclusive
             items={mixItems("cta_type")}
             coverage={mixCoverage("cta_type")}
@@ -360,6 +381,7 @@ export default async function TrendsPage({ searchParams }: { searchParams: Promi
         </Panel>
         <Panel padded>
           <TrendMix
+            previousCollected={previousContext.length > 0}
             testId="mix-platform" title="แพลตฟอร์ม" exclusive={false}
             items={mixItems("publisher_platform")}
             coverage={mixCoverage("publisher_platform")}

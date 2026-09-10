@@ -44,3 +44,6 @@
   .table th, .table td { padding: 6px 4px; }
   .name { max-width: 8rem; }
 }
+
+/* An absence, not a measurement. Quiet on purpose: it must not read as a value. */
+.absent { color: var(--muted); font-size: var(--fs-meta); }

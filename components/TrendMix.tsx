@@ -1,5 +1,5 @@
 import { coverageOf } from "@/lib/domain/coverage-language";
-import { pointChange, share } from "@/lib/trends/periods";
+import { NOT_COLLECTED, pointChange, share } from "@/lib/trends/periods";
 import styles from "./TrendMix.module.css";
 
 /**
@@ -14,12 +14,17 @@ import styles from "./TrendMix.module.css";
  * Shares move in PERCENTAGE POINTS. 40% → 55% is +15 pp, not +37.5%; both are
  * arithmetically true and only one is what a reader means, so the unit is
  * printed rather than assumed.
+ *
+ * And when the previous period was never collected there is no share to move
+ * from. Rendering "0.0%" and "+42.0 pp" there would put a measurement where an
+ * absence belongs — the most misleading thing this screen could do, and the
+ * reason `previousCollected` is required rather than inferred from a zero.
  */
 
 export type TrendMixItem = { value: string; current: number; previous: number };
 
 export function TrendMix({
-  title, items, exclusive, coverage, testId, evidenceHref,
+  title, items, exclusive, coverage, previousCollected, testId, evidenceHref,
 }: {
   title: string;
   items: TrendMixItem[];
@@ -29,6 +34,8 @@ export function TrendMix({
     current: { covered: number; observed: number };
     previous: { covered: number; observed: number };
   };
+  /** False when no run landed in the previous period at all. */
+  previousCollected: boolean;
   testId: string;
   evidenceHref?: (value: string, period: "current" | "previous") => string;
 }) {
@@ -81,6 +88,13 @@ export function TrendMix({
                   {(["current", "previous"] as const).map((period) => {
                     const n = period === "current" ? row.current : row.previous;
                     const percent = period === "current" ? currentShare : previousShare;
+                    if (period === "previous" && !previousCollected) {
+                      return (
+                        <td key={period} className={styles.cell}>
+                          <span className={styles.absent}>{NOT_COLLECTED}</span>
+                        </td>
+                      );
+                    }
                     return (
                       <td key={period} className={styles.cell}>
                         {evidenceHref && n > 0 ? (
@@ -98,9 +112,15 @@ export function TrendMix({
                       </td>
                     );
                   })}
-                  {/* Percentage points, with the unit written out. */}
+                  {/* Percentage points, with the unit written out — or nothing
+                      at all, when there is no previous share to have moved
+                      from. */}
                   <td className={styles.points} data-testid={`${testId}-points-${row.value}`}>
-                    {points.label}
+                    {previousCollected ? points.label : (
+                      <span className={styles.absent} title="ช่วงก่อนหน้าไม่มีรอบเก็บ จึงไม่มีสัดส่วนให้เทียบ">
+                        —
+                      </span>
+                    )}
                   </td>
                 </tr>
               );

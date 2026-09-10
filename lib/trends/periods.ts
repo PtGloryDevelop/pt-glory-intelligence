@@ -94,6 +94,16 @@ export function changeOf(current: number, previous: number): Change {
   return { current, previous, delta, direction, percent, lowBase, label };
 }
 
+/**
+ * What a period with no collection is called, everywhere.
+ *
+ * A share of 0.0% and a delta of +42.0 pp both LOOK measured. Neither is, when
+ * the period behind them was never collected: there is no denominator, so there
+ * is no share, so there is no movement between shares. Screens print this
+ * instead, and the word is defined once so two of them cannot disagree.
+ */
+export const NOT_COLLECTED = "ไม่ได้เก็บ";
+
 /** An arrow, so direction is never carried by colour alone. */
 export const DIRECTION_MARK: Record<Change["direction"], string> = {
   up: "▲", down: "▼", flat: "—",

@@ -97,3 +97,6 @@
   .mix { grid-template-columns: 1fr; }
   .contexts { grid-template-columns: 1fr; }
 }
+
+/* An absence where a measurement would otherwise sit. */
+.absent { color: var(--muted); font-size: var(--fs-meta); }
