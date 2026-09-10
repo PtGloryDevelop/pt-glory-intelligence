@@ -16,9 +16,9 @@ test("every up migration has a matching down migration", () => {
   }
 });
 
-test("migrations are numbered 0001..0033 with no gaps", () => {
+test("migrations are numbered 0001..0034 with no gaps", () => {
   const numbers = up.map((f) => Number(f.slice(0, 4)));
-  assert.deepEqual(numbers, Array.from({ length: 33 }, (_, i) => i + 1));
+  assert.deepEqual(numbers, Array.from({ length: 34 }, (_, i) => i + 1));
 });
 
 test("all 17 tables are created", () => {
@@ -228,6 +228,40 @@ test("recreating a read function restores its grants", () => {
   assert.match(sql, /must not be executable by anon/);
 });
 
+
+/**
+ * A tick must finish inside the window that records its answer.
+ *
+ * Found in pilot: at ~1.6 seconds per asset on the hosted deployment, a batch of
+ * 200 runs about five minutes while pg_net stops waiting at 120 seconds. The
+ * archival still worked, but every loaded tick recorded a timeout instead of an
+ * HTTP status — and net._http_response is the only thing that distinguishes a
+ * healthy run from the C1.8 failure, where cron reported success while nothing
+ * was delivered.
+ *
+ * The bound below is deliberately generous: it fails if somebody raises the
+ * batch back into territory that cannot report on itself.
+ */
+test("one scheduled drain fits inside the pg_net timeout", () => {
+  const scheduled = read("0034_media_archive_batch_size.sql");
+
+  const limit = Number(/'limit',\s*(\d+)/.exec(scheduled)?.[1]);
+  const timeoutMs = Number(/timeout_milliseconds\s*:=\s*(\d+)/.exec(scheduled)?.[1]);
+  assert.ok(Number.isFinite(limit) && Number.isFinite(timeoutMs));
+
+  const SECONDS_PER_ASSET = 1.6; // measured against the pilot deployment
+  const budget = timeoutMs / 1000;
+  assert.ok(
+    limit * SECONDS_PER_ASSET < budget,
+    `a batch of ${limit} needs ~${limit * SECONDS_PER_ASSET}s but pg_net waits ${budget}s`,
+  );
+
+  // The route's own ceiling has to be the larger of the two, or the function
+  // would be killed mid-batch and leave claimed work behind.
+  const route = readFileSync(join("app", "api", "media", "archive", "run", "route.ts"), "utf8");
+  const maxDuration = Number(/maxDuration\s*=\s*(\d+)/.exec(route)?.[1]);
+  assert.ok(maxDuration * 1000 >= timeoutMs, "maxDuration must cover the pg_net timeout");
+});
 
 test("the archive drain is scheduled and unreachable from an app role", () => {
   const sql = read("0025_media_archive_schedule.sql");
