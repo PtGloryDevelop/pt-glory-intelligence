@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { type Media } from "@/lib/media";
-import { resolveMedia } from "@/lib/media/resolve";
+import { MEDIA_STATE_MESSAGE, resolveMedia } from "@/lib/media/resolve";
 import { formatIdentity } from "@/lib/media/format";
 import { thaiDate } from "@/lib/format/date";
 import { StatusBadge } from "./StatusBadge";
@@ -122,10 +122,9 @@ function Preview({ ad }: { ad: AdCardData }) {
 
   if (resolved.state === "none" || resolved.state === "unusable" || broken) {
     const message =
-      // Only a source URL can go stale on us; an archived object cannot.
-      broken ? "สื่อต้นทางหมดอายุ"
-      : resolved.state === "none" ? "ไม่มีสื่อที่บันทึกไว้"
-      : "ไม่สามารถแสดงตัวอย่างสื่อ";
+      broken ? MEDIA_STATE_MESSAGE.expired
+      : resolved.state === "none" ? MEDIA_STATE_MESSAGE.none
+      : MEDIA_STATE_MESSAGE.unusable;
     return (
       <div
         className={styles.placeholder}

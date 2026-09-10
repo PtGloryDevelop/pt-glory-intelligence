@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { mediaPresentation, type Media } from "@/lib/media";
-import { resolveMedia } from "@/lib/media/resolve";
+import { MEDIA_STATE_MESSAGE, resolveMedia } from "@/lib/media/resolve";
 import { formatIdentity } from "@/lib/media/format";
 import { thaiDate, thaiDateTime } from "@/lib/format/date";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -326,8 +326,8 @@ function Creative({ detail }: { detail: Detail }) {
           <p className={styles.placeholder} data-testid="media-placeholder" data-media-state={resolved.state}>
             <MediaGlyph />
             {resolved.state === "none"
-              ? "ไม่มีสื่อที่บันทึกไว้สำหรับโฆษณานี้"
-              : "ไม่สามารถแสดงตัวอย่างสื่อของโฆษณานี้"}
+              ? MEDIA_STATE_MESSAGE.none
+              : MEDIA_STATE_MESSAGE.unusable}
           </p>
         </div>
         {formatLabel ? <p className={styles.mediaNote}>รูปแบบ: {formatLabel}</p> : null}

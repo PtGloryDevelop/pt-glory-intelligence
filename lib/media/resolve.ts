@@ -20,6 +20,27 @@ export type ResolvedMedia =
   | { state: "unusable"; entries: number }
   | { state: "none" };
 
+/**
+ * What each state means, in the words a reader gets.
+ *
+ * Written once because it was written three times — the card, the row and the
+ * drawer each carried their own copy, which is how three surfaces come to
+ * describe the same row differently.
+ *
+ * `unusable` used to read "ไม่สามารถแสดงตัวอย่างสื่อ", which says we failed.
+ * We did not: these are CAROUSEL, DPA and DCO ads whose cards carry video
+ * links and no still, so there was never an image to keep. Measured at 3–4% of
+ * a real collection. The fact belongs to the ad, and the sentence should say so.
+ */
+export const MEDIA_STATE_MESSAGE = {
+  /** The collector recorded no media at all for this observation. */
+  none: "ไม่มีสื่อที่บันทึกไว้",
+  /** Media exists, but none of it is a still we could archive. */
+  unusable: "โฆษณาแบบนี้ไม่มีภาพนิ่งให้เก็บ",
+  /** An archived object cannot expire; only a source URL can. */
+  expired: "สื่อต้นทางหมดอายุ",
+} as const;
+
 export type ArchiveReference = {
   archivePath: string | null;
   archiveStatus: string | null;
