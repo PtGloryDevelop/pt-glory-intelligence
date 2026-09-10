@@ -49,3 +49,58 @@
   .stat { border-right: 0; border-bottom: 1px solid var(--line); }
   .stat:last-child { border-bottom: 0; }
 }
+
+/* ------------------------------------------------------------- freshness */
+
+.freshness { margin-bottom: var(--gap-page); }
+.freshRow { display: flex; align-items: center; gap: 32px; flex-wrap: wrap; }
+.freshValue { font-size: var(--fs-subhead); font-weight: 600; color: var(--ink); }
+.freshAction { margin-left: auto; font-size: var(--fs-meta); }
+
+.freshNote {
+  margin: 10px 0 0;
+  font-size: var(--fs-meta);
+  color: var(--muted);
+  max-width: 78ch;
+}
+/* Old data is not wrong; it just answers less. Warn-toned, never alarming. */
+.freshWarn {
+  margin: 10px 0 0;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--warn-tint);
+  color: var(--warn-ink);
+  font-size: var(--fs-meta);
+  max-width: 78ch;
+}
+
+/* --------------------------------------------------------------- sections */
+
+.section { margin-top: var(--gap-section); }
+
+.cardCount {
+  margin-left: 8px;
+  font-size: var(--fs-title);
+  color: var(--brand-ink);
+}
+
+.links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-body);
+  text-decoration: none;
+  color: var(--ink);
+  background: var(--surface);
+}
+.linkIcon { display: inline-flex; opacity: 0.7; }
+
+@media (max-width: 640px) {
+  .freshRow { gap: 16px; }
+  .freshAction { margin-left: 0; }
+}
