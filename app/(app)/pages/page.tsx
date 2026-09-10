@@ -10,7 +10,7 @@ import { PageHeader } from "@/components/shell/PageHeader";
 import { ContextBar } from "@/components/ContextBar";
 import { EmptyState } from "@/components/states/EmptyState";
 import { Panel, PanelHead, TableWrap } from "@/components/Surface";
-import { StatusBadge } from "@/components/StatusBadge";
+import { StatusBreakdown } from "@/components/StatusBreakdown";
 import { thaiDate } from "@/lib/format/date";
 import { PageToolbar } from "./toolbar";
 import styles from "./pages.module.css";
@@ -139,13 +139,18 @@ export default async function PagesPage({ searchParams }: { searchParams: Promis
                       {row.page_categories?.length ? row.page_categories.join(" · ") : "—"}
                     </td>
                     <td data-numeral>{row.observed_ads}</td>
-                    {/* Three states, three numbers. Unknown is never folded into
-                        inactive: the collector not reading a state is not the
-                        advertiser having stopped. */}
+                    {/* Only the states this page actually has ads in. Unknown
+                        is never folded into inactive — the collector failing to
+                        read a state is not the advertiser having stopped — and
+                        what is hidden is always a zero, checkable against the
+                        total in the column before this one. */}
                     <td className={styles.states}>
-                      <StatusBadge isActive={true} count={row.active_ads} />
-                      <StatusBadge isActive={false} count={row.inactive_ads} />
-                      <StatusBadge isActive={null} count={row.unknown_ads} />
+                      <StatusBreakdown
+                        active={row.active_ads}
+                        inactive={row.inactive_ads}
+                        unknown={row.unknown_ads}
+                        testId={`states-${row.page_id}`}
+                      />
                     </td>
                     <td data-numeral>{row.recently_found}</td>
                     <td data-numeral>{row.evergreen_ads}</td>

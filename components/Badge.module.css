@@ -28,3 +28,9 @@
 
 /* A count beside the state word, when the badge summarises a set of ads. */
 .count { font-size: var(--fs-meta); opacity: 0.85; }
+
+/* A row's status split. Wraps rather than forcing the column wide. */
+.group { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+
+/* Said, not left blank: an empty cell reads as a rendering fault. */
+.none { font-size: var(--fs-meta); color: var(--muted); }
