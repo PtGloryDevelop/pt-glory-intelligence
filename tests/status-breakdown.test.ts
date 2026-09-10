@@ -29,6 +29,18 @@ test("a page with no ads says so instead of rendering an empty cell", () => {
   assert.match(source, /ไม่มีโฆษณา/);
 });
 
+test("every surface with status badges carries the filter caveat", () => {
+  /*
+   * The timeline tab shows a status split per collection run and lives on its
+   * own route state, so a reader there never sees the overview tab's sentence.
+   * Badges and caveat travel together or the zero misleads again.
+   */
+  const timeline = readFileSync(
+    join("app", "(app)", "pages", "[pageId]", "timeline.tsx"), "utf8");
+  assert.match(timeline, /StatusBadge/);
+  assert.match(timeline, /statusFilterNote/);
+});
+
 test("the full three-way split stays where the caveat is", () => {
   // The Page and Category screens show every state, including the zeros,
   // because that is where the sentence explaining the collection's filter sits.

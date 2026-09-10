@@ -10,6 +10,7 @@ import {
   timelineRange, runStatus, STATUS_LABEL,
   type Grain, type TimelineMetric, type TimelineRange,
 } from "@/lib/pages/timeline";
+import { statusFilterNote, type CollectionFilters } from "@/lib/domain/collection-filters";
 import { thaiDate, thaiDateTime } from "@/lib/format/date";
 import { Panel, PanelHead, TableWrap } from "@/components/Surface";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -30,12 +31,14 @@ import styles from "./page-detail.module.css";
 
 const EVIDENCE_SIZE = 24;
 
-export async function PageTimeline({ scope, pageId, datasetId, query, pageName }: {
+export async function PageTimeline({ scope, pageId, datasetId, query, pageName, filters }: {
   scope: PageScope;
   pageId: string;
   datasetId: string | null;
   query: Record<string, string | undefined>;
   pageName: string;
+  /** Already read by the page, and the same answer for both tabs. */
+  filters: CollectionFilters | null;
 }) {
   const range = timelineRange(query.range);
   const grain = timelineGrain(query.grain, range);
@@ -201,6 +204,13 @@ export async function PageTimeline({ scope, pageId, datasetId, query, pageName }
             </table>
           </TableWrap>
         )}
+        {/* The same sentence the overview tab carries. Per-run status badges
+            sit here too, and a reader on this tab never sees the other one. */}
+        {statusFilterNote(filters) ? (
+          <p className={styles.filterNote} data-testid="status-filter-note">
+            {statusFilterNote(filters)}
+          </p>
+        ) : null}
         <p className={styles.caveat}>
           ตัวเลขเหล่านี้คือสิ่งที่เราพบในแต่ละรอบเก็บ ไม่ใช่จำนวนโฆษณาทั้งหมดที่เพจนี้มีอยู่จริง
           และการที่ตัวเลขเปลี่ยนระหว่างรอบไม่ได้แปลว่าเพจเปลี่ยนพฤติกรรมการยิงโฆษณา

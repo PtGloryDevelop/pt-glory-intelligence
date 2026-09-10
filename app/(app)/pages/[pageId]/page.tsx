@@ -180,6 +180,7 @@ export default async function PageDetailPage({ params, searchParams }: {
           pageId={pageId}
           pageName={detail.page_name ?? detail.page_id}
           datasetId={scope.kind === "dataset" ? scope.id : null}
+          filters={filters}
           query={Object.fromEntries(
             Object.entries(query).map(([key, value]) => [key, one(value)]),
           )}
