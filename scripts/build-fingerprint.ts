@@ -47,6 +47,23 @@ export async function sourceFingerprint(): Promise<string> {
     hash.update(readFileSync(path));
     hash.update("\0");
   }
+
+  /*
+   * NEXT_PUBLIC_* values are inlined into BOTH the server and the client output
+   * at build time, so they are part of what is served just as much as a source
+   * file is. Leaving them out meant a build made against one Supabase project
+   * was reused against another: found at D1.2, when the existing .next carried
+   * the PILOT project ref in 34 files and the local suite would have run a
+   * server wired to PILOT while every guard reported a local target. Public by
+   * definition, so hashing the values leaks nothing.
+   */
+  const publicEnv = Object.entries(process.env)
+    .filter(([name]) => name.startsWith("NEXT_PUBLIC_"))
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+  for (const [name, value] of publicEnv) {
+    hash.update(`env:${name}=${value ?? ""}`);
+    hash.update("\0");
+  }
   return hash.digest("hex").slice(0, 16);
 }
 
