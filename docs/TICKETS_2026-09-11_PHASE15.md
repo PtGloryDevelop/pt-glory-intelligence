@@ -50,7 +50,8 @@
 - epoch วินาที → ISO · `end_date`: active → null · inactive + epoch ถูกต้อง → ISO · นอกนั้น null · **ไม่ใช้เวลาเก็บแทนเด็ดขาด** · `network_end_date_raw` = ISO ของค่าต้นทาง
 - dedupe ด้วย `ad_archive_id` · แถวที่ไม่มี id / `page_id` / `start_date` → `unresolved_ads`
 - media sub-key allowlist · `quality_summary` มี `collection_request_id` แต่ไม่มีข้อมูล provider
-- `stop_reason`: `limit_reached` · `source_exhausted` เฉพาะเมื่อมีหลักฐานตาม C01-A(c) · นอกนั้น null
+- `stop_reason`: `limit_reached` · `source_exhausted` **เฉพาะเมื่อครบทั้ง 5 เงื่อนไข** (run จบแบบสำเร็จ · ไม่ถูก cap จำนวนหยุด · ไม่ถูก ceiling ค่าใช้จ่ายหยุด · ไม่ถูก guard อื่นของระบบหยุด · หลักฐาน pagination/source บอกว่าไม่มีผลเพิ่ม) · `total` ใช้ตรวจความสอดคล้องเท่านั้น · ห้ามใช้ `ads_count` / `position` · นอกนั้น null
+- ตรวจขนาด export ระหว่างสร้าง: ถ้า item ถัดไปจะทำให้เกิน `collector.max_export_bytes` (≤ `MAX_BYTES` 25 MB ซึ่งยังเป็นค่าที่ชี้ขาด) → หยุดก่อนสร้างไฟล์ที่เกิน และคืน `export_too_large`
 **Acceptance** output ผ่าน `validate()` · ค่า start_date ตรงกับ Pilot ทุกแถวที่ซ้อนกัน (ยืนยันผล spike ซ้ำ) · fixture ไม่มี `oh=` / `oe=` หลงเหลือ
 **Tests** unit ครบทุกกฎข้างบน · test สแกน fixture หาลายเซ็น
 **Deps** — (กิ่ง `source_exhausted` ปิดหลัง C01-A)
@@ -73,7 +74,7 @@
 - invariants: `unique (requested_by, request_key)` · `unique (provider_run_id)` · `unique (collection_run_id)` · check ต่าง ๆ ตาม spec §9
 - partial unique index บน `collection_runs ((reported_quality_summary ->> 'collection_request_id'))`
 - view `collection_request_status` (`security_invoker`) · RLS select-own · column grants เฉพาะกลุ่ม user-safe
-- `app_settings` `collector.*` (null/TBD · `max_concurrent = 1` · `lease_seconds = 120` · `actor` · `countries = ["TH"]` · `enabled = false`)
+- `app_settings` `collector.*` (null/TBD · `max_export_bytes` ≤ `MAX_BYTES` · `max_concurrent = 1` · `lease_seconds = 120` · `actor` · `countries = ["TH"]` · `enabled = false`)
 - down: drop ทั้งหมด **แต่ปฏิเสธถ้ามี run ที่ใช้ `apify_actor_run` แล้ว**
 **Compat (ใน ticket นี้)** `tests/migrations.test.ts` (เลขลำดับ · **ตาราง 17 → 18**) · `tests/db/table-grants.test.ts` (**กฎระดับคอลัมน์สำหรับ `collection_requests`** ไม่ใช่การยกเว้น)
 **Acceptance** migrate up/down/up สะอาดบน local · ทุก invariant ปฏิเสธการละเมิด · index บล็อก commit ครั้งที่สองของ request เดียวกัน
@@ -122,9 +123,9 @@
 
 ### C09 · State machine II: import + adoption + zero result + media
 **Goal** commit แบบ exactly-once บังคับด้วย DB
-**Scope** marker `import_attempted_at` · ถ้ามี `collection_run` ที่มี request id นี้แล้ว → adopt ไม่ commit ซ้ำ · fetch ≤ cap → adapter → `previewImport` → `commitImport` · unique violation → adopt · ไม่มี item → `succeeded` ไม่สร้าง Dataset · หลังจบ: `enqueueRun` เป็นขั้นแยก (idempotent) · บันทึก result counts และ `stop_reason`
+**Scope** marker `import_attempted_at` · ถ้ามี `collection_run` ที่มี request id นี้แล้ว → adopt ไม่ commit ซ้ำ · fetch ≤ cap จำนวนและภายใน byte budget → adapter → **`analyzeImport` → `commitImport` (`actorId = requested_by`)** — ไม่เรียก `previewImport` เพราะต้องมี session ของผู้ใช้ · unique violation → adopt · ไม่มี item → `succeeded` ไม่สร้าง Dataset · หลังจบ: `enqueueRun` เป็นขั้นแยก (idempotent) · บันทึก result counts และ `stop_reason`
 **Acceptance** จำนวน `collection_runs` ต่อ request ≤ 1 เสมอ แม้ commit ซ้ำโดยจงใจ
-**Tests** crash หลัง commit ก่อนอัปเดต request → adopt · บังคับ commit สองครั้ง → rollback ทั้ง transaction · zero items · `adapter_rejected` (เกินขนาดหรือไม่ผ่าน validate) → ไม่มีอะไรถูกเขียน · media enqueue ซ้ำไม่เพิ่มแถว
+**Tests** crash หลัง commit ก่อนอัปเดต request → adopt · บังคับ commit สองครั้ง → rollback ทั้ง transaction · zero items · `adapter_rejected` (เกินขนาดหรือไม่ผ่าน validate) → ไม่มีอะไรถูกเขียน · media enqueue ซ้ำไม่เพิ่มแถว · **parity test**: export ที่ถูกและผิดชุดเดียวกันผ่าน `previewImport` และ `analyzeImport` ได้ canonical output, validation rejection และ reported/computed counts เท่ากัน · `created_by` ของ run และ dataset = `requested_by` ของ request (ไม่ใช่ worker) · export เกินขนาด → `export_too_large` ไม่มีอะไรถูกเขียน
 **Deps** C02, C08
 **Out** cost (C10)
 
@@ -148,7 +149,7 @@
 **Goal** backend เดินได้ครบวงจรด้วย mock provider โดย collector ยังปิดสำหรับผู้ใช้
 **Scope** `app/api/collections/advance/route.ts` (machine auth ด้วย token ของตัวเอง · claim ≤ `tick_batch` · ตอบ `202` · หนึ่ง step ต่อ request ใน `after()`) · `export const maxDuration = 300` · migration: `run_collection_advance()` (security definer อ่าน Vault · ไม่ยิง HTTP ถ้าไม่มีงาน) + cron · `scripts/collection-schedule-config.mjs`
 **Compat (ใน ticket นี้)** **`tests/db/foundation-audit.test.ts` ใส่ฟังก์ชันใน machine-only + definer list** · `tests/migrations.test.ts` (รายการฟังก์ชัน) · **`scripts/check-privileged-imports.mjs` เพิ่ม `ALLOWED`** สำหรับ route และโมดูล privileged · bundle scan เพิ่ม advance token
-**Acceptance** route ประกาศ `maxDuration` ชัดเจน · import ที่ cap × เวลาที่วัดได้ใน C01-A < 80% ของค่านั้น · ไม่มี invocation ใดรอ run จนจบ
+**Acceptance** route ประกาศ `maxDuration` ชัดเจน · เวลา import ที่วัดบน local ที่ขีดจำกัดที่ตั้งไว้ < 80% ของค่านั้น · เวลาจริงบน production วัดใน C16 และไม่ใช้ค่าประมาณเป็นเงื่อนไขความถูกต้อง · ไม่มี invocation ใดรอ run จนจบ
 **Tests** test อ่าน export `maxDuration` + ขอบเขตจากการวัด (แบบเดียวกับ 0034) · 401 เมื่อไม่มี token · 202 เร็ว · SQL function ไม่เรียก `net.http_post` เมื่อว่าง · function เรียกจาก app role ไม่ได้ · ฆ่ากลางขั้น → tick ถัดไปทำต่อได้ถูกต้อง
 **Deps** C08, C09, C10, C11
 **Out** UI
@@ -213,7 +214,7 @@
 
 **Acceptance** requirement 1–15 ผ่านครบ · acceptance criteria 1–17 ของ spec ผ่าน (ตามถ้อยคำที่ review ปรับแล้ว) · run จริงครั้งแรกไหลผ่านครบทุกสถานะ · เก็บรูปได้จริงจาก CDN ของ provider
 **Tests** ทุกชุดข้างบน
-**Deps** C01-A–C15 + ค่าจากเจ้าของ (budget · per-run ceiling · billing anchor/length · cap จาก C01-A · token · build pin)
+**Deps** C01-A–C15 + ค่าจากเจ้าของ (budget · per-run ceiling · billing anchor/length · cap จำนวนและขนาด (provisional จาก C01-A จนกว่าจะมีข้อมูลงานจริง) · token · build pin)
 **Out** Phase ถัดไป
 
 ---
