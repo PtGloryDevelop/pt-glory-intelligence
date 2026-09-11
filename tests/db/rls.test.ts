@@ -110,10 +110,19 @@ test("RLS matrix", { skip }, async (t) => {
   });
 
   await t.test("unauthenticated sees nothing", async () => {
+    /*
+     * Refused at the privilege layer, before RLS is even consulted.
+     *
+     * Until 0036 this case asserted "0 rows", which only held because older
+     * Supabase projects granted anon SELECT on every new table by default and
+     * RLS then filtered everything out. No policy has ever given anon a row.
+     * 0036 stopped relying on that platform default, so anon holds no table
+     * privilege at all — the same refusal brands.test.ts already asserts for
+     * the tables 0033 created.
+     */
     await asAnon(client, async () => {
       for (const table of READ_TABLES) {
-        const { rowCount } = await client.query(`select * from public.${table}`);
-        assert.equal(rowCount, 0, `anon must not read ${table}`);
+        await expectRejected(client, `select * from public.${table}`, /permission denied/i);
       }
     });
   });

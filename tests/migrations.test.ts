@@ -16,9 +16,9 @@ test("every up migration has a matching down migration", () => {
   }
 });
 
-test("migrations are numbered 0001..0035 with no gaps", () => {
+test("migrations are numbered 0001..0036 with no gaps", () => {
   const numbers = up.map((f) => Number(f.slice(0, 4)));
-  assert.deepEqual(numbers, Array.from({ length: 35 }, (_, i) => i + 1));
+  assert.deepEqual(numbers, Array.from({ length: 36 }, (_, i) => i + 1));
 });
 
 test("all 17 tables are created", () => {
@@ -291,4 +291,29 @@ test("only retryable failures are eligible to be claimed again", () => {
   const sql = read("0025_media_archive_schedule.sql");
   assert.match(sql, /add column if not exists failure_retryable boolean/);
   assert.match(sql, /where archive_status = 'pending'\s*\n\s*or \(archive_status = 'failed' and failure_retryable\)/);
+});
+
+/**
+ * 0036 makes the API grants explicit. Applied to the running Pilot it must
+ * change nothing, because the Pilot already holds every privilege it names —
+ * they came from a platform default that current Supabase no longer applies.
+ * So it may only ADD, and whatever it adds is written down, which is the only
+ * way its rollback can take back exactly that and nothing the Pilot had before.
+ */
+test("0036 grants without revoking anything an API role already holds", () => {
+  const up = read("0036_explicit_api_table_grants.sql");
+  const down = read("0036_explicit_api_table_grants.down.sql");
+
+  // No revoke may touch a product object. The only revokes allowed are the
+  // ones that keep the ledger itself away from the API roles.
+  for (const m of up.matchAll(/revoke[^;]*;/gi)) {
+    assert.match(m[0], /migration_ledger/i, `0036 must not revoke on a product object: ${m[0]}`);
+  }
+  // anon is given nothing: no policy has ever let it read a row.
+  assert.doesNotMatch(up, /'anon'/, "0036 must not grant anything to anon");
+  // What it adds is recorded before it is granted, and the rollback reads the record.
+  assert.match(up, /insert into migration_ledger\.grants/i);
+  assert.match(down, /from migration_ledger\.grants/i);
+  // The rollback revokes only what the ledger names — never a literal product object.
+  assert.doesNotMatch(down, /revoke\s+[a-z, ]+\s+on\s+(table\s+|function\s+)?public\./i);
 });
