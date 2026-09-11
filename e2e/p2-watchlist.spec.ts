@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { AUTH, CATEGORY_WATCH, TMP } from "./constants.ts";
+import { connect } from "../tests/db/helpers.ts";
 
 /**
  * P2.7 — Watchlist V1.
@@ -242,6 +243,27 @@ test.describe("P2.7 watchlist", () => {
   /* ------------------------------------------------------------- baseline */
 
   test("resetting the baseline says what it costs, then does exactly that", async ({ page }) => {
+    /*
+     * The baseline is shown to the minute, and this whole journey can run inside
+     * one: saved at 11:11:05, reset at 11:11:50, both read "11:11" and the
+     * assertion below fails whether or not the reset happened — while the checks
+     * that actually prove it never run. Found at D1.2 on a fast machine; it had
+     * only ever passed by crossing a minute boundary.
+     *
+     * So the saved baseline is moved an hour back first, through the guarded
+     * fixture connection. The assertion is unchanged. A reset that did nothing
+     * would still leave the screen an hour behind, and still fail.
+     */
+    const client = await connect();
+    try {
+      await client.query(
+        "update public.watch_items set baseline_at = baseline_at - interval '1 hour' where id = $1",
+        [watchId],
+      );
+    } finally {
+      await client.end();
+    }
+
     await page.goto(`/watchlist/${watchId}`);
     const before = await page.getByTestId("watch-baseline").innerText();
 
