@@ -22,7 +22,7 @@
 - (a) อ่าน run ตัวอย่างเดิมผ่าน API (อ่านอย่างเดียว ไม่มีค่าใช้จ่าย): สถานะ · `usageTotalUsd` (ต้นทุนจริงของ run ตัวอย่าง) · `chargedEventCounts` · `pricingInfo` · รูปแบบ record `INPUT` (รูปทรงของ `urls`) · จำนวน item จาก `X-Apify-Pagination-Total`
 - (b) `Authorization: Bearer` ใช้ได้กับ run, dataset items และ `INPUT` โดยไม่ต้องใส่ token ใน query
 - (c) ความหมายของ `total` / `ads_count` / `position` จากไฟล์ตัวอย่าง (หลักฐานสำหรับ `source_exhausted`)
-- (d) วัด import บน local stack: เวลา `previewImport` + `commitImport` และจำนวน SQL round trip ที่ 100 / 500 / 1,000 ads · byte ต่อ 100 ads ของ output ที่ผ่าน allowlist · ประเมินเวลาบน production จาก region ของ function และ latency ไปฐานข้อมูล → เสนอเพดาน `max_records_per_run`
+- (d) วัด import บน local stack: เวลา `analyzeImport` + `commitImport` และจำนวน SQL round trip ที่ 100 / 500 / 1,000 ads · byte ต่อ 100 ads ของ output ที่ผ่าน allowlist · ประเมินเวลาบน production จาก region ของ function และ latency ไปฐานข้อมูล → เสนอเพดาน `max_records_per_run`
 - (e) แผน run สำหรับ C01-B: input ที่แน่นอน · เพดาน `maxTotalChargeUsd` · สิ่งที่จะสังเกต
 **Files** `docs/SPIKE_2026-09-11_PROVIDER_EVIDENCE.md` + script ชั่วคราวใน scratchpad เท่านั้น
 **Acceptance** (a)–(e) มีตัวเลขหรือคำตอบพร้อมหลักฐาน · token ไม่ปรากฏในเอกสาร log หรือแชท · ไม่มี run ใหม่เกิดขึ้น
