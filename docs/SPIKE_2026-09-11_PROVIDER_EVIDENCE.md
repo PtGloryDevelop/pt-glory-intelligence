@@ -1,8 +1,8 @@
 # Spike — provider evidence for Phase 15 (C01)
 
 Date: 2026-09-11 · Ticket: C01-A (no cost, read-only) — **complete** · C01-B (paid
-qualification run) **not started** — it needs the owner's approval immediately
-before it runs.
+qualification run) — **complete**: one owner-approved run on 2026-09-11,
+settled provider-reported cost $0.0998 against the approved $0.10 ceiling.
 
 ## C01-A status
 
@@ -184,3 +184,117 @@ One run of `curious_coder/facebook-ads-library-scraper`, started through the API
      (sets `cost_settle_minutes` / `cost_final_window_hours`);
   4. `X-Apify-Pagination-Total` while running (the "ads found so far" source);
   5. `chargedEventCounts` against `usageTotalUsd`.
+
+## C01-B results (owner-approved paid run, ceiling $0.10)
+
+Approved by the owner on 2026-09-11 immediately before the run, with the plan in
+(e) unchanged. One `POST`, never retried; token in the `Authorization` header
+only. Dataset item bodies were not printed.
+
+| Field | Value |
+|---|---|
+| Run | `SwEWkJk0kp6sg4QMY` · start `HTTP 201` · status `READY` in the start response |
+| Run options echoed back | `build` 2.7.25 · `timeoutSecs` 600 · `memoryMbytes` 512 · `maxTotalChargeUsd` 0.1 · `restartOnError` false · **`maxItems` 133 (derived by the platform)** |
+| Time | 09:09:12.5 → 09:09:39.7 UTC (27.0 s) |
+| Terminal | `SUCCEEDED` · exit code 0 · "Scraped requested number of records" |
+| Items at the terminal read (≈1.3 s after `finishedAt`) | 117 in the dataset metadata · `chargedEventCounts` 117 items + 1 start — **a stale snapshot** |
+| Items, settled | **133** in the dataset (133 fetched, 133 distinct `ad_archive_id`) · `chargedEventCounts` 133 items + 1 start · dataset `modifiedAt` 09:09:39.230, **before** `finishedAt` 09:09:39.722 |
+| `usageTotalUsd` at terminal | **$0.0443 — provisional provider-reported cost** |
+| Derived expected charge | at the terminal read $0.0878 (117 items, stale counts) · settled **$0.0998** = 133 × $0.00075 + 1 × $0.00005 — derived from `chargedEventCounts` and the run's `pricingInfo`, not the final actual cost |
+| Final actual cost | **$0.0998** — the settled provider-reported `usageTotalUsd`, unchanged from +5 to +60 min (below) · within the approved $0.10 ceiling |
+| `INPUT` read back | keys `urls, limitPerSource, scrapeAdDetails, runTag` plus the actor's `scrapePageAds.*` defaults · `runTag` **matches** · `urls` identical to the sample |
+
+While running, polled every ~5 s:
+
+| t (s) | Status | `X-Apify-Pagination-Total` | Charged items | `usageTotalUsd` |
+|---|---|---|---|---|
+| 6 | RUNNING | 0 | 0 | 0.00005 |
+| 12 | RUNNING | 29 | 0 | 0.00005 |
+| 18 | RUNNING | 59 | 29 | 0.00005 |
+| 23 | RUNNING | 89 | 59 | 0.0218 |
+| 29 | SUCCEEDED | 117 | 117 | 0.0443 |
+
+Every value above is a provider snapshot. The last row, read within about a
+second of `finishedAt`, was stale: the settled dataset holds 133 items.
+
+Settlement — delayed reads of the same run (`finishedAt` 09:09:39.7 UTC):
+
+| Read | Time from `finishedAt` | `usageTotalUsd` (provider-reported) | Changed since previous read | `chargedEventCounts` (items + start) | Derived expected charge |
+|---|---|---|---|---|---|
+| terminal | 0 min (1.3 s) | 0.0443 | — | 117 + 1 | 0.0878 |
+| +5 | 5 min 1.4 s | 0.0998 | yes (0.0443 → 0.0998) | 133 + 1 | 0.0998 |
+| +15 | 15 min 1.3 s | 0.0998 | no | 133 + 1 | 0.0998 |
+| +30 | 30 min 1.4 s | 0.0998 | no | 133 + 1 | 0.0998 |
+| +60 | 60 min 1.3 s | 0.0998 | no | 133 + 1 | 0.0998 |
+
+**Settlement conclusion (owner wording, 2026-09-11).** For this qualification
+run only: the provider-reported `usageTotalUsd` was $0.0998 at +5, +15, +30 and
++60 minutes after `finishedAt`. Therefore, in this observed run, the reported
+cost had already stabilized by the first +5 minute observation and remained
+unchanged through +60 minutes.
+
+This does **not** establish that:
+
+- all Apify runs settle within 5 minutes;
+- 60 minutes is universally sufficient;
+- $0.0998 is a pricing constant.
+
+It is evidence for the reconciliation design, not a general settlement window:
+`cost_settle_minutes` and `cost_final_window_hours` stay configurable
+engineering parameters.
+
+### What C01-B establishes
+
+1. **`runTag` survives into `INPUT`.** The actor accepted the extra key and the
+   record returns it unchanged, so reconciliation by `runTag` + `source_url`
+   works as designed (review §2).
+2. **`SUCCEEDED` does not prove `source_exhausted`.** Observed (settled):
+   `maxTotalChargeUsd` 0.10 · platform-derived `maxItems` 133 · **133 ads** in
+   the dataset · `limitPerSource` 300 · status `SUCCEEDED` with "Scraped
+   requested number of records" · the query's search metadata reported `total`
+   1,475. The settled item count equals the derived `maxItems`. The terminal
+   status and message do not say which condition stopped the run. **The
+   provider's terminal status does not expose enough information by itself to
+   distinguish natural exhaustion from another stopping condition.** (The
+   interim comparison 117 < 133 used the stale terminal snapshot; the settled
+   count is 133.)
+
+   `source_exhausted` therefore stays conservative and is **never** set from
+   `SUCCEEDED` alone. It requires all of: a successful terminal provider state ·
+   no application record cap reached · no provider cost-ceiling or charge-guard
+   termination · no timeout or other guard termination · positive provider
+   pagination or exhaustion evidence. When exhaustion cannot be proven, the stop
+   reason stays unknown/other (`stop_reason = null`), never an invented
+   `source_exhausted`.
+3. **Terminal reads are provisional — for cost and for counts.** Within about a
+   second of `finishedAt`, `usageTotalUsd` ($0.0443), `chargedEventCounts`
+   (117), dataset `itemCount` (117) and `X-Apify-Pagination-Total` (117) all
+   trailed the settled values ($0.0998 / 133 / 133 / 133), although the dataset
+   was last modified before `finishedAt`. This supports the cost lifecycle in
+   the review (§3): a terminal read is `provisional`, and the final actual cost
+   is the settled provider-reported value from later reads.
+4. **"Ads found so far" works as a lagging provider count.**
+   `X-Apify-Pagination-Total` rose 0 → 29 → 59 → 89 → 117 during the run, ahead
+   of the charged count but behind the settled 133 — a provider-reported
+   snapshot, labelled as such.
+5. **`restartOnError` false and the pinned `build` are accepted and echoed
+   back** in the run options.
+6. **Exactly one run was created.** The actor's run list shows one run started
+   after 08:00 UTC on 2026-09-11: `SwEWkJk0kp6sg4QMY`.
+7. **Import waits for the result to settle — owner decision (2026-09-11).** At
+   the terminal read the dataset metadata reported 117 of its 133 items
+   (whether the item listing itself was short at that moment was not
+   measured), so an immediate import could have committed a partial collection
+   as complete. The owner's provider result settlement gate is recorded in the
+   architecture review (§9) and tickets C04, C08, C09 and C11: no immediate
+   import; ready only when the run is terminal-success, `itemCount` and
+   `modifiedAt` are unchanged across two observations, the pagination total
+   agrees with `itemCount`, the full intended range returns exactly that many
+   items, and no guard indicates an incomplete or uncertain result.
+   `chargedEventCounts` is billing evidence and a diagnostic check only — never
+   required to equal `itemCount`. Not settled within the bounded window → the
+   same run and dataset are kept, `requires_admin` with
+   `provider_result_unsettled`, automatic polling stops; an admin may **retry
+   settlement** (re-reads the same dataset — no new run, no new charge) or
+   **fail the collection** (evidence preserved, no PT Glory dataset). A new
+   paid collection is a separate user action through admission and budget.
