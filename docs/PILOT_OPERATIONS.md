@@ -118,6 +118,25 @@ The generated password is appended to `.env.pilot-users.local` (gitignored,
 mode 600) and never printed. Hand it over, have the person change it, delete the
 file.
 
+### Changing a password
+
+The app has no change-password screen. Until it does, the person sits at the
+operator's machine and types their own:
+
+```powershell
+$env:PT_GLORY_ENV='pilot'; node --env-file-if-exists=.env.local scripts/pilot-set-password.mjs <email>
+```
+
+Hidden prompt, entered twice, at least 12 characters. It never takes the value
+from argv or the environment, never prints it, never writes it anywhere — so the
+operator never learns it either. A long run of digits (a phone or ID number)
+draws a warning and needs `yes`. On success it proves the new password signs in
+and removes that account's now-dead generated record from
+`.env.pilot-users.local`.
+
+Needs a real terminal (PowerShell or Windows Terminal). A piped or embedded
+shell cannot hide keystrokes, so the script refuses rather than echo them.
+
 | Role | May |
 |---|---|
 | viewer | read everything; keep their own Watchlist |
