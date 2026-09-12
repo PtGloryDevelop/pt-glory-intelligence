@@ -57,16 +57,10 @@ function adapt(overrides: Partial<AdapterInput> = {}): { text: string; file: Exp
   return { text: result.text, file: JSON.parse(result.text) as ExportFile };
 }
 
-/**
- * apify_actor_run joins COLLECTION_METHODS together with its CHECK migration in
- * C04. Until then this swaps that one field — and only it — so every other
- * contract rule is checked by the real validator and import engine.
- */
-function withPreC04Method(text: string): string {
-  const file = JSON.parse(text);
-  assert.equal(file.source.collection_method, COLLECTION_METHOD);
-  file.source.collection_method = "network_response_observation";
-  return JSON.stringify(file);
+/** The adapter's own method, accepted by the validator since migration 0037. */
+function assertsMethod(text: string): string {
+  assert.equal((JSON.parse(text) as { source: { collection_method: string } }).source.collection_method, COLLECTION_METHOD);
+  return text;
 }
 
 /** A minimal synthetic Apify item, shaped like the sample, with recognisable forbidden values. */
@@ -116,14 +110,14 @@ function apifyItem(overrides: Row = {}, snapshot: Row = {}): Row {
 
 // --- The export contract -------------------------------------------------------
 
-test("the validator refuses apify_actor_run until C04 adds it with its CHECK migration", () => {
+test("the validator accepts apify_actor_run, added by migration 0037", () => {
   const result = validate(adapt().file);
-  assert.equal(result.ok ? "ok" : result.reason, "unsupported_collection_method");
+  assert.equal(result.ok ? "ok" : result.reason, "ok");
 });
 
 test("the qualification sample becomes a valid PT Glory export", () => {
   const items = sample();
-  const result = validate(JSON.parse(withPreC04Method(adapt().text)));
+  const result = validate(JSON.parse(assertsMethod(adapt().text)));
   if (!result.ok) assert.fail(`${result.reason}: ${result.detail}`);
   assert.deepEqual(result.computed, {
     sourceRows: 59,
@@ -254,7 +248,7 @@ test("rows that cannot satisfy the contract go to unresolved_ads, and the file s
     missing_ad_archive_id: 2, missing_page_id: 1, invalid_start_date: 3,
   });
 
-  const analysis = analyzeImport(withPreC04Method(text));
+  const analysis = analyzeImport(assertsMethod(text));
   if (!analysis.ok) assert.fail(`${analysis.reason}: ${analysis.detail}`);
   assert.equal(analysis.counts.ads, 1);
   assert.equal(analysis.counts.quarantine, 6);
@@ -316,7 +310,7 @@ test("IMAGE, VIDEO, MULTI_IMAGES and DPA keep their media, reduced to the allowl
 // --- Compatibility with the unchanged import engine ------------------------------
 
 test("analyzeImport reads the adapter's export with the same active-ad semantics and counts", () => {
-  const analysis = analyzeImport(withPreC04Method(adapt().text));
+  const analysis = analyzeImport(assertsMethod(adapt().text));
   if (!analysis.ok) assert.fail(`${analysis.reason}: ${analysis.detail}`);
   assert.equal(analysis.counts.ads, 59);
   assert.equal(analysis.counts.quarantine, 0);
@@ -330,7 +324,7 @@ test("analyzeImport reads the adapter's export with the same active-ad semantics
 
 test("where both collectors saw the same ad, the canonical fields qualified in C01 agree", () => {
   const extension = analyzeImport(EXTENSION_TEXT);
-  const apify = analyzeImport(withPreC04Method(adapt().text));
+  const apify = analyzeImport(assertsMethod(adapt().text));
   if (!extension.ok) assert.fail(`${extension.reason}: ${extension.detail}`);
   if (!apify.ok) assert.fail(`${apify.reason}: ${apify.detail}`);
 

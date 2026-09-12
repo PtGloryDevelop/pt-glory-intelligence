@@ -16,12 +16,12 @@ test("every up migration has a matching down migration", () => {
   }
 });
 
-test("migrations are numbered 0001..0036 with no gaps", () => {
+test("migrations are numbered 0001..0037 with no gaps", () => {
   const numbers = up.map((f) => Number(f.slice(0, 4)));
-  assert.deepEqual(numbers, Array.from({ length: 36 }, (_, i) => i + 1));
+  assert.deepEqual(numbers, Array.from({ length: 37 }, (_, i) => i + 1));
 });
 
-test("all 17 tables are created", () => {
+test("all 18 tables are created", () => {
   const expected = [
     "user_roles", "categories", "collection_runs", "datasets", "pages",
     "page_observations", "ads", "ad_observations", "dataset_ads",
@@ -33,12 +33,15 @@ test("all 17 tables are created", () => {
     // Brand mapping (0033). The mapping is its own table, not a column on
     // pages: a brand id written in place would erase the decision it replaced.
     "brands", "brand_page_mappings",
+    // Phase 15 C04 (0037): one row per collection a person asked for, with the
+    // state machine's invariants enforced as constraints.
+    "collection_requests",
   ];
   for (const table of expected) {
     assert.match(allUp, new RegExp(`create table public\\.${table}\\b`), `missing ${table}`);
   }
   const created = [...allUp.matchAll(/create table public\.(\w+)/g)].map((m) => m[1]);
-  assert.equal(created.length, 17, `expected 17 tables, found ${created.length}`);
+  assert.equal(created.length, 18, `expected 18 tables, found ${created.length}`);
 });
 
 test("ads.ad_archive_id is NOT NULL UNIQUE and is_active stays nullable", () => {
@@ -74,11 +77,81 @@ test("quarantine reason is limited to the two row-level causes", () => {
   }
 });
 
-test("collection_method enum holds the three known collectors", () => {
+test("collection_method started as the three collectors the Extension era had", () => {
   assert.match(
     read("0004_collection_runs.sql"),
     /'network_response_observation','user_initiated_dom_observation','socialapis_api'/,
   );
+});
+
+test("0037 adds the automated method without disturbing the historical three", () => {
+  const sql = read("0037_collection_requests.sql");
+  const check = sql.match(/add constraint collection_runs_collection_method_check[\s\S]*?\);/);
+  assert.ok(check, "0037 must restate the method CHECK");
+  for (const method of [
+    "network_response_observation", "user_initiated_dom_observation", "socialapis_api",
+    "apify_actor_run",
+  ]) {
+    assert.match(check[0], new RegExp(`'${method}'`), `${method} must be accepted`);
+  }
+});
+
+test("0037 states every collection request invariant in the schema", () => {
+  const sql = read("0037_collection_requests.sql");
+  for (const fragment of [
+    // The states the architecture froze, including the settlement gate's own.
+    /'queued', 'starting', 'provider_start_uncertain', 'running',/,
+    /'settling',/,
+    /'importing', 'succeeded', 'failed'/,
+    // One name for an unresolved start, never a second equivalent.
+    /'provider_start_unknown'/,
+    /'provider_result_unsettled'/,
+    // Cost reconciliation cannot be scheduled before a run is identified.
+    /cost_next_check_at is null or provider_run_id is not null/,
+    // The release is all three fields or none, with a real reason.
+    // The reason has to hold something that is not whitespace; asserted as a
+    // literal below, because the SQL pattern is itself a character class.
+    /reservation_release_reason ~ /,
+    /and cost_status = 'unreported'/,
+    // Exactly-once canonical commit.
+    /create unique index collection_runs_request_once/,
+    // Column grants, not a table grant.
+    /grant select \(/,
+    /with \(security_invoker = true\)/,
+  ]) {
+    assert.match(sql, fragment, `0037 must contain ${fragment}`);
+  }
+  // No insert, update or delete policy: writes go through the server only.
+  assert.ok(sql.includes(String.raw`reservation_release_reason ~ '[^[:space:]]'`),
+    "a blank reason must be refused by the constraint itself");
+  assert.doesNotMatch(sql, /create policy collection_requests_(insert|update|delete)/);
+});
+
+test("0037 seeds every collector setting, and invents no production default", () => {
+  const sql = read("0037_collection_requests.sql");
+  const fixed = {
+    "collector.max_concurrent": "'1'::jsonb",
+    "collector.lease_seconds": "'120'::jsonb",
+    "collector.enabled": "'false'::jsonb",
+  };
+  const tbd = [
+    "collector.monthly_budget_usd", "collector.max_charge_per_run_usd",
+    "collector.estimated_usd_per_1000_ads", "collector.billing_cycle_anchor",
+    "collector.billing_cycle_length_months", "collector.max_records_per_run",
+    "collector.max_export_bytes", "collector.run_timeout_minutes",
+    "collector.reconcile_window_minutes", "collector.reconcile_page_size",
+    "collector.cost_settle_minutes", "collector.cost_final_window_hours",
+    "collector.result_settle_seconds", "collector.result_settle_window_minutes",
+    "collector.tick_batch", "collector.actor_build",
+  ];
+  for (const [key, value] of Object.entries(fixed)) {
+    assert.ok(sql.includes(`('${key}', ${value})`), `${key} must be seeded ${value}`);
+  }
+  for (const key of tbd) {
+    assert.ok(sql.includes(`('${key}', 'null'::jsonb)`), `${key} must start unset`);
+  }
+  // A price read from one qualification run is evidence, not a default.
+  assert.doesNotMatch(sql, /0\.00075|0\.0998|2\.25/);
 });
 
 test("collection_runs separates reported provenance from computed canon", () => {

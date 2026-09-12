@@ -16,6 +16,8 @@ export const COLLECTION_METHODS = [
   "network_response_observation",
   "user_initiated_dom_observation",
   "socialapis_api",
+  // Collected by an automated Ad Library search the server started (0037).
+  "apify_actor_run",
 ] as const;
 export type CollectionMethod = (typeof COLLECTION_METHODS)[number];
 

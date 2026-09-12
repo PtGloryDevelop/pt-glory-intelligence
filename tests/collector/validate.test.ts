@@ -62,6 +62,8 @@ test("collection_method outside the enum is rejected", () => {
 test("every approved collection method is accepted", () => {
   for (const method of [
     "network_response_observation", "user_initiated_dom_observation", "socialapis_api",
+    // The automated collector's method, accepted since 0037.
+    "apify_actor_run",
   ]) {
     const file = syntheticExport();
     (file.source as Record<string, unknown>).collection_method = method;
