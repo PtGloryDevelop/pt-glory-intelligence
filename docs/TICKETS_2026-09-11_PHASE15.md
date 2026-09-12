@@ -191,9 +191,17 @@
 
 ## P2 — Release
 
+### C16-PRE · ล้าง signed URL ใน fixture เดิม — **ต้องเสร็จก่อน C16**
+**Goal** ไม่มี fixture ใน git ที่ถือ URL ลายเซ็นของ fbcdn
+**Scope** `tests/fixtures/golden-500.json` มี URL ที่ยังมีลายเซ็น 3,799 จุด (`oh=` / `oe=`) ตั้งแต่ก่อน Phase 15 — ตัด query string ของ fbcdn ทุกตัว แล้วรัน golden snapshot / coverage / counts ใหม่ให้ตัวเลขเดิมทั้งหมด
+**Acceptance** สแกน `tests/fixtures/` ทั้งโฟลเดอร์ไม่เจอ `oh=` / `oe=` หรือ URL fbcdn ที่มี `?` · ตัวเลขของ golden ไม่เปลี่ยน
+**Tests** test สแกนลายเซ็นครอบคลุมทุก fixture ไม่ใช่เฉพาะของ C02
+**Deps** — · **C16 เริ่มไม่ได้ถ้าข้อนี้ยังไม่ผ่าน**
+**Out** แก้ข้อมูลจริง
+
 ### C16 · Production activation gate — ประตูเปิดใช้งานจริงเพียงประตูเดียว
 **Goal** พิสูจน์ทั้งระบบตามเงื่อนไขของเจ้าของ แล้วเปิด collector ตามลำดับที่ปลอดภัย
-**Scope** regression เต็มบน local (npm test · DB · Playwright chromium / p2 / c3 / collect · build) · watcher: 0 การเชื่อมต่อไป Supabase Cloud และ `api.apify.com` ระหว่าง test · guard scanner · เอกสาร (`PILOT_OPERATIONS.md`: การตั้งค่า collector, recovery · `PILOT_USER_GUIDE.md`: `เก็บข้อมูลใหม่` แทนการ import) · ลำดับเปิดใช้: migration → deploy (`enabled = false`) → Vault + settings → run แรกจริงที่เจ้าของอนุมัติ → `enabled = true` · action **Release unresolved budget reservation** (C11) ต้องผ่าน test แล้วก่อนเปิดใช้ เพื่อไม่ให้ reservation ที่ unresolved บล็อกงบถาวรโดยไม่มีทาง recovery (action นี้เปลี่ยนเฉพาะยอดที่ PT Glory ถือไว้ ไม่เปลี่ยนค่าใช้จริงหรือหลักฐานค่าใช้จ่าย)
+**Scope** regression เต็มบน local (npm test · DB · Playwright chromium / p2 / c3 / collect · build) · watcher: 0 การเชื่อมต่อไป Supabase Cloud และ `api.apify.com` ระหว่าง test · guard scanner · เอกสาร (`PILOT_OPERATIONS.md`: การตั้งค่า collector, recovery · `PILOT_USER_GUIDE.md`: `เก็บข้อมูลใหม่` แทนการ import) · ลำดับเปิดใช้: migration → deploy (`enabled = false`) → Vault + settings → run แรกจริงที่เจ้าของอนุมัติ → `enabled = true` · C16-PRE (ล้างลายเซ็นใน fixture เดิม) ต้องผ่านก่อน · ถ้ามีการทำ change detection ระหว่าง observation ในอนาคต: `cta_type` คือค่าความหมายที่ใช้ตัดสิน ส่วน `cta_text` เป็นภาษา/การนำเสนอของ provider — ความต่างเฉพาะ `cta_text` ห้ามนับเป็นการเปลี่ยนของโฆษณา (C02: ต่างกัน 26 จาก 27 เพราะภาษา ขณะที่ `cta_type` ตรงกันทั้งหมด) วันนี้ยังไม่มี detector ในระบบ · action **Release unresolved budget reservation** (C11) ต้องผ่าน test แล้วก่อนเปิดใช้ เพื่อไม่ให้ reservation ที่ unresolved บล็อกงบถาวรโดยไม่มีทาง recovery (action นี้เปลี่ยนเฉพาะยอดที่ PT Glory ถือไว้ ไม่เปลี่ยนค่าใช้จริงหรือหลักฐานค่าใช้จ่าย)
 
 **Production activation requirements (เจ้าของกำหนด — ต้องผ่านครบทุกข้อพร้อมหลักฐาน):**
 1. ไม่มี provider start ซ้ำใน test แบบ retry และ race

@@ -1,0 +1,1490 @@
+{
+  "schema_version": "pt-glory-meta-ad-library-export.v1",
+  "generated_at": "2026-09-10T04:59:59.161Z",
+  "source_rows": 27,
+  "unique_ads": 27,
+  "unique_pages": 19,
+  "unresolved_count": 0,
+  "scope": {
+    "country": "TH",
+    "query": "วิตามินสลายไขมัน",
+    "active_status": "active",
+    "ad_type": "all",
+    "media_type": "all"
+  },
+  "source": {
+    "product": "PT Glory Meta Ad Library Extension",
+    "collection_method": "network_response_observation",
+    "url": "https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=TH&is_targeted_country=false&media_type=all&q=%E0%B8%A7%E0%B8%B4%E0%B8%95%E0%B8%B2%E0%B8%A1%E0%B8%B4%E0%B8%99%E0%B8%AA%E0%B8%A5%E0%B8%B2%E0%B8%A2%E0%B9%84%E0%B8%82%E0%B8%A1%E0%B8%B1%E0%B8%99&search_type=keyword_unordered&sort_data[mode]=total_impressions&sort_data[direction]=desc",
+    "completeness_claim": "Only structured ad records observed in network responses already loaded by the Meta Ads Library page during this user-initiated session are included."
+  },
+  "stop_reason": "limit_reached",
+  "ads": [
+    {
+      "record_key": "ad:1986675705273310",
+      "ad_archive_id": "1986675705273310",
+      "collation_id": "1973037686633954",
+      "collation_count": 1,
+      "page_id": "1230411940355542",
+      "meta_page_id": "1230411940355542",
+      "page_name": "Calypso Clinic รัชดา Botox Filler โบท็อกซ์ ฟิลเลอร์ ร้อยไหม ปรับรูปหน้า",
+      "page_aliases": [],
+      "page_profile_uri": "https://www.facebook.com/100039104208324/",
+      "page_profile_numeric_id": "100039104208324",
+      "page_like_count": 32680,
+      "is_active": true,
+      "start_date": "2026-05-17T07:00:00.000Z",
+      "start_date_raw": "2026-05-17T07:00:00.000Z",
+      "end_date": null,
+      "end_date_raw": null,
+      "network_end_date_raw": "2026-09-09T07:00:00.000Z",
+      "display_format": "IMAGE",
+      "cta_type": "MESSAGE_PAGE",
+      "cta_text": "ส่งข้อความ",
+      "title": "ทรงสวยละมุน ฉ่ำฟู ดูแพง🍒",
+      "body_text": "ก่อนเติม = หน้าดูจืด หลังเติม = หน้าหวานขึ้น! 💋✨ เติมวอลลุ่มปาก ทรงสวยละมุน ฉ่ำฟู ดูแพง 🍒 อยากมีปากอวบอิ่ม #ยื่นเรฟให้คุณหมอปั้นได้เลย . ✨ โปรแรงแซงทุกโค้ง! เพียง 𝟭,𝟵𝟵𝟵.- / 𝘾𝘾 แรก 🎁 แถมฟรี! หน้าใส ลดฝ้า 𝘽𝙤𝙤𝙨𝙩𝙚𝙧 𝟮 เข็ม . ✅ ตัวยาสแกนเช็คได้ทุกกล่อง ✅ เลือกเติมได้ทุกบริเวณตามต้องการ ✅ประเมินรูปหน้าและทำหัตถการโดยแพทย์ . สำหรับลูกค้าร่วมกิจกรรมกดแชร์ รีวิว ยื่นเรฟปากในฝันได้เลย 💄🫧 . . พิมพ์ “สนใจ” เพื่อให้แอดมินส่งรายละเอียดเพิ่มเติมหรือทักแชทเลย ปรึกษาฟรีไม่มีค่าใช้จ่ายเพิ่มจบทุกปัญหาที่กังวล 👉🏻 https://lin.ee/W2SvLng 💳 ยินดีรับบัตรเครดิตและบัตรเดบิตทุกธนาคาร 🏥 คลินิกเปิดให้บริการทุกวัน (เวลา 11.30-20:00 น.) . ที่ 𝐂𝐀𝐋𝐘𝐏𝐒𝐎 𝐂𝐋𝐈𝐍𝐈𝐂 💉 ผลิตภัณฑ์แท้ ตรวจสอบได้ 👨🏻‍⚕️ คุณหมอวิเคราะห์ใบหน้าแบบเคสต่อเคสเพื่อผลลัพธ์ที่ดีที่สุด ━━━━━━━━━━━━━━━━━ 📍 จองคิว ปรึกษาคุณหมอฟรี! ☎️ 080-9496817 📲 line : @calypsoclinic https://lin.ee/W2SvLng 📸 IG : calypsoclinic 🚆 MRT สายสีน้ำเงิน~สายสีเหลือง สถานีลาดพร้าว 🚇 BTS สายสีเขียว สถานีรัชโยธิน 🚌 มีรถตู้ รถเมล์ ผ่านตลอดค่ะ . #CalypsoClinic #Neuramis #เติมแก้มตอบ #ดอลลี่อาย #เติมหน้าผาก #ปรับรูปหน้า #หน้าเรียว #เมโสแฟต #ฉีดสลายไขมัน #โบท็อกซ์ #ร้อยไหม #ฟิลเลอร์ #Botox #Filler #ฉีดผิว #ฉีดวิตามินผิว #เมโสหน้าใส #สลายฟิลเลอร์ #softfiller #ปากกระจับ #ฟิลเลอร์ปาก #ฟิลเลอร์ใต้ตา #เติมปาก #dollyeyes #ฟิลเลอร์หน้าเด็ก #พสจีน #beautyclinic",
+      "caption": null,
+      "link_url": null,
+      "link_description": null,
+      "publisher_platform": [
+        "FACEBOOK",
+        "INSTAGRAM",
+        "AUDIENCE_NETWORK",
+        "MESSENGER"
+      ],
+      "page_categories": [
+        "Health/beauty"
+      ],
+      "images": [
+        {
+          "original_image_url": "https://scontent.fphs2-1.fna.fbcdn.net/v/t39.35426-6/701056257_1351271770152851_5226917426476193828_n.jpg",
+          "resized_image_url": "https://scontent.fphs2-1.fna.fbcdn.net/v/t39.35426-6/700657895_1378750870942772_6073061628061942112_n.jpg",
+          "image_crops": []
+        }
+      ],
+      "videos": [],
+      "cards": [],
+      "raw_evidence": null,
+      "_pt_glory": {
+        "source_level": "network",
+        "collection_method": "network_response_observation",
+        "source_position": 1,
+        "request_url": "https://www.facebook.com/api/graphql/",
+        "parse_warnings": [],
+        "change_flags": []
+      }
+    },
+    {
+      "record_key": "ad:1547444780339786",
+      "ad_archive_id": "1547444780339786",
+      "collation_id": "2481491652308897",
+      "collation_count": 2,
+      "page_id": "105951192262704",
+      "meta_page_id": "105951192262704",
+      "page_name": "โปรเมดคลินิก - PMC คลินิกศัลยกรรมและผิวพรรณความงาม",
+      "page_aliases": [],
+      "page_profile_uri": "https://www.facebook.com/100085608278875/",
+      "page_profile_numeric_id": "100085608278875",
+      "page_like_count": 13789,
+      "is_active": true,
+      "start_date": "2026-05-05T07:00:00.000Z",
+      "start_date_raw": "2026-05-05T07:00:00.000Z",
+      "end_date": null,
+      "end_date_raw": null,
+      "network_end_date_raw": "2026-09-09T07:00:00.000Z",
+      "display_format": "VIDEO",
+      "cta_type": "MESSAGE_PAGE",
+      "cta_text": "ส่งข้อความ",
+      "title": "9,900 บาท จากปกติ 19,900 บาท (จำกัด 49 ท่าน เท่านั้น!!)",
+      "body_text": "🔥เติมไขมันหน้าเด็ก 9,900 บาท จากปกติ 19,900 บาท (จำกัด 49 ท่าน เท่านั้น!!) จะดีแค่ไหน‼️ ถ้าสวยแบบปลอดภัย ด้วยไขมันตัวเอง หลังเติมสวยเป๊ะ แผลเล็กเท่ารูเข็ม . 📌รับประกัน!! #รีวิวเยอะที่สุด #หมอเบญ #ยืน1เรื่องเติมไขมันหน้า . 📣ทำไมต้องเติมไขมันหน้าที่ #Promed Clinic #หมอเบญ ✅เรามีทีมแพทย์ที่มากประสบการณ์ กว่า10,000เคส . ✅ดูแลอย่างใกล้ชิดทั้งก่อนและหลังทำ . ✅สะอาด ปลอดภัย พร้อมด้วยเครื่องมือครบครัน ได้มาตรฐาน (**ความปลอดภัยมาเป็นอันดับแรก) . ✅เติมไขมันทั่วหน้า ไม่จำกัดจุด ไม่จำกัด CC . ✅ ปรับรูปหน้าเฉพาะบุคคล . ✅ เทคนิคเดียวกับทางเกาหลี . ✅ ปลอดภัยด้วยไขมันตัวเอง . ✅ แพทย์ผู้มีประสบการณ์โดยตรงในการปรับรูปหน้า . 📌ด้วยขั้นตอนการทำพิเศษเฉพาะของทาง #Promed Clinic #หมอเบญ เท่านั้น!! . 1.) Supernano fat คัดไขมัน ปั่นแยกด้วยเครื่องมือที่ทันสมัยให้ได้ไขมันที่บริสุทธิ์ เพื่อการจัดเรียงไขมันอย่างสวยงามและเรียบเนียน . 2.) ผสานด้วยวิธีการทำ Fat grafting + Growth factor เฉพาะของทางคลินิก เพิ่ม Growth factor กระตุ้นคุณภาพเซลล์ไขมัน เพื่อให้ได้ไขมันที่มีคุณภาพดีเยี่ยม . 3.) ด้วยเทคนิคพิเศษของทางคลินิก Diamond fat spider เป็นการเติมไขมัน 3 ระดับชั้น เพื่อให้เซลล์ไขมันติดอยู่นานที่สุด “ Fat nano drop lifting spider layer ” เป็นการเติมไขมันลงไปถึงชั้นลึกที่สุดและชั้นกลางรวมถึงชั้นบน และสานลึกเป็นตาข่าย เพื่อให้เซลล์ไขมันเกาะติดดีและอยู่ได้นานที่สุด . ✨ เทคนิคนี้จะทำให้มวลไขมันสมบูรณ์และแข็งแรงมากที่สุด และเน้นความละเอียดของมวลไขมันสานเป็นตาข่ายและป้องกันการเป็นคลื่นหรือเป็นก้อน และช่วยเพิ่มฉ่ำวาวดูโกลด์หลังทำทันที . ✅ โดยแพทย์ #หมอเบญ #ยืน1เรื่องเติมไขมันหน้า ประสบการณ์สูง ที่ #Promed Clinic ย่านกัลปพฤกษ์ เอกชัย บางบอน . ⭐️การเติมไขมันหน้าเหมาะสำหรับผู้ที่มีปัญหา ✅ หน้าตอบ ✅ ใต้ตาลึก ✅ หน้าผากไม่มีมิติ ✅ ขมับยุบเป็นหลุม ✅ ร่องแก้มลึกอย่างชัดเจน ✅ คางตัด . ⚫การเติมไขมันสามารถปรับรูปหน้า จบปัญหาขมับเว้า แก้มตอบ ร่องแก้ม ใต้ตาลึก โหนกแก้มสูงเติมเต็มด้วยไขมันแก้ปัญหา ลดหน้าโทรม คืนความมั่นใจกลับมาได้ดีที่สุด . 📣จบปัญหาทั่วหน้าได้ด้วยราคา 9900 บาท เท่านั้น (จำกัด 49 ท่าน เท่านั้น)‼️ . 🎊พิเศษมาเป็นคู่ ลดเพิ่มอีกคู่ละ 500 บาท🎊 . ✨ ไม่ต้องพักฟื้น หลังจากดูดไขมันเติมหน้าเสร็จแล้ว สามารถกลับบ้านและใช้ชีวิตได้ตามปกติได้เลย ในตำแหน่งที่ดูดไขมันแผลมีขนาดเล็ก ลดความเสี่ยงในการเกิดแผลเป็น และแผลคีลอยด์ ผิวเรียบเนียน ไม่เป็นคลื่น เป็นก้อน . 📌รายการของแถมพิเศษ 12 รายการ มูลค่ากว่า 20,000‼️ ✅ ฟรี! ปรึกษาแพทย์ #หมอเบญ . ✅ ฟรี! ออกแบบวิเคราะห์รูปหน้าแบบเจาะลึก . ✅ ฟรี! ตรวจร่างกายความพร้อมก่อนเข้ารับบริการผ่าตัดโดยแพทย์ . ✅ ฟรี! ยานอนหลับมูลค่า 1200 บาท . ✅ ฟรี! ยาชาทั้งดูดและเติมไขมัน มูลค่า 1200 บาท . ✅ ฟรี! anti swelling (ยาฉีดลดบวมมูลค่า 1200 บาท) . ✅ ฟรี! fat face mask (มาร์คคอลลาเจ้นเตรียมผิวมูลค่า 2000 บาท) . ✅ ฟรี! preparing mask (มาร์คเตรียมความพร้อมไขมันมูลค่า 2000 บาท) . ✅ ฟรี! pure blink (drip วิตามินผิวใสมูลค่า 3900 บาท) . ✅ ฟรี! prp plasma กระตุ้นเซลล์ไขมันหลังทำมูลค่า 3900 บาท . ✅ ฟรี! body firm นวดกระชับเพื่อป้องกันการเกิดพังผืด และกระชับผิว มูลค่า 2900 บาท . ✅ ฟรี! ยารับประทานแก้ปวดและฆ่าเชื้อหลังทำ มูลค่า 1000 บาท . เน้นย้ำ‼️ หลังทำจะมีทีมแพทย์ #หมอเบญ ดูแลเคสทุกเคสด้วยตัวเอง , 🔥โอนจองโปรโมชั่นพิเศษเพียง 900 บาทเก็บสิทธิ์ไว้ได้นาน 3เดือน (**เหตุจำเป็นสามารถแจ้งเลื่อนนัดได้) จำกัด 49 ท่าน เท่านั้น!! . ---------------------------------------------------------------- . 📲ปรึกษา/จองคิว/ติดต่อข้อมูลเพิ่มเติม Call center: 095-980-2779 Tel: 02-897-7398 Line ID: @promedclinic (Add friend คลิกlinkทางนี้เลยจ้า http://bit.ly/2Meaz0I) . -------------------------------------------------- . 🏡#Promedclinic ถนนกัลปพฤกษ์ ซอยกำนันแม้น24 แขวงบางขุนเทียน เขตจอมทอง กรุงเทพฯ . #โปรเมดคลินิก #หมอเบญ #หมอแจม #เรื่องไขมันไว้ใจเรา #ยืนหนึ่งเรื่องไขมัน #เติมไขมันหน้าเด็ก #ไม่จำกัดซีซี #ศัลยกรรมสวย #เสริมจมูกใหม่ #งานแก้ไขจมูก #เนื้อเยื่อหลังหู #ตะไบฮัมพ์ #เย็บอินเตอร์โดม #เนื้อจมูกน้อย #เติมไขมันหน้า #ดูดไขมัน #ฉีดโบท็อกซ์ #ฉีดฟิลเลอร์ #ร้อยไหม #ฉีดสลายไขมัน #ฉีดเมโสหน้าใส #ศัลยกรรม #ปรับรูปหน้า #คลินิกความงาม #ศูนย์ศัลยกรรมความงามผิวพรรณ #คลินิกความงามแถวกำนันแม้น",
+      "caption": null,
+      "link_url": null,
+      "link_description": null,
+      "publisher_platform": [
+        "FACEBOOK",
+        "INSTAGRAM",
+        "AUDIENCE_NETWORK",
+        "MESSENGER"
+      ],
+      "page_categories": [
+        "Health/beauty"
+      ],
+      "images": [],
+      "videos": [
+        {
+          "video_hd_url": "https://scontent.fphs2-1.fna.fbcdn.net/o1/v/t2/f2/m366/AQP8GPfJIbsDCV1daeUvL-bOcHGUF6Jfp9wEGYpfkkTTq6MVKMwHTSl9ZMxtwaiFYQbFbdVKgrkTAVSCv-5IEj24pZOjqkbXExzDsSMt8Qjxdg.mp4",
+          "video_sd_url": "https://scontent.fphs2-1.fna.fbcdn.net/o1/v/t2/f2/m412/AQPXJKAuM_Tluk3O2k-DxWAyGybaVsq-rohcOa5qcPd-OUaX0VUcRZc79U6mTzoYAGp3TCoqMFRIF1pMOc4pqazGXSH-efJtxh32tm722w.mp4",
+          "video_preview_image_url": "https://scontent.fphs2-1.fna.fbcdn.net/v/t39.35426-6/687928489_1643236973670225_6739884419820092456_n.jpg"
+        }
+      ],
+      "cards": [],
+      "raw_evidence": null,
+      "_pt_glory": {
+        "source_level": "network",
+        "collection_method": "network_response_observation",
+        "source_position": 2,
+        "request_url": "https://www.facebook.com/api/graphql/",
+        "parse_warnings": [],
+        "change_flags": []
+      }
+    },
+    {
+      "record_key": "ad:2877712445911950",
+      "ad_archive_id": "2877712445911950",
+      "collation_id": "2481491652308897",
+      "collation_count": 1,
+      "page_id": "105951192262704",
+      "meta_page_id": "105951192262704",
+      "page_name": "โปรเมดคลินิก - PMC คลินิกศัลยกรรมและผิวพรรณความงาม",
+      "page_aliases": [],
+      "page_profile_uri": "https://www.facebook.com/100085608278875/",
+      "page_profile_numeric_id": "100085608278875",
+      "page_like_count": 13789,
+      "is_active": true,
+      "start_date": "2026-05-19T07:00:00.000Z",
+      "start_date_raw": "2026-05-19T07:00:00.000Z",
+      "end_date": null,
+      "end_date_raw": null,
+      "network_end_date_raw": "2026-09-09T07:00:00.000Z",
+      "display_format": "VIDEO",
+      "cta_type": "MESSAGE_PAGE",
+      "cta_text": "ส่งข้อความ",
+      "title": "9,900 บาท จากปกติ 19,900 บาท (จำกัด 49 ท่าน เท่านั้น!!)",
+      "body_text": "🔥เติมไขมันหน้าเด็ก 9,900 บาท จากปกติ 19,900 บาท (จำกัด 49 ท่าน เท่านั้น!!) จะดีแค่ไหน‼️ ถ้าสวยแบบปลอดภัย ด้วยไขมันตัวเอง หลังเติมสวยเป๊ะ แผลเล็กเท่ารูเข็ม . 📌รับประกัน!! #รีวิวเยอะที่สุด #หมอเบญ #ยืน1เรื่องเติมไขมันหน้า . 📣ทำไมต้องเติมไขมันหน้าที่ #Promed Clinic #หมอเบญ ✅เรามีทีมแพทย์ที่มากประสบการณ์ กว่า10,000เคส . ✅ดูแลอย่างใกล้ชิดทั้งก่อนและหลังทำ . ✅สะอาด ปลอดภัย พร้อมด้วยเครื่องมือครบครัน ได้มาตรฐาน (**ความปลอดภัยมาเป็นอันดับแรก) . ✅เติมไขมันทั่วหน้า ไม่จำกัดจุด ไม่จำกัด CC . ✅ ปรับรูปหน้าเฉพาะบุคคล . ✅ เทคนิคเดียวกับทางเกาหลี . ✅ ปลอดภัยด้วยไขมันตัวเอง . ✅ แพทย์ผู้มีประสบการณ์โดยตรงในการปรับรูปหน้า . 📌ด้วยขั้นตอนการทำพิเศษเฉพาะของทาง #Promed Clinic #หมอเบญ เท่านั้น!! . 1.) Supernano fat คัดไขมัน ปั่นแยกด้วยเครื่องมือที่ทันสมัยให้ได้ไขมันที่บริสุทธิ์ เพื่อการจัดเรียงไขมันอย่างสวยงามและเรียบเนียน . 2.) ผสานด้วยวิธีการทำ Fat grafting + Growth factor เฉพาะของทางคลินิก เพิ่ม Growth factor กระตุ้นคุณภาพเซลล์ไขมัน เพื่อให้ได้ไขมันที่มีคุณภาพดีเยี่ยม . 3.) ด้วยเทคนิคพิเศษของทางคลินิก Diamond fat spider เป็นการเติมไขมัน 3 ระดับชั้น เพื่อให้เซลล์ไขมันติดอยู่นานที่สุด “ Fat nano drop lifting spider layer ” เป็นการเติมไขมันลงไปถึงชั้นลึกที่สุดและชั้นกลางรวมถึงชั้นบน และสานลึกเป็นตาข่าย เพื่อให้เซลล์ไขมันเกาะติดดีและอยู่ได้นานที่สุด . ✨ เทคนิคนี้จะทำให้มวลไขมันสมบูรณ์และแข็งแรงมากที่สุด และเน้นความละเอียดของมวลไขมันสานเป็นตาข่ายและป้องกันการเป็นคลื่นหรือเป็นก้อน และช่วยเพิ่มฉ่ำวาวดูโกลด์หลังทำทันที . ✅ โดยแพทย์ #หมอเบญ #ยืน1เรื่องเติมไขมันหน้า ประสบการณ์สูง ที่ #Promed Clinic ย่านกัลปพฤกษ์ เอกชัย บางบอน . ⭐️การเติมไขมันหน้าเหมาะสำหรับผู้ที่มีปัญหา ✅ หน้าตอบ ✅ ใต้ตาลึก ✅ หน้าผากไม่มีมิติ ✅ ขมับยุบเป็นหลุม ✅ ร่องแก้มลึกอย่างชัดเจน ✅ คางตัด . ⚫การเติมไขมันสามารถปรับรูปหน้า จบปัญหาขมับเว้า แก้มตอบ ร่องแก้ม ใต้ตาลึก โหนกแก้มสูงเติมเต็มด้วยไขมันแก้ปัญหา ลดหน้าโทรม คืนความมั่นใจกลับมาได้ดีที่สุด . 📣จบปัญหาทั่วหน้าได้ด้วยราคา 9900 บาท เท่านั้น (จำกัด 49 ท่าน เท่านั้น)‼️ . 🎊พิเศษมาเป็นคู่ ลดเพิ่มอีกคู่ละ 500 บาท🎊 . ✨ ไม่ต้องพักฟื้น หลังจากดูดไขมันเติมหน้าเสร็จแล้ว สามารถกลับบ้านและใช้ชีวิตได้ตามปกติได้เลย ในตำแหน่งที่ดูดไขมันแผลมีขนาดเล็ก ลดความเสี่ยงในการเกิดแผลเป็น และแผลคีลอยด์ ผิวเรียบเนียน ไม่เป็นคลื่น เป็นก้อน . 📌รายการของแถมพิเศษ 12 รายการ มูลค่ากว่า 20,000‼️ ✅ ฟรี! ปรึกษาแพทย์ #หมอเบญ . ✅ ฟรี! ออกแบบวิเคราะห์รูปหน้าแบบเจาะลึก . ✅ ฟรี! ตรวจร่างกายความพร้อมก่อนเข้ารับบริการผ่าตัดโดยแพทย์ . ✅ ฟรี! ยานอนหลับมูลค่า 1200 บาท . ✅ ฟรี! ยาชาทั้งดูดและเติมไขมัน มูลค่า 1200 บาท . ✅ ฟรี! anti swelling (ยาฉีดลดบวมมูลค่า 1200 บาท) . ✅ ฟรี! fat face mask (มาร์คคอลลาเจ้นเตรียมผิวมูลค่า 2000 บาท) . ✅ ฟรี! preparing mask (มาร์คเตรียมความพร้อมไขมันมูลค่า 2000 บาท) . ✅ ฟรี! pure blink (drip วิตามินผิวใสมูลค่า 3900 บาท) . ✅ ฟรี! prp plasma กระตุ้นเซลล์ไขมันหลังทำมูลค่า 3900 บาท . ✅ ฟรี! body firm นวดกระชับเพื่อป้องกันการเกิดพังผืด และกระชับผิว มูลค่า 2900 บาท . ✅ ฟรี! ยารับประทานแก้ปวดและฆ่าเชื้อหลังทำ มูลค่า 1000 บาท . เน้นย้ำ‼️ หลังทำจะมีทีมแพทย์ #หมอเบญ ดูแลเคสทุกเคสด้วยตัวเอง , 🔥โอนจองโปรโมชั่นพิเศษเพียง 900 บาทเก็บสิทธิ์ไว้ได้นาน 3เดือน (**เหตุจำเป็นสามารถแจ้งเลื่อนนัดได้) จำกัด 49 ท่าน เท่านั้น!! . ---------------------------------------------------------------- . 📲ปรึกษา/จองคิว/ติดต่อข้อมูลเพิ่มเติม Call center: 095-980-2779 Tel: 02-897-7398 Line ID: @promedclinic (Add friend คลิกlinkทางนี้เลยจ้า http://bit.ly/2Meaz0I) . -------------------------------------------------- . 🏡#Promedclinic ถนนกัลปพฤกษ์ ซอยกำนันแม้น24 แขวงบางขุนเทียน เขตจอมทอง กรุงเทพฯ . #โปรเมดคลินิก #หมอเบญ #หมอแจม #เรื่องไขมันไว้ใจเรา #ยืนหนึ่งเรื่องไขมัน #เติมไขมันหน้าเด็ก #ไม่จำกัดซีซี #ศัลยกรรมสวย #เสริมจมูกใหม่ #งานแก้ไขจมูก #เนื้อเยื่อหลังหู #ตะไบฮัมพ์ #เย็บอินเตอร์โดม #เนื้อจมูกน้อย #เติมไขมันหน้า #ดูดไขมัน #ฉีดโบท็อกซ์ #ฉีดฟิลเลอร์ #ร้อยไหม #ฉีดสลายไขมัน #ฉีดเมโสหน้าใส #ศัลยกรรม #ปรับรูปหน้า #คลินิกความงาม #ศูนย์ศัลยกรรมความงามผิวพรรณ #คลินิกความงามแถวกำนันแม้น",
+      "caption": null,
+      "link_url": null,
+      "link_description": null,
+      "publisher_platform": [
+        "FACEBOOK",
+        "INSTAGRAM",
+        "AUDIENCE_NETWORK",
+        "MESSENGER"
+      ],
+      "page_categories": [
+        "Health/beauty"
+      ],
+      "images": [],
+      "videos": [
+        {
+          "video_hd_url": "https://scontent.fphs2-1.fna.fbcdn.net/o1/v/t2/f2/m366/AQP8GPfJIbsDCV1daeUvL-bOcHGUF6Jfp9wEGYpfkkTTq6MVKMwHTSl9ZMxtwaiFYQbFbdVKgrkTAVSCv-5IEj24pZOjqkbXExzDsSMt8Qjxdg.mp4",
+          "video_sd_url": "https://scontent.fphs2-1.fna.fbcdn.net/o1/v/t2/f2/m412/AQPXJKAuM_Tluk3O2k-DxWAyGybaVsq-rohcOa5qcPd-OUaX0VUcRZc79U6mTzoYAGp3TCoqMFRIF1pMOc4pqazGXSH-efJtxh32tm722w.mp4",
+          "video_preview_image_url": "https://scontent.fphs2-1.fna.fbcdn.net/v/t39.35426-6/687928489_1643236973670225_6739884419820092456_n.jpg"
+        }
+      ],
+      "cards": [],
+      "raw_evidence": null,
+      "_pt_glory": {
+        "source_level": "network",
+        "collection_method": "network_response_observation",
+        "source_position": 3,
+        "request_url": "https://www.facebook.com/api/graphql/",
+        "parse_warnings": [],
+        "change_flags": []
+      }
+    },
+    {
+      "record_key": "ad:1201184711560461",
+      "ad_archive_id": "1201184711560461",
+      "collation_id": "1827344874864110",
+      "collation_count": 3,
+      "page_id": "1105725919577784",
+      "meta_page_id": "1105725919577784",
+      "page_name": "Destiny Clinic",
+      "page_aliases": [],
+      "page_profile_uri": "https://www.facebook.com/DestinyAestheticsClinic/",
+      "page_profile_numeric_id": null,
+      "page_like_count": 130489,
+      "is_active": true,
+      "start_date": "2025-05-05T07:00:00.000Z",
+      "start_date_raw": "2025-05-05T07:00:00.000Z",
+      "end_date": null,
+      "end_date_raw": null,
+      "network_end_date_raw": "2026-09-09T07:00:00.000Z",
+      "display_format": "VIDEO",
+      "cta_type": "MESSAGE_PAGE",
+      "cta_text": "ส่งข้อความ",
+      "title": "ดริปผิวสูตรลดน้ำหนัก : Destiny Clinic",
+      "body_text": "👉 ออกกำลังกายแล้วไม่ลด ลดยาก ระบบเผาผลาญไม่ดี 👉 ผิวคล้ำ ผิวหมอง หักโหมงาน ออกกำลังกายหนัก 👉 ขี้เกียจออกกำลังกาย ไขมันเยอะ -------- \" ฟังทางนี้ !!! \" --------- . 🤡Active Fat Burners +🌞 (Wink White Booster) IV Drip สูตรพิเศษ กระตุ้นระบบเผาผลาญ พร้อมบูสต์ผิวให้เปล่งปลั่ง เร่งกระบวนเปลี่ยนไขมันส่วนเกินนำมาใช้ เป็นพลังงาน . ✅ เผาผลาญไขมันในระดับเซลล์ ✅ เร่งการดึงสภาพไขมันให้เป็นพลังงาน ✅ ผิวขาวมีออร่า สุขภาพผิวดีจากภายใน . ⭐ พิเศษรับปีนี้ 1899.-/ครั้ง (เฉพาะผู้ลงทะเบียนทางออนไลน์ 80 ท่าน/สาขา) . 💬 สนใจสอบถามข้อมูล!! m.me/DestinyAestheticsClinic ------------------------------------- . 📞 ฟิวเจอร์พาร์ครังสิต 090-961-9387 📞 ซีคอนสแควร์ ศรีนครินทร์ 082-669-1764 📞 เดอะพรอมานาด 095-163-8242 📞 เซ็นทรัลพลาซ่า ลาดพร้าว 096-961-4787 📞 เซ็นทรัลพลาซ่า พระราม2 091-689-9946 📞 เซ็นทรัลพลาซ่า พระราม3 096-941-6787 📞 เซ็นทรัลพลาซ่า ปิ่นเกล้า 095-252-9587 . #DestinyClinic #ChagneYourDestiny #Acne #Melasma #Treatment #Filler #Botox #FatLift #Cryolipolysis #ฉีดฝ้า #สลายฝ้า #ยกกระชับ #ปรับรูปหน้า #ชะลอวัย #AntiAging #NadPlus #IVDrip #ดริปผิว #เร่งการเผาผลาญ",
+      "caption": null,
+      "link_url": null,
+      "link_description": null,
+      "publisher_platform": [
+        "FACEBOOK",
+        "INSTAGRAM",
+        "AUDIENCE_NETWORK",
+        "MESSENGER"
+      ],
+      "page_categories": [
+        "Health/beauty"
+      ],
+      "images": [],
+      "videos": [
+        {
+          "video_hd_url": "https://scontent.fphs2-1.fna.fbcdn.net/o1/v/t2/f2/m412/AQMlHfzpS_yBkt3y51cAGganpwW0Cr8O26CXjB9BlM0n4tjrOediBwk707K9ORUhtEHJ8_z2XrkheFCmtsGH.mp4",
+          "video_sd_url": "https://scontent.fphs2-1.fna.fbcdn.net/o1/v/t2/f2/m412/AQMWRbiRh4d-iuCMBjNbEhXqLlAVNg5Hm93Xzf62DNPxb8-wrCX0iy7bWf5zZtXNrZaOmQeqEjqPNVam57bF8Ks.mp4",
+          "video_preview_image_url": "https://scontent.fphs2-1.fna.fbcdn.net/v/t39.35426-6/495092770_1000186562304132_786574315600298359_n.jpg"
+        }
+      ],
+      "cards": [],
+      "raw_evidence": null,
+      "_pt_glory": {
+        "source_level": "network",
+        "collection_method": "network_response_observation",
+        "source_position": 4,
+        "request_url": "https://www.facebook.com/api/graphql/",
+        "parse_warnings": [],
+        "change_flags": []
+      }
+    },
+    {
+      "record_key": "ad:1670279110932437",
+      "ad_archive_id": "1670279110932437",
+      "collation_id": "1471237394302698",
+      "collation_count": 3,
+      "page_id": "1006317285891076",
+      "meta_page_id": "1006317285891076",
+      "page_name": "Verna Plus Thailand เพจเจ้าของแบรนด์",
+      "page_aliases": [],
+      "page_profile_uri": "https://www.facebook.com/61587433621880/",
+      "page_profile_numeric_id": "61587433621880",
+      "page_like_count": 2871,
+      "is_active": true,
+      "start_date": "2026-06-02T07:00:00.000Z",
+      "start_date_raw": "2026-06-02T07:00:00.000Z",
+      "end_date": null,
+      "end_date_raw": null,
+      "network_end_date_raw": "2026-09-09T07:00:00.000Z",
+      "display_format": "IMAGE",
+      "cta_type": "MESSAGE_PAGE",
+      "cta_text": "ส่งข้อความ",
+      "title": "Chat in Messenger",
+      "body_text": "เตือน!! ของเเท้ต้องเวอน่าต้องเพจนี้เท่านั้น ไม่มีแอดไลน์ก่อนสั่งซื้อ ไม่มีของทดลองก่อนทาน #นวัตกรรมใหม่แคปซูล2ชั้น🔥#เวอน่าพลัส ✅ตัดน้ำตาล ตัดแป้ง ✅สลายไขมันเก่า กระชับสัดส่วน ✅ลดไขมันสะสม ดีท็ิอกลำไส้ โปรโมชั่นสุดพิเศษ สำหรับคนอยากผอม ซื้อ 1 แถม 1 เพียง 490.- ส่งฟรี มีเก็บเงินปลายทาง รอรับหน้าบ้านได้เลย #เวอน่า #ลดน้ำหนัก #วิตามินผัก #หุ่นดี",
+      "caption": null,
+      "link_url": null,
+      "link_description": null,
+      "publisher_platform": [
+        "FACEBOOK",
+        "INSTAGRAM",
+        "AUDIENCE_NETWORK",
+        "THREADS"
+      ],
+      "page_categories": [
+        "Vitamins/supplements"
+      ],
+      "images": [
+        {
+          "original_image_url": "https://scontent.fphs2-1.fna.fbcdn.net/v/t39.35426-6/712643899_1495613158928486_6605060072289971274_n.jpg",
+          "resized_image_url": "https://scontent.fphs2-1.fna.fbcdn.net/v/t39.35426-6/710555454_1694884964995911_1786417692558348202_n.jpg",
+          "image_crops": []
+        }
+      ],
+      "videos": [],
+      "cards": [],
+      "raw_evidence": null,
+      "_pt_glory": {
+        "source_level": "network",
+        "collection_method": "network_response_observation",
+        "source_position": 5,
+        "request_url": "https://www.facebook.com/api/graphql/",
+        "parse_warnings": [],
+        "change_flags": []
+      }
+    },
+    {
+      "record_key": "ad:1357359659550824",
+      "ad_archive_id": "1357359659550824",
+      "collation_id": "1705854830133329",
+      "collation_count": 1,
+      "page_id": "101724559226025",
+      "meta_page_id": "101724559226025",
+      "page_name": "The Season Spa & Beauty",
+      "page_aliases": [],
+      "page_profile_uri": "https://www.facebook.com/theseasonspa/",
+      "page_profile_numeric_id": null,
+      "page_like_count": 7274,
+      "is_active": true,
+      "start_date": "2026-04-11T07:00:00.000Z",
+      "start_date_raw": "2026-04-11T07:00:00.000Z",
+      "end_date": null,
+      "end_date_raw": null,
+      "network_end_date_raw": "2026-08-12T07:00:00.000Z",
+      "display_format": "VIDEO",
+      "cta_type": "MESSAGE_PAGE",
+      "cta_text": "ส่งข้อความ",
+      "title": "ขัด พอก อบ 1,499.- บาท",
+      "body_text": "💆🏻‍♀️มาแจกพิกัดร้านสปา ที่ครบวงจร บอกเลยว่าเลิฟมากก💕 . ใดๆคือ อยากแนะนำที่นี่ให้เพื่อนๆได้ลองมากค่ะ เหมือนได้ความผ่อนคลาย และการบำรุงผิวไปควบคู่เลย หลังทำเสร็จรู้สึกว่าผิวนุ่มมาก แบบอิ่มฟู ไอเลิฟมากค่าา🩷 กับโปรแกรมที่ต้องบอกเลยว่าคุ้มสุดๆค่ะ กับโปรแกรมสปาผิวออร่าจัดเต็ม 3 ขั้นตอน จัดโปรโมชั่นพิเศษ ราคาเพียง 1,499.- บาทเท่านั้น จากราคาปกติ 3,000.- บาท *** พิเศษสำหรับ 30 ท่านแรก โอนจองออนไลน์เท่านั้น แถมฟรี โปรแกรม Multi Rf หน้าท้อง 15 นาที) . ขั้นตอนในการทำ 90 นาที 💗 ขัดขี้ไคลด้วยสครับสมุนไพรสูตรชาววัง ผลัดเซลล์ผิวเก่า (เลือกสครับได้ตามปัญหาผิว) 💗 พอกไบร์เทนนิ่ง ให้ผิวกระจ่างใส ลดจุดด่างดำ ลดรอยแตกลาย สีผิวสม่ำเสมอ 💗 อบผ้าห่มอินฟราเรด ช่วยผลักวิตามินให้ลงลึก ช่วยกระตุ้นระบบการไหลเวียนโลหิต และขับเดรนของเสีย . ••••••••••••••••••••••••••• เพื่อความสะดวกสำรองคิว/สอบถามเพิ่มเติม 👇🏻 🕙 เปิดบริการทุกวัน : 10.00 - 21.00 น. 𝗟𝗶𝗻𝗲 ไม่พลาดโปร : @theseasonspatmk1 𝗖𝗮𝗹𝗹 : 061-6939644, 02-0007433 𝗜𝗻𝗯𝗼𝘅 : https://m.me/theseasonspa 𝗟𝗼𝗰𝗮𝘁𝗶𝗼𝗻 : ปากซอยทุ่งมังกร 1 ถนนทุ่งมังกร ตลิ่งชัน กทม. https://goo.gl/maps/QjbZM7YUnzx5uWbFA ** สามารถจอดรถหน้าร้าน และบริเวณด้านข้างร้านได้ค่ะ #สปาผิว #ผิวออร่า #ระเบิดขี้ไคล #สปาที่ดีที่สุดในตลิ่งชัน #สปาใกล้ฉัน #ตลิ่งชัน #เดอะซีซั่นสปา #นวดไหนดี #สปาแบบครบวงจร",
+      "caption": null,
+      "link_url": null,
+      "link_description": null,
+      "publisher_platform": [
+        "FACEBOOK",
+        "INSTAGRAM",
+        "AUDIENCE_NETWORK",
+        "MESSENGER"
+      ],
+      "page_categories": [
+        "Health/beauty"
+      ],
+      "images": [],
+      "videos": [
+        {
+          "video_hd_url": "https://scontent.fphs2-1.fna.fbcdn.net/o1/v/t2/f2/m366/AQMXVhoFisnq-1hyB_M2AqIHvge_HaZEXNLERPj96X0LMpiu2JDsJAbLOchKm7vfuEXrn3L8m4UvzUDAQOY-GShZhxpkTqypRqYdER7XRkcD-g.mp4",
+          "video_sd_url": "https://scontent.fphs2-1.fna.fbcdn.net/o1/v/t2/f2/m366/AQN9yTBylqEKlSwQHkdu8Ef_he16_8TCVccwzwcsRKnrXqOamTY2Vl1BCYcRtFgYaW7wcNK86df58aZloROb749j1S4piDTq72Uh-vmlog.mp4",
+          "video_preview_image_url": "https://scontent.fphs2-1.fna.fbcdn.net/v/t39.35426-6/670914356_2394305901083438_3284802456792171272_n.jpg"
+        }
+      ],
+      "cards": [],
+      "raw_evidence": null,
+      "_pt_glory": {
+        "source_level": "network",
+        "collection_method": "network_response_observation",
+        "source_position": 6,
+        "request_url": "https://www.facebook.com/api/graphql/",
+        "parse_warnings": [],
+        "change_flags": []
+      }
+    },
+    {
+      "record_key": "ad:1572604481040682",
+      "ad_archive_id": "1572604481040682",
+      "collation_id": "1772026497585651",
+      "collation_count": 1,
+      "page_id": "1152521664615049",
+      "meta_page_id": "1152521664615049",
+      "page_name": "เบต้า ออยล์ ล้างไขมันสะสม คืนความสมดุลให้ร่างกาย เพจคุณนัท",
+      "page_aliases": [],
+      "page_profile_uri": "https://www.facebook.com/61590217635181/",
+      "page_profile_numeric_id": "61590217635181",
+      "page_like_count": 6781,
+      "is_active": true,
+      "start_date": "2026-08-22T07:00:00.000Z",
+      "start_date_raw": "2026-08-22T07:00:00.000Z",
+      "end_date": null,
+      "end_date_raw": null,
+      "network_end_date_raw": "2026-09-09T07:00:00.000Z",
+      "display_format": "VIDEO",
+      "cta_type": "MESSAGE_PAGE",
+      "cta_text": "ส่งข้อความ",
+      "title": "🔥รับโปรโมชั่นพิเศษ วันนี้เท่านั้น‼️ ทักแชท>>>",
+      "body_text": "รู้ไหมคะ? ⏱️ วินาทีที่ \"คนไขมันสูง\" กลืนเบต้าออยล์เข้าไป... ภายใน 24 ชั่วโมง ร่างกายคุณจะเกิดอะไรขึ้นบ้าง 🤔 หลายคนไม่เคยรู้เลยว่าเจ้าแคปซูลสีทองเม็ดเล็กๆ นี้ทำงานหนักแค่ไหน! 🧡 เมื่อกลืนลงไป น้ำมันสกัดจากธรรมชาติจะค่อยๆ เดินทางเข้าสู่กระแสเลือด ไปช่วยจัดการคราบไขมันเลวที่เกาะตามผนังหลอดเลือด ⚠️ อาการเวียนหัว มึนหัว ตัวหนักๆ จะค่อยๆ ดีขึ้นเมื่อหลอดเลือดสะอาด เพราะไขมันเลวตัวร้ายลดลงและมีไขมันดีเข้าไปช่วยปรับสมดุล 🧡 🔥 โปรแรงแห่งปี คืนสมองโล่งโปร่งในราคาหลักร้อย จัดส่งฟรีทั่วประเทศ! 🚚💨 ✅ ชุดทดลอง 1 กล่อง เพียง 690.- (ปกติ 1,290.-) ✅ ชุดเปิดใจ 4 กล่อง เพียง 1,790.- (ปกติ 5,160.-) ✅ ชุดสลายไขมัน 8 กล่อง เพียง 3,290.- (ปกติ 10,320.-) 👇 เริ่มดูแลหลอดเลือดตั้งแต่วันนี้ อย่ารอให้สาย สั่งเลย! สนใจเม้น \"สนใจ\" ใต้โพสต์ 💬 ทักแชท 📩 หรือโทร 📞 094-999-2395 (ปรึกษาฟรี 24 ชม.) 🕐 #BETA #เบต้าออยล์ #betaoil #ไขมันสูง #ความดันสูง #หลอดเลือด #หัวใจ #ลดไขมันในเลือด #คอเลสเตอรอล #สุขภาพผู้สูงวัย #สุขภาพดีไม่มีขาย #บำรุงระบบประสาท #โปรแรงแห่งปี #ดูแลตัวเองตั้งแต่วันนี้ #Joyful #จอยฟูล",
+      "caption": null,
+      "link_url": null,
+      "link_description": null,
+      "publisher_platform": [
+        "FACEBOOK"
+      ],
+      "page_categories": [
+        "Vitamins/supplements"
+      ],
+      "images": [],
+      "videos": [
+        {
+          "video_hd_url": "https://scontent.fphs2-1.fna.fbcdn.net/o1/v/t2/f2/m366/AQOvNdhC4SefuJ1SuaN4_3iW8sMmn2VkTmin5tzQ4_JS4Bc168KWDy9oPF6NE9ZfmbWppG_w5t7kkAnwEK8kbu4ZE0-BLzYTHi-nzA3GzxuAvA.mp4",
+          "video_sd_url": "https://scontent.fphs2-1.fna.fbcdn.net/o1/v/t2/f2/m412/AQNc1rsFejUIjtTNZ_dhKOSImlQodDF-jBASPX-AIvboeE7VGalzf72uclQrD2XYtUs7S_d9UuYqJOfvFsUwxFYygIH_Ei2m6Im1xtBaOQ.mp4",
+          "video_preview_image_url": "https://scontent.fphs2-1.fna.fbcdn.net/v/t39.35426-6/781206908_1586247109803038_5062484124469985951_n.jpg"
+        }
+      ],
+      "cards": [],
+      "raw_evidence": null,
+      "_pt_glory": {
+        "source_level": "network",
+        "collection_method": "network_response_observation",
+        "source_position": 7,
+        "request_url": "https://www.facebook.com/api/graphql/",
+        "parse_warnings": [],
+        "change_flags": []
+      }
+    },
+    {
+      "record_key": "ad:2392018067932789",
+      "ad_archive_id": "2392018067932789",
+      "collation_id": "874395108465059",
+      "collation_count": 1,
+      "page_id": "431015036762488",
+      "meta_page_id": "431015036762488",
+      "page_name": "เติมไขมันหน้า โดยหมอเบญและทีมแพทย์ Promed Clinic",
+      "page_aliases": [],
+      "page_profile_uri": "https://www.facebook.com/61564820413255/",
+      "page_profile_numeric_id": "61564820413255",
+      "page_like_count": 5897,
+      "is_active": true,
+      "start_date": "2026-05-22T07:00:00.000Z",
+      "start_date_raw": "2026-05-22T07:00:00.000Z",
+      "end_date": null,
+      "end_date_raw": null,
+      "network_end_date_raw": "2026-09-09T07:00:00.000Z",
+      "display_format": "VIDEO",
+      "cta_type": null,
+      "cta_text": null,
+      "title": null,
+      "body_text": "🔥เติมไขมันหน้าเด็ก 9,900 บาท จากปกติ 19,900 บาท (จำกัด 49 ท่าน เท่านั้น!!) จะดีแค่ไหน‼️ ถ้าสวยแบบปลอดภัย ด้วยไขมันตัวเอง หลังเติมสวยเป๊ะ แผลเล็กเท่ารูเข็ม . 📌รับประกัน!! #รีวิวเยอะที่สุด #หมอเบญ #ยืน1เรื่องเติมไขมันหน้า . 📣ทำไมต้องเติมไขมันหน้าที่ #Promed Clinic #หมอเบญ ✅เรามีทีมแพทย์ที่มากประสบการณ์ กว่า10,000เคส . ✅ดูแลอย่างใกล้ชิดทั้งก่อนและหลังทำ . ✅สะอาด ปลอดภัย พร้อมด้วยเครื่องมือครบครัน ได้มาตรฐาน (**ความปลอดภัยมาเป็นอันดับแรก) . ✅เติมไขมันทั่วหน้า ไม่จำกัดจุด ไม่จำกัด CC . ✅ ปรับรูปหน้าเฉพาะบุคคล . ✅ เทคนิคเดียวกับทางเกาหลี . ✅ ปลอดภัยด้วยไขมันตัวเอง . ✅ แพทย์ผู้มีประสบการณ์โดยตรงในการปรับรูปหน้า . 📌ด้วยขั้นตอนการทำพิเศษเฉพาะของทาง #Promed Clinic #หมอเบญ เท่านั้น!! . 1.) Supernano fat คัดไขมัน ปั่นแยกด้วยเครื่องมือที่ทันสมัยให้ได้ไขมันที่บริสุทธิ์ เพื่อการจัดเรียงไขมันอย่างสวยงามและเรียบเนียน . 2.) ผสานด้วยวิธีการทำ Fat grafting + Growth factor เฉพาะของทางคลินิก เพิ่ม Growth factor กระตุ้นคุณภาพเซลล์ไขมัน เพื่อให้ได้ไขมันที่มีคุณภาพดีเยี่ยม . 3.) ด้วยเทคนิคพิเศษของทางคลินิก Diamond fat spider เป็นการเติมไขมัน 3 ระดับชั้น เพื่อให้เซลล์ไขมันติดอยู่นานที่สุด “ Fat nano drop lifting spider layer ” เป็นการเติมไขมันลงไปถึงชั้นลึกที่สุดและชั้นกลางรวมถึงชั้นบน และสานลึกเป็นตาข่าย เพื่อให้เซลล์ไขมันเกาะติดดีและอยู่ได้นานที่สุด . ✨ เทคนิคนี้จะทำให้มวลไขมันสมบูรณ์และแข็งแรงมากที่สุด และเน้นความละเอียดของมวลไขมันสานเป็นตาข่ายและป้องกันการเป็นคลื่นหรือเป็นก้อน และช่วยเพิ่มฉ่ำวาวดูโกลด์หลังทำทันที . ✅ โดยแพทย์ #หมอเบญ #ยืน1เรื่องเติมไขมันหน้า ประสบการณ์สูง ที่ #Promed Clinic ย่านกัลปพฤกษ์ เอกชัย บางบอน . ⭐️การเติมไขมันหน้าเหมาะสำหรับผู้ที่มีปัญหา ✅ หน้าตอบ ✅ ใต้ตาลึก ✅ หน้าผากไม่มีมิติ ✅ ขมับยุบเป็นหลุม ✅ ร่องแก้มลึกอย่างชัดเจน ✅ คางตัด . ⚫การเติมไขมันสามารถปรับรูปหน้า จบปัญหาขมับเว้า แก้มตอบ ร่องแก้ม ใต้ตาลึก โหนกแก้มสูงเติมเต็มด้วยไขมันแก้ปัญหา ลดหน้าโทรม คืนความมั่นใจกลับมาได้ดีที่สุด . 📣จบปัญหาทั่วหน้าได้ด้วยราคา 9900 บาท เท่านั้น (จำกัด 49 ท่าน เท่านั้น)‼️ . 🎊พิเศษมาเป็นคู่ ลดเพิ่มอีกคู่ละ 500 บาท🎊 . ✨ ไม่ต้องพักฟื้น หลังจากดูดไขมันเติมหน้าเสร็จแล้ว สามารถกลับบ้านและใช้ชีวิตได้ตามปกติได้เลย ในตำแหน่งที่ดูดไขมันแผลมีขนาดเล็ก ลดความเสี่ยงในการเกิดแผลเป็น และแผลคีลอยด์ ผิวเรียบเนียน ไม่เป็นคลื่น เป็นก้อน . 📌รายการของแถมพิเศษ 12 รายการ มูลค่ากว่า 20,000‼️ ✅ ฟรี! ปรึกษาแพทย์ #หมอเบญ . ✅ ฟรี! ออกแบบวิเคราะห์รูปหน้าแบบเจาะลึก . ✅ ฟรี! ตรวจร่างกายความพร้อมก่อนเข้ารับบริการผ่าตัดโดยแพทย์ . ✅ ฟรี! ยานอนหลับมูลค่า 1200 บาท . ✅ ฟรี! ยาชาทั้งดูดและเติมไขมัน มูลค่า 1200 บาท . ✅ ฟรี! anti swelling (ยาฉีดลดบวมมูลค่า 1200 บาท) . ✅ ฟรี! fat face mask (มาร์คคอลลาเจ้นเตรียมผิวมูลค่า 2000 บาท) . ✅ ฟรี! preparing mask (มาร์คเตรียมความพร้อมไขมันมูลค่า 2000 บาท) . ✅ ฟรี! pure blink (drip วิตามินผิวใสมูลค่า 3900 บาท) . ✅ ฟรี! prp plasma กระตุ้นเซลล์ไขมันหลังทำมูลค่า 3900 บาท . ✅ ฟรี! body firm นวดกระชับเพื่อป้องกันการเกิดพังผืด และกระชับผิว มูลค่า 2900 บาท . ✅ ฟรี! ยารับประทานแก้ปวดและฆ่าเชื้อหลังทำ มูลค่า 1000 บาท . เน้นย้ำ‼️ หลังทำจะมีทีมแพทย์ #หมอเบญ ดูแลเคสทุกเคสด้วยตัวเอง , 🔥โอนจองโปรโมชั่นพิเศษเพียง 900 บาทเก็บสิทธิ์ไว้ได้นาน 3เดือน (**เหตุจำเป็นสามารถแจ้งเลื่อนนัดได้) จำกัด 49 ท่าน เท่านั้น!! . ---------------------------------------------------------------- . 📲ปรึกษา/จองคิว/ติดต่อข้อมูลเพิ่มเติม Call center: 095-980-2779 Tel: 02-897-7398 Line ID: @promedclinic (Add friend คลิกlinkทางนี้เลยจ้า http://bit.ly/2Meaz0I) . -------------------------------------------------- . 🏡#Promedclinic ถนนกัลปพฤกษ์ ซอยกำนันแม้น24 แขวงบางขุนเทียน เขตจอมทอง กรุงเทพฯ . #โปรเมดคลินิก #หมอเบญ #หมอแจม #เรื่องไขมันไว้ใจเรา #ยืนหนึ่งเรื่องไขมัน #เติมไขมันหน้าเด็ก #ไม่จำกัดซีซี #ศัลยกรรมสวย #เสริมจมูกใหม่ #งานแก้ไขจมูก #เนื้อเยื่อหลังหู #ตะไบฮัมพ์ #เย็บอินเตอร์โดม #เนื้อจมูกน้อย #เติมไขมันหน้า #ดูดไขมัน #ฉีดโบท็อกซ์ #ฉีดฟิลเลอร์ #ร้อยไหม #ฉีดสลายไขมัน #ฉีดเมโสหน้าใส #ศัลยกรรม #ปรับรูปหน้า #คลินิกความงาม #ศูนย์ศัลยกรรมความงามผิวพรรณ #คลินิกความงามแถวกำนันแม้น",
+      "caption": null,
+      "link_url": null,
+      "link_description": null,
+      "publisher_platform": [
+        "FACEBOOK",
+        "INSTAGRAM",
+        "AUDIENCE_NETWORK",
+        "WHATSAPP",
+        "THREADS"
+      ],
+      "page_categories": [
+        "Health/beauty"
+      ],
+      "images": [],
+      "videos": [
+        {
+          "video_hd_url": "https://scontent.fphs2-1.fna.fbcdn.net/o1/v/t2/f2/m366/AQOPs5RHz44iAaLhC7PwHakJhv1cVcOAU9ZVLTjuwhekbwN54WRWZVeiGwtHaoLy0hPcLkRGfuYs2P3Epvges84U_OjM73ZbTjAgwpo-5hpOvQ.mp4",
+          "video_sd_url": "https://scontent.fphs2-1.fna.fbcdn.net/o1/v/t2/f2/m412/AQOKPwWMx4j06OVbWpULX4rC1mIdwH4nW9PBcj7PVSIWANFXYnzzMGDPIvP7vphKjtZgHq4T5q8fjCtkll6UhJRIbTnZ_G9AIHZr6-UiJQ.mp4",
+          "video_preview_image_url": "https://scontent.fphs2-1.fna.fbcdn.net/v/t39.35426-6/703824079_958639793648618_6431175132729315444_n.jpg"
+        }
+      ],
+      "cards": [],
+      "raw_evidence": null,
+      "_pt_glory": {
+        "source_level": "network",
+        "collection_method": "network_response_observation",
+        "source_position": 8,
+        "request_url": "https://www.facebook.com/api/graphql/",
+        "parse_warnings": [],
+        "change_flags": []
+      }
+    },
+    {
+      "record_key": "ad:1873272776786708",
+      "ad_archive_id": "1873272776786708",
+      "collation_id": "969943324666169",
+      "collation_count": 2,
+      "page_id": "352297341298474",
+      "meta_page_id": "352297341298474",
+      "page_name": "สลายก้อนเนื้อ เนื้องอก ถุงน้ำ ซีสต์ By Muniplus DD สาขา 2",
+      "page_aliases": [],
+      "page_profile_uri": "https://www.facebook.com/61560495158208/",
+      "page_profile_numeric_id": "61560495158208",
+      "page_like_count": 5547,
+      "is_active": true,
+      "start_date": "2025-07-26T07:00:00.000Z",
+      "start_date_raw": "2025-07-26T07:00:00.000Z",
+      "end_date": null,
+      "end_date_raw": null,
+      "network_end_date_raw": "2026-09-09T07:00:00.000Z",
+      "display_format": "VIDEO",
+      "cta_type": "MESSAGE_PAGE",
+      "cta_text": "ส่งข้อความ",
+      "title": null,
+      "body_text": "🤒 กินยามาเยอะ ❎ 🤒 รักษามาหลายวิธี ❎ 😍 แต่มาจบด้วยตัวนี้✅ #มูนิพลัส ✅ #ไฟโตไฟว์ ✅ สารอาหารประสิทธิภาพสูง ในการระงับการอักเสบที่เรื้อรังของซีสต์ เนื้องอก รังไข่ เต้านม ต่อมน้ำเหลือง ตับ ปอด เยื่อหุ้มปอด บำบัดและยับยั้ง เนื้องอก เนื้อร้าย ก้อนซีสต์ ช็อกโกแล็ตซีส ถุงน้ำในรังไข่ พังผืดในมดลูก เยื่อบุโพรงมดลูก ✅ กำจัดเซลล์เสื่อม เซลล์ตาย ลดอาการอักเสบของเซลล์ ซ่อมแซมเซลล์ในร่างกายและเร่งการสร้างเซลล์เกิดใหม่ให้แข็งแรง และยืดอายุเซลล์ดีให้ยาวขึ้น ✅ ยับยั้งการเจริญเติบโตและแพร่กระจายของเซลล์มะเร็ง ป้องกันการเกิดใหม่ของเซลล์มะเร็ง และช่วยฟื้นฟูร่างกายในผู้ป่วยที่ทำเคมีบำบัด ให้ฟื้นตัว เร็วขึ้น ไม่อ่อนเพลีย ไม่เหนื่อยง่าย ✅ ป้องกันตับจากการถูกทำลายจาก สารเคมี มะเร็งตับ มะเร็งท่อน้ำดี มะเร็งลำไส้ใหญ่ มะเร็งปอด มะเร็งต่อมน้ำเหลือง มะเร็งสมอง มะเร็ง กระดูก มะเร็งเม็ดเลือดขาว เนื้องอกและชีสต์ ✅ เพิ่มประสิทธิภาพเซลล์เม็ด เลือดขาวโดยเพิ่มความแข็งแรงที่เยื่อหุ้มเซลล์ ช่วยชะลอความเสื่อมของ เซลล์และช่วยเร่งสร้างสารต้านอนุมูลอิสระ สอบถามข้อมูล/สั่งซื้อ ทัก Inbox ได้เลยค่ะ หรือ โทร.062-602-9005 #เนื้องอก #ก้อนเนื้อ #ซีสต์ #เนื้องอกในสมอง #ถุงน้ำในรังไข่ #ซีสต์ในรังไข่ #มะเร็ง #ไทรอยด์ #เต้านม #มดลูก #โพรงมดลูก #พังผืด #ต่อมลูกหมาก #ประจำเดือน #ตกขาว #ไขมันใต้ผิวหนัง",
+      "caption": null,
+      "link_url": null,
+      "link_description": null,
+      "publisher_platform": [
+        "FACEBOOK",
+        "MESSENGER"
+      ],
+      "page_categories": [
+        "Vitamins/supplements"
+      ],
+      "images": [],
+      "videos": [
+        {
+          "video_hd_url": "https://scontent.fphs2-1.fna.fbcdn.net/o1/v/t2/f2/m412/AQP77TdLl2vimupDhA4JtUsvGVHTvTbZ7nhpt4aRh2wbYOSubWNekF5X3jhGSUwWAMm91wbr-9CaexgRHhegxX3g.mp4",
+          "video_sd_url": "https://scontent.fphs2-1.fna.fbcdn.net/o1/v/t2/f2/m412/AQPy63Q76WKnaHG7vF70FO05Kig5XqAO_2o-7fD5jSmbxQOolTgCCmctkOODERkL-Cj1m25Pq_KDo1NdQ3CRelnX.mp4",
+          "video_preview_image_url": "https://scontent.fphs2-1.fna.fbcdn.net/v/t39.35426-6/483840481_1067816318439835_1212587259911819309_n.jpg"
+        }
+      ],
+      "cards": [],
+      "raw_evidence": null,
+      "_pt_glory": {
+        "source_level": "network",
+        "collection_method": "network_response_observation",
+        "source_position": 9,
+        "request_url": "https://www.facebook.com/api/graphql/",
+        "parse_warnings": [],
+        "change_flags": []
+      }
+    },
+    {
+      "record_key": "ad:1672688186780465",
+      "ad_archive_id": "1672688186780465",
+      "collation_id": "1233492941614033",
+      "collation_count": 1,
+      "page_id": "104651638739253",
+      "meta_page_id": "104651638739253",
+      "page_name": "IYOU Clinic ไอย์ยูคลินิก ฉะเชิงเทรา by หมอหุ้น",
+      "page_aliases": [],
+      "page_profile_uri": "https://www.facebook.com/iyouclinic7942/",
+      "page_profile_numeric_id": null,
+      "page_like_count": 10926,
+      "is_active": true,
+      "start_date": "2025-06-17T07:00:00.000Z",
+      "start_date_raw": "2025-06-17T07:00:00.000Z",
+      "end_date": null,
+      "end_date_raw": null,
+      "network_end_date_raw": "2026-09-09T07:00:00.000Z",
+      "display_format": "IMAGE",
+      "cta_type": "MESSAGE_PAGE",
+      "cta_text": "ส่งข้อความ",
+      "title": null,
+      "body_text": "🌈โปรแกรมทรีตเมนต์รักษาผิว จ่ายราคาเดียว 999.-/โปรแกรม 🩵โปรแกรมทรีตเมนต์หน้าทอง 1 แถม 1 🩵โปรแกรมทรีตเมนต์หน้าใส 🎊Free🎊 -ฉายแสงหน้าใส -Hyaluron Mask เข้มข้น 🩵โปรแกรมทรีตเมนต์หน้าใส 🎊Free🎊 -ทรีตเม้นต์รอบดวงตา -Hyaluron Mask เข้มข้น 🩵โปรแกรมทรีตเมนต์หน้าใส 🎊Free🎊 -กดสิวเหมาทั่วหน้า -Hyaluron Mask เข้มข้น 🩵โปรแกรมทรีตเมนต์ยกกระชับหน้า-เหนียง 🎊Free🎊 -Hyaluron Mask เข้มข้น หน้า-เหนียง-คอ 🩵โปรแกรมทรีตเมนต์รักษาสิว 🎊Free🎊 -ยาครบชุด+เหมาฉีดสิว 🩵โปรแกรมทรีตเมนต์รักษาฝ้า-กระลึก 🎊Free🎊 -Whitening Mask เข้มข้น -ยาครบชุด 5 รายการ 🩵โปรแกรมทรีตเมนต์รักษารอยสิว จุดด่างดำ หน้า + คอ 🎊Free🎊 -Whitening Mask เข้มข้น -ยาครบชุด 5 รายการ 🩵ทรีตเมนต์รักษาผิวแพ้ 🎊Free🎊 -Detox Mask ฟื้นฟูผิว -ยาครบชุด 5 รายการ 🔥ตั้งแต่ 1-30 มิถุนายน 68 นี้ เท่านั้น!!🔥 🥰 ปรึกษาสอบถามเพิ่มเติมได้นะคะ ✨✨✨✨✨✨✨✨✨✨✨✨✨ รักษาผิว เพิ่มความสวยที่ไอย์ยูคลินิก #คุณหมอเป็นเจ้าของคลินิกเอง #คุณหมออยู่ประจำคลินิกทุกวัน #คุณหมอมากประสบการณ์ #คุณหมอดูแลเคสต่อเคส #ปรึกษาฟรีไม่มีค่าใช้จ่าย 🫶🥰 🏩 คลินิกเปิดทำการทุกวัน 10.00 - 19.00 น. แอดมินใจดี ตอบไว ถามได้เลยค่ะ 😘 -------------------------------------------- ช่องทางการติดต่อหรือจองคิว 📱 Line : @iyouclinic 📩 m.me/iyouclinic7942 📞 Tel. 099 089 7300 📍IYOU Clinic ไอย์ยูคลินิก https://maps.app.goo.gl/UEAC4j7p89K5LB2Q6 12/5 ถ.ประชาสรรค์ ต.หน้าเมือง อ.เมือง จ.ฉะเชิงเทรา คลินิกตั้งอยู่ใจกลางเมือง เดินทางสะดวก มีที่จอดรถ มีความเป็นส่วนตัว ดูแลโดยแพทย์ #ไอย์ยูคลินิก #IYOUCLINIC #ไอย์ยูคลินิกฉะเชิงเทรา #โปรแกรมFiller #ร้อยไหม #โปรแกรมโบท็อกซ์ #โปรแกรมฉีดฟิลเลอร์ #โปรแกรมสลายไขมัน #เมโสหน้าใส #ไฮฟู่ #วิตามินผิว #IVDRIP #ดริปผิวขาว #เลเซอร์หน้าใส #เลเซอร์คาร์บอน #Mesoหน้าใส #เลเซอร์ผิว #โปรแกรมPicoLaser #IPL #AquaSkin #lift #ดอลลี่อาย #Hifu #รักษาสิว #รูขุมขน #Volnewmer #Ultraformer #ยกกระชับ",
+      "caption": null,
+      "link_url": null,
+      "link_description": null,
+      "publisher_platform": [
+        "FACEBOOK",
+        "INSTAGRAM",
+        "AUDIENCE_NETWORK",
+        "MESSENGER"
+      ],
+      "page_categories": [
+        "Health/beauty"
+      ],
+      "images": [
+        {
+          "original_image_url": "https://scontent.fphs2-1.fna.fbcdn.net/v/t39.35426-6/508311590_1244942717358006_847471432123603819_n.jpg",
+          "resized_image_url": "https://scontent.fphs2-1.fna.fbcdn.net/v/t39.35426-6/508340210_1254681919681895_5617129756788709982_n.jpg",
+          "image_crops": []
+        }
+      ],
+      "videos": [],
+      "cards": [],
+      "raw_evidence": null,
+      "_pt_glory": {
+        "source_level": "network",
+        "collection_method": "network_response_observation",
+        "source_position": 10,
+        "request_url": "https://www.facebook.com/api/graphql/",
+        "parse_warnings": [],
+        "change_flags": []
+      }
+    },
+    {
+      "record_key": "ad:965642576536940",
+      "ad_archive_id": "965642576536940",
+      "collation_id": "1470751803979375",
+      "collation_count": 1,
+      "page_id": "402987939561214",
+      "meta_page_id": "402987939561214",
+      "page_name": "ซีรีนคลินิก โบท็อก ฟิลเลอ เลเซอร์ สิว ฝ้า กระ ยะลา",
+      "page_aliases": [],
+      "page_profile_uri": "https://www.facebook.com/61563848647881/",
+      "page_profile_numeric_id": "61563848647881",
+      "page_like_count": 3114,
+      "is_active": true,
+      "start_date": "2026-07-17T07:00:00.000Z",
+      "start_date_raw": "2026-07-17T07:00:00.000Z",
+      "end_date": null,
+      "end_date_raw": null,
+      "network_end_date_raw": "2026-09-09T07:00:00.000Z",
+      "display_format": "IMAGE",
+      "cta_type": "MESSAGE_PAGE",
+      "cta_text": "ส่งข้อความ",
+      "title": null,
+      "body_text": "✨ ดูแลความสวยครบวงจรที่ ซีรีนคลินิก ยะลา ✨ ปรับรูปหน้า ฉีดผิว เลเซอร์ HIFU ครบจบในที่เดียว 💖 ดูแลโดยทีมงานมืออาชีพ ใส่ใจทุกเคส ใช้ผลิตภัณฑ์มาตรฐาน ปลอดภัย มั่นใจได้ 🫶 คลินิกสวย หรู สะอาด ใจกลางเมืองยะลา อยากสวยแบบมั่นใจ ทักมาปรึกษาฟรีได้เลยค่ะ 💬",
+      "caption": null,
+      "link_url": null,
+      "link_description": null,
+      "publisher_platform": [
+        "FACEBOOK",
+        "INSTAGRAM",
+        "AUDIENCE_NETWORK",
+        "WHATSAPP",
+        "THREADS"
+      ],
+      "page_categories": [
+        "Health & Beauty",
+        "Health/beauty"
+      ],
+      "images": [
+        {
+          "original_image_url": "https://scontent.fphs2-1.fna.fbcdn.net/v/t39.35426-6/749270085_1028218843468312_3409527678410245203_n.jpg",
+          "resized_image_url": "https://scontent.fphs2-1.fna.fbcdn.net/v/t39.35426-6/749419683_1571209091405920_1687682354883808133_n.jpg",
+          "image_crops": []
+        }
+      ],
+      "videos": [],
+      "cards": [],
+      "raw_evidence": null,
+      "_pt_glory": {
+        "source_level": "network",
+        "collection_method": "network_response_observation",
+        "source_position": 11,
+        "request_url": "https://www.facebook.com/api/graphql/",
+        "parse_warnings": [],
+        "change_flags": []
+      }
+    },
+    {
+      "record_key": "ad:1345752704176148",
+      "ad_archive_id": "1345752704176148",
+      "collation_id": "1303750505244148",
+      "collation_count": 1,
+      "page_id": "100855871748254",
+      "meta_page_id": "100855871748254",
+      "page_name": "MysecretClinic ความงามครบวงจร สาขาแม่สาย",
+      "page_aliases": [],
+      "page_profile_uri": "https://www.facebook.com/MysecretMaesai/",
+      "page_profile_numeric_id": null,
+      "page_like_count": 6115,
+      "is_active": true,
+      "start_date": "2026-06-10T07:00:00.000Z",
+      "start_date_raw": "2026-06-10T07:00:00.000Z",
+      "end_date": null,
+      "end_date_raw": null,
+      "network_end_date_raw": "2026-09-09T07:00:00.000Z",
+      "display_format": "VIDEO",
+      "cta_type": "MESSAGE_PAGE",
+      "cta_text": "ส่งข้อความ",
+      "title": null,
+      "body_text": "💖 ดริปวิตามินผิว ตัวดังที่สายดูแลตัวเองต้องลอง!เติมวิตามินเข้มข้น ช่วยฟื้นฟูผิวจากความเหนื่อยล้าให้ผิวดูไบรท์ ฉ่ำ เล่นแสง ✨ ​ 🌸 ผิวดูสุขภาพดีขึ้น 🌸 ลดความโทรมสะสม 🌸 เติมความสดใสให้ร่างกายและผิวพรรณ ​ งานผิวดีไม่ใช่เรื่องบังเอิญ แต่คือการดูแลอย่างต่อเนื่อง 🫶🏻 ​ 💌จองคิวทักแชทเลย! ​ ✅สวย สะอาด ปลอดภัย ​ ✅บริการเป็นเลิศ ✅ยาแท้ ปลอดภัย สแกนตรวจสอบได้ ​ 📍ติดต่อ Mysecret clinic ได้ที่นี่ ​ สาขาแม่สาย - ถนนเหมืองแดง 📱Line: @mysecretms (มี@) 💌Inbox: m.me/mysecretmaesai ☎เบอร์โทร :096-2120921 📌พิกัด: https://maps.app.goo.g//ivULDJEHBTnQGqjx5 ​ #ยกกระชับหน้า #ผิวใส #ฟิลเลอร์ #เมโสหน้าใส #ไฮฟู่ #เติมวิตามินผิว #โบท๊อก #ฉีดแฟตสลายไขมันแม่สาย #เมโสหน้าใส #คลินิกความงามแม่สาย #คลินิกความงามเชียงราย #มายซีเคร็ทแม่สาย #mysecretmaesai #โปรโมชั่นฟิลเลอร์ ​ #Review #ร้อยไหม #ฟิลเลอร์โปรพิเศษ #ฟิลเลอร์คาง #ฟิลเลอร์ปาก #ฟิลเลอร์ใต้ตา #ฟิลเลอร์หน้าผาก #ฟิลเลอร์ร่องแก้ม #ฟิลเลอร์หน้าเด็ก #ฟิลเลอร์ปรับรูปหน้า #ศัลยกรรม #เสริมจมูก #diodelaser #ตาสองชั้น",
+      "caption": null,
+      "link_url": null,
+      "link_description": null,
+      "publisher_platform": [
+        "FACEBOOK",
+        "INSTAGRAM",
+        "AUDIENCE_NETWORK"
+      ],
+      "page_categories": [
+        "Medical Clinic",
+        "Medical Center"
+      ],
+      "images": [],
+      "videos": [
+        {
+          "video_hd_url": "https://scontent.fphs2-1.fna.fbcdn.net/o1/v/t2/f2/m366/AQN3N3djBLxVH5Ka1T79DlpoBSL4qa--8pu1rk-fdpq--E1MaXwLgkVXn1Gv_L1DJWr7uAjuUvfPN2v3d9Cx7CodOMFdgIX3DEGtDHfnG22dpA.mp4",
+          "video_sd_url": "https://scontent.fphs2-1.fna.fbcdn.net/o1/v/t2/f2/m412/AQOruAWzDL7YwHsT0KVa6gTPXba1KH2J7JOfzvEE7i1sKgic6M2PG7WJnLNOW3HyP1rx3DkOnL3cuQX0HDRmQ0wUpoLlWV-XGCs8SaXqIQ.mp4",
+          "video_preview_image_url": "https://scontent.fphs2-1.fna.fbcdn.net/v/t39.35426-6/720191238_1514557323547160_5213773318382019383_n.jpg"
+        }
+      ],
+      "cards": [],
+      "raw_evidence": null,
+      "_pt_glory": {
+        "source_level": "network",
+        "collection_method": "network_response_observation",
+        "source_position": 12,
+        "request_url": "https://www.facebook.com/api/graphql/",
+        "parse_warnings": [],
+        "change_flags": []
+      }
+    },
+    {
+      "record_key": "ad:2981300325535327",
+      "ad_archive_id": "2981300325535327",
+      "collation_id": "25645683285113492",
+      "collation_count": 1,
+      "page_id": "820350114500297",
+      "meta_page_id": "820350114500297",
+      "page_name": "บิจินคลินิก เชียงราย",
+      "page_aliases": [],
+      "page_profile_uri": "https://www.facebook.com/61582881510379/",
+      "page_profile_numeric_id": "61582881510379",
+      "page_like_count": 3816,
+      "is_active": true,
+      "start_date": "2026-06-17T07:00:00.000Z",
+      "start_date_raw": "2026-06-17T07:00:00.000Z",
+      "end_date": null,
+      "end_date_raw": null,
+      "network_end_date_raw": "2026-09-09T07:00:00.000Z",
+      "display_format": "IMAGE",
+      "cta_type": "MESSAGE_PAGE",
+      "cta_text": "ส่งข้อความ",
+      "title": null,
+      "body_text": "📍โบท็อกซ์บุฟเฟ่ต์”(ไม่จำกัดยูนิต) “ลดกรามหน้าวี หรือ ริ้วรอยทั่วหน้า”รับความสวยความปัง￼ ใบหน้าเรียวสวยไร้ริ้วรอย สุดคุ้ม!! 🌟จองวันนี้รับแถมสุดคุ้มทันที 3 รายการสุดคุ้ม 1. เมโสหน้าใส 1 ครั้ง 2. วิตามินผิวออร่า 1 ครั้ง 3. แฟตสล่ายไขมันแก้มเหนียง 5 cc ⚡️￼จองด่วน จำกัดสิทธิ์เพียง 30 ท่านแรกเท่านั้น !! ✅ รีบจองด่วนรับจำนวนจำกัด ✅ อย.ไทยปลอดภัย 100% ✅ ประเมินโดยแพทย์ผู้เชี่ยวชาญทุกเคส 🚩 ดูแลโดยแพทย์ผู้เชี่ยวชาญทุกเคส 🕘 คลินิกเปิดทุกวัน 11:00-20:00 น. ⏰ สอบถามนัดคิวคุณหมอ 📕 ขอดูรีวิวหรือปรึกษาเพิ่มเติมทักแอดมินได้เลยนะคะ ___________________________________________ พิกัดบิจินคลินิก📍 : https://maps.app.goo.gl/YWk5spcNBsMeBvCM7?g_st=ipc Line : @bijin_clinic Tel. 📞 : 091 567 1101 ต้นอ้อ #ฟิลเลอร์ #เชียงราย #โบท็อกซ์ #ร้อยไหม #ทรีทเม้นท์หน้า #fillerchiangrai #botoxchiangrai #hifu #หน้าใส #หน้าเรียว #ผิวใสผิวขาว #คลินิกเชียงราย #โบท๊อกซ์ของแท้ #โบท็อกซ์เชียงราย #คลินิกความงามเชียงราย",
+      "caption": null,
+      "link_url": null,
+      "link_description": null,
+      "publisher_platform": [
+        "FACEBOOK",
+        "INSTAGRAM"
+      ],
+      "page_categories": [
+        "Health/beauty"
+      ],
+      "images": [
+        {
+          "original_image_url": "https://scontent.fphs2-1.fna.fbcdn.net/v/t39.35426-6/724858672_27093559420303360_4034937576830230268_n.jpg",
+          "resized_image_url": "https://scontent.fphs2-1.fna.fbcdn.net/v/t39.35426-6/724335521_1314863760757699_4306789744906659520_n.jpg",
+          "image_crops": []
+        }
+      ],
+      "videos": [],
+      "cards": [],
+      "raw_evidence": null,
+      "_pt_glory": {
+        "source_level": "network",
+        "collection_method": "network_response_observation",
+        "source_position": 13,
+        "request_url": "https://www.facebook.com/api/graphql/",
+        "parse_warnings": [],
+        "change_flags": []
+      }
+    },
+    {
+      "record_key": "ad:1618898035969032",
+      "ad_archive_id": "1618898035969032",
+      "collation_id": "621291194137173",
+      "collation_count": 1,
+      "page_id": "526853840511162",
+      "meta_page_id": "526853840511162",
+      "page_name": "Veggy เวจจี้ - วิตามินผัก เพจบริษัท",
+      "page_aliases": [],
+      "page_profile_uri": "https://www.facebook.com/61571295231978/",
+      "page_profile_numeric_id": "61571295231978",
+      "page_like_count": 1474,
+      "is_active": true,
+      "start_date": "2026-03-16T07:00:00.000Z",
+      "start_date_raw": "2026-03-16T07:00:00.000Z",
+      "end_date": null,
+      "end_date_raw": null,
+      "network_end_date_raw": "2026-09-09T07:00:00.000Z",
+      "display_format": "MULTI_IMAGES",
+      "cta_type": "MESSAGE_PAGE",
+      "cta_text": "ส่งข้อความ",
+      "title": null,
+      "body_text": "🔥สูตรใหม่! พุงยุบ กระชับ #อายุเยอะก็ลงได้ พุงหาย ถ่ายคล่อง #สูตรแพทย์เมกาแนะนำ🇺🇸 เทคโนโลยี Fat Lock สลายไขมันระดับเซลล์ น้ำหนักลงฮวบ! ทางรอดของคนลดยาก . เวจจี้ผัก 1 เม็ด = กินผัก 10 โล มีโพรไบโอติก ปรับสมดุลย์ขับถ่าย เจ้าแรก ! ที่ลดน้ำตาลในเลือดได้ . 🥦 ลดได้ ไม่โยโย่ 🥦 เร่งเผาพลาญ 🥦 พุงยุบ สัดส่วนกระชับ . นาทีทอง #หมดแล้วหมดเลย 1 แถม 1 จ่ายแค่ 390.- 2 แถม3 จ่ายแค่ 690.- (✨คุ้มสุด) . พิมพ์ \"สนใจ\" ใต้คอมเมนต์ หรือขอดูรีวิวลูกค้าจริงได้เลย #ลดแบบไม่พึ่งยา #ไม่ใช่ยาลด . 🏆 เลขอย. 13-1-09459-5-0148 🏆 1 กระปุก มี 20 แคปซูล 🏆 สูตรสารสกัดนำเข้าอเมริกา 🇺🇸",
+      "caption": null,
+      "link_url": null,
+      "link_description": null,
+      "publisher_platform": [
+        "FACEBOOK",
+        "INSTAGRAM",
+        "AUDIENCE_NETWORK",
+        "MESSENGER"
+      ],
+      "page_categories": [
+        "Health/beauty"
+      ],
+      "images": [
+        {
+          "original_image_url": "https://scontent.fphs2-1.fna.fbcdn.net/v/t39.35426-6/653702457_2724358781275227_3508498500771406205_n.jpg",
+          "resized_image_url": "https://scontent.fphs2-1.fna.fbcdn.net/v/t39.35426-6/651790314_1204532391492582_6629082771858792689_n.jpg",
+          "image_crops": []
+        },
+        {
+          "original_image_url": "https://scontent.fphs2-1.fna.fbcdn.net/v/t39.35426-6/651683399_1233480478856301_7346781049575330743_n.jpg",
+          "resized_image_url": "https://scontent.fphs2-1.fna.fbcdn.net/v/t39.35426-6/653913066_1950217385618160_6818743979678131653_n.jpg",
+          "image_crops": []
+        },
+        {
+          "original_image_url": "https://scontent.fphs2-1.fna.fbcdn.net/v/t39.35426-6/652915700_26066617966355290_1561775899185157746_n.jpg",
+          "resized_image_url": "https://scontent.fphs2-1.fna.fbcdn.net/v/t39.35426-6/651781241_4449377538625340_7215305247201681925_n.jpg",
+          "image_crops": []
+        },
+        {
+          "original_image_url": "https://scontent.fphs2-1.fna.fbcdn.net/v/t39.35426-6/652442438_26105809242381310_4080355316747575312_n.jpg",
+          "resized_image_url": "https://scontent.fphs2-1.fna.fbcdn.net/v/t39.35426-6/651217680_1318377176784441_5637864496503589135_n.jpg",
+          "image_crops": []
+        }
+      ],
+      "videos": [],
+      "cards": [],
+      "raw_evidence": null,
+      "_pt_glory": {
+        "source_level": "network",
+        "collection_method": "network_response_observation",
+        "source_position": 14,
+        "request_url": "https://www.facebook.com/api/graphql/",
+        "parse_warnings": [],
+        "change_flags": []
+      }
+    },
+    {
+      "record_key": "ad:813052205037030",
+      "ad_archive_id": "813052205037030",
+      "collation_id": "25489696070654377",
+      "collation_count": 1,
+      "page_id": "100855871748254",
+      "meta_page_id": "100855871748254",
+      "page_name": "MysecretClinic ความงามครบวงจร สาขาแม่สาย",
+      "page_aliases": [],
+      "page_profile_uri": "https://www.facebook.com/MysecretMaesai/",
+      "page_profile_numeric_id": null,
+      "page_like_count": 6115,
+      "is_active": true,
+      "start_date": "2025-11-09T08:00:00.000Z",
+      "start_date_raw": "2025-11-09T08:00:00.000Z",
+      "end_date": null,
+      "end_date_raw": null,
+      "network_end_date_raw": "2026-09-09T07:00:00.000Z",
+      "display_format": "VIDEO",
+      "cta_type": "MESSAGE_PAGE",
+      "cta_text": "ส่งข้อความ",
+      "title": null,
+      "body_text": "“ยกระดับผิวใต้วงแขนให้เนียนใสระดับคลินิกพรีเมียม ด้วย ไดโอดเลเซอร์ (Diode Laser) ที่กำจัดขนได้ลึกถึงราก ผิวไม่ไหม้ ไม่ระคายเคือง ปลอดภัยทุกสภาพผิว ✨ ขนขึ้นช้าลง เห็นผลตั้งแต่ครั้งแรก ✨ ผิวดูสว่าง เรียบลื่นขึ้นทุกครั้งที่ทำ หมดกังวลเรื่องรักแร้ไม่มั่นใจ ยกแขนกี่ครั้งก็มั่นใจเหมือนวันแรก 💖 📍จองคิววันนี้ รับโปรพิเศษเฉพาะเดือนนี้เท่านั้น!” 👉🏻 สนใจสามารถทักแชทเพื่อสอบถามข้อมูลเพิ่มเติมหรือจองคิวได้ เลย 🏩 คลินิกเปิดทุกวัน จันทร์-อาทิตย์ เวลา 10.00-19.30น. ( แนะนำจองคิวล่วงหน้า ) 👩🏼‍⚕️สนใจปรึกษาคุณหมอฟรีไม่มีค่าใช้จ่าย ✅ สวย ✅ สะอาด ✅ ปลอดภัย ✅ บริการเป็นเลิศ 🧑🏻‍⚕️หัตถการทำโดยแพทย์ผู้เชี่ยวชาญ 📍ติดต่อ Mysecret clinic ได้ที่นี่ สาขาแม่สาย - ถนนเหมืองแดง 📱Line: @mysecretms (มี@) 📩Inbox: m.me/mysecretmaesai ☎️ เบอร์โทร :096-2120921 📌พิกัด: https://maps.app.goo.g//ivULDJEHBTnQGqjx5 #ยกกระชับหน้า #ผิวใส #ฟิลเลอร์ #เมโสหน้าใส #ไฮฟู่ #เติม วิตามินผิว #โบท๊อก #ฉีดแฟตสลายไขมันแม่สาย #เมโสหน้าใส #คลินิกความงามแม่สาย #คลินิกความงามเชียงราย #มายซีเคร็ทแม่สาย #mysecretmaesai #โปรโมชั่นฟิลเลอร์ #ครบรอบ2ปี #Review #ร้อยไหม #ฟิลเลอร์โปรพิเศษ #ฟิลเลอร์คาง #ฟิลเลอร์ปาก #ฟิลเลอร์ใต้ตา #ฟิลเลอร์หน้าผาก #ฟิลเลอร์ร่องแก้ม #ฟิลเลอร์หน้าเด็ก #ฟิลเลอร์ปรับรูปหน้า #ศัลยกรรม #เสริมจมูก",
+      "caption": null,
+      "link_url": null,
+      "link_description": null,
+      "publisher_platform": [
+        "FACEBOOK",
+        "INSTAGRAM",
+        "AUDIENCE_NETWORK"
+      ],
+      "page_categories": [
+        "Medical Center"
+      ],
+      "images": [],
+      "videos": [
+        {
+          "video_hd_url": "https://scontent.fphs2-1.fna.fbcdn.net/o1/v/t2/f2/m366/AQOpI8oisQ_hmaarFVGQfKPScjfXPPEaw13q5mFVyqFtK4DvWr_LJLVBGmxfJC8D2sQ-7PzcB_xUTW3oBT5fxygXg-ZCZNAVBs7I5B9BdjKHoQ.mp4",
+          "video_sd_url": "https://scontent.fphs2-1.fna.fbcdn.net/o1/v/t2/f2/m412/AQNkC4fCmyn9PBfFsbes0ZlpIjps7jQv7lm2Fjwes35IMvYg1sWvs8E-sLNDffGCLl4oTwVbF2GNv3-vFjHuhDRK58ZO2EmB8GvCoiDuug.mp4",
+          "video_preview_image_url": "https://scontent.fphs2-1.fna.fbcdn.net/v/t39.35426-6/580494398_820336137270507_2442332451369380719_n.jpg"
+        }
+      ],
+      "cards": [],
+      "raw_evidence": null,
+      "_pt_glory": {
+        "source_level": "network",
+        "collection_method": "network_response_observation",
+        "source_position": 15,
+        "request_url": "https://www.facebook.com/api/graphql/",
+        "parse_warnings": [],
+        "change_flags": []
+      }
+    },
+    {
+      "record_key": "ad:784297384327919",
+      "ad_archive_id": "784297384327919",
+      "collation_id": "1882706909002861",
+      "collation_count": 4,
+      "page_id": "280224166119210",
+      "meta_page_id": "280224166119210",
+      "page_name": "Arthur Clinic อาเธอร์คลินิก ปรับรูปหน้า โบท็อกซ์ ฟิลเลอร์ ร้อยไหม ผิวขาวใส",
+      "page_aliases": [],
+      "page_profile_uri": "https://www.facebook.com/arthurclinic/",
+      "page_profile_numeric_id": null,
+      "page_like_count": 115582,
+      "is_active": true,
+      "start_date": "2026-03-20T07:00:00.000Z",
+      "start_date_raw": "2026-03-20T07:00:00.000Z",
+      "end_date": null,
+      "end_date_raw": null,
+      "network_end_date_raw": "2026-09-09T07:00:00.000Z",
+      "display_format": "IMAGE",
+      "cta_type": "MESSAGE_PAGE",
+      "cta_text": "ส่งข้อความ",
+      "title": null,
+      "body_text": "#รวมโปรจัดหนัก โบท็อกซ์ แฟตแก้มเหนียง 😘 3 สาขาสุดคุ้ม 📍เพชรเกษม มีนบุรี ราชพฤกษ์ ดึงโบ แฟตต่อหน้า #เข้มข้นคุ้มทุกหยด 🏆 ✅ โปรแกรม โบท็อกซ์ ดึงโบต่อหน้า 2,790 / โปร 1 โปร คือ กรามหน้าเรียว / เหมาริ้วรอย / ยกลิฟท์หน้า สองโปร หรือ จับคู่เพื่อนมา เหลือโปรละ 2,500 ท่านเดียวทำ สามอย่าง พิเศษ 6,900.- ฟรีวิตามินผิว ✅ เช็คนาโบ ตรงจากบริษัท ได้ง่ายๆ \"ไม่เสี่ยงดื้อโบ\" ผ่าน Line ผู้นำเข้านาโบเจ้าเดียวในประเทศ ได้ที่ @montanamarketing #ท้าให้เช็ค 👉 กดคลินิกที่ใช้นาโบ พิมพ์ Arthur clinic หรือ อาเธอร์คลินิก กดค้นหาแล้ว เจอเลย 💖 #ใส่ใจก่อนทำ 👉 เช็คสักนิดไม่เสี่ยงของปลอม ▶️ อ่านคอมเมนต์ ✅ โปรแกรมแฟต ลดไขมันแก้ม / เหนียง เปิดขวด ดึงแฟตต่อหน้า ไม่เจือจางน้ำเกลือ ▪ Miracle Fat ลดไขมัน (คุ้ม) - เหมาขวด 12 ml 1,790.- - สองขวด 24 ml 3,490.- ▪ SISI Fat พร้อมกระชับผิว - เหมาขวด 10 ml 2,490.- - สองขวด 20 ml 4,490 ▪ BABI Fat (ฮิต คุณภาพ) สลายไขมันแน่นๆ พร้อมกระชับผิว - เหมาขวด 10 ml 2,790.- - สองขวด 20 ml 4,990.- 🔹 โปรสองขวด สามารถแบ่งทำ / แบ่งเพื่อนได้ 🔹 ฟรี firmimg serum (1,490.-) เปปไทด์กระชับผิว ทุกโปรแฟตสองขวด ✨ ทางคลินิกจัด package สุดคุ้มไว้บริการอีกด้วย #กว่าห้าพันรีวิวไว้วางใจให้เราดูแลคุณ โปรจัดหนักจัดเต็ม ต้องอาเธอร์คลินิก ✅inbox : https://m.me/arthurclinic ✅Line📲 : @arthurclinic (มี@ด้วยนะคะ) หรือกด bit.ly/arthurclinic ยินดีตอบทุกคำถาม ❤️ __________________________ สามสาขา ติดถนนใหญ่ ที่จอดรถกว้าง เดินทางสะดวก เปิดบริการทุกวัน 10.00-20.00 น. แพทย์เข้าตรวจทุกวัน 13.00-20.00 น 🔹 สาขาเพชรเกษม ปากซอย 81 (ไม่เข้าซอย) โทร : 062-979-1666 🔹 สาขามีนบุรี ตรงข้ามบิ๊กซีสุวินทวงศ์ โทร : 061-929-2666 🔹 สาขาราชพฤกษ์ ปิ่นเกล้า MRTไฟฉาย (จองคิว) โทร : 062-646-2666 __________________________ #arthurclinic #อาเธอร์คลินิก #แพทย์ประจำดูแลต่อเนื่อง #ขอบคุณกว่าห้าหมื่นความไว้วางใจ",
+      "caption": null,
+      "link_url": null,
+      "link_description": null,
+      "publisher_platform": [
+        "FACEBOOK",
+        "MESSENGER"
+      ],
+      "page_categories": [
+        "Health/beauty"
+      ],
+      "images": [
+        {
+          "original_image_url": "https://scontent.fphs2-1.fna.fbcdn.net/v/t39.35426-6/583299211_1357242695899675_8412640183088633910_n.jpg",
+          "resized_image_url": "https://scontent.fphs2-1.fna.fbcdn.net/v/t39.35426-6/584490752_2627870287546160_4908337247008234250_n.jpg",
+          "image_crops": []
+        }
+      ],
+      "videos": [],
+      "cards": [],
+      "raw_evidence": null,
+      "_pt_glory": {
+        "source_level": "network",
+        "collection_method": "network_response_observation",
+        "source_position": 16,
+        "request_url": "https://www.facebook.com/api/graphql/",
+        "parse_warnings": [],
+        "change_flags": []
+      }
+    },
+    {
+      "record_key": "ad:828902906391447",
+      "ad_archive_id": "828902906391447",
+      "collation_id": "702563068852462",
+      "collation_count": 1,
+      "page_id": "104853022380053",
+      "meta_page_id": "104853022380053",
+      "page_name": "Ploypeta Clinic เพจหลัก",
+      "page_aliases": [],
+      "page_profile_uri": "https://www.facebook.com/100085564280268/",
+      "page_profile_numeric_id": "100085564280268",
+      "page_like_count": 3115,
+      "is_active": true,
+      "start_date": "2025-11-02T07:00:00.000Z",
+      "start_date_raw": "2025-11-02T07:00:00.000Z",
+      "end_date": null,
+      "end_date_raw": null,
+      "network_end_date_raw": "2026-09-09T07:00:00.000Z",
+      "display_format": "IMAGE",
+      "cta_type": "MESSAGE_PAGE",
+      "cta_text": "ส่งข้อความ",
+      "title": null,
+      "body_text": "✨FAT สลายไขมัน 🔥มีห่วงยาง เพราะไขมันสะสม ถึงเวลาจัดการกู้หุ่นสวยด้วย FAT✨ . 💥จัดการปัญหาด้วย MESO FAT แฟตแบบบุฟเฟ่ต์✨ 🎉โปรโมชั่น เพียง 999.- เท่านั้น . . . สามารถติดต่อสอบถามราคาโปรโมชั่นได้แล้ววันนี้ จุ๊บๆ 😘 เปิดให้บริการทุกวัน ไม่มีวันหยุดราชการและนักขัตฤกษ์ . *ผลลัพธ์ขึ้นอยู่กับแต่ละบุคคล *เงื่อนไขเป็นไปตามที่บริษัทกำหนดเฉพาะลูกค้าที่โอนจองเท่านั้น . 💖😍สอบถามเพิ่มเติมหรือจองคิวเพื่อนัดกับทางคลินิก 💌 ทักแชท Inbox 📲 : 094-4662914 หรือ 02-4579365 📱IG : ploypeta_clinic 📱 Line: https://lin.ee/dAIlSyO หรือ @ploypeta.clinic (มี @ ด้วยนะคะ) . 📍:https://goo.gl/maps/butNAKnx62nWfCv3A คลินิกอยู่ติดถนนใหญ่ถนนเพชรเกษม ใกล้กับ MRT เพชรเกษม48 ทางออกที่ 4 มีที่จอดรคลินิกอยู่ติดถนนใหญ่ถนนเพชรเกษม ใกล้กับ MRT เพชรเกษม48 ทางออกที่ 4 มีที่จอดร#mrtเพชรเกษม48ถสะดวกสะบาย ที่ตั้งคลินิก :343 ถนนเพชรเกษม แขวงปากคลองภาษีเจริญ เขตภาษีเจริญ กรุงเทพมหานคร . #ฉีดผิวขาว #เลเซอร์ #ทรีทเม้นท์หน้าขาวใส #ทรีทเม้นท์ลดริ้วรอย #เมโสหน้าใส #ผลักวิตามิน #ลดสัดส่วน #รักษาสิวฝ้ากระ #เมโสแฟต #Fat #PloypetaClinic #พลอยเพตาคลินิก #คลินิกความงามแถวเพชรเกษม48 #mrtเพชรเกษม48",
+      "caption": null,
+      "link_url": null,
+      "link_description": null,
+      "publisher_platform": [
+        "FACEBOOK",
+        "INSTAGRAM",
+        "AUDIENCE_NETWORK"
+      ],
+      "page_categories": [
+        "Health & Beauty"
+      ],
+      "images": [
+        {
+          "original_image_url": "https://scontent.fphs2-1.fna.fbcdn.net/v/t39.35426-6/573872454_2046856699493530_3018954928432823615_n.jpg",
+          "resized_image_url": "https://scontent.fphs2-1.fna.fbcdn.net/v/t39.35426-6/574977160_2247635825737302_1810659735310234836_n.jpg",
+          "image_crops": []
+        }
+      ],
+      "videos": [],
+      "cards": [],
+      "raw_evidence": null,
+      "_pt_glory": {
+        "source_level": "network",
+        "collection_method": "network_response_observation",
+        "source_position": 17,
+        "request_url": "https://www.facebook.com/api/graphql/",
+        "parse_warnings": [],
+        "change_flags": []
+      }
+    },
+    {
+      "record_key": "ad:873109815540195",
+      "ad_archive_id": "873109815540195",
+      "collation_id": "783948014234174",
+      "collation_count": 1,
+      "page_id": "100855871748254",
+      "meta_page_id": "100855871748254",
+      "page_name": "MysecretClinic ความงามครบวงจร สาขาแม่สาย",
+      "page_aliases": [],
+      "page_profile_uri": "https://www.facebook.com/MysecretMaesai/",
+      "page_profile_numeric_id": null,
+      "page_like_count": 6115,
+      "is_active": true,
+      "start_date": "2026-02-23T08:00:00.000Z",
+      "start_date_raw": "2026-02-23T08:00:00.000Z",
+      "end_date": null,
+      "end_date_raw": null,
+      "network_end_date_raw": "2026-09-09T07:00:00.000Z",
+      "display_format": "VIDEO",
+      "cta_type": "MESSAGE_PAGE",
+      "cta_text": "ส่งข้อความ",
+      "title": null,
+      "body_text": "ตาสองชั้นหลบใน ปากไม่เป็นทรง #แก้ได้ ด้วยศัลยกรรม 2 อย่าง ตาสองชั้น+ปากกระจับ ใบหน้าเปลี่ยนสวยละมุนขึ้น!💖 ​ 💬เคสนี้มารีวิวการทำศัลยกรรมสองอย่างพร้อมกันที่ลูกค้าตัดสินใจทำเพื่อเปลี่ยนลุคให้ใบหน้าละมุนมากยิ่งขึ้น ผลลัพธ์ออกสวยมาก ลูกค้าปลื้มสุดๆ ​ ⭐มายซีเคร็ทคลินิก ศัลยกรรมโดยแพทย์ผู้ชำนาญทุกเคส มีการออกแบบเคสต่อเคสให้เข้ากับใบหน้าของแต่ละคน ​ 👩🏻‍⚕️สนใจปรึกษาคุณหมอฟรีไม่มีค่าใช้จ่าย ​ ✅หัตถการโดยแพทย์ผู้ชำนาญ ✅สวย สะอาด ปลอดภัย ​ ✅บริการเป็นเลิศ ✅ยาแท้ ปลอดภัย สแกนตรวจสอบได้ ​ 📍ติดต่อ Mysecret clinic ได้ที่นี่ ​ สาขาแม่สาย - ถนนเหมืองแดง 📱Line: @mysecretms (มี@) 💌Inbox: m.me/mysecretmaesai ☎เบอร์โทร :096-2120921 📌พิกัด: https://maps.app.goo.g//ivULDJEHBTnQGqjx5 ​ #ยกกระชับหน้า #ผิวใส #ฟิลเลอร์ #เมโสหน้าใส #ไฮฟู่ #เติมวิตามินผิว #โบท๊อก #ฉีดแฟตสลายไขมันแม่สาย #เมโสหน้าใส #คลินิกความงามแม่สาย #คลินิกความงามเชียงราย #มายซีเคร็ทแม่สาย #mysecretmaesai #โปรโมชั่นฟิลเลอร์ #ครบรอบ2ปี #Review #ร้อยไหม #ฟิลเลอร์โปรพิเศษ #ฟิลเลอร์คาง #ฟิลเลอร์ปาก #ฟิลเลอร์ใต้ตา #ฟิลเลอร์หน้าผาก #ฟิลเลอร์ร่องแก้ม #ฟิลเลอร์หน้าเด็ก #ฟิลเลอร์ปรับรูปหน้า #ศัลยกรรม #เสริมจมูก",
+      "caption": null,
+      "link_url": null,
+      "link_description": null,
+      "publisher_platform": [
+        "FACEBOOK",
+        "INSTAGRAM",
+        "AUDIENCE_NETWORK",
+        "MESSENGER"
+      ],
+      "page_categories": [
+        "Medical Clinic",
+        "Medical Center"
+      ],
+      "images": [],
+      "videos": [
+        {
+          "video_hd_url": "https://scontent.fphs2-1.fna.fbcdn.net/o1/v/t2/f2/m366/AQOopshsbykh-daKRr5JebhQX98lp2nF8L3pNxqMiT3n9Kc7tXRekGhk9ebMl55dQZQ-EN-RLLl2CQnb9MQbyZiZCSSzTZG1msUHONgOOLUypw.mp4",
+          "video_sd_url": "https://scontent.fphs2-1.fna.fbcdn.net/o1/v/t2/f2/m412/AQPI65VHSo-JDkooPLg4wLJWIwoKcsKe_uZDiy2o1TiDDaagSF5QrBJnY165mk_lLoIJDIEZOWfaITgV6co9CIU5Z8YKKpiOYQgcgLhm6A.mp4",
+          "video_preview_image_url": "https://scontent.fphs2-1.fna.fbcdn.net/v/t39.35426-6/641416962_889731383841827_5268883081025544120_n.jpg"
+        }
+      ],
+      "cards": [],
+      "raw_evidence": null,
+      "_pt_glory": {
+        "source_level": "network",
+        "collection_method": "network_response_observation",
+        "source_position": 18,
+        "request_url": "https://www.facebook.com/api/graphql/",
+        "parse_warnings": [],
+        "change_flags": []
+      }
+    },
+    {
+      "record_key": "ad:9619654211476492",
+      "ad_archive_id": "9619654211476492",
+      "collation_id": "29782239128086965",
+      "collation_count": 1,
+      "page_id": "264404733424243",
+      "meta_page_id": "264404733424243",
+      "page_name": "Medella Clinic",
+      "page_aliases": [],
+      "page_profile_uri": "https://www.facebook.com/medellaclinic/",
+      "page_profile_numeric_id": null,
+      "page_like_count": 10757,
+      "is_active": true,
+      "start_date": "2025-05-24T07:00:00.000Z",
+      "start_date_raw": "2025-05-24T07:00:00.000Z",
+      "end_date": null,
+      "end_date_raw": null,
+      "network_end_date_raw": "2026-09-09T07:00:00.000Z",
+      "display_format": "IMAGE",
+      "cta_type": "MESSAGE_PAGE",
+      "cta_text": "ส่งข้อความ",
+      "title": "🎁 1,999.- แถมฟรี ลิฟท์กรอบหน้า",
+      "body_text": "📣 กลับมาอีกครั้ง ตามคำเรียกร้อง กับฟิลเลอร์ปาก เพียง 1,999.- แถมฟรี ลิฟท์กรอบหน้า #โปรโมชั่นนี้เฉพาะลูกค้าที่จองออนไลน์เท่านั้น . 🥰 “สนใจ” ทักแชทข้อความได้เลยค่า - - - - - - - - - - - - - - - - - - - - - - - - 💕 𝐌𝐞𝐝𝐞𝐥𝐥𝐚 𝐂𝐥𝐢𝐧𝐢𝐜 \"สวยในแบบที่คุณเลือกเองได้\" 💉 ผลิตภัณฑ์ของแท้ ปลอดภัย สามารถตรวจสอบได้ 👨🏻‍⚕️ คุณหมอดูเองทุกเคส เพื่อผลลัพธ์ที่ดีและพึงพอใจมากที่สุด ⏰ เปิดให้บริการทุกวัน 11:00 - 20:00 น. 💬 Line OA: @medellaclinic 📱 สอบถาม/จองคิวโปรโมชั่น/วิธีการเดินทาง: 064-491-6325 📍 ที่ตั้งคลินิก: https://maps.app.goo.gl/JiNdznwuYeCb9eEbA 🚝 BTS สายสีเขียว ลงสถานีรัชโยธิน ออกประตู 2 🚝 MRT สายสีน้ำเงิน สายสีเหลือง ลงสถานีลาดพร้าว ออกประตู 4 #MedellaClinic #เมเดลล่าคลินิก #คลินิกรัชดา #คลินิกลาดพร้าว #Botox #Filler #ลิฟกรอบหน้า #ฉีดผิว #ฉีดวิตามินผิว #เมโสหน้าใส #สลายฟิลเลอร์ #softfiller #ปากกระจับ #เติมหน้าผาก #โปรโมชั่น #ปรับนูปหน้า #หน้าเรียว #เมโสแฟต #ฉีดสลายไขมัน #โบท็อกซ์ #ร้อยไหม #ฟิลเลอร์ #Botox #Filler #ลิฟกรอบหน้า #ฉีดผิว #ฉีดวิตามินผิว #เมโสหน้าใส #สลายฟิลเลอร์ #softfiller #ปากกระจับ #ฟิลเลอร์ปาก #ฟิลเลอร์ใต้ตา #ฟิลเลอร์ใต้ตา #Neuramis #เติมแก้มตอบ #ดอลลี่อาย",
+      "caption": null,
+      "link_url": null,
+      "link_description": null,
+      "publisher_platform": [
+        "FACEBOOK",
+        "INSTAGRAM",
+        "MESSENGER"
+      ],
+      "page_categories": [
+        "Health/beauty",
+        "Medical Service",
+        "Health & Beauty"
+      ],
+      "images": [
+        {
+          "original_image_url": "https://scontent.fphs2-1.fna.fbcdn.net/v/t39.35426-6/500077519_1076803760934962_2846852701091539579_n.jpg",
+          "resized_image_url": "https://scontent.fphs2-1.fna.fbcdn.net/v/t39.35426-6/500318948_1356203745588139_4365244460924322098_n.jpg",
+          "image_crops": []
+        }
+      ],
+      "videos": [],
+      "cards": [],
+      "raw_evidence": null,
+      "_pt_glory": {
+        "source_level": "network",
+        "collection_method": "network_response_observation",
+        "source_position": 19,
+        "request_url": "https://www.facebook.com/api/graphql/",
+        "parse_warnings": [],
+        "change_flags": []
+      }
+    },
+    {
+      "record_key": "ad:1203099635019047",
+      "ad_archive_id": "1203099635019047",
+      "collation_id": "1861954834432645",
+      "collation_count": 2,
+      "page_id": "106863732287944",
+      "meta_page_id": "106863732287944",
+      "page_name": "G Grand Spa",
+      "page_aliases": [],
+      "page_profile_uri": "https://www.facebook.com/ggrandspa/",
+      "page_profile_numeric_id": null,
+      "page_like_count": 4832,
+      "is_active": true,
+      "start_date": "2025-11-07T08:00:00.000Z",
+      "start_date_raw": "2025-11-07T08:00:00.000Z",
+      "end_date": null,
+      "end_date_raw": null,
+      "network_end_date_raw": "2026-09-09T07:00:00.000Z",
+      "display_format": "VIDEO",
+      "cta_type": "VIEW_INSTAGRAM_PROFILE",
+      "cta_text": "ไปที่โปรไฟล์ Instagram",
+      "title": null,
+      "body_text": "Promotion เดือนนี้ จำนวนจำกัด 1 แถม 1 จ่ายเพียง 890.- 🌹Detox head & face spa ✨ 90 นาที 20 ขั้นตอน ราคา 890.- ✅ฟรี อบไอน้ำเคราติน ✅นวดดีท๊อกหนังศรีษะเส้นผม+ทรีทเม้นท์บำรุง ♦️เสียงบำบัดไมเกรน ♦️ผ่อนคลายกลิ่น relax aroma ♦️นวดเปิดจุด ♦️cleansing milk ♦️นวดหน้า ♦️กัวซาหน้า บำบัดด้วย Rose Quartz,Aventurine ♦️ มาร์คหน้า เลือกสูตรได้ ♦️มาร์คปาก LANEIGE ♦️สระผม ออร์แกนิค ล้างสารพิษ ♦️สระผมนวดผ่อนคลาย ♦️พ่นนาโนทรีทเม้นท์สูตร Organic Detox ปั่นเคราติน ♦️นวดทั้งศรีษะสปาบำรุงเส้นผมมีน้ำหนัก ลดผมเสียแตกปลาย ♦️นวดคอบ่าไหล่ท่านอน ♦️ นวดแขนมือ ♦️ผ่อนคลายผ้าอุ่น ♦️ผ่อนคลายวงแหวนน้ำอุ่น ♦️นวดอโรม่า คอ บ่า ไหล่ ♦️ประคบสมุนไพร ♦️นวดคอ บ่า ไหล่ ♦️ไดร์ตรง สอบถามข้อมูล/จองคิว line:@ggrand 🟢ADD LINE : https://lin.ee/yYKhspz 📲TEL : 098-1464244 มีที่จอดรถ สถานที่ 🚗🏢 เจ บิซ รังสิต - คลอง1 (J Biz Rangsit - Klong1) https://maps.app.goo.gl/qV2mqMk3n5cxT7c36?g_st=il #ghealthbeauty #slimming #body #spa #facial #ggrandspa #bodyslimming #facialcare #beauty #relaxation #สปาหน้า #สปาตัว #ยกกระชับ #ลดสัดส่วน #วิตามินผิว #ทรีทเม้นต์บำรุงผิวหน้า#สปาผม#ดีท๊อกหนังศรีษะ#สลายไขมัน#สปาผม",
+      "caption": "instagram.com",
+      "link_url": "http://instagram.com/ggrandspa",
+      "link_description": null,
+      "publisher_platform": [
+        "FACEBOOK",
+        "INSTAGRAM"
+      ],
+      "page_categories": [
+        "Spa"
+      ],
+      "images": [],
+      "videos": [
+        {
+          "video_hd_url": "https://scontent.fphs2-1.fna.fbcdn.net/o1/v/t2/f2/m86/AQMSqJoldTAsu9V0u0GtNPYRMA6uLVymY5FKA996qVA09LbQCPjKwh3bve5QseOyOnt1njmZpUpb2jxuTp50JdKutV3DZZX3d017-tU.mp4",
+          "video_sd_url": "https://scontent.fphs2-1.fna.fbcdn.net/o1/v/t2/f2/m86/AQOMtmtY8v-ppwEc2_6NYcXV7qhAIsShhIveJuA-UFHDMUYvmx-k9TubsmWF7mYJf5rxBQPpTQIN6Z7NEoaijHjDTXwzkMpTypLNVPI.mp4",
+          "video_preview_image_url": "https://scontent.fphs2-1.fna.fbcdn.net/v/t39.35426-6/578244830_2122039408610793_5950132730595695233_n.jpg"
+        }
+      ],
+      "cards": [],
+      "raw_evidence": null,
+      "_pt_glory": {
+        "source_level": "network",
+        "collection_method": "network_response_observation",
+        "source_position": 20,
+        "request_url": "https://www.facebook.com/api/graphql/",
+        "parse_warnings": [],
+        "change_flags": []
+      }
+    },
+    {
+      "record_key": "ad:2874517276081197",
+      "ad_archive_id": "2874517276081197",
+      "collation_id": "1861954834432645",
+      "collation_count": 1,
+      "page_id": "106863732287944",
+      "meta_page_id": "106863732287944",
+      "page_name": "G Grand Spa",
+      "page_aliases": [],
+      "page_profile_uri": "https://www.facebook.com/ggrandspa/",
+      "page_profile_numeric_id": null,
+      "page_like_count": 4832,
+      "is_active": true,
+      "start_date": "2025-11-07T08:00:00.000Z",
+      "start_date_raw": "2025-11-07T08:00:00.000Z",
+      "end_date": null,
+      "end_date_raw": null,
+      "network_end_date_raw": "2026-09-09T07:00:00.000Z",
+      "display_format": "VIDEO",
+      "cta_type": "VIEW_INSTAGRAM_PROFILE",
+      "cta_text": "ไปที่โปรไฟล์ Instagram",
+      "title": null,
+      "body_text": "Promotion เดือนนี้ จำนวนจำกัด 1 แถม 1 จ่ายเพียง 890.- 🌹Detox head & face spa ✨ 90 นาที 20 ขั้นตอน ราคา 890.- ✅ฟรี อบไอน้ำเคราติน ✅นวดดีท๊อกหนังศรีษะเส้นผม+ทรีทเม้นท์บำรุง ♦️เสียงบำบัดไมเกรน ♦️ผ่อนคลายกลิ่น relax aroma ♦️นวดเปิดจุด ♦️cleansing milk ♦️นวดหน้า ♦️กัวซาหน้า บำบัดด้วย Rose Quartz,Aventurine ♦️ มาร์คหน้า เลือกสูตรได้ ♦️มาร์คปาก LANEIGE ♦️สระผม ออร์แกนิค ล้างสารพิษ ♦️สระผมนวดผ่อนคลาย ♦️พ่นนาโนทรีทเม้นท์สูตร Organic Detox ปั่นเคราติน ♦️นวดทั้งศรีษะสปาบำรุงเส้นผมมีน้ำหนัก ลดผมเสียแตกปลาย ♦️นวดคอบ่าไหล่ท่านอน ♦️ นวดแขนมือ ♦️ผ่อนคลายผ้าอุ่น ♦️ผ่อนคลายวงแหวนน้ำอุ่น ♦️นวดอโรม่า คอ บ่า ไหล่ ♦️ประคบสมุนไพร ♦️นวดคอ บ่า ไหล่ ♦️ไดร์ตรง สอบถามข้อมูล/จองคิว line:@ggrand 🟢ADD LINE : https://lin.ee/yYKhspz 📲TEL : 098-1464244 มีที่จอดรถ สถานที่ 🚗🏢 เจ บิซ รังสิต - คลอง1 (J Biz Rangsit - Klong1) https://maps.app.goo.gl/qV2mqMk3n5cxT7c36?g_st=il #ghealthbeauty #slimming #body #spa #facial #ggrandspa #bodyslimming #facialcare #beauty #relaxation #สปาหน้า #สปาตัว #ยกกระชับ #ลดสัดส่วน #วิตามินผิว #ทรีทเม้นต์บำรุงผิวหน้า#สปาผม#ดีท๊อกหนังศรีษะ#สลายไขมัน#สปาผม",
+      "caption": "instagram.com",
+      "link_url": "http://instagram.com/ggrandspa",
+      "link_description": null,
+      "publisher_platform": [
+        "FACEBOOK",
+        "INSTAGRAM"
+      ],
+      "page_categories": [
+        "Spa"
+      ],
+      "images": [],
+      "videos": [
+        {
+          "video_hd_url": "https://scontent.fphs2-1.fna.fbcdn.net/o1/v/t2/f2/m86/AQMSqJoldTAsu9V0u0GtNPYRMA6uLVymY5FKA996qVA09LbQCPjKwh3bve5QseOyOnt1njmZpUpb2jxuTp50JdKutV3DZZX3d017-tU.mp4",
+          "video_sd_url": "https://scontent.fphs2-1.fna.fbcdn.net/o1/v/t2/f2/m86/AQOMtmtY8v-ppwEc2_6NYcXV7qhAIsShhIveJuA-UFHDMUYvmx-k9TubsmWF7mYJf5rxBQPpTQIN6Z7NEoaijHjDTXwzkMpTypLNVPI.mp4",
+          "video_preview_image_url": "https://scontent.fphs2-1.fna.fbcdn.net/v/t39.35426-6/574341191_871558428871248_7308457421418519834_n.jpg"
+        }
+      ],
+      "cards": [],
+      "raw_evidence": null,
+      "_pt_glory": {
+        "source_level": "network",
+        "collection_method": "network_response_observation",
+        "source_position": 21,
+        "request_url": "https://www.facebook.com/api/graphql/",
+        "parse_warnings": [],
+        "change_flags": []
+      }
+    },
+    {
+      "record_key": "ad:883234820916525",
+      "ad_archive_id": "883234820916525",
+      "collation_id": "813596724528142",
+      "collation_count": 2,
+      "page_id": "264404733424243",
+      "meta_page_id": "264404733424243",
+      "page_name": "Medella Clinic",
+      "page_aliases": [],
+      "page_profile_uri": "https://www.facebook.com/medellaclinic/",
+      "page_profile_numeric_id": null,
+      "page_like_count": 10757,
+      "is_active": true,
+      "start_date": "2026-01-13T08:00:00.000Z",
+      "start_date_raw": "2026-01-13T08:00:00.000Z",
+      "end_date": null,
+      "end_date_raw": null,
+      "network_end_date_raw": "2026-09-09T07:00:00.000Z",
+      "display_format": "IMAGE",
+      "cta_type": "MESSAGE_PAGE",
+      "cta_text": "ส่งข้อความ",
+      "title": "📣 รับ 10 สิทธิ์เท่านั้น",
+      "body_text": "📣 กลับมาอีกครั้ง ตามคำเรียกร้อง กับฟิลเลอร์ปาก เพียง 1,999.- แถมฟรี ลิฟท์กรอบหน้า #โปรโมชั่นนี้เฉพาะลูกค้าที่จองออนไลน์เท่านั้น . 🥰 “สนใจ” ทักแชทข้อความได้เลยค่า - - - - - - - - - - - - - - - - - - - - - - - - 💕 𝐌𝐞𝐝𝐞𝐥𝐥𝐚 𝐂𝐥𝐢𝐧𝐢𝐜 \"สวยในแบบที่คุณเลือกเองได้\" 💉 ผลิตภัณฑ์ของแท้ ปลอดภัย สามารถตรวจสอบได้ 👨🏻‍⚕️ คุณหมอดูเองทุกเคส เพื่อผลลัพธ์ที่ดีและพึงพอใจมากที่สุด ⏰ เปิดให้บริการทุกวัน 11:00 - 20:00 น. 💬 Line OA: @medellaclinic 📱 สอบถาม/จองคิวโปรโมชั่น/วิธีการเดินทาง: 064-491-6325 📍 ที่ตั้งคลินิก: https://maps.app.goo.gl/JiNdznwuYeCb9eEbA 🚝 BTS สายสีเขียว ลงสถานีรัชโยธิน ออกประตู 2 🚝 MRT สายสีน้ำเงิน สายสีเหลือง ลงสถานีลาดพร้าว ออกประตู 4 #MedellaClinic #เมเดลล่าคลินิก #คลินิกรัชดา #คลินิกลาดพร้าว #Botox #Filler #ลิฟกรอบหน้า #ฉีดผิว #ฉีดวิตามินผิว #เมโสหน้าใส #สลายฟิลเลอร์ #softfiller #ปากกระจับ #เติมหน้าผาก #โปรโมชั่น #ปรับนูปหน้า #หน้าเรียว #เมโสแฟต #ฉีดสลายไขมัน #โบท็อกซ์ #ร้อยไหม #ฟิลเลอร์ #Botox #Filler #ลิฟกรอบหน้า #ฉีดผิว #ฉีดวิตามินผิว #เมโสหน้าใส #สลายฟิลเลอร์ #softfiller #ปากกระจับ #ฟิลเลอร์ปาก #ฟิลเลอร์ใต้ตา #ฟิลเลอร์ใต้ตา #Neuramis #เติมแก้มตอบ #ดอลลี่อาย",
+      "caption": null,
+      "link_url": null,
+      "link_description": null,
+      "publisher_platform": [
+        "FACEBOOK",
+        "INSTAGRAM",
+        "MESSENGER"
+      ],
+      "page_categories": [
+        "Health/beauty",
+        "Medical Service",
+        "Health & Beauty"
+      ],
+      "images": [
+        {
+          "original_image_url": "https://scontent.fphs2-1.fna.fbcdn.net/v/t39.35426-6/615424280_1990241021536037_4943632526994120100_n.jpg",
+          "resized_image_url": "https://scontent.fphs2-1.fna.fbcdn.net/v/t39.35426-6/615160167_1195248199472443_2833397501275691476_n.jpg",
+          "image_crops": []
+        }
+      ],
+      "videos": [],
+      "cards": [],
+      "raw_evidence": null,
+      "_pt_glory": {
+        "source_level": "network",
+        "collection_method": "network_response_observation",
+        "source_position": 22,
+        "request_url": "https://www.facebook.com/api/graphql/",
+        "parse_warnings": [],
+        "change_flags": []
+      }
+    },
+    {
+      "record_key": "ad:1450306733290222",
+      "ad_archive_id": "1450306733290222",
+      "collation_id": "1623829511997115",
+      "collation_count": 1,
+      "page_id": "103300545735533",
+      "meta_page_id": "103300545735533",
+      "page_name": "The Kiss Clinic สระบุรี",
+      "page_aliases": [],
+      "page_profile_uri": "https://www.facebook.com/100083295941023/",
+      "page_profile_numeric_id": "100083295941023",
+      "page_like_count": 10533,
+      "is_active": true,
+      "start_date": "2026-02-09T08:00:00.000Z",
+      "start_date_raw": "2026-02-09T08:00:00.000Z",
+      "end_date": null,
+      "end_date_raw": null,
+      "network_end_date_raw": "2026-09-09T07:00:00.000Z",
+      "display_format": "VIDEO",
+      "cta_type": "MESSAGE_PAGE",
+      "cta_text": "ส่งข้อความ",
+      "title": null,
+      "body_text": "💖“เพราะการรักตัวเอง คือการลงทุนที่คุ้มค่าที่สุด” ให้ The Kiss Clinic ดูแลคุณตั้งแต่วันนี้ ปรนนิบัติผิวและรูปร่างให้สมบูรณ์แบบที่ The Kiss Clinic คลินิกที่สาวๆ สระบุรีไว้วางใจ เรารวมทุกศาสตร์ความงามไว้ในที่เดียว: 🛁 👉 ศาสตร์แห่งการบำบัด: สปาหินภูเขาไฟ และสปาผิวมหาเสน่ห์ บูสต์ออร่าให้ผิวใสขั้นสุด ⚡ 👉 ศาสตร์แห่งความเนียน: เลเซอร์กำจัดขนเทคโนโลยีล่าสุด เคลียร์ครบทุกจุด 👉 ศาสตร์แห่งหุ่นสวย: สลายไขมันลึกถึงชั้นเซลล์ พร้อมนวด Hot Oil ผ่อนคลายกล้ามเนื้อ . บรรยากาศห้อง VIP ส่วนตัว บริการระดับโรงแรม 5 ดาว แต่จ่ายเพียงหลักร้อย! . 💖โปรแกรมเริ่มต้น 999.- พร้อมของแถมจุกๆ เฉพาะเดือนนี้เท่านั้น . ปักหมุดความสวย: 📍 ชั้น 2 โลตัส สระบุรี สวยขึ้น... มั่นใจขึ้น รับปี 2026 ไปด้วยกันนะคะ . จองเลย 👉 https://m.me/100083295941023 ---------- 🌸 The Kiss Clinic สระบุรี 🌸 🌸🌸 เพราะความสวย อัพเดทได้ 🌸🌸 📞 CALL : 036 670 189 🚗 เส้นทางการเดินทาง https://maps.app.goo.gl/qrMjarDWG1d1gcwv6 #TheKissClinic #TheKissClinicสระบุรี #เพราะความสวยอัปเดทได้ #สปาสระบุรี",
+      "caption": null,
+      "link_url": null,
+      "link_description": null,
+      "publisher_platform": [
+        "FACEBOOK",
+        "INSTAGRAM",
+        "AUDIENCE_NETWORK",
+        "MESSENGER"
+      ],
+      "page_categories": [
+        "Health/beauty"
+      ],
+      "images": [],
+      "videos": [
+        {
+          "video_hd_url": "https://scontent.fphs2-1.fna.fbcdn.net/o1/v/t2/f2/m366/AQPSB5B4GVXLHcAiZjcfE37oSEivvboTtkbidIUdfMq_8GP3wwRzG6GcuXuYLuTt3d0ak2yDBcJiQJPvFUiL1qzpRydhXe-1TvTdSFa3DVyrHg.mp4",
+          "video_sd_url": "https://scontent.fphs2-1.fna.fbcdn.net/o1/v/t2/f2/m412/AQN5U78XhdneUFo_AuYS7S99YV-OqPhGacPF4FuEga-ojgW5HRKS1BQncWa-JGPTRNVnv0QflaGVok54473IEyn2Mf45OWv-0OCvReijOQ.mp4",
+          "video_preview_image_url": "https://scontent.fphs2-1.fna.fbcdn.net/v/t39.35426-6/642260699_26075829162069008_5732357585164654842_n.jpg"
+        }
+      ],
+      "cards": [],
+      "raw_evidence": null,
+      "_pt_glory": {
+        "source_level": "network",
+        "collection_method": "network_response_observation",
+        "source_position": 23,
+        "request_url": "https://www.facebook.com/api/graphql/",
+        "parse_warnings": [],
+        "change_flags": []
+      }
+    },
+    {
+      "record_key": "ad:1766732900854149",
+      "ad_archive_id": "1766732900854149",
+      "collation_id": "636122552782912",
+      "collation_count": 1,
+      "page_id": "100855871748254",
+      "meta_page_id": "100855871748254",
+      "page_name": "MysecretClinic ความงามครบวงจร สาขาแม่สาย",
+      "page_aliases": [],
+      "page_profile_uri": "https://www.facebook.com/MysecretMaesai/",
+      "page_profile_numeric_id": null,
+      "page_like_count": 6115,
+      "is_active": true,
+      "start_date": "2025-05-28T07:00:00.000Z",
+      "start_date_raw": "2025-05-28T07:00:00.000Z",
+      "end_date": null,
+      "end_date_raw": null,
+      "network_end_date_raw": "2026-09-09T07:00:00.000Z",
+      "display_format": "VIDEO",
+      "cta_type": "MESSAGE_PAGE",
+      "cta_text": "ส่งข้อความ",
+      "title": null,
+      "body_text": "✨วิวฟิลเลอร์ปรับรูปหน้า สวยครบ 3 จุด 🌈ขมับเต็ม ร่องแก้มหาย คางละมุน 3cc ก็ปังได้‼️ ปรับหน้าให้ละมุน ดูเด็กลงแบบไม่โป๊ะ ด้วยเทคนิคเฉพาะจาก Mysecret Clinic 💜จองคิวรับราคาพิเศษ + ของแถมสุดคุ้ม ทักแชทเลยก่อนเต็ม! ⚡️𝐌𝐲 𝐬𝐞𝐜𝐫𝐞𝐭 𝐜𝐥𝐢𝐧𝐢𝐜 ทุกสาขา ใช้แต่ยาเวชภัณฑ์ อย. แท้ มั่นใจ ปลอดภัย และฉีดโดยเเพทย์ผู้เชี่ยวชาญเท่านั้น 👨🏻‍⚕️ ✦━━━━━━━━━━━━━━━━━━✦ ⠀⠀⠀⠀ ⠀⠀⠀⠀⠀⠀⠀ ⠀⠀⠀⠀⠀⠀⠀ **ใช้เป็นตัวอย่างผลการรักษาขึ้นอยู่กับแต่ละบุคคล** ❄️ สอบถามโปรพิเศษทักแอดมินเลย โปรดีๆมีอีกเพียบเลยค่า🥰 📲 จองคิว / ขอดูรีวิว เพิ่มเติมทาง INBOX ทักแอดมิน🥰 ✅️มีคุณหมอมากประสบการณ์ประเมินใบหน้าได้อย่างชำนาญ ✅️ตัวยาแท้ ปลอดภัย สแกนกล่องได้ ✅สวยสะอาด ปลอดภัย ✅พนักงานบริการ ใส่ใจ เป็นกันเอง ✅ทำหัตถการโดยแพทย์ผู้เชี่ยวชาญ ​ *ผลลัพธ์ที่ได้และเทคนิคที่คุณหมอใช้อาจแตกต่างกันในแต่ละบุคคล *รูปที่ใช้รีวิวได้รับการอนุญาตเรียบร้อยแล้ว ทำสวยที่ #มายซีเคร็ท เคสเยอะเคสแน่น คุณหมอมากประสบการณ์ #ดูแลหลังทำศัลยกรรมไม่ทิ้งเคส #จำกัดเคสต่อวันเพื่องานที่ละเอียดเพื่อให้ได้ผลลัพธ์ที่ดีที่สุด🥰 🏩 คลินิกเปิดทุกวัน จันทร์-อาทิตย์ เวลา 10.00-19.30น.( แนะนำจองคิวล่วงหน้า ) 👨🏻‍🔬หัตถการทำโดยแพทย์ผู้เชี่ยวชาญ 📌 ติดต่อ Mysecret clinic ได้ที่นี่ ‼️ สาขาแม่สาย - ถนนเหมืองแดง 📱Line:@mysecretms(มี@) 📩Inbox : m.me/mysecretmaesai ☎️เบอร์โทร .:096-2120921 📌พิกัด: https://maps.app.goo.gl/ivULDJEHBTnQGqjx5 #ยกกระชับหน้า #ผิวใส #ฟิลเลอร์ #เมโสหน้าใส #ไฮฟู่ #เติมวิตามินผิว #โบท๊อก #ฉีดแฟตสลายไขมันแม่สาย #เมโสหน้าใส #คลินิกความงามแม่สาย #คลินิกความงามเชียงราย #มายซีเคร็ทแม่สาย #mysecretmaesai #โปรโมชั่นฟิลเลอร์ #ครบรอบ2ปี #Review #ร้อยไหม #ฟิลเลอร์โปรพิเศษ #ฟิลเลอร์คาง #ฟิลเลอร์ปาก #ฟิลเลอร์ใต้ตา #ฟิลเลอร์หน้าผาก #ฟิลเลอร์ร่องแก้ม #ฟิลเลอร์หน้าเด็ก #ฟิลเลอร์ปรับรูปหน้า #ศัลยกรรม #เสริมจมูก #ทำตาสองชั้น #เสริมคาง #ทำปากกระจับ",
+      "caption": null,
+      "link_url": null,
+      "link_description": null,
+      "publisher_platform": [
+        "FACEBOOK",
+        "INSTAGRAM",
+        "AUDIENCE_NETWORK",
+        "MESSENGER"
+      ],
+      "page_categories": [
+        "Medical Center"
+      ],
+      "images": [],
+      "videos": [
+        {
+          "video_hd_url": "https://scontent.fphs2-1.fna.fbcdn.net/o1/v/t2/f2/m412/AQPdTwj6gwqR9uu8XLPAP_uOp52BNCqftgO5SIdb1gtsgld9ODEUIcx2LLRHD7C4HK2zS6kM1TDq_2_WyVRp40d4.mp4",
+          "video_sd_url": "https://scontent.fphs2-1.fna.fbcdn.net/o1/v/t2/f2/m412/AQNKu5Tz8kAHh_Fa0R2SqghzFFNFuu0QvTArf_Ltr0P4bMDRnypf4jGLcyea4N17O5fsAnHdA3OYL84op23DgzbS.mp4",
+          "video_preview_image_url": "https://scontent.fphs2-1.fna.fbcdn.net/v/t39.35426-6/501751102_9981324541930613_6718863082484807432_n.jpg"
+        }
+      ],
+      "cards": [],
+      "raw_evidence": null,
+      "_pt_glory": {
+        "source_level": "network",
+        "collection_method": "network_response_observation",
+        "source_position": 24,
+        "request_url": "https://www.facebook.com/api/graphql/",
+        "parse_warnings": [],
+        "change_flags": []
+      }
+    },
+    {
+      "record_key": "ad:1409091413543630",
+      "ad_archive_id": "1409091413543630",
+      "collation_id": "687716880394190",
+      "collation_count": 3,
+      "page_id": "105951192262704",
+      "meta_page_id": "105951192262704",
+      "page_name": "โปรเมดคลินิก - PMC คลินิกศัลยกรรมและผิวพรรณความงาม",
+      "page_aliases": [],
+      "page_profile_uri": "https://www.facebook.com/100085608278875/",
+      "page_profile_numeric_id": "100085608278875",
+      "page_like_count": 13789,
+      "is_active": true,
+      "start_date": "2025-08-05T07:00:00.000Z",
+      "start_date_raw": "2025-08-05T07:00:00.000Z",
+      "end_date": null,
+      "end_date_raw": null,
+      "network_end_date_raw": "2026-09-09T07:00:00.000Z",
+      "display_format": "VIDEO",
+      "cta_type": "MESSAGE_PAGE",
+      "cta_text": "ส่งข้อความ",
+      "title": null,
+      "body_text": "🔥เติมไขมันหน้าเด็ก 9,900 บาท จากปกติ 19,900 บาท (จำกัด 49 ท่าน เท่านั้น!!) จะดีแค่ไหน‼️ ถ้าสวยแบบปลอดภัย ด้วยไขมันตัวเอง หลังเติมสวยเป๊ะ แผลเล็กเท่ารูเข็ม . 📌รับประกัน!! #รีวิวเยอะที่สุด #หมอเบญ #ยืน1เรื่องเติมไขมันหน้า . 📣ทำไมต้องเติมไขมันหน้าที่ #Promed Clinic #หมอเบญ ✅เรามีทีมแพทย์ที่มากประสบการณ์ กว่า10,000เคส . ✅ดูแลอย่างใกล้ชิดทั้งก่อนและหลังทำ . ✅สะอาด ปลอดภัย พร้อมด้วยเครื่องมือครบครัน ได้มาตรฐาน (**ความปลอดภัยมาเป็นอันดับแรก) . ✅เติมไขมันทั่วหน้า ไม่จำกัดจุด ไม่จำกัด CC . ✅ ปรับรูปหน้าเฉพาะบุคคล . ✅ เทคนิคเดียวกับทางเกาหลี . ✅ ปลอดภัยด้วยไขมันตัวเอง . ✅ แพทย์ผู้มีประสบการณ์โดยตรงในการปรับรูปหน้า . 📌ด้วยขั้นตอนการทำพิเศษเฉพาะของทาง #Promed Clinic #หมอเบญ เท่านั้น!! . 1.) Supernano fat คัดไขมัน ปั่นแยกด้วยเครื่องมือที่ทันสมัยให้ได้ไขมันที่บริสุทธิ์ เพื่อการจัดเรียงไขมันอย่างสวยงามและเรียบเนียน . 2.) ผสานด้วยวิธีการทำ Fat grafting + Growth factor เฉพาะของทางคลินิก เพิ่ม Growth factor กระตุ้นคุณภาพเซลล์ไขมัน เพื่อให้ได้ไขมันที่มีคุณภาพดีเยี่ยม . 3.) ด้วยเทคนิคพิเศษของทางคลินิก Diamond fat spider เป็นการเติมไขมัน 3 ระดับชั้น เพื่อให้เซลล์ไขมันติดอยู่นานที่สุด “ Fat nano drop lifting spider layer ” เป็นการเติมไขมันลงไปถึงชั้นลึกที่สุดและชั้นกลางรวมถึงชั้นบน และสานลึกเป็นตาข่าย เพื่อให้เซลล์ไขมันเกาะติดดีและอยู่ได้นานที่สุด . ✨ เทคนิคนี้จะทำให้มวลไขมันสมบูรณ์และแข็งแรงมากที่สุด และเน้นความละเอียดของมวลไขมันสานเป็นตาข่ายและป้องกันการเป็นคลื่นหรือเป็นก้อน และช่วยเพิ่มฉ่ำวาวดูโกลด์หลังทำทันที . ✅ โดยแพทย์ #หมอเบญ #ยืน1เรื่องเติมไขมันหน้า ประสบการณ์สูง ที่ #Promed Clinic ย่านกัลปพฤกษ์ เอกชัย บางบอน . ⭐️การเติมไขมันหน้าเหมาะสำหรับผู้ที่มีปัญหา ✅ หน้าตอบ ✅ ใต้ตาลึก ✅ หน้าผากไม่มีมิติ ✅ ขมับยุบเป็นหลุม ✅ ร่องแก้มลึกอย่างชัดเจน ✅ คางตัด . ⚫การเติมไขมันสามารถปรับรูปหน้า จบปัญหาขมับเว้า แก้มตอบ ร่องแก้ม ใต้ตาลึก โหนกแก้มสูงเติมเต็มด้วยไขมันแก้ปัญหา ลดหน้าโทรม คืนความมั่นใจกลับมาได้ดีที่สุด . 📣จบปัญหาทั่วหน้าได้ด้วยราคา 9900 บาท เท่านั้น (จำกัด 49 ท่าน เท่านั้น)‼️ . 🎊พิเศษมาเป็นคู่ ลดเพิ่มอีกคู่ละ 500 บาท🎊 . ✨ ไม่ต้องพักฟื้น หลังจากดูดไขมันเติมหน้าเสร็จแล้ว สามารถกลับบ้านและใช้ชีวิตได้ตามปกติได้เลย ในตำแหน่งที่ดูดไขมันแผลมีขนาดเล็ก ลดความเสี่ยงในการเกิดแผลเป็น และแผลคีลอยด์ ผิวเรียบเนียน ไม่เป็นคลื่น เป็นก้อน . 📌รายการของแถมพิเศษ 12 รายการ มูลค่ากว่า 20,000‼️ ✅ ฟรี! ปรึกษาแพทย์ #หมอเบญ . ✅ ฟรี! ออกแบบวิเคราะห์รูปหน้าแบบเจาะลึก . ✅ ฟรี! ตรวจร่างกายความพร้อมก่อนเข้ารับบริการผ่าตัดโดยแพทย์ . ✅ ฟรี! ยานอนหลับมูลค่า 1200 บาท . ✅ ฟรี! ยาชาทั้งดูดและเติมไขมัน มูลค่า 1200 บาท . ✅ ฟรี! anti swelling (ยาฉีดลดบวมมูลค่า 1200 บาท) . ✅ ฟรี! fat face mask (มาร์คคอลลาเจ้นเตรียมผิวมูลค่า 2000 บาท) . ✅ ฟรี! preparing mask (มาร์คเตรียมความพร้อมไขมันมูลค่า 2000 บาท) . ✅ ฟรี! pure blink (drip วิตามินผิวใสมูลค่า 3900 บาท) . ✅ ฟรี! prp plasma กระตุ้นเซลล์ไขมันหลังทำมูลค่า 3900 บาท . ✅ ฟรี! body firm นวดกระชับเพื่อป้องกันการเกิดพังผืด และกระชับผิว มูลค่า 2900 บาท . ✅ ฟรี! ยารับประทานแก้ปวดและฆ่าเชื้อหลังทำ มูลค่า 1000 บาท . เน้นย้ำ‼️ หลังทำจะมีทีมแพทย์ #หมอเบญ ดูแลเคสทุกเคสด้วยตัวเอง , 🔥โอนจองโปรโมชั่นพิเศษเพียง 900 บาทเก็บสิทธิ์ไว้ได้นาน 3เดือน (**เหตุจำเป็นสามารถแจ้งเลื่อนนัดได้) จำกัด 49 ท่าน เท่านั้น!! . ---------------------------------------------------------------- . 📲ปรึกษา/จองคิว/ติดต่อข้อมูลเพิ่มเติม Call center: 095-980-2779 Tel: 02-897-7398 Line ID: @promedclinic (Add friend คลิกlinkทางนี้เลยจ้า http://bit.ly/2Meaz0I) . -------------------------------------------------- . 🏡#Promedclinic ถนนกัลปพฤกษ์ ซอยกำนันแม้น24 แขวงบางขุนเทียน เขตจอมทอง กรุงเทพฯ . #โปรเมดคลินิก #หมอเบญ #หมอแจม #เรื่องไขมันไว้ใจเรา #ยืนหนึ่งเรื่องไขมัน #เติมไขมันหน้าเด็ก #ไม่จำกัดซีซี #ศัลยกรรมสวย #เสริมจมูกใหม่ #งานแก้ไขจมูก #เนื้อเยื่อหลังหู #ตะไบฮัมพ์ #เย็บอินเตอร์โดม #เนื้อจมูกน้อย #เติมไขมันหน้า #ดูดไขมัน #ฉีดโบท็อกซ์ #ฉีดฟิลเลอร์ #ร้อยไหม #ฉีดสลายไขมัน #ฉีดเมโสหน้าใส #ศัลยกรรม #ปรับรูปหน้า #คลินิกความงาม #ศูนย์ศัลยกรรมความงามผิวพรรณ #คลินิกความงามแถวกำนันแม้น",
+      "caption": null,
+      "link_url": null,
+      "link_description": null,
+      "publisher_platform": [
+        "FACEBOOK",
+        "INSTAGRAM",
+        "AUDIENCE_NETWORK",
+        "MESSENGER"
+      ],
+      "page_categories": [
+        "Health/beauty"
+      ],
+      "images": [],
+      "videos": [
+        {
+          "video_hd_url": "https://scontent.fphs2-1.fna.fbcdn.net/o1/v/t2/f2/m366/AQNsPIx5J1zwt6jCVuYAe0CrhNXFUfhQK4QuNIcFDrGizgmxKfgtTeep-9Dx2XH0ae-0AnLbmkwHDUYdqqqbRjiqYnnkdgN_vjqcOxCYbUTnAA.mp4",
+          "video_sd_url": "https://scontent.fphs2-1.fna.fbcdn.net/o1/v/t2/f2/m412/AQMDA1JOPkBEUgjBj7F6zf4Rri72ZQLN7UaG_xKVvFAitag0PoMxr0sVXCNX2MzPIr2cNVbraEje14mhKpVS6eAkT2uJ9tPLW6KSRgxcRA.mp4",
+          "video_preview_image_url": "https://scontent.fphs2-1.fna.fbcdn.net/v/t39.35426-6/526825665_1493061738534955_1615103165332142379_n.jpg"
+        }
+      ],
+      "cards": [],
+      "raw_evidence": null,
+      "_pt_glory": {
+        "source_level": "network",
+        "collection_method": "network_response_observation",
+        "source_position": 25,
+        "request_url": "https://www.facebook.com/api/graphql/",
+        "parse_warnings": [],
+        "change_flags": []
+      }
+    },
+    {
+      "record_key": "ad:3665065310299725",
+      "ad_archive_id": "3665065310299725",
+      "collation_id": "4308743226026396",
+      "collation_count": 1,
+      "page_id": "100855871748254",
+      "meta_page_id": "100855871748254",
+      "page_name": "MysecretClinic ความงามครบวงจร สาขาแม่สาย",
+      "page_aliases": [],
+      "page_profile_uri": "https://www.facebook.com/MysecretMaesai/",
+      "page_profile_numeric_id": null,
+      "page_like_count": 6115,
+      "is_active": true,
+      "start_date": "2025-08-23T07:00:00.000Z",
+      "start_date_raw": "2025-08-23T07:00:00.000Z",
+      "end_date": null,
+      "end_date_raw": null,
+      "network_end_date_raw": "2026-09-09T07:00:00.000Z",
+      "display_format": "VIDEO",
+      "cta_type": "MESSAGE_PAGE",
+      "cta_text": "ส่งข้อความ",
+      "title": null,
+      "body_text": "“ถึงเวลาบอกลา #ขนรักแร้ ที่ทำให้หมดความมั่นใจ! ✨ #DiodeLaser คือเทคโนโลยีกำจัดขนที่ยิงตรงถึงรากขน ทำให้ขนหลุดง่าย ลดการเกิดใหม่ และช่วยให้รักแร้เรียบเนียนขึ้นตั้งแต่ครั้งแรกที่ทำ 🩷 ไม่มีปัญหาตอแข็ง ไม่มีรอยดำ หรือผิวคล้ำจากการถอน/โกนอีกต่อไป 💡 เหมาะสำหรับคนที่อยากใส่เสื้อแขนกุด โชว์ผิวได้มั่นใจ ไม่ต้องกลัวเงาขนหรือกลิ่นอับ ทำแล้วผิวใสขึ้น รูขุมขนกระชับขึ้น 📍 เห็นผลจริง ปลอดภัย ไม่เจ็บ และอ่อนโยนต่อผิว” 👉🏻 สนใจสามารถทักแชทเพื่อสอบถามข้อมูลเพิ่มเติมหรือจองคิวได้ เลย 🏩 คลินิกเปิดทุกวัน จันทร์-อาทิตย์ เวลา 10.00-19.30น. ( แนะนำจองคิวล่วงหน้า ) 👩🏼‍⚕️สนใจปรึกษาคุณหมอฟรีไม่มีค่าใช้จ่าย ✅ สวย ✅ สะอาด ✅ ปลอดภัย ✅ บริการเป็นเลิศ 🧑🏻‍⚕️หัตถการทำโดยแพทย์ผู้เชี่ยวชาญ 📍ติดต่อ Mysecret clinic ได้ที่นี่ สาขาแม่สาย - ถนนเหมืองแดง 📱Line: @mysecretms (มี@) 📩Inbox: m.me/mysecretmaesai ☎️ เบอร์โทร :096-2120921 📌พิกัด: https://maps.app.goo.g//ivULDJEHBTnQGqjx5 #ยกกระชับหน้า #ผิวใส #ฟิลเลอร์ #เมโสหน้าใส #ไฮฟู่ #เติม วิตามินผิว #โบท๊อก #ฉีดแฟตสลายไขมันแม่สาย #เมโสหน้าใส #คลินิกความงามแม่สาย #คลินิกความงามเชียงราย #มายซีเคร็ทแม่สาย #mysecretmaesai #โปรโมชั่นฟิลเลอร์ #ครบรอบ2ปี #Review #ร้อยไหม #ฟิลเลอร์โปรพิเศษ #ฟิลเลอร์คาง #ฟิลเลอร์ปาก #ฟิลเลอร์ใต้ตา #ฟิลเลอร์หน้าผาก #ฟิลเลอร์ร่องแก้ม #ฟิลเลอร์หน้าเด็ก #ฟิลเลอร์ปรับรูปหน้า #ศัลยกรรม #เสริมจมูก",
+      "caption": null,
+      "link_url": null,
+      "link_description": null,
+      "publisher_platform": [
+        "FACEBOOK",
+        "INSTAGRAM",
+        "AUDIENCE_NETWORK",
+        "MESSENGER"
+      ],
+      "page_categories": [
+        "Medical Center"
+      ],
+      "images": [],
+      "videos": [
+        {
+          "video_hd_url": "https://scontent.fphs2-1.fna.fbcdn.net/o1/v/t2/f2/m366/AQNUuBzpQeCiDgiSNI-WJtSGHOkda9jYiLP7EixNX7CyE9rKbvpfd2edYeziwOmdYbnSKhCf7lDHtG0SIZqV0aGanbmxF-3Oz_kqFug4QNvFFA.mp4",
+          "video_sd_url": "https://scontent.fphs2-1.fna.fbcdn.net/o1/v/t2/f2/m412/AQPud2YjpcCDO3RR0uzvNWKDXMUTMws-maJubC4KtKCyjcIm_vC6IYy7rIP9uAFc_m90LapydHd2ILz0Ahv3kVm7HwPMrudtZ4puIFW4Ow.mp4",
+          "video_preview_image_url": "https://scontent.fphs2-1.fna.fbcdn.net/v/t39.35426-6/536278918_745125004991794_188117506492803800_n.jpg"
+        }
+      ],
+      "cards": [],
+      "raw_evidence": null,
+      "_pt_glory": {
+        "source_level": "network",
+        "collection_method": "network_response_observation",
+        "source_position": 26,
+        "request_url": "https://www.facebook.com/api/graphql/",
+        "parse_warnings": [],
+        "change_flags": []
+      }
+    },
+    {
+      "record_key": "ad:1433108278134434",
+      "ad_archive_id": "1433108278134434",
+      "collation_id": "1324564122797202",
+      "collation_count": 2,
+      "page_id": "781853668345754",
+      "meta_page_id": "781853668345754",
+      "page_name": "Renana Matcha Signature ผงอูจิมัทฉะแท้จากญี่ปุ่น - เพจหลัก",
+      "page_aliases": [],
+      "page_profile_uri": "https://www.facebook.com/61580932256183/",
+      "page_profile_numeric_id": "61580932256183",
+      "page_like_count": 2525,
+      "is_active": true,
+      "start_date": "2026-04-07T07:00:00.000Z",
+      "start_date_raw": "2026-04-07T07:00:00.000Z",
+      "end_date": null,
+      "end_date_raw": null,
+      "network_end_date_raw": "2026-09-09T07:00:00.000Z",
+      "display_format": "VIDEO",
+      "cta_type": "MESSAGE_PAGE",
+      "cta_text": "ส่งข้อความ",
+      "title": null,
+      "body_text": "ไม่ต้องบินไปญี่ปุ่น ก็ได้จิบมัทฉะเกรดอูจิแท้ 🇯🇵 ..🍃มัทฉะเพียว 100% ต้องเรนาน่า มัทฉะ [เกรดพรีเมี่ยม] อยากหุ่นลีน หน้าใส ชะลอวัย ระบบดี - เริ่มจากมัทฉะแท้ 1 แก้วต่อวัน . ดื่มมัทฉะมีประโยชน์อย่างไร..?? ✅ ช่วยเผาผลาญไขมัน กระตุ้นให้หุ่นลีน ลดบวม ✅ ต้านอนุมูลอิสระ ชะลอวัย ผิวใส ✅ ลดความเครียดเสริมสมาธิและพลังงานแบบไม่ใจสั่น ✅ ลดระดับน้ำตาลในเลือด ดีต่อคนควบคุมน้ำหนัก ควบคุมอินซูลินให้สมดุล ✅ ดีท็อกซ์สารพิษจากตับและลำไส้ ✅ ดีต่อหัวใจและหลอดเลือด ✅ หอม ละมุน ไม่มีน้ำตาล ✅ เบาหวาน ความดัน ดื่มได้ #สำหรับผู้ที่ทำ if ดื่มได้ ❌ไม่มีน้ำตาล ❌ไม่มีไขมัน ❌ไม่เฝื่อน ไม่ขม ❌ไม่ผสมสีหรือสารเติมเต็มอื่นๆ 🍵รสชาติเข้มข้น ดื่มง่าย อร่อย หอมมัทฉะแท้ เหมือนนั่งดื่มอยู่ที่ญี่ปุ่นเลยค่ะ 🇯🇵 . 1 กป. = 299.- ส่งฟรี 2 กป. = 490.- ส่งฟรี 5 กป. = 1,000.- ส่งฟรี >แถมขวดเชค 1 ขวด< 💢โปรขายดี💢 #มัทฉะแท้ #มัทฉะเพรียว #เรนาน่ามัทฉะ",
+      "caption": null,
+      "link_url": null,
+      "link_description": null,
+      "publisher_platform": [
+        "FACEBOOK",
+        "INSTAGRAM",
+        "AUDIENCE_NETWORK",
+        "MESSENGER"
+      ],
+      "page_categories": [
+        "Health/beauty",
+        "Vitamins/supplements"
+      ],
+      "images": [],
+      "videos": [
+        {
+          "video_hd_url": "https://scontent.fphs2-1.fna.fbcdn.net/o1/v/t2/f2/m366/AQMaZy8FEKrBnrc1qB1UvjaBpdSLqSpCRQxTrs88zjDnCVsj4h6cmCA1dNEbvJRV1nJpP65ZnmJoFdy6yih7kxG2435Ii8WZenreuj8-moEstA.mp4",
+          "video_sd_url": "https://scontent.fphs2-1.fna.fbcdn.net/o1/v/t2/f2/m412/AQNrLb0GYdZz9oLnnKZr96sRR0ciX-6FosgLsUNOHhXNQXFXq23mMcCoihwne-Yu9e6USnLWTMEMGxzj8itJCzUQefhvgzLVIEzYubIW6w.mp4",
+          "video_preview_image_url": "https://scontent.fphs2-1.fna.fbcdn.net/v/t39.35426-6/666975715_1337967531493631_5282846952860683954_n.jpg"
+        }
+      ],
+      "cards": [],
+      "raw_evidence": null,
+      "_pt_glory": {
+        "source_level": "network",
+        "collection_method": "network_response_observation",
+        "source_position": 27,
+        "request_url": "https://www.facebook.com/api/graphql/",
+        "parse_warnings": [],
+        "change_flags": []
+      }
+    }
+  ],
+  "unresolved_ads": []
+}
