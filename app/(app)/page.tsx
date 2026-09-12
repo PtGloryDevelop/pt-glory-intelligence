@@ -133,7 +133,7 @@ export default async function HomePage() {
           <EmptyState
             testId="home-no-categories"
             title="ยังไม่มีข้อมูลในระบบ"
-            body="เริ่มจากนำเข้าไฟล์ export จาก PT Glory Extension หนึ่งไฟล์"
+            body="เริ่มจากนำเข้าไฟล์ export ของ PT Glory หนึ่งไฟล์"
             action={canEdit ? <Link href="/import">ไปที่นำเข้าข้อมูล</Link> : undefined}
           />
         ) : (

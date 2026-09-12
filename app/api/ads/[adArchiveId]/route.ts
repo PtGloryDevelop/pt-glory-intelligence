@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { getAdDetail, getObservationHistory } from "@/lib/read/queries";
+import { labelProvenanceRows } from "@/lib/collect/labels";
 import { badRequest, notFound, readRoute } from "@/lib/read/guard";
 import { signArchivedPreviews } from "@/lib/media/presentation";
 import { isAdArchiveId, isUuid } from "@/lib/read/request";
@@ -29,7 +30,9 @@ export async function GET(
         ...detail,
         archive_url: detail.archive_path ? signed.get(detail.archive_path) ?? null : null,
       },
-      history: await getObservationHistory(adArchiveId),
+      // The drawer's history carries collection_method. Labelled here so the
+      // JSON body itself never names a collector, whoever is reading.
+      history: labelProvenanceRows(await getObservationHistory(adArchiveId)),
     };
   });
 }

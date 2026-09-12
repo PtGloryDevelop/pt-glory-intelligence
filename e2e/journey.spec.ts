@@ -46,7 +46,8 @@ test.describe("import to explorer to drawer", () => {
     await expect(page.getByTestId("preview-ads")).toHaveText("500");
     await expect(page.getByTestId("preview-pages")).toHaveText("309");
     await expect(page.getByTestId("preview-quarantine")).toHaveText("0");
-    await expect(page.getByTestId("preview-method")).toHaveText("network_response_observation");
+    // An analyst reads the neutral label, never the collector's own name (C03).
+    await expect(page.getByTestId("preview-method")).toHaveText("นำเข้าจากไฟล์");
     await expect(page.getByTestId("coverage-table")).toBeVisible();
     await page.goto("/datasets");
     await expect(page.getByTestId("datasets-empty")).toBeVisible();

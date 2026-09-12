@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireActorOrRedirect } from "@/lib/auth/roles";
 import { listDatasets } from "@/lib/read/queries";
+import { labelProvenanceRows } from "@/lib/collect/labels";
 import { PageHeader } from "@/components/shell/PageHeader";
 import { EmptyState } from "@/components/states/EmptyState";
 import { QualityBadge } from "@/components/QualityBadge";
@@ -13,7 +14,10 @@ export default async function DatasetsPage() {
   // Awaited before any read: layout and page render concurrently, so the
   // layout's redirect cannot order this on the page's behalf.
   await requireActorOrRedirect();
-  const datasets = await listDatasets();
+  // Neutralised on the server, for every role: this is an ordinary product
+  // screen, so the collector's own names stay out of the HTML and out of the
+  // payload behind it.
+  const datasets = labelProvenanceRows(await listDatasets());
 
   return (
     <>
@@ -29,7 +33,7 @@ export default async function DatasetsPage() {
         <EmptyState
           testId="datasets-empty"
           title="ยังไม่มีชุดข้อมูล"
-          body="เริ่มจากการนำเข้าไฟล์ JSON จาก Extension"
+          body="เริ่มจากการนำเข้าไฟล์ JSON หนึ่งไฟล์"
           action={<Link href="/import">นำเข้าไฟล์แรก</Link>}
         />
       ) : (

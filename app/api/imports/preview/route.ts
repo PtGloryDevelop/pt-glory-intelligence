@@ -3,6 +3,7 @@ import { previewImport } from "@/lib/import/preview";
 import { readUpload } from "@/lib/import/upload";
 import { requireRole } from "@/lib/auth/roles";
 import { AuthorizationError } from "@/lib/auth/role-model";
+import { labelScope } from "@/lib/collect/labels";
 
 export const runtime = "nodejs";
 
@@ -29,5 +30,7 @@ export async function POST(request: NextRequest) {
 
   const { canonical, ...rest } = result;
   void canonical;
-  return NextResponse.json({ fileName: upload.name, ...rest });
+  // The import screen is an ordinary product surface: it never names the
+  // collector, for any role.
+  return NextResponse.json({ fileName: upload.name, ...rest, scope: labelScope(rest.scope) });
 }

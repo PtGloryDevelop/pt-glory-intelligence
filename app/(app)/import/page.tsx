@@ -32,7 +32,7 @@ export default async function ImportPage() {
     <>
       <PageHeader
         title="นำเข้าข้อมูล"
-        description="อัปโหลดไฟล์ JSON จาก PT Glory Extension · ขั้นตรวจจะไม่เขียนฐานข้อมูล"
+        description="อัปโหลดไฟล์ JSON ของ PT Glory · ขั้นตรวจจะไม่เขียนฐานข้อมูล"
       />
       <ImportClient categories={await listCategories()} />
     </>

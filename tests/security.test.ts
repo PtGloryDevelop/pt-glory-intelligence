@@ -35,6 +35,8 @@ test("no server-only credential reaches the client bundle", { skip: buildSkip },
     // The scheduler credential. It has no NEXT_PUBLIC_ prefix, so Next cannot
     // inline it — this asserts that stays true.
     "MEDIA_ARCHIVE_TOKEN",
+    // The collector's provider token. Server-only, like the rest.
+    "APIFY_TOKEN",
   ] as const;
 
   for (const name of secrets) {

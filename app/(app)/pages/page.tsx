@@ -215,7 +215,7 @@ async function ScopeChooser() {
         <EmptyState
           testId="scope-empty"
           title="ยังไม่มีข้อมูลให้วิเคราะห์"
-          body="นำเข้าไฟล์จาก Extension ก่อน แล้วหน้านี้จะมีเพจให้ดู"
+          body="นำเข้าไฟล์ข้อมูลก่อน แล้วหน้านี้จะมีเพจให้ดู"
           action={<Link href="/import">ไปที่นำเข้าข้อมูล</Link>}
         />
       ) : (

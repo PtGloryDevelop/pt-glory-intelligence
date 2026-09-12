@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { requireActorOrRedirect } from "@/lib/auth/roles";
 import { thaiDateTime } from "@/lib/format/date";
 import { getDatasetContext, getDatasetQuality } from "@/lib/read/queries";
+import { labelProvenance } from "@/lib/collect/labels";
 import { PageHeader } from "@/components/shell/PageHeader";
 import { ContextBar } from "@/components/ContextBar";
 import { QualityBadge } from "@/components/QualityBadge";
@@ -21,8 +22,11 @@ export default async function DatasetPage({ params }: { params: Promise<{ id: st
   // layout's redirect cannot order this on the page's behalf.
   await requireActorOrRedirect();
 
-  const context = await getDatasetContext(id);
-  if (!context) notFound();
+  const runContext = await getDatasetContext(id);
+  if (!runContext) notFound();
+  // "วิธีเก็บ" is a label on this screen for every role, decided here rather
+  // than in the component, so nothing downstream renders the raw value.
+  const context = labelProvenance(runContext);
   const quality = await getDatasetQuality(id);
 
   return (

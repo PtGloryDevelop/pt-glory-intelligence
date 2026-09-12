@@ -123,8 +123,8 @@ export function ImportClient({ categories }: { categories: { id: string; name: s
         onClick={() => inputRef.current?.click()}
       >
         <div className={styles.dropTitle}>ลากไฟล์ JSON มาวางที่นี่</div>
-        <div className={styles.dropHint}>หรือกดเพื่อเลือกไฟล์จากเครื่อง · ไฟล์จาก PT Glory Extension เท่านั้น</div>
-        <label htmlFor="file" className={styles.dropLabel}>ไฟล์ JSON จาก Extension</label>
+        <div className={styles.dropHint}>หรือกดเพื่อเลือกไฟล์จากเครื่อง · ไฟล์ JSON ของ PT Glory เท่านั้น</div>
+        <label htmlFor="file" className={styles.dropLabel}>ไฟล์ JSON ของ PT Glory</label>
         <input
           id="file" ref={inputRef} data-testid="file-input" type="file" accept="application/json"
           className={styles.dropInput}
