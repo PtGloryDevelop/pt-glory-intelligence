@@ -55,6 +55,35 @@ test("no server-only credential reaches the client bundle", { skip: buildSkip },
   assert.ok(!bundle.includes("service_role"), "a service-role key is in the client bundle");
 });
 
+test("the provider client is server-only, and its token has no second path", () => {
+  const apify = readFileSync(join("lib", "collect", "apify.ts"), "utf8");
+  // Server-only, so a client component that imported it would fail the build
+  // rather than ship a provider call to the browser.
+  assert.match(apify, /^import "server-only";/m);
+  // Header authentication, and no query-string token path to fall back to.
+  assert.match(apify, /Authorization: `Bearer \${token}`/);
+  assert.doesNotMatch(apify, /[?&]token=\${/, "a token must never be built into a URL");
+  assert.match(apify, /never goes in a URL/, "and the guard that refuses one stays");
+
+  // The token is read in exactly one place, and never through NEXT_PUBLIC_.
+  const readers = ["lib", "app", "components"]
+    .flatMap((dir) => (existsSync(dir) ? walk(dir) : []))
+    .filter((path) => /.tsx?$/.test(path))
+    .filter((path) => readFileSync(path, "utf8").includes("APIFY_TOKEN"));
+  assert.deepEqual(readers, [join("lib", "collect", "apify.ts")]);
+  for (const path of ["lib/collect/apify.ts", "lib/collect/provider.ts", "lib/collect/mock.ts"]) {
+    assert.doesNotMatch(readFileSync(path, "utf8"), /NEXT_PUBLIC_/, path);
+  }
+});
+
+test("no test or fixture points at the provider's API host", () => {
+  const offenders = [...walk("tests"), ...walk("e2e")]
+    .filter((path) => /.tsx?$/.test(path))
+    .filter((path) => !path.endsWith(join("tests", "security.test.ts")))
+    .filter((path) => readFileSync(path, "utf8").includes("api.apify.com"));
+  assert.deepEqual(offenders, [], "a suite must never reach the provider");
+});
+
 test("the bundle scan is looking at real client code", { skip: buildSkip }, () => {
   // Without a positive control, a scan that silently read the wrong directory
   // would pass every secret check by finding nothing at all.
