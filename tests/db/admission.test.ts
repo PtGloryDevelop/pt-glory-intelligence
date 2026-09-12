@@ -335,6 +335,62 @@ test("admission judges settings, budget and concurrency in one place", { skip },
     assert.equal(rows.length, 1, "nothing was admitted a second time");
   });
 
+  await t.test("changing only the country is a different collection", async () => {
+    await reset(client);
+    // Both countries are collectable, so the refusal can only come from the
+    // idempotency rule rather than from plain input validation.
+    await setSettings(client, { "collector.countries": ["TH", "VN"] });
+    const submission = request(base);
+    const first = await admitCollection(submission, { now: NOW });
+    assert.ok(first.ok);
+
+    const elsewhere = await admitCollection({ ...submission, country: "VN" }, { now: NOW });
+    assert.equal(elsewhere.ok, false, "a different country is a different paid collection");
+    if (!elsewhere.ok) {
+      assert.equal(elsewhere.refusal, "invalid_request");
+      assert.match(elsewhere.detail, /different collection/);
+      assert.ok(!("requestId" in elsewhere), "and no request is handed back");
+    }
+
+    const { rows } = await client.query<{ id: string; params: { country: string }; cost_reserved_usd: string }>(
+      "select id, params, cost_reserved_usd from public.collection_requests",
+    );
+    assert.equal(rows.length, 1, "no second request");
+    assert.equal(rows[0].params.country, "TH", "and the original is untouched");
+    assert.equal(rows[0].cost_reserved_usd, first.reservedUsd, "no second reservation");
+    const audit = await client.query(
+      "select 1 from public.audit_logs where action = 'collection.start' and entity_id = $1",
+      [first.requestId],
+    );
+    assert.equal(audit.rowCount, 1, "and no second collection.start");
+  });
+
+  await t.test("a renamed dataset reuses the request without renaming it", async () => {
+    await reset(client);
+    await setSettings(client);
+    const submission = request(base, { datasetName: "the name it was admitted with" });
+    const first = await admitCollection(submission, { now: NOW });
+    assert.ok(first.ok);
+
+    const renamed = await admitCollection(
+      { ...submission, datasetName: "a different label" }, { now: NOW });
+    assert.ok(renamed.ok);
+    assert.equal(renamed.requestId, first.requestId);
+    assert.equal(renamed.reused, true);
+
+    const { rows } = await client.query<{ dataset_name: string }>(
+      "select dataset_name from public.collection_requests",
+    );
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].dataset_name, "the name it was admitted with",
+      "presentation metadata never rewrites an admitted request");
+    const audit = await client.query(
+      "select 1 from public.audit_logs where action = 'collection.start' and entity_id = $1",
+      [first.requestId],
+    );
+    assert.equal(audit.rowCount, 1);
+  });
+
   await t.test("somebody else's key is refused without revealing the request", async () => {
     await reset(client);
     await setSettings(client);
