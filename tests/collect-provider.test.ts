@@ -144,18 +144,24 @@ test("one POST on success, and exactly one POST when the outcome is unknown", as
 });
 
 test("only a status proven to reject before actor work is a definitive refusal", async () => {
-  for (const status of [401, 403]) {
-    const unauthorized = provider(() => json({ error: { type: "token-not-provided" } }, { status }));
-    const auth = await unauthorized.client.startRun(startRequest());
-    assert.equal(auth.outcome, "refused", `${status} is refused at the API edge`);
-    if (auth.outcome === "refused") assert.equal(auth.reason, "not_configured");
-  }
+  // 401 alone: C01-A saw the API answer token-not-provided with nothing else
+  // happening. A 403 is an authorization decision that can be taken anywhere,
+  // including after a run exists, so it is not inferred from that.
+  const unauthorized = provider(() => json({ error: { type: "token-not-provided" } }, { status: 401 }));
+  const auth = await unauthorized.client.startRun(startRequest());
+  assert.equal(auth.outcome, "refused");
+  if (auth.outcome === "refused") assert.equal(auth.reason, "not_configured");
+
+  const forbidden = provider(() => json({ error: { type: "forbidden" } }, { status: 403 }));
+  const outcome = await forbidden.client.startRun(startRequest());
+  assert.equal(outcome.outcome, "unknown", "403 is not proof that no run exists");
+  assert.equal(forbidden.calls.length, 1, "and it is never retried");
 });
 
 test("an ambiguous 4xx is unknown, because a run may exist behind it", async () => {
   // 409 and 429 could be answered after a run was created; 400 and 404 are not
   // proven to reject first; 408 is a timeout wearing a status code.
-  for (const status of [400, 404, 408, 409, 429, 422, 451]) {
+  for (const status of [400, 403, 404, 408, 409, 429, 422, 451]) {
     const ambiguous = provider(() => json({ error: { type: "provider-said-no" } }, { status }));
     const outcome = await ambiguous.client.startRun(startRequest());
     assert.equal(outcome.outcome, "unknown", `${status} must fail safe to unknown`);

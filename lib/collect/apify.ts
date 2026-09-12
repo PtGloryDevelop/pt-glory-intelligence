@@ -29,15 +29,18 @@ import {
 const BASE = "https://api.apify.com/v2";
 
 /**
- * The only statuses treated as proof that no run was created.
+ * The only status treated as proof that no run was created.
  *
  * Authentication is refused at the API edge before any actor work: C01-A
  * observed a request without the header answered `401 token-not-provided`
- * with nothing else happening. Every other 4xx — including 400, 404, 408, 409
- * and 429 — is ambiguous about whether a run now exists, so it fails safe to
+ * with nothing else happening. That evidence is about 401 alone — a 403 can
+ * be an authorization decision taken anywhere, including after a run exists,
+ * so it is not inferred from it. Every other 4xx — 400, 403, 404, 408, 409,
+ * 429 — is ambiguous about whether a run now exists, so it fails safe to
  * UNKNOWN and the state machine reconciles by runTag rather than assuming.
+ * A 403 may join this set only when its own error contract is proven.
  */
-const DEFINITIVE_REFUSAL_STATUSES: ReadonlySet<number> = new Set([401, 403]);
+const DEFINITIVE_REFUSAL_STATUSES: ReadonlySet<number> = new Set([401]);
 /** A start is a write: it gets the longer bound, but it is still bounded. */
 export const START_TIMEOUT_MS = 20_000;
 export const READ_TIMEOUT_MS = 15_000;
