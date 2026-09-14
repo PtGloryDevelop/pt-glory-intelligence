@@ -12,6 +12,11 @@ import {
   canonicalInstant, scrubProviderMessage,
   type CollectionProvider, type ProviderRun,
 } from "./provider.ts";
+import { findCommittedRun as findCommittedRunWithClient } from "./adoption.ts";
+import { findOriginalStart, identityConflict } from "./reconcile.ts";
+
+export { RECONCILE_SKEW_SECONDS } from "./reconcile.ts";
+export { identityConflict } from "./reconcile.ts";
 
 /**
  * The collection state machine (C08): claim, one transition, persist, release.
@@ -48,9 +53,6 @@ export const MAX_CHECK_SECONDS = 300;
  * admin needs to change it.
  */
 export const RUN_MEMORY_MBYTES = 512;
-
-/** How far before the recorded attempt a matching run may have started. */
-export const RECONCILE_SKEW_SECONDS = 120;
 
 /**
  * How many dataset items are read per provider page.
@@ -120,6 +122,7 @@ type RequestRow = {
   result_pagination_total: number | null;
   result_observed_at: string | null;
   result_settle_started_at: string | null;
+  result_settle_reopened_at: string | null;
 };
 
 type Settings = {
@@ -198,7 +201,7 @@ async function claimRequest(client: PoolClient, requestId: string, worker: strin
                 category_id, dataset_name, ceiling_reached, collection_run_id,
                 import_attempted_at, media_enqueued_at, result_item_count,
                 result_modified_at, result_pagination_total, result_observed_at,
-                result_settle_started_at`,
+                result_settle_started_at, result_settle_reopened_at`,
     [requestId, worker, settings.leaseSeconds],
   );
   if (claimed.rowCount === 0) return null;
@@ -302,46 +305,36 @@ async function reconcile(
   settings: Settings,
   provider: CollectionProvider,
 ): Promise<AdvanceOutcome> {
-  const since = new Date(
-    new Date(request.start_attempted_at ?? Date.now()).getTime() - RECONCILE_SKEW_SECONDS * 1_000,
-  );
   const pageSize = settings.reconcilePageSize ?? 20;
   const windowMinutes = settings.reconcileWindowMinutes;
   const expired = windowMinutes !== null && request.start_attempted_at !== null
     && Date.now() - new Date(request.start_attempted_at).getTime() > windowMinutes * 60_000;
 
-  const runs = await provider.findRunsSince(since, pageSize);
-  if (!runs.ok) {
+  const lookup = await findOriginalStart(provider, {
+    id: request.id,
+    sourceUrl: request.source_url,
+    startAttemptedAt: request.start_attempted_at,
+  }, pageSize);
+  if (lookup.kind === "unavailable") {
     return finish(requestId, request, {
       action: "reconcile_unresolved", status: "provider_start_uncertain",
-      detail: `provider list unavailable: ${runs.detail}`,
+      detail: lookup.detail,
       requiresAdmin: expired,
     });
   }
-
-  const matches: ProviderRun[] = [];
-  for (const candidate of runs.value) {
-    if (!candidate.keyValueStoreId) continue;
-    const input = await provider.readRunInput({ keyValueStoreId: candidate.keyValueStoreId });
-    if (!input.ok) continue;
-    if (input.value.runTag === request.id && input.value.sourceUrl === request.source_url) {
-      matches.push(candidate);
-    }
-  }
-
-  if (matches.length === 1) {
-    const conflict = identityConflict(request, matches[0]);
+  if (lookup.kind === "match") {
+    const conflict = identityConflict(request, lookup.run);
     if (conflict) return failClosed(requestId, request, conflict);
     return finish(requestId, request, {
-      action: "reconciled", status: "running", run: matches[0], audit: "collection.reconciled",
+      action: "reconciled", status: "running", run: lookup.run, audit: "collection.reconciled",
     });
   }
-  if (matches.length > 1) {
+  if (lookup.kind === "ambiguous") {
     // Two runs carrying this request's tag is not something to guess at.
     return finish(requestId, request, {
       action: "reconcile_ambiguous", status: "provider_start_uncertain",
       requiresAdmin: true, audit: "collection.requires_admin",
-      detail: `${matches.length} runs carry this request's tag`,
+      detail: `${lookup.count} runs carry this request's tag`,
     });
   }
   return finish(requestId, request, {
@@ -488,47 +481,6 @@ async function finish(
 }
 
 /**
- * Provider evidence that contradicts what is already persisted.
- *
- * Keeping the first value is not enough on its own: a response describing a
- * different run must not be allowed to move this request either. Identity is
- * settled once, and a contradiction is a question for a person, not something
- * to resolve by preferring one side.
- *
- * Timestamps are compared as canonical instants (C06) and exactly. There is no
- * tolerance: C05 attributes a finalized cost by the charge-bearing start, and a
- * billing-cycle boundary can fall between two consecutive milliseconds, so a
- * "close enough" start time is a different start time.
- */
-export function identityConflict(
-  request: {
-    provider_run_id: string | null; provider_dataset_id: string | null;
-    provider_actor_build: string | null; started_at: string | null;
-  },
-  run: ProviderRun,
-): string | null {
-  if (request.provider_run_id && run.runId && request.provider_run_id !== run.runId) {
-    return "provider run identity does not match the run already attached";
-  }
-  if (request.provider_dataset_id && run.datasetId && request.provider_dataset_id !== run.datasetId) {
-    return "provider dataset identity does not match the dataset already attached";
-  }
-  if (request.provider_actor_build && run.buildNumber && request.provider_actor_build !== run.buildNumber) {
-    return "provider build does not match the build already recorded";
-  }
-  if (request.started_at && run.startedAt) {
-    const persisted = canonicalInstant(request.started_at);
-    const reported = canonicalInstant(run.startedAt);
-    // An unreadable instant on either side is a conflict, not a pass: it cannot
-    // be shown to be the same start.
-    if (persisted === null || reported === null || persisted !== reported) {
-      return "provider start time does not match the start already recorded";
-    }
-  }
-  return null;
-}
-
-/**
  * Stops on contradictory evidence: the state does not move, the persisted
  * identity stands, and an admin is asked.
  *
@@ -635,7 +587,8 @@ async function settle(
 
   const observedAt = now.toISOString();
   const expired = settlementExpired(
-    request.result_settle_started_at, observedAt, settings.resultSettleWindowMinutes,
+    request.result_settle_reopened_at ?? request.result_settle_started_at,
+    observedAt, settings.resultSettleWindowMinutes,
   );
   /** Not ready this tick: either wait, or — once the window is spent — ask a person. */
   const notReady = (detail: string, observation?: SettlementObservation) => (
@@ -1062,27 +1015,7 @@ async function resettle(
 async function findCommittedRun(requestId: string): Promise<
   { runId: string; datasetId: string | null; ads: number; pages: number; unresolved: number } | null
 > {
-  return withTransaction(async (client) => {
-    const { rows } = await client.query<{
-      run_id: string; dataset_id: string | null;
-      computed_unique_ads: number; computed_unique_pages: number; computed_unresolved_count: number;
-    }>(
-      `select run.id as run_id, dataset.id as dataset_id,
-              run.computed_unique_ads, run.computed_unique_pages, run.computed_unresolved_count
-         from public.collection_runs run
-         left join public.datasets dataset on dataset.collection_run_id = run.id
-        where run.reported_quality_summary ->> 'collection_request_id' = $1
-        limit 1`,
-      [requestId],
-    );
-    if (rows.length === 0) return null;
-    const row = rows[0];
-    return {
-      runId: row.run_id, datasetId: row.dataset_id,
-      ads: row.computed_unique_ads, pages: row.computed_unique_pages,
-      unresolved: row.computed_unresolved_count,
-    };
-  });
+  return withTransaction((client) => findCommittedRunWithClient(client, requestId));
 }
 
 /** The unique index that makes one canonical run per request a database fact. */

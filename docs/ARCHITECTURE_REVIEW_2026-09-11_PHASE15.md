@@ -379,12 +379,17 @@ required to equal** `itemCount`.
 Admin actions (audited):
 
 1. **Retry settlement** — re-reads the **same** provider dataset: clears
-   `requires_admin`, opens a new settle window, and the gate above applies
-   unchanged. It never starts an Actor run and incurs no collection charge.
+   `requires_admin`, records `result_settle_reopened_at`, and opens a new
+   settle window from that instant. The historical
+   `result_settle_started_at` and prior observations remain unchanged; the gate
+   above then applies unchanged. It never starts an Actor run and incurs no
+   collection charge.
 2. **Fail collection** — marks the PT Glory request `failed` (class
    `provider_result_unsettled`), preserving the provider run ID, dataset ID,
-   observations, cost evidence and audit history. No PT Glory dataset is
-   created or imported.
+   observations, cost evidence and audit history. When the request is already
+   `importing`, canonical-run adoption is checked first; an existing canonical
+   run refuses the fail so it remains authoritative. No PT Glory dataset is
+   created or imported by the fail action.
 
 Importing a partial dataset is not offered; that needs owner approval (§8).
 Starting a new paid collection is a separate user action and goes through
@@ -414,7 +419,10 @@ engineering parameters, TBD. One run's evidence (stale about 1 s after
   `requires_admin boolean` (admin group).
 - Settlement observations (admin group, review §9): `result_item_count`,
   `result_modified_at`, `result_pagination_total`, `result_observed_at`,
-  `result_settle_started_at`, `result_charged_items` (diagnostic only).
+  `result_settle_started_at`, `result_settle_reopened_at`,
+  `result_charged_items` (diagnostic only). `result_settle_reopened_at` is an
+  admin-only scheduling instant; it never replaces the historical start or
+  assigns a billing cycle.
   `error_class` gains `provider_result_unsettled`; an admin-failed uncertain
   start uses `provider_start_unknown`.
 - `cost_next_check_at` (internal recovery group): cost reconciliation's own
@@ -427,7 +435,9 @@ engineering parameters, TBD. One run's evidence (stale about 1 s after
 - Cost columns (admin group) replace `cost_usd` / `cost_estimate_usd`:
   `cost_status` (`reserved | provisional | final | unreported`),
   `cost_reserved_usd`, `cost_provisional_usd`, `cost_final_usd`,
-  `cost_first_read_at`, `cost_finalized_at`, `ceiling_reached`.
+  `cost_first_read_at`, `cost_finalized_at`, `ceiling_reached`,
+  `cost_window_reopened_at` (admin-only scheduling instant; never used for
+  billing-cycle attribution).
 - New settings, TBD unless stated: `collector.max_charge_per_run_usd`,
   `collector.reconcile_window_minutes`, `collector.reconcile_page_size`,
   `collector.cost_settle_minutes`, `collector.cost_final_window_hours`,

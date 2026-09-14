@@ -16,9 +16,9 @@ test("every up migration has a matching down migration", () => {
   }
 });
 
-test("migrations are numbered 0001..0039 with no gaps", () => {
+test("migrations are numbered 0001..0040 with no gaps", () => {
   const numbers = up.map((f) => Number(f.slice(0, 4)));
-  assert.deepEqual(numbers, Array.from({ length: 39 }, (_, i) => i + 1));
+  assert.deepEqual(numbers, Array.from({ length: 40 }, (_, i) => i + 1));
 });
 
 test("all 18 tables are created", () => {
@@ -448,4 +448,27 @@ test("0039 adds only the provisional observation instant", () => {
   // The rollback removes exactly what it added.
   assert.match(down, /drop constraint collection_requests_provisional_observed/);
   assert.match(down, /drop column cost_provisional_observed_at/);
+});
+
+/**
+ * 0040 exists so an admin can reopen a cost window that is, by definition,
+ * already spent. It must stay scheduling state: additive, run-gated, and
+ * nothing an automatic path would write.
+ */
+test("0040 adds the admin settlement and cost-window reopen instants", () => {
+  const up = read("0040_cost_window_reopen.sql");
+  const down = read("0040_cost_window_reopen.down.sql");
+
+  assert.match(up, /add column result_settle_reopened_at timestamptz/);
+  assert.match(up, /add column cost_window_reopened_at timestamptz/);
+  assert.equal(up.match(/add column/g)?.length, 2);
+  assert.doesNotMatch(up, /alter column|drop column|set default/i);
+  assert.match(up, /result_settle_reopened_at is null or provider_dataset_id is not null/);
+  // Reopening means asking about a run, so there has to be one.
+  assert.match(up, /cost_window_reopened_at is null or provider_run_id is not null/);
+  assert.doesNotMatch(up, /(update|delete|grant|revoke)/i);
+  assert.match(down, /drop constraint collection_requests_result_reopen_needs_dataset/);
+  assert.match(down, /drop constraint collection_requests_cost_reopen_needs_run/);
+  assert.match(down, /drop column result_settle_reopened_at/);
+  assert.match(down, /drop column cost_window_reopened_at/);
 });

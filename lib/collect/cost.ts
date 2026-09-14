@@ -29,8 +29,15 @@ import { scrubProviderMessage, type CollectionProvider } from "./provider.ts";
  */
 export const COST_CLAIM_SECONDS = 300;
 
-/** Cost states an automatic tick may still act on. `final` and `unreported` are done. */
-export const COST_OPEN_STATES = ["reserved", "provisional"] as const;
+/**
+ * Cost states a tick may still act on.
+ *
+ * `final` is done for good. `unreported` is included because an admin may
+ * reopen it (C11) — the schedule, not the status, is what decides whether
+ * anything happens: `cost_next_check_at` is null for every request the
+ * automatic window has finished with.
+ */
+export const COST_OPEN_STATES = ["reserved", "provisional", "unreported"] as const;
 
 export type CostAction =
   | "not_due"
@@ -66,6 +73,7 @@ type CostRow = {
   cost_first_read_at: Date | string | null;
   started_at: Date | string | null;
   start_attempted_at: Date | string | null;
+  cost_window_reopened_at: Date | string | null;
 };
 
 type CostSettings = { settleMinutes: number | null; windowHours: number | null };
@@ -102,9 +110,14 @@ export async function reconcileCost(
   //    before a queued request had done anything, and any read-derived instant
   //    would let a failing provider extend its own deadline.
   //
+  //    An admin retry (C11) reopens a spent window, and that reopen — audited,
+  //    read-only, never automatic — is the one thing that can move the anchor.
+  //
   //    This is a polling deadline and nothing more. Billing-cycle attribution
   //    belongs to C05, which uses `started_at` alone and fails closed without it.
-  const anchor = instant(request.started_at) ?? instant(request.start_attempted_at);
+  const anchor = instant(request.cost_window_reopened_at)
+    ?? instant(request.started_at)
+    ?? instant(request.start_attempted_at);
   if (anchor === null) {
     // An identified run with no usable anchor: the window cannot be evaluated,
     // and polling without a deadline is not the safe direction. No timestamp is
@@ -228,7 +241,7 @@ async function claimCostWork(client: PoolClient, requestId: string) {
         and cost_next_check_at <= now()
       returning id, requested_by, status, provider_run_id, cost_status, cost_reserved_usd,
                 cost_provisional_usd, cost_provisional_observed_at, cost_first_read_at,
-                started_at, start_attempted_at`,
+                started_at, start_attempted_at, cost_window_reopened_at`,
     [requestId, COST_CLAIM_SECONDS, [...COST_OPEN_STATES]],
   );
   if (claimed.rowCount === 0) return null;
