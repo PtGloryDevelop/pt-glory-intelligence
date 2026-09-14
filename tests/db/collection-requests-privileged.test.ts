@@ -131,6 +131,9 @@ test("the privileged server path owns the whole request lifecycle", { skip }, as
     await client.query(
       `update public.collection_requests
           set cost_status = 'provisional', cost_provisional_usd = 0.0443,
+              -- 0039: an amount and the instant it was first seen travel together,
+              -- because the provisional -> final rule measures from that instant.
+              cost_provisional_observed_at = now(),
               cost_first_read_at = now(), cost_next_check_at = now() + interval '5 minutes'
         where id = $1`,
       [requestId],

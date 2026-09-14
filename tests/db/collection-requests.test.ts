@@ -158,6 +158,25 @@ test("collection_requests enforces its invariants in the schema", { skip }, asyn
     );
   });
 
+  await t.test("a provisional amount and the instant it was seen travel together", async () => {
+    // 0039: the provisional -> final rule measures from that instant, so an
+    // amount without one could never settle, and an instant without an amount
+    // describes nothing.
+    const { rows } = await insertRequest(client, fresh({
+      cost_status: "provisional", cost_provisional_usd: "0.099800",
+      cost_provisional_observed_at: new Date().toISOString(),
+    }));
+    assert.equal(rows.length, 1);
+    await refused(
+      insertRequest(client, fresh({ cost_provisional_usd: "0.099800" })),
+      /collection_requests_provisional_observed/,
+    );
+    await refused(
+      insertRequest(client, fresh({ cost_provisional_observed_at: new Date().toISOString() })),
+      /collection_requests_provisional_observed/,
+    );
+  });
+
   await t.test("a scrubbed error detail stays bounded", async () => {
     await refused(
       insertRequest(client, fresh({ error_detail: "x".repeat(2001) })),

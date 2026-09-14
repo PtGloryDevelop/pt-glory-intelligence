@@ -436,6 +436,11 @@ async function finish(
               started_at = coalesce(started_at, $7),
               finished_at = case when $8 then coalesce(finished_at, now()) else finished_at end,
               error_class = case when $14 then $9 else coalesce($9, error_class) end,
+              -- A terminal run has a bill to settle, so cost reconciliation
+              -- (C10) gets its own first check here. It runs on its own
+              -- schedule from now on, in any request status.
+              cost_next_check_at = case when $16 then coalesce(cost_next_check_at, now())
+                                        else cost_next_check_at end,
               -- Billing evidence at the terminal moment, kept as a diagnostic.
               -- It is never a settlement condition and never an accounting
               -- figure: C10 owns cost, and C01-B showed this number lags.
@@ -465,6 +470,7 @@ async function finish(
         nextCheck,
         outcome.overwriteErrorClass === true,
         outcome.run?.usage.chargedItems ?? null,
+        outcome.run?.terminal === true && outcome.run.runId !== "",
       ],
     );
     if (outcome.audit) {

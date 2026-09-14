@@ -16,9 +16,9 @@ test("every up migration has a matching down migration", () => {
   }
 });
 
-test("migrations are numbered 0001..0038 with no gaps", () => {
+test("migrations are numbered 0001..0039 with no gaps", () => {
   const numbers = up.map((f) => Number(f.slice(0, 4)));
-  assert.deepEqual(numbers, Array.from({ length: 38 }, (_, i) => i + 1));
+  assert.deepEqual(numbers, Array.from({ length: 39 }, (_, i) => i + 1));
 });
 
 test("all 18 tables are created", () => {
@@ -425,4 +425,27 @@ test("0038 adds provider_identity_conflict and keeps the taxonomy closed", () =>
 
   // Nothing else moves: this is a CHECK, not a grant or a policy change.
   assert.doesNotMatch(up, /\b(grant|revoke|create policy|drop policy)\b/i);
+});
+
+/**
+ * 0039 gives the finalization rule the one instant it needs. It must not touch
+ * the amounts themselves, and it must not disturb cost_first_read_at, which
+ * means something else: the first provider figure ever seen.
+ */
+test("0039 adds only the provisional observation instant", () => {
+  const up = read("0039_cost_provisional_observed_at.sql");
+  const down = read("0039_cost_provisional_observed_at.down.sql");
+
+  assert.match(up, /add column cost_provisional_observed_at timestamptz/);
+  // One added column, and no existing column altered — cost_first_read_at keeps
+  // its own meaning.
+  assert.equal(up.match(/add column/g)?.length, 1);
+  assert.doesNotMatch(up, /alter column|drop column|set default/i);
+  // The amount and its instant exist together or not at all.
+  assert.match(up, /\(cost_provisional_usd is null\) = \(cost_provisional_observed_at is null\)/);
+  // Additive only: no data is rewritten and no other column changes.
+  assert.doesNotMatch(up, /(update|delete|drop column|grant|revoke)/i);
+  // The rollback removes exactly what it added.
+  assert.match(down, /drop constraint collection_requests_provisional_observed/);
+  assert.match(down, /drop column cost_provisional_observed_at/);
 });
