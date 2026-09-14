@@ -1,7 +1,10 @@
 import type { PoolClient } from "pg";
 import { withTransaction } from "../db/privileged.ts";
 import { CONCURRENCY_SLOT_STATES } from "./budget.ts";
-import { scrubProviderMessage, type CollectionProvider, type ProviderRun } from "./provider.ts";
+import {
+  canonicalInstant, scrubProviderMessage,
+  type CollectionProvider, type ProviderRun,
+} from "./provider.ts";
 
 /**
  * The collection state machine (C08): claim, one transition, persist, release.
@@ -341,6 +344,8 @@ async function finish(
     errorClass?: string;
     detail?: string;
     requiresAdmin?: boolean;
+    /** Only a fail-closed stop replaces a class that is already recorded. */
+    overwriteErrorClass?: boolean;
     clearStartMarker?: boolean;
   },
 ): Promise<AdvanceOutcome> {
@@ -363,7 +368,7 @@ async function finish(
               -- moved once it is known.
               started_at = coalesce(started_at, $7),
               finished_at = case when $8 then coalesce(finished_at, now()) else finished_at end,
-              error_class = coalesce($9, error_class),
+              error_class = case when $14 then $9 else coalesce($9, error_class) end,
               error_detail = coalesce($10, error_detail),
               requires_admin = case when $11 then true else requires_admin end,
               start_attempted_at = case when $12 then null else start_attempted_at end,
@@ -387,6 +392,7 @@ async function finish(
         outcome.requiresAdmin === true,
         outcome.clearStartMarker === true,
         nextCheck,
+        outcome.overwriteErrorClass === true,
       ],
     );
     if (outcome.audit) {
@@ -411,8 +417,10 @@ async function finish(
  * settled once, and a contradiction is a question for a person, not something
  * to resolve by preferring one side.
  *
- * A timestamp is compared with a second of tolerance, because a provider may
- * report the same instant with different precision.
+ * Timestamps are compared as canonical instants (C06) and exactly. There is no
+ * tolerance: C05 attributes a finalized cost by the charge-bearing start, and a
+ * billing-cycle boundary can fall between two consecutive milliseconds, so a
+ * "close enough" start time is a different start time.
  */
 export function identityConflict(
   request: {
@@ -431,8 +439,11 @@ export function identityConflict(
     return "provider build does not match the build already recorded";
   }
   if (request.started_at && run.startedAt) {
-    const drift = Math.abs(new Date(request.started_at).getTime() - new Date(run.startedAt).getTime());
-    if (Number.isNaN(drift) || drift > 1_000) {
+    const persisted = canonicalInstant(request.started_at);
+    const reported = canonicalInstant(run.startedAt);
+    // An unreadable instant on either side is a conflict, not a pass: it cannot
+    // be shown to be the same start.
+    if (persisted === null || reported === null || persisted !== reported) {
       return "provider start time does not match the start already recorded";
     }
   }
@@ -443,9 +454,10 @@ export function identityConflict(
  * Stops on contradictory evidence: the state does not move, the persisted
  * identity stands, and an admin is asked.
  *
- * No error_class is set. None of the ten documented classes describes an
- * identity conflict, and inventing one would need a migration this ticket is
- * not allowed to write.
+ * It carries its own class (0038). An identity conflict is neither an uncertain
+ * start nor a dataset that never settled, and labelling it with either of those
+ * would send an admin to the wrong recovery. The class is written even over an
+ * earlier one, because this is the reason the request stopped.
  */
 async function failClosed(
   requestId: string,
@@ -454,7 +466,8 @@ async function failClosed(
 ): Promise<AdvanceOutcome> {
   return finish(requestId, request, {
     action: "identity_conflict", status: request.status, requiresAdmin: true,
-    audit: "collection.requires_admin", detail,
+    audit: "collection.requires_admin", errorClass: "provider_identity_conflict",
+    overwriteErrorClass: true, detail,
   });
 }
 

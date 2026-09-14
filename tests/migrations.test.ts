@@ -16,9 +16,9 @@ test("every up migration has a matching down migration", () => {
   }
 });
 
-test("migrations are numbered 0001..0037 with no gaps", () => {
+test("migrations are numbered 0001..0038 with no gaps", () => {
   const numbers = up.map((f) => Number(f.slice(0, 4)));
-  assert.deepEqual(numbers, Array.from({ length: 37 }, (_, i) => i + 1));
+  assert.deepEqual(numbers, Array.from({ length: 38 }, (_, i) => i + 1));
 });
 
 test("all 18 tables are created", () => {
@@ -389,4 +389,40 @@ test("0036 grants without revoking anything an API role already holds", () => {
   assert.match(down, /from migration_ledger\.grants/i);
   // The rollback revokes only what the ledger names — never a literal product object.
   assert.doesNotMatch(down, /revoke\s+[a-z, ]+\s+on\s+(table\s+|function\s+)?public\./i);
+});
+
+/**
+ * 0038 names the identity conflict the state machine can actually meet, and
+ * names nothing else: the taxonomy stays closed, and the two classes that mean
+ * different failures keep their own meanings.
+ */
+test("0038 adds provider_identity_conflict and keeps the taxonomy closed", () => {
+  const up = read("0038_provider_identity_conflict.sql");
+  const down = read("0038_provider_identity_conflict.down.sql");
+  const classesIn = (sql: string) => [...sql.matchAll(/'([a-z_]+)'(?=[\s,)])/g)].map((m) => m[1]);
+
+  const before = [
+    "provider_start_failed", "provider_unreachable", "provider_start_unknown",
+    "provider_run_failed", "provider_timed_out", "provider_aborted",
+    "provider_result_unsettled", "adapter_rejected", "export_too_large", "import_failed",
+  ];
+  const upClasses = classesIn(up.slice(up.indexOf("add constraint")));
+  assert.deepEqual(upClasses, [
+    "provider_start_failed", "provider_unreachable", "provider_start_unknown",
+    "provider_identity_conflict",
+    "provider_run_failed", "provider_timed_out", "provider_aborted",
+    "provider_result_unsettled", "adapter_rejected", "export_too_large", "import_failed",
+  ], "0038 adds exactly one class and drops none");
+
+  // The constraint is replaced by name, so the check is not silently duplicated.
+  assert.match(up, /drop constraint collection_requests_error_class_check/);
+  assert.match(up, /add constraint collection_requests_error_class_check/);
+
+  // The rollback restores exactly the pre-0038 list, and refuses while the new
+  // class is in use rather than erasing why a request is waiting for an admin.
+  assert.deepEqual(classesIn(down.slice(down.indexOf("add constraint"))), before);
+  assert.match(down, /raise exception 'refusing to revert 0038/);
+
+  // Nothing else moves: this is a CHECK, not a grant or a policy change.
+  assert.doesNotMatch(up, /\b(grant|revoke|create policy|drop policy)\b/i);
 });

@@ -1,6 +1,6 @@
 import "server-only";
 import {
-  normalizeStatus, isTerminalStatus, scrubProviderMessage,
+  canonicalInstant, normalizeStatus, isTerminalStatus, scrubProviderMessage,
   type CollectionProvider, type DatasetMetadata, type DatasetPage, type ProviderRead,
   type ProviderRun, type RunInputEvidence, type StartOutcome, type StartRequest,
 } from "./provider.ts";
@@ -120,8 +120,10 @@ export function createApifyProvider(config: ApifyConfig): CollectionProvider {
       succeeded: status === "SUCCEEDED",
       datasetId: text(raw.defaultDatasetId),
       keyValueStoreId: text(raw.defaultKeyValueStoreId),
-      startedAt: text(raw.startedAt),
-      finishedAt: text(raw.finishedAt),
+      // Canonical instants, so an identity comparison is exact and needs no
+      // tolerance: the provider's own precision never reaches the caller.
+      startedAt: canonicalInstant(raw.startedAt),
+      finishedAt: canonicalInstant(raw.finishedAt),
       buildNumber: text(raw.buildNumber),
       // Exact decimal text, never a float: this is money evidence.
       ceilingUsd: number(options.maxTotalChargeUsd) === null ? null : String(options.maxTotalChargeUsd),

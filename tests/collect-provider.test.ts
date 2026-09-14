@@ -3,8 +3,11 @@ import test from "node:test";
 import { createApifyProvider, READ_TIMEOUT_MS, START_TIMEOUT_MS } from "../lib/collect/apify.ts";
 import { createMockProvider, mockRun } from "../lib/collect/mock.ts";
 import {
-  isTerminalStatus, normalizeStatus, scrubProviderMessage, type StartRequest,
+  canonicalInstant, isTerminalStatus, normalizeStatus, scrubProviderMessage,
+  type StartRequest,
 } from "../lib/collect/provider.ts";
+import { billingWindow } from "../lib/collect/budget.ts";
+import { identityConflict } from "../lib/collect/machine.ts";
 
 /**
  * C06 — the provider client boundary.
@@ -391,4 +394,96 @@ test("this suite never reaches the network", () => {
   const source = new URL("collect-provider.test.ts", import.meta.url);
   assert.ok(source.pathname.endsWith("tests/collect-provider.test.ts"));
   assert.equal(typeof createApifyProvider, "function");
+});
+
+/**
+ * Canonical instants (C08 follow-up).
+ *
+ * Every timestamp crossing this boundary is one shape, so identity can be
+ * compared exactly. Nothing downstream may reintroduce a tolerance: C05
+ * attributes a finalized cost by the charge-bearing start, and a billing-cycle
+ * boundary can fall between two consecutive milliseconds.
+ */
+test("provider timestamps leave the boundary in one canonical shape", async (t) => {
+  await t.test("the same instant written differently canonicalizes the same", () => {
+    const canonical = "2026-09-11T09:09:12.548Z";
+    for (const spelling of [
+      "2026-09-11T09:09:12.548Z",
+      "2026-09-11T16:09:12.548+07:00",
+      "2026-09-11T09:09:12.548000Z",
+      new Date(canonical),
+    ]) {
+      assert.equal(canonicalInstant(spelling), canonical);
+    }
+  });
+
+  await t.test("sub-second precision survives, because a cycle boundary is sub-second", () => {
+    assert.equal(canonicalInstant("2026-09-30T16:59:59.700Z"), "2026-09-30T16:59:59.700Z");
+    assert.notEqual(
+      canonicalInstant("2026-09-30T16:59:59.700Z"),
+      canonicalInstant("2026-09-30T17:00:00.100Z"),
+    );
+  });
+
+  await t.test("an unreadable instant is null, never a guess", () => {
+    for (const junk of ["", "   ", "not a date", null, undefined, 0, {}, new Date("nope")]) {
+      assert.equal(canonicalInstant(junk), null);
+    }
+  });
+
+  await t.test("the client canonicalizes what the provider reports", async () => {
+    const { client } = provider(() => json(runBody({
+      id: "RUN-1",
+      startedAt: "2026-09-11T16:09:12.548+07:00", finishedAt: "2026-09-11T16:09:39+07:00",
+    })));
+    const read = await client.readRun("RUN-1");
+    assert.ok(read.ok);
+    assert.equal(read.value.startedAt, "2026-09-11T09:09:12.548Z");
+    assert.equal(read.value.finishedAt, "2026-09-11T09:09:39.000Z");
+  });
+});
+
+/**
+ * The boundary case the tolerance would have swallowed: two starts 400ms apart
+ * that fall in different billing cycles. An elapsed-time tolerance of a second
+ * would call them the same start and let the wrong cycle carry the cost.
+ */
+test("two instants under a second apart, in different billing cycles, are not the same start", () => {
+  const anchor = "2026-09-01";
+  const persisted = new Date("2026-09-30T16:59:59.700Z");
+  const reported = new Date("2026-09-30T17:00:00.100Z");
+
+  assert.ok(reported.getTime() - persisted.getTime() < 1_000, "the two instants are under a second apart");
+  const before = billingWindow(anchor, 1, persisted);
+  const after = billingWindow(anchor, 1, reported);
+  assert.ok(before && after);
+  assert.notEqual(before.index, after.index, "and they fall in different billing cycles");
+
+  const conflict = identityConflict(
+    {
+      provider_run_id: "RUN-1", provider_dataset_id: null,
+      provider_actor_build: null, started_at: persisted.toISOString(),
+    },
+    mockRun({ runId: "RUN-1", startedAt: reported.toISOString() }),
+  );
+  assert.match(conflict ?? "", /start time does not match/);
+});
+
+test("an identical canonical start is still accepted", () => {
+  const conflict = identityConflict(
+    {
+      provider_run_id: "RUN-1", provider_dataset_id: null,
+      provider_actor_build: null, started_at: "2026-09-11T16:09:12.548+07:00",
+    },
+    mockRun({ runId: "RUN-1", startedAt: "2026-09-11T09:09:12.548Z" }),
+  );
+  assert.equal(conflict, null, "the same instant in another offset is the same instant");
+});
+
+test("an unreadable start on either side fails closed", () => {
+  const base = { provider_run_id: "RUN-1", provider_dataset_id: null, provider_actor_build: null };
+  assert.match(
+    identityConflict({ ...base, started_at: "whenever" }, mockRun({ runId: "RUN-1" })) ?? "",
+    /start time does not match/,
+  );
 });

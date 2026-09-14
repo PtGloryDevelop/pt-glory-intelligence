@@ -459,6 +459,7 @@ and the tickets follow it:
 | §7.4 — cap from `max_records_per_run` and `MAX_RECORDS` only | §8 above — record cap and byte cap, both provisional; oversize fails closed |
 | §2, §11 — import as soon as the provider run succeeds | §9 above — settlement gate: `settling` until the dataset is ready; otherwise admin, never a partial import as complete |
 | §15 — error classes | + `provider_result_unsettled` (§9): user sees `รอผู้ดูแลระบบตรวจสอบ`, and after **Fail collection** the standard failure message; admin sees run ID, dataset ID, observations, charged events |
+| §15 — error classes | + `provider_identity_conflict` (0038, C08 follow-up): a provider response contradicting the run ID, dataset ID, build or canonical start instant already persisted. The persisted identity stands, no transition is made, no run is ever started, `requires_admin = true`. User sees `รอผู้ดูแลระบบตรวจสอบ`; admin sees the persisted identity and the scrubbed, bounded conflict detail. Distinct from `provider_start_unknown` (a run may or may not exist) and `provider_result_unsettled` (the result never became readable) |
 
 ## Components
 

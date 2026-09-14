@@ -38,6 +38,26 @@ export function normalizeStatus(value: unknown): ProviderRunStatus {
 export const isTerminalStatus = (status: ProviderRunStatus): boolean => TERMINAL.has(status);
 
 /**
+ * The one spelling of a provider instant: UTC, ISO-8601, millisecond precision.
+ *
+ * Every timestamp leaving this boundary passes through here, so two instants
+ * are the same instant exactly when their canonical text is equal. That test is
+ * exact on purpose: C05 attributes a finalized cost by the charge-bearing start
+ * timestamp, and a billing-cycle boundary can fall between two consecutive
+ * milliseconds. A tolerance measured in seconds would quietly accept a start on
+ * the far side of that boundary as "the same time".
+ *
+ * Anything unreadable is null, not a guess. Null is already how the collector
+ * says "not known", and a start time nobody can parse must not become evidence.
+ */
+export function canonicalInstant(value: unknown): string | null {
+  const ms = value instanceof Date ? value.getTime()
+    : typeof value === "string" && value.trim() !== "" ? Date.parse(value)
+    : Number.NaN;
+  return Number.isFinite(ms) ? new Date(ms).toISOString() : null;
+}
+
+/**
  * Provider cost evidence. Not accounting: these are the provider's own figures,
  * still moving, and only C05 decides what a budget may hold or call settled.
  */
@@ -58,11 +78,12 @@ export type ProviderRun = {
   datasetId: string | null;
   keyValueStoreId: string | null;
   /**
-   * When the charge-bearing run began, as the provider reports it. This is the
+   * When the charge-bearing run began, as a canonical instant. This is the
    * evidence C05 attributes a finalized cost by; persisting it to the request's
    * started_at belongs to the state-machine ticket, not here.
    */
   startedAt: string | null;
+  /** Canonical instant, like `startedAt`. */
   finishedAt: string | null;
   /** The build that actually ran, so a pinned build can be verified after the fact. */
   buildNumber: string | null;

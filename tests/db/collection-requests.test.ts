@@ -144,7 +144,11 @@ test("collection_requests enforces its invariants in the schema", { skip }, asyn
   });
 
   await t.test("an error class outside the documented set is refused", async () => {
-    for (const error_class of ["provider_start_unknown", "provider_result_unsettled"]) {
+    for (const error_class of [
+      "provider_start_unknown", "provider_result_unsettled",
+      // 0038: a contradiction between persisted and reported identity.
+      "provider_identity_conflict",
+    ]) {
       const { rows } = await insertRequest(client, fresh({ error_class }));
       assert.equal(rows.length, 1, `${error_class} is a documented class`);
     }

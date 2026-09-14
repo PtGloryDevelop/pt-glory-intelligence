@@ -346,7 +346,8 @@ test("contradictory provider evidence stops the request rather than moving it", 
     assert.equal(after.status, "running", "a conflicting response never moves the request");
     assert.equal(after.provider_run_id, before.provider_run_id, "the attached run stands");
     assert.equal(after.requires_admin, true);
-    assert.equal(after.error_class, null, "and no documented class is bent to fit");
+    assert.equal(after.error_class, "provider_identity_conflict",
+      "the conflict has its own class, and borrows neither uncertain-start nor unsettled-result");
     assert.match(after.error_detail ?? "", /run identity/);
   });
 
@@ -376,6 +377,37 @@ test("contradictory provider evidence stops the request rather than moving it", 
     const state = await stateOf(client, id);
     assert.equal(new Date(state.started_at ?? "").toISOString(), "2026-09-11T09:09:12.548Z");
     assert.equal(state.status, "running");
+  });
+
+  await t.test("a start under a second apart is a different start, not a rounding difference", async () => {
+    // 400ms apart, and on opposite sides of a Bangkok-midnight cycle boundary.
+    const id = await attached({ started_at: "2026-09-30T16:59:59.700Z" });
+    const runId = (await stateOf(client, id)).provider_run_id!;
+    const mock = provider({ run: mockRun({ runId, status: "SUCCEEDED", startedAt: "2026-09-30T17:00:00.100Z" }) });
+    const outcome = await advance(id, { provider: mock, worker: "w1" });
+    assert.equal(outcome.action, "identity_conflict");
+    const state = await stateOf(client, id);
+    assert.equal(new Date(state.started_at ?? "").toISOString(), "2026-09-30T16:59:59.700Z",
+      "the start that cost attribution is built on never moves");
+    assert.equal(state.status, "running");
+    assert.equal(state.error_class, "provider_identity_conflict");
+  });
+
+  await t.test("the same instant reported in another offset is not a conflict", async () => {
+    const id = await attached();
+    const runId = (await stateOf(client, id)).provider_run_id!;
+    const mock = provider({ run: mockRun({ runId, status: "RUNNING", finishedAt: null, startedAt: "2026-09-11T16:09:12.548+07:00" }) });
+    const outcome = await advance(id, { provider: mock, worker: "w1" });
+    assert.equal(outcome.action, "still_running");
+    assert.equal((await stateOf(client, id)).error_class, null);
+  });
+
+  await t.test("the conflict class replaces an earlier one rather than hiding behind it", async () => {
+    const id = await attached({ error_class: "provider_unreachable" });
+    const runId = (await stateOf(client, id)).provider_run_id!;
+    const mock = provider({ run: mockRun({ runId: `${runId}-other`, status: "SUCCEEDED", startedAt: "2026-09-11T09:09:12.548Z" }) });
+    assert.equal((await advance(id, { provider: mock, worker: "w1" })).action, "identity_conflict");
+    assert.equal((await stateOf(client, id)).error_class, "provider_identity_conflict");
   });
 
   await t.test("a different build is not silently accepted", async () => {
@@ -596,6 +628,11 @@ test("the machine keeps provider detail and secrets where they belong", { skip: 
   // beyond the status the requester's own screen needs.
   assert.doesNotMatch(source, /update public\.collection_requests[\s\S]*?set[\s\S]*?params =/);
   assert.match(source, /provider_run_id = coalesce/);
+  // Identity is compared exactly, at the boundary's canonical precision. No
+  // elapsed-time tolerance may creep back in: a cycle boundary is sub-second.
+  assert.match(source, /canonicalInstant/);
+  // No elapsed-time arithmetic on instants: that is what a tolerance is made of.
+  assert.doesNotMatch(source, /Math\.abs\([^)]*getTime\(\)/);
   // The start is the only write path to the provider, and it lives in one place.
   assert.equal(source.match(/provider\.startRun\(/g)?.length, 1);
 });

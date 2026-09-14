@@ -1,5 +1,5 @@
 import {
-  isTerminalStatus, normalizeStatus,
+  canonicalInstant, isTerminalStatus, normalizeStatus,
   type CollectionProvider, type DatasetMetadata, type DatasetPage, type ProviderRead,
   type ProviderRun, type RunInputEvidence, type StartOutcome, type StartRequest,
 } from "./provider.ts";
@@ -35,7 +35,7 @@ export type MockProvider = CollectionProvider & {
 
 export function mockRun(overrides: Partial<ProviderRun> = {}): ProviderRun {
   const status = normalizeStatus(overrides.status ?? "SUCCEEDED");
-  return {
+  const run: ProviderRun = {
     runId: "mock-run-1",
     status,
     terminal: isTerminalStatus(status),
@@ -49,6 +49,13 @@ export function mockRun(overrides: Partial<ProviderRun> = {}): ProviderRun {
     maxItems: 133,
     usage: { reportedTotalUsd: null, chargedItems: null, chargedStartEvents: null },
     ...overrides,
+  };
+  // The double normalizes exactly as the real client does, so a test cannot
+  // prove anything about timestamps that the provider boundary would not.
+  return {
+    ...run,
+    startedAt: canonicalInstant(run.startedAt),
+    finishedAt: canonicalInstant(run.finishedAt),
   };
 }
 
