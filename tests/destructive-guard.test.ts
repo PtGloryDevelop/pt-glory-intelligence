@@ -154,12 +154,15 @@ test("every destructive path calls the guard", () => {
   const PILOT_OPERATIONS = /^pilot-/;
 
   /*
-   * One more deliberate cloud path: archive-schedule-config writes the
-   * scheduler's credentials into Supabase Vault. It is an operations script run
-   * by hand once per environment, and it destroys no research data — it sets
-   * two secrets. Named here so the exemption is a decision, not a gap.
+   * One more deliberate cloud path: the scheduler-config scripts write machine
+   * credentials into Supabase Vault. They are operations scripts run by hand
+   * once per environment, and destroy no research data — they set two secrets.
+   * Named here so the exemption is a decision, not a gap.
    */
-  const OPERATIONS = new Set(["archive-schedule-config.mjs"]);
+   const OPERATIONS = new Set([
+     "archive-schedule-config.mjs",
+     "collection-schedule-config.mjs",
+   ]);
 
   const walk = (dir: string): string[] =>
     readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {

@@ -21,11 +21,12 @@ import { connect, resetTables, seedCategory, singleAdCanonical } from "./helpers
 
 const skip = process.env.DATABASE_URL ? false : "DATABASE_URL not set";
 
-/** Deliberately unreachable from app roles: the machine drain (C1.8). */
-const MACHINE_ONLY = new Set(["run_media_archive_drain"]);
+/** Deliberately unreachable from app roles: the two machine schedulers. */
+const MACHINE_ONLY = new Set(["run_media_archive_drain", "run_collection_advance"]);
 /** Deliberately SECURITY DEFINER, each for a documented reason. */
 const DEFINER_ALLOWED = new Set([
   "current_user_role", "evergreen_threshold_days", "run_media_archive_drain",
+  "run_collection_advance",
 ]);
 
 test("every function this product defines keeps the read-layer security contract", { skip }, async () => {

@@ -16,7 +16,12 @@ const PRIVILEGED = /lib\/db\/privileged/;
 // Paths permitted to import the privileged client.
 const ALLOWED = [
   "app/api/imports/commit/route.ts",
+  "app/api/collections/advance/route.ts",
   "lib/import/commit.ts",
+  "lib/collect/admission.ts",
+  "lib/collect/cost.ts",
+  "lib/collect/machine.ts",
+  "lib/collect/recovery.ts",
   "tests/db/",
 ];
 

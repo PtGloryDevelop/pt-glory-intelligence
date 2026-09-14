@@ -37,6 +37,8 @@ test("no server-only credential reaches the client bundle", { skip: buildSkip },
     "MEDIA_ARCHIVE_TOKEN",
     // The collector's provider token. Server-only, like the rest.
     "APIFY_TOKEN",
+    // The collection scheduler credential. It is never a client setting.
+    "COLLECTION_ADVANCE_TOKEN",
   ] as const;
 
   for (const name of secrets) {

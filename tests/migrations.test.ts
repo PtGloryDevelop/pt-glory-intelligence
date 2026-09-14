@@ -16,9 +16,9 @@ test("every up migration has a matching down migration", () => {
   }
 });
 
-test("migrations are numbered 0001..0040 with no gaps", () => {
+test("migrations are numbered 0001..0041 with no gaps", () => {
   const numbers = up.map((f) => Number(f.slice(0, 4)));
-  assert.deepEqual(numbers, Array.from({ length: 40 }, (_, i) => i + 1));
+  assert.deepEqual(numbers, Array.from({ length: 41 }, (_, i) => i + 1));
 });
 
 test("all 18 tables are created", () => {
@@ -228,7 +228,7 @@ test("every function a migration creates is dropped by its rollback", () => {
     "page_creative_mix", "page_detail", "page_in_scope",
     "page_like_history", "page_list", "page_run_history", "page_run_mix",
     "page_scope_ads", "page_scope_observations", "page_timeline",
-    "page_timeline_evidence",
+    "page_timeline_evidence", "run_collection_advance",
     "run_media_archive_drain",
     // What the collection asked for (0035). Reads what collection_runs has
     // stored since 0004; changes no count and no existing function.
@@ -357,6 +357,42 @@ test("the archive drain is scheduled and unreachable from an app role", () => {
 
   // Credentials come from Vault, never from a file in the repository.
   assert.match(sql, /vault[.]decrypted_secrets/);
+  assert.doesNotMatch(sql, /Bearer [A-Za-z0-9]{16}/, "no literal token in a migration");
+});
+
+test("collection advance is bounded and scheduled as a machine-only sweep", () => {
+  const sql = read("0041_collection_advance_schedule.sql");
+  const route = readFileSync(join("app", "api", "collections", "advance", "route.ts"), "utf8");
+
+  assert.match(route, /export const maxDuration = 300/);
+  assert.match(route, /after\(/, "work must continue after the 202 response");
+  assert.match(route, /status:\s*202/, "the scheduler must acknowledge without waiting for a run");
+
+  // The measured 1,000-record import from the approved spike is evidence for a
+  // local bound only; production timing remains C16 work.
+  const spike = readFileSync(join("docs", "SPIKE_2026-09-11_PROVIDER_EVIDENCE.md"), "utf8");
+  const measuredLine = spike.split("\n").find((line) => line.includes("| 1,000 |"));
+  const measuredImportSeconds = Number(measuredLine?.match(/\|\s*([\d.]+)\s*s\s*\|/)?.[1]);
+  assert.ok(Number.isFinite(measuredImportSeconds), "the approved spike must record the 1,000-record import time");
+  assert.ok(measuredImportSeconds < 300 * 0.8, "the local import bound must stay under 80% of maxDuration");
+
+  assert.match(sql, /create function public\.run_collection_advance\(\)/);
+  assert.match(sql, /security definer/);
+  assert.match(sql, /set search_path = public, extensions, vault, pg_temp/);
+  assert.match(sql, /vault\.decrypted_secrets/);
+  assert.match(sql, /net\.http_post/);
+  assert.match(sql, /collection_advance_url/);
+  assert.match(sql, /collection_advance_token/);
+  assert.match(sql, /collection_requests/);
+  assert.match(sql, /no work due/);
+  assert.ok(sql.includes("'* * * * *'"), "the advance sweep runs every minute");
+
+  for (const role of ["public", "anon", "authenticated"]) {
+    assert.ok(
+      sql.includes(`revoke all on function public.run_collection_advance() from ${role}`),
+      `${role} must not be able to execute the scheduler function`,
+    );
+  }
   assert.doesNotMatch(sql, /Bearer [A-Za-z0-9]{16}/, "no literal token in a migration");
 });
 
