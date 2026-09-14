@@ -84,7 +84,6 @@ async function queuedRequest(
     category_id: base.categoryId,
     source_url: SOURCE_URL,
     cost_reserved_usd: "0.100000",
-    next_check_at: new Date().toISOString(),
     ...overrides,
   };
   const names = Object.keys(columns);
@@ -105,11 +104,12 @@ async function stateOf(client: pg.Client, id: string) {
     status: string; provider_run_id: string | null; provider_dataset_id: string | null;
     started_at: string | null; finished_at: string | null; error_class: string | null;
     error_detail: string | null; requires_admin: boolean; next_check_at: string | null;
+    result_charged_items: number | null;
     lease_owner: string | null; cost_reserved_usd: string; start_attempted_at: string | null;
   }>(
     `select status, provider_run_id, provider_dataset_id, started_at, finished_at, error_class,
             error_detail, requires_admin, next_check_at, lease_owner, cost_reserved_usd,
-            start_attempted_at
+            start_attempted_at, result_charged_items
        from public.collection_requests where id = $1`,
     [id],
   );
@@ -253,12 +253,16 @@ test("a running request is polled, never restarted", { skip }, async (t) => {
 
   await t.test("a successful run moves to settling, never straight to importing", async () => {
     const { id, runId } = await running();
-    const mock = provider({ run: mockRun({ runId, status: "SUCCEEDED" }) });
+    const mock = provider({ run: mockRun({
+      runId, status: "SUCCEEDED",
+      usage: { reportedTotalUsd: "0.0998", chargedItems: 133, chargedStartEvents: 1 },
+    }) });
     const outcome = await advance(id, { provider: mock, worker: "w1" });
     assert.equal(outcome.action, "provider_succeeded");
     const state = await stateOf(client, id);
     assert.equal(state.status, "settling", "the settlement gate owns what happens next");
     assert.equal(state.next_check_at, null, "and C09 schedules its own work");
+    assert.equal(state.result_charged_items, 133, "the charged events are kept as evidence, not as a gate");
     assert.equal(mock.startCount, 0);
     assert.ok((await auditActions(client, id)).includes("collection.provider_succeeded"));
   });
@@ -298,13 +302,14 @@ test("a running request is polled, never restarted", { skip }, async (t) => {
     assert.equal((await stateOf(client, id)).status, "running");
   });
 
-  await t.test("a settling request is left alone by this machine", async () => {
+  await t.test("a settling request belongs to the settlement gate, and starts nothing", async () => {
     const { id } = await running({ status: "settling" });
     const mock = provider({ run: mockRun() });
+    // This suite configures no settlement interval, so the gate refuses to
+    // invent one — and either way, nothing on this path may start a run.
     const outcome = await advance(id, { provider: mock, worker: "w1" });
-    assert.equal(outcome.action, "not_claimed");
+    assert.equal(outcome.action, "not_configured");
     assert.equal(mock.startCount, 0);
-    assert.equal(mock.calls.length, 0, "and it is not even read: C09 owns this state");
     assert.equal((await stateOf(client, id)).status, "settling");
   });
 });

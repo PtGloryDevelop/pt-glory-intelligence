@@ -365,6 +365,89 @@ test("admission judges settings, budget and concurrency in one place", { skip },
     assert.equal(audit.rowCount, 1, "and no second collection.start");
   });
 
+  await t.test("an unnamed collection is named at admission, before anything starts", async () => {
+    await reset(client);
+    await setSettings(client);
+    // 2026-09-20T00:00Z is already the 20th of September in Bangkok (UTC+7).
+    const admitted = await admitCollection(request(base, { datasetName: null }), { now: NOW });
+    assert.ok(admitted.ok);
+
+    const { rows } = await client.query<{ dataset_name: string; status: string; start_attempted_at: string | null }>(
+      "select dataset_name, status, start_attempted_at from public.collection_requests where id = $1",
+      [admitted.requestId],
+    );
+    assert.equal(rows[0].dataset_name, "วิตามินสลายไขมัน · TH · 2026-09-20",
+      "keyword, country and the admission date in Bangkok");
+    assert.equal(rows[0].status, "queued");
+    assert.equal(rows[0].start_attempted_at, null, "and the name exists before any provider is contacted");
+  });
+
+  await t.test("the Bangkok date is the requester's day, not UTC's", async () => {
+    await reset(client);
+    await setSettings(client);
+    // 18:30Z on the 19th is already 01:30 on the 20th in Bangkok.
+    const admitted = await admitCollection(
+      request(base, { datasetName: null }), { now: new Date("2026-09-19T18:30:00Z") });
+    assert.ok(admitted.ok);
+    const { rows } = await client.query<{ dataset_name: string }>(
+      "select dataset_name from public.collection_requests where id = $1", [admitted.requestId],
+    );
+    assert.match(rows[0].dataset_name, /2026-09-20$/);
+  });
+
+  await t.test("a blank name is a name to generate, not a name to keep", async () => {
+    await reset(client);
+    await setSettings(client);
+    const admitted = await admitCollection(request(base, { datasetName: "   " }), { now: NOW });
+    assert.ok(admitted.ok);
+    const { rows } = await client.query<{ dataset_name: string }>(
+      "select dataset_name from public.collection_requests where id = $1", [admitted.requestId],
+    );
+    assert.equal(rows[0].dataset_name, "วิตามินสลายไขมัน · TH · 2026-09-20");
+  });
+
+  await t.test("a label added to an auto-named request never rewrites it", async () => {
+    await reset(client);
+    await setSettings(client);
+    const submission = request(base, { datasetName: null });
+    const first = await admitCollection(submission, { now: NOW });
+    assert.ok(first.ok);
+
+    const relabelled = await admitCollection({ ...submission, datasetName: "my own label" }, { now: NOW });
+    assert.ok(relabelled.ok);
+    assert.equal(relabelled.requestId, first.requestId);
+    assert.equal(relabelled.reused, true);
+
+    const { rows } = await client.query<{ dataset_name: string }>(
+      "select dataset_name from public.collection_requests where id = $1", [first.requestId],
+    );
+    assert.equal(rows[0].dataset_name, "วิตามินสลายไขมัน · TH · 2026-09-20",
+      "the name the request was admitted with stands");
+  });
+
+  await t.test("a padded name is stored the way it will be read", async () => {
+    await reset(client);
+    await setSettings(client);
+    const submission = request(base, { datasetName: "  Campaign A  " });
+    const admitted = await admitCollection(submission, { now: NOW });
+    assert.ok(admitted.ok);
+
+    const nameOf = async () => {
+      const { rows } = await client.query<{ dataset_name: string }>(
+        "select dataset_name from public.collection_requests where id = $1", [admitted.requestId],
+      );
+      return rows[0].dataset_name;
+    };
+    assert.equal(await nameOf(), "Campaign A", "normalized once, at admission, and never again");
+
+    // The same submission with a different label is the same request.
+    const again = await admitCollection({ ...submission, datasetName: "Campaign B" }, { now: NOW });
+    assert.ok(again.ok);
+    assert.equal(again.requestId, admitted.requestId);
+    assert.equal(again.reused, true);
+    assert.equal(await nameOf(), "Campaign A", "and a later label never rewrites it");
+  });
+
   await t.test("a renamed dataset reuses the request without renaming it", async () => {
     await reset(client);
     await setSettings(client);

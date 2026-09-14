@@ -1,6 +1,13 @@
 import type { PoolClient } from "pg";
 import { withTransaction } from "../db/privileged.ts";
 import { CONCURRENCY_SLOT_STATES } from "./budget.ts";
+import { adaptApifyItems, stopReason } from "./adapter.ts";
+import {
+  assessSettlement, intendedCount, settlementExpired, type SettlementObservation,
+} from "./settlement.ts";
+import { analyzeImport } from "../import/analyze.ts";
+import { commitImport } from "../import/commit.ts";
+import { enqueueRun } from "../media/archive.ts";
 import {
   canonicalInstant, scrubProviderMessage,
   type CollectionProvider, type ProviderRun,
@@ -19,9 +26,13 @@ import {
  * `provider_start_uncertain` and is only ever reconciled by reading, never by
  * starting again.
  *
- * What this ticket does NOT do: the settlement gate and the import (C09), cost
- * reconciliation (C10), admin recovery (C11) and the scheduler (C12). A
- * provider run that succeeds moves to `settling` and stops there.
+ * C09 continues the same machine through `settling` and `importing`: a terminal
+ * provider run is observed twice before anything is imported, the canonical
+ * commit is exactly-once by database constraint, and the media enqueue is a
+ * separate step that can be retried without repeating the commit.
+ *
+ * What this file still does NOT do: cost reconciliation (C10), admin recovery
+ * (C11) and the scheduler (C12).
  */
 
 /** Back-off for the next bounded check. Engineering parameters, not prices. */
@@ -41,6 +52,14 @@ export const RUN_MEMORY_MBYTES = 512;
 /** How far before the recorded attempt a matching run may have started. */
 export const RECONCILE_SKEW_SECONDS = 120;
 
+/**
+ * How many dataset items are read per provider page.
+ *
+ * An engineering parameter, like the back-off: the record cap is at most 4,970,
+ * so the whole intended range is a handful of bounded reads inside one advance.
+ */
+export const ITEM_PAGE_SIZE = 1_000;
+
 export type AdvanceAction =
   | "not_claimed"
   | "not_configured"
@@ -54,7 +73,18 @@ export type AdvanceAction =
   | "still_running"
   | "provider_succeeded"
   | "provider_failed"
-  | "identity_conflict";
+  | "identity_conflict"
+  // C09: the settlement gate, the import and the one step after it.
+  | "result_observed"
+  | "result_ready"
+  | "result_unsettled"
+  | "import_incomplete"
+  | "import_failed"
+  | "imported"
+  | "import_adopted"
+  | "zero_result"
+  | "media_enqueued"
+  | "media_enqueue_retry";
 
 export type AdvanceOutcome = {
   requestId: string;
@@ -78,6 +108,18 @@ type RequestRow = {
   cost_reserved_usd: string | null;
   start_attempted_at: string | null;
   attempt: number;
+  // C09: what the settlement gate and the import step read.
+  category_id: string;
+  dataset_name: string | null;
+  ceiling_reached: boolean;
+  collection_run_id: string | null;
+  import_attempted_at: string | null;
+  media_enqueued_at: string | null;
+  result_item_count: number | null;
+  result_modified_at: string | null;
+  result_pagination_total: number | null;
+  result_observed_at: string | null;
+  result_settle_started_at: string | null;
 };
 
 type Settings = {
@@ -86,6 +128,10 @@ type Settings = {
   leaseSeconds: number;
   reconcileWindowMinutes: number | null;
   reconcilePageSize: number | null;
+  /** C09. All three are unset in C04 and fail closed until an admin sets them. */
+  resultSettleSeconds: number | null;
+  resultSettleWindowMinutes: number | null;
+  maxExportBytes: number | null;
 };
 
 export async function advance(
@@ -106,6 +152,11 @@ export async function advance(
     return reconcile(requestId, request, settings, deps.provider);
   }
   if (request.status === "running") return pollRun(requestId, request, deps.provider);
+  const now = deps.now ?? new Date();
+  if (request.status === "settling") return settle(requestId, request, settings, deps.provider, now);
+  if (request.status === "importing") return importResult(requestId, request, settings, deps.provider, now);
+  // Committed, but the one step after the commit is still owed.
+  if (request.status === "succeeded") return enqueueMedia(requestId, request);
 
   // A `starting` row whose worker died is resolved inside the claim itself.
   return { requestId, action: claim.claimAction, from: request.status, to: claim.claimedTo };
@@ -125,13 +176,29 @@ async function claimRequest(client: PoolClient, requestId: string, worker: strin
             attempt = attempt + 1,
             updated_at = now()
       where id = $1
-        and status in ('queued', 'starting', 'provider_start_uncertain', 'running')
+        and (
+          status in ('queued', 'starting', 'provider_start_uncertain', 'running',
+                     -- C09 owns these two.
+                     'settling', 'importing')
+          -- Finished, with the one post-commit step still owed. The canonical
+          -- import is done; only the media enqueue is retried here.
+          or (status = 'succeeded' and media_enqueued_at is null)
+        )
+        -- A request waiting for a person is never picked up again automatically.
+        -- That is what stops settlement polling after the window expires. It
+        -- stops THIS work only: cost reconciliation (C10) has its own schedule
+        -- in cost_next_check_at and its own read-only claim, and must not be
+        -- built on this predicate.
         and requires_admin = false
         and (lease_expires_at is null or lease_expires_at < now())
         and (next_check_at is null or next_check_at <= now())
       returning id, status, requested_by, params, source_url, provider_run_id,
                 provider_dataset_id, provider_actor_build, started_at,
-                cost_reserved_usd, start_attempted_at, attempt`,
+                cost_reserved_usd, start_attempted_at, attempt,
+                category_id, dataset_name, ceiling_reached, collection_run_id,
+                import_attempted_at, media_enqueued_at, result_item_count,
+                result_modified_at, result_pagination_total, result_observed_at,
+                result_settle_started_at`,
     [requestId, worker, settings.leaseSeconds],
   );
   if (claimed.rowCount === 0) return null;
@@ -369,6 +436,10 @@ async function finish(
               started_at = coalesce(started_at, $7),
               finished_at = case when $8 then coalesce(finished_at, now()) else finished_at end,
               error_class = case when $14 then $9 else coalesce($9, error_class) end,
+              -- Billing evidence at the terminal moment, kept as a diagnostic.
+              -- It is never a settlement condition and never an accounting
+              -- figure: C10 owns cost, and C01-B showed this number lags.
+              result_charged_items = coalesce(result_charged_items, $15),
               error_detail = coalesce($10, error_detail),
               requires_admin = case when $11 then true else requires_admin end,
               start_attempted_at = case when $12 then null else start_attempted_at end,
@@ -393,6 +464,7 @@ async function finish(
         outcome.clearStartMarker === true,
         nextCheck,
         outcome.overwriteErrorClass === true,
+        outcome.run?.usage.chargedItems ?? null,
       ],
     );
     if (outcome.audit) {
@@ -498,6 +570,9 @@ async function readSettings(client: PoolClient): Promise<Settings> {
     leaseSeconds: number("lease_seconds") ?? 120,
     reconcileWindowMinutes: number("reconcile_window_minutes"),
     reconcilePageSize: number("reconcile_page_size"),
+    resultSettleSeconds: number("result_settle_seconds"),
+    resultSettleWindowMinutes: number("result_settle_window_minutes"),
+    maxExportBytes: number("max_export_bytes"),
   };
 }
 
@@ -515,7 +590,637 @@ async function audit(
   );
 }
 
-/** Exposed so the scheduler ticket can claim exactly the states this machine advances. */
-export const ADVANCEABLE_STATES = CONCURRENCY_SLOT_STATES.filter(
-  (status) => status !== "settling" && status !== "importing",
-);
+/**
+ * Exposed so the scheduler ticket can claim exactly the states this machine
+ * advances. C09 added `settling` and `importing`, so this is now every
+ * non-terminal state — plus, in the claim predicate above, a `succeeded`
+ * request whose media enqueue has not happened yet.
+ */
+export const ADVANCEABLE_STATES = [...CONCURRENCY_SLOT_STATES];
+
+// ---------------------------------------------------------------------------
+// C09 — the provider result settlement gate, the canonical import, and the one
+// step that follows it.
+// ---------------------------------------------------------------------------
+
+/**
+ * One settle tick: read the dataset, judge it against the previous reading,
+ * persist what was seen, and stop.
+ *
+ * Two readings taken in the same tick would be one observation wearing two
+ * hats, so this never reads twice: it records, schedules the next check at
+ * least `result_settle_seconds` away, and leaves.
+ */
+async function settle(
+  requestId: string,
+  request: RequestRow,
+  settings: Settings,
+  provider: CollectionProvider,
+  now: Date,
+): Promise<AdvanceOutcome> {
+  const settleSeconds = settings.resultSettleSeconds;
+  if (settleSeconds === null || settings.resultSettleWindowMinutes === null) {
+    // Unset is unset. Nothing invents an interval, and nothing imports without one.
+    return settleFinish(requestId, request, {
+      action: "not_configured", status: "settling", nextSeconds: backoffSeconds(request.attempt),
+      detail: "result_settle_seconds or result_settle_window_minutes is unset",
+    });
+  }
+
+  const observedAt = now.toISOString();
+  const expired = settlementExpired(
+    request.result_settle_started_at, observedAt, settings.resultSettleWindowMinutes,
+  );
+  /** Not ready this tick: either wait, or — once the window is spent — ask a person. */
+  const notReady = (detail: string, observation?: SettlementObservation) => (
+    expired
+      ? settleFinish(requestId, request, {
+          action: "result_unsettled", status: "settling", observation, requiresAdmin: true,
+          errorClass: "provider_result_unsettled", audit: "collection.requires_admin",
+          nextSeconds: null, detail,
+        })
+      : settleFinish(requestId, request, {
+          action: "result_observed", status: "settling", observation,
+          nextSeconds: settleSeconds, detail, startWindowAt: observedAt,
+        })
+  );
+
+  const datasetId = request.provider_dataset_id;
+  if (!datasetId) {
+    // A terminal success naming no dataset is not something to guess at, and
+    // waiting for one to appear would never end.
+    return settleFinish(requestId, request, {
+      action: "result_unsettled", status: "settling", requiresAdmin: true,
+      errorClass: "provider_result_unsettled", audit: "collection.requires_admin",
+      nextSeconds: null, detail: "the provider run identified no dataset",
+    });
+  }
+
+  const metadata = await provider.readDatasetMetadata(datasetId);
+  if (!metadata.ok) return notReady(`dataset metadata unavailable: ${metadata.detail}`);
+  // Missing or malformed pagination evidence fails closed. It is never read as
+  // "no items" — that is exactly how an empty result comes to look complete.
+  const total = await provider.readDatasetItemTotal(datasetId);
+  if (!total.ok) return notReady(`pagination total unreadable: ${total.detail}`);
+
+  const current: SettlementObservation = {
+    itemCount: metadata.value.itemCount,
+    modifiedAt: canonicalInstant(metadata.value.modifiedAt),
+    paginationTotal: total.value,
+    observedAt,
+  };
+  const prior: SettlementObservation | null = request.result_observed_at === null ? null : {
+    itemCount: request.result_item_count ?? -1,
+    modifiedAt: canonicalInstant(request.result_modified_at),
+    paginationTotal: request.result_pagination_total ?? -1,
+    observedAt: canonicalInstant(request.result_observed_at) ?? observedAt,
+  };
+
+  const assessment = assessSettlement(prior, current, settleSeconds);
+  if (assessment.verdict === "ready") {
+    // The gate is passed. The import is the next tick's bounded work, so one
+    // advance stays one transition and `importing` is a state a dead worker can
+    // be recovered from.
+    return settleFinish(requestId, request, {
+      action: "result_ready", status: "importing", observation: current,
+      markImportAttempt: true, audit: "collection.result_ready", nextSeconds: 0,
+      detail: `settled at ${current.itemCount} items`,
+    });
+  }
+  return notReady(
+    assessment.verdict === "first" ? `first observation: ${current.itemCount} items` : assessment.detail,
+    current,
+  );
+}
+
+/**
+ * Persists one settle tick.
+ *
+ * An observation replaces the previous one, because the baseline is whatever
+ * was last actually seen. The window's start is written once: a request must
+ * not be able to postpone its own timeout by observing again.
+ */
+async function settleFinish(
+  requestId: string,
+  request: RequestRow,
+  write: {
+    action: AdvanceAction;
+    status: string;
+    observation?: SettlementObservation;
+    requiresAdmin?: boolean;
+    errorClass?: string;
+    audit?: string;
+    detail?: string;
+    markImportAttempt?: boolean;
+    startWindowAt?: string;
+    /** Forget the settled baseline entirely; the next reading is a first one. */
+    clearBaseline?: boolean;
+    /** Seconds until the next check. null stops automatic polling entirely. */
+    nextSeconds: number | null;
+  },
+): Promise<AdvanceOutcome> {
+  const observation = write.observation ?? null;
+  const detail = write.detail ? scrubProviderMessage(write.detail) : null;
+
+  await withTransaction(async (client) => {
+    await client.query(
+      `update public.collection_requests
+          set status = $2,
+              -- $14 clears the baseline outright: used when the disagreement is
+              -- with the items themselves, so there is no new metadata reading
+              -- to carry forward and the next tick must observe from scratch.
+              result_item_count = case when $14 then null else coalesce($3, result_item_count) end,
+              result_modified_at = case when $14 then null
+                                        when $4 then $5 else result_modified_at end,
+              result_pagination_total = case when $14 then null
+                                             else coalesce($6, result_pagination_total) end,
+              result_observed_at = case when $14 then null else coalesce($7, result_observed_at) end,
+              -- Written once: the window runs from the first settle tick.
+              result_settle_started_at = coalesce(result_settle_started_at, $8),
+              requires_admin = case when $9 then true else requires_admin end,
+              error_class = coalesce($10, error_class),
+              error_detail = coalesce($11, error_detail),
+              import_attempted_at = case when $12 then coalesce(import_attempted_at, now())
+                                         else import_attempted_at end,
+              next_check_at = case when $13::int is null then null
+                                   else now() + make_interval(secs => $13::int) end,
+              lease_owner = null,
+              lease_expires_at = null,
+              updated_at = now()
+        where id = $1`,
+      [
+        requestId,
+        write.status,
+        observation?.itemCount ?? null,
+        observation !== null,
+        observation?.modifiedAt ?? null,
+        observation?.paginationTotal ?? null,
+        observation?.observedAt ?? null,
+        write.startWindowAt ?? null,
+        write.requiresAdmin === true,
+        write.errorClass ?? null,
+        detail,
+        write.markImportAttempt === true,
+        write.nextSeconds,
+        write.clearBaseline === true,
+      ],
+    );
+    // One event per thing that actually happened. A claimed request always had
+    // requires_admin = false, so the requires-admin event cannot repeat.
+    if (write.audit) {
+      await audit(client, request.requested_by, write.audit, requestId, {
+        from: request.status, to: write.status,
+        ...(observation ? { item_count: observation.itemCount } : {}),
+        ...(write.errorClass ? { error_class: write.errorClass } : {}),
+      });
+    }
+  });
+
+  return {
+    requestId, action: write.action, from: request.status, to: write.status,
+    ...(detail ? { detail } : {}),
+  };
+}
+
+/**
+ * The import step: read exactly what settled, convert it, commit it once.
+ *
+ * Adoption comes first. A commit can land and the worker die before the request
+ * is linked to it; the canonical run is then already correct, and the only
+ * honest thing to do is find it and attach. Re-importing would be the mistake,
+ * and the unique index on the request id inside the run's quality summary is
+ * there to make that mistake impossible rather than merely unlikely.
+ */
+async function importResult(
+  requestId: string,
+  request: RequestRow,
+  settings: Settings,
+  provider: CollectionProvider,
+  now: Date,
+): Promise<AdvanceOutcome> {
+  const adopted = await findCommittedRun(requestId);
+  if (adopted) {
+    return complete(requestId, request, {
+      action: "import_adopted", audit: "collection.import_adopted",
+      collectionRunId: adopted.runId, datasetId: adopted.datasetId,
+      result: {
+        ads: adopted.ads, pages: adopted.pages, unresolved: adopted.unresolved, quarantined: null,
+      },
+      providerItemCount: request.result_item_count,
+      detail: "a canonical run for this request already exists",
+    });
+  }
+
+  if (settings.maxExportBytes === null) {
+    // No transition: nothing has been read, nothing written, and an unset cap
+    // is not a reason to move the request anywhere.
+    return settleFinish(requestId, request, {
+      action: "not_configured", status: "importing",
+      nextSeconds: backoffSeconds(request.attempt), detail: "max_export_bytes is unset",
+    });
+  }
+  const datasetId = request.provider_dataset_id;
+  const maxRecords = typeof request.params.max_records === "number" ? request.params.max_records : null;
+  const settled = request.result_item_count;
+  if (!datasetId || maxRecords === null || settled === null || !request.source_url
+    // Defensive: admission always writes a non-blank name. A row that reaches
+    // here without one was not admitted properly, and naming it now would give
+    // a retry a different name from its first attempt.
+    || !request.dataset_name?.trim()) {
+    return failImport(requestId, request, "adapter_rejected",
+      "the request lacks the dataset, record cap, settled count, source URL or dataset name the import needs");
+  }
+
+  const intended = intendedCount(settled, maxRecords);
+  if (intended === 0) {
+    // Zero is a claim like any other, and it is re-checked at the moment it
+    // would become final: a dataset that filled in after it settled empty must
+    // not be recorded as a collection that found nothing.
+    const stillEmpty = await verifyUnchanged(provider, datasetId, request, now);
+    if (!stillEmpty.ok) return resettle(requestId, request, settings, stillEmpty);
+    // No PT Glory dataset is created for zero ads — an empty dataset would be a
+    // collection that never happened — and the request keeps the provider
+    // evidence, counts and audit history.
+    return complete(requestId, request, {
+      action: "zero_result", audit: "collection.zero_result",
+      collectionRunId: null, datasetId: null,
+      result: { ads: 0, pages: 0, unresolved: 0, quarantined: 0 },
+      providerItemCount: 0, stopReason: null,
+      // Nothing was committed, so there is nothing downstream to enqueue.
+      mediaSettled: true,
+      detail: "the provider run returned no ads",
+    });
+  }
+
+  // The fence, before the fetch: a dataset that settled minutes ago may have
+  // moved since, and the settlement observations alone cannot see that.
+  const before = await verifyUnchanged(provider, datasetId, request, now);
+  if (!before.ok) return resettle(requestId, request, settings, before);
+
+  const fetched = await fetchItems(provider, datasetId, intended);
+  if (!fetched.ok) {
+    return settleFinish(requestId, request, {
+      action: "import_incomplete", status: "importing",
+      nextSeconds: backoffSeconds(request.attempt), detail: fetched.detail,
+    });
+  }
+
+  // And again after it. Reading the range takes time, and the only way to know
+  // the dataset held still for all of it is to check both ends against the same
+  // baseline.
+  const after = await verifyUnchanged(provider, datasetId, request, now);
+  if (!after.ok) return resettle(requestId, request, settings, after);
+
+  if (fetched.items.length !== intended) {
+    // Condition 5 of the gate, checked where the items actually are.
+    return resettle(requestId, request, settings, {
+      observation: null,
+      // The metadata never moved; the items disagreed with it. There is no
+      // reading worth keeping, so the whole baseline goes.
+      clearBaseline: true,
+      detail: `fetched ${fetched.items.length} of the ${intended} items that had settled`,
+    });
+  }
+
+  const stop = {
+    runSucceeded: true,
+    ceilingReached: request.ceiling_reached,
+    guardStopped: false,
+    // C09 has no positive evidence that a source ended: the provider reports no
+    // exhaustion flag. SUCCEEDED alone, and a total alone, prove nothing (C01-B),
+    // so a run that is not limit-capped stops for an unknown reason.
+    exhaustionEvidence: false,
+  };
+  const exported = adaptApifyItems({
+    items: fetched.items,
+    collectionRequestId: requestId,
+    scope: {
+      country: paramText(request.params.country) ?? "",
+      query: paramText(request.params.keyword) ?? "",
+      activeStatus: request.params.active_status === "all" ? "all" : "active",
+    },
+    sourceUrl: request.source_url,
+    maxRecords,
+    maxExportBytes: settings.maxExportBytes,
+    generatedAt: now.toISOString(),
+    stop,
+  });
+  if (!exported.ok) return failImport(requestId, request, "export_too_large", exported.detail);
+
+  // The background path never calls previewImport: that wrapper exists to count
+  // existing ads for a signed-in person's confirm screen, and there is no
+  // session here. The validation and normalization underneath are the same.
+  const analysis = analyzeImport(exported.text);
+  if (!analysis.ok) return failImport(requestId, request, "adapter_rejected", `${analysis.reason}: ${analysis.detail}`);
+
+  let committed;
+  try {
+    committed = await commitImport({
+      canonical: analysis.canonical,
+      categoryId: request.category_id,
+      // Exactly the name admission persisted. It was normalized once, there,
+      // before the provider was contacted — so there is nothing to tidy here
+      // and nothing that could differ between an import and its retry.
+      datasetName: request.dataset_name,
+      // The person who asked for the collection owns the result. Never the
+      // worker, the scheduler or the database role that happened to write it.
+      actorId: request.requested_by,
+    });
+  } catch (error) {
+    if (isRequestAlreadyCommitted(error)) {
+      // The database refused a second canonical run for this request. That is
+      // the barrier working; the existing run is the answer.
+      const existing = await findCommittedRun(requestId);
+      if (existing) {
+        return complete(requestId, request, {
+          action: "import_adopted", audit: "collection.import_adopted",
+          collectionRunId: existing.runId, datasetId: existing.datasetId,
+          result: {
+            ads: existing.ads, pages: existing.pages, unresolved: existing.unresolved, quarantined: null,
+          },
+          providerItemCount: settled,
+          detail: "a canonical run for this request already exists",
+        });
+      }
+    }
+    throw error;
+  }
+
+  return complete(requestId, request, {
+    action: "imported", audit: "collection.imported",
+    collectionRunId: committed.collectionRunId, datasetId: committed.datasetId,
+    result: {
+      ads: committed.saved.ads, pages: committed.saved.pages,
+      unresolved: analysis.computed.unresolvedCount, quarantined: committed.quarantined.count,
+    },
+    providerItemCount: settled,
+    stopReason: stopReason({ items: fetched.items, maxRecords, stop }),
+    detail: `imported ${committed.saved.ads} ads`,
+  });
+}
+
+/** Reads the intended range in bounded pages. One pass, no waiting, no retry loop. */
+async function fetchItems(
+  provider: CollectionProvider,
+  datasetId: string,
+  intended: number,
+): Promise<{ ok: true; items: unknown[] } | { ok: false; detail: string }> {
+  const items: unknown[] = [];
+  while (items.length < intended) {
+    const limit = Math.min(ITEM_PAGE_SIZE, intended - items.length);
+    const page = await provider.readDatasetItems(datasetId, { offset: items.length, limit });
+    if (!page.ok) return { ok: false, detail: `dataset items unreadable: ${page.detail}` };
+    if (page.value.items.length === 0) break;
+    items.push(...page.value.items);
+  }
+  return { ok: true, items };
+}
+
+/**
+ * The final fence: the dataset is still exactly what settled.
+ *
+ * Checked immediately before the fetch and again immediately after it, both
+ * times against the SAME persisted baseline. Settlement proves the dataset had
+ * stopped moving some minutes ago; only this proves it held still while the
+ * items were actually being read.
+ *
+ * Evidence that cannot be read is not evidence that nothing changed, so it
+ * fails the fence too.
+ */
+type FenceResult =
+  | { ok: true }
+  | { ok: false; observation: SettlementObservation | null; detail: string };
+
+async function verifyUnchanged(
+  provider: CollectionProvider,
+  datasetId: string,
+  request: RequestRow,
+  now: Date,
+): Promise<FenceResult> {
+  const metadata = await provider.readDatasetMetadata(datasetId);
+  if (!metadata.ok) {
+    return { ok: false, observation: null, detail: `dataset metadata unavailable: ${metadata.detail}` };
+  }
+  const total = await provider.readDatasetItemTotal(datasetId);
+  if (!total.ok) {
+    return { ok: false, observation: null, detail: `pagination total unreadable: ${total.detail}` };
+  }
+
+  const current: SettlementObservation = {
+    itemCount: metadata.value.itemCount,
+    modifiedAt: canonicalInstant(metadata.value.modifiedAt),
+    paginationTotal: total.value,
+    observedAt: now.toISOString(),
+  };
+  const changed = current.itemCount !== request.result_item_count
+    || current.modifiedAt !== canonicalInstant(request.result_modified_at)
+    || current.paginationTotal !== current.itemCount
+    || current.paginationTotal !== request.result_pagination_total;
+
+  return changed
+    ? {
+        ok: false,
+        observation: current,
+        detail: `the dataset changed after it settled: ${request.result_item_count} → ${current.itemCount} items`,
+      }
+    : { ok: true };
+}
+
+/**
+ * The result moved before the commit. Nothing was written.
+ *
+ * The request goes back to `settling` — the one backward transition, and only
+ * before a canonical commit — carrying the new evidence as its baseline, so two
+ * fresh stable observations are needed again. `result_settle_started_at` is
+ * untouched: the window measures how long this result has been refusing to
+ * settle, and a change is the reason to keep counting, not to start over.
+ */
+async function resettle(
+  requestId: string,
+  request: RequestRow,
+  settings: Settings,
+  failure: { observation: SettlementObservation | null; detail: string; clearBaseline?: boolean },
+): Promise<AdvanceOutcome> {
+  return settleFinish(requestId, request, {
+    action: "import_incomplete", status: "settling",
+    observation: failure.observation ?? undefined,
+    clearBaseline: failure.clearBaseline === true,
+    // Only a real change is announced; an unreadable provider is not an event.
+    audit: failure.observation ? "collection.result_changed" : undefined,
+    nextSeconds: settings.resultSettleSeconds ?? FIRST_CHECK_SECONDS,
+    detail: failure.detail,
+  });
+}
+
+/** The canonical run this request already produced, if it produced one. */
+async function findCommittedRun(requestId: string): Promise<
+  { runId: string; datasetId: string | null; ads: number; pages: number; unresolved: number } | null
+> {
+  return withTransaction(async (client) => {
+    const { rows } = await client.query<{
+      run_id: string; dataset_id: string | null;
+      computed_unique_ads: number; computed_unique_pages: number; computed_unresolved_count: number;
+    }>(
+      `select run.id as run_id, dataset.id as dataset_id,
+              run.computed_unique_ads, run.computed_unique_pages, run.computed_unresolved_count
+         from public.collection_runs run
+         left join public.datasets dataset on dataset.collection_run_id = run.id
+        where run.reported_quality_summary ->> 'collection_request_id' = $1
+        limit 1`,
+      [requestId],
+    );
+    if (rows.length === 0) return null;
+    const row = rows[0];
+    return {
+      runId: row.run_id, datasetId: row.dataset_id,
+      ads: row.computed_unique_ads, pages: row.computed_unique_pages,
+      unresolved: row.computed_unresolved_count,
+    };
+  });
+}
+
+/** The unique index that makes one canonical run per request a database fact. */
+function isRequestAlreadyCommitted(error: unknown): boolean {
+  const code = (error as { code?: unknown }).code;
+  const constraint = (error as { constraint?: unknown }).constraint;
+  return code === "23505" && constraint === "collection_runs_request_once";
+}
+
+/** Links the committed result to the request and finishes it. */
+async function complete(
+  requestId: string,
+  request: RequestRow,
+  outcome: {
+    action: AdvanceAction;
+    audit: string;
+    collectionRunId: string | null;
+    datasetId: string | null;
+    result: { ads: number; pages: number; unresolved: number; quarantined: number | null };
+    providerItemCount: number | null;
+    stopReason?: string | null;
+    mediaSettled?: boolean;
+    detail?: string;
+  },
+): Promise<AdvanceOutcome> {
+  const detail = outcome.detail ? scrubProviderMessage(outcome.detail) : null;
+  await withTransaction(async (client) => {
+    await client.query(
+      `update public.collection_requests
+          set status = 'succeeded',
+              collection_run_id = coalesce(collection_run_id, $2),
+              dataset_id = coalesce(dataset_id, $3),
+              result = $4::jsonb,
+              provider_item_count = coalesce($5, provider_item_count),
+              stop_reason = coalesce($6, stop_reason),
+              error_detail = coalesce($7, error_detail),
+              finished_at = coalesce(finished_at, now()),
+              -- Zero result: nothing was committed, so nothing is owed
+              -- downstream and the request is finished outright.
+              media_enqueued_at = case when $8 then coalesce(media_enqueued_at, now())
+                                       else media_enqueued_at end,
+              -- One more tick, for the media enqueue that follows the commit.
+              next_check_at = case when $8 then null else now() end,
+              lease_owner = null,
+              lease_expires_at = null,
+              updated_at = now()
+        where id = $1`,
+      [
+        requestId, outcome.collectionRunId, outcome.datasetId, JSON.stringify(outcome.result),
+        outcome.providerItemCount, outcome.stopReason ?? null, detail, outcome.mediaSettled === true,
+      ],
+    );
+    await audit(client, request.requested_by, outcome.audit, requestId, {
+      from: request.status, to: "succeeded", ...outcome.result,
+    });
+  });
+  return {
+    requestId, action: outcome.action, from: request.status, to: "succeeded",
+    ...(detail ? { detail } : {}),
+  };
+}
+
+/** Nothing was written. The request fails with the class that says why. */
+async function failImport(
+  requestId: string,
+  request: RequestRow,
+  errorClass: "adapter_rejected" | "export_too_large",
+  detail: string,
+): Promise<AdvanceOutcome> {
+  const scrubbed = scrubProviderMessage(detail);
+  await withTransaction(async (client) => {
+    await client.query(
+      `update public.collection_requests
+          set status = 'failed',
+              error_class = coalesce(error_class, $2),
+              error_detail = coalesce(error_detail, $3),
+              finished_at = coalesce(finished_at, now()),
+              next_check_at = null,
+              lease_owner = null,
+              lease_expires_at = null,
+              updated_at = now()
+        where id = $1`,
+      [requestId, errorClass, scrubbed],
+    );
+    await audit(client, request.requested_by, "collection.failed", requestId, {
+      from: request.status, to: "failed", error_class: errorClass,
+    });
+  });
+  return { requestId, action: "import_failed", from: request.status, to: "failed", detail: scrubbed };
+}
+
+/**
+ * The one step after the canonical commit.
+ *
+ * Separate on purpose: a CDN or queue problem must not be able to undo, repeat
+ * or hold up an import that is already durable. `enqueueRun` only inserts, and
+ * only where nothing exists, so a retry cannot enqueue the same observation
+ * twice.
+ */
+async function enqueueMedia(requestId: string, request: RequestRow): Promise<AdvanceOutcome> {
+  if (!request.collection_run_id) {
+    // Succeeded with no canonical run is the zero-result case: nothing to queue.
+    await markMediaSettled(requestId);
+    return { requestId, action: "media_enqueued", from: "succeeded", to: "succeeded", detail: "no canonical run" };
+  }
+  let queued: number;
+  try {
+    queued = (await enqueueRun(request.collection_run_id)).queued;
+  } catch (error) {
+    // The import stands. Only this step is retried.
+    const detail = scrubProviderMessage(error instanceof Error ? error.message : String(error));
+    await withTransaction(async (client) => {
+      await client.query(
+        `update public.collection_requests
+            set next_check_at = now() + make_interval(secs => $2),
+                lease_owner = null, lease_expires_at = null, updated_at = now()
+          where id = $1`,
+        [requestId, backoffSeconds(request.attempt)],
+      );
+    });
+    return { requestId, action: "media_enqueue_retry", from: "succeeded", to: "succeeded", detail };
+  }
+
+  await markMediaSettled(requestId);
+  await withTransaction((client) =>
+    audit(client, request.requested_by, "collection.media_enqueued", requestId, { queued }));
+  return { requestId, action: "media_enqueued", from: "succeeded", to: "succeeded", detail: `queued ${queued}` };
+}
+
+async function markMediaSettled(requestId: string): Promise<void> {
+  await withTransaction(async (client) => {
+    await client.query(
+      `update public.collection_requests
+          set media_enqueued_at = coalesce(media_enqueued_at, now()),
+              next_check_at = null,
+              lease_owner = null,
+              lease_expires_at = null,
+              updated_at = now()
+        where id = $1`,
+      [requestId],
+    );
+  });
+}
+
+function paramText(value: unknown): string | null {
+  return typeof value === "string" && value.trim() !== "" ? value.trim() : null;
+}

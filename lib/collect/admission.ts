@@ -47,6 +47,7 @@ export type AdmissionInput = {
   activeStatus: "active" | "all";
   maxRecords: number;
   categoryId: string;
+  /** A label for the result. Omitted means "name it for me", not "leave it unnamed". */
   datasetName: string | null;
 };
 
@@ -200,6 +201,7 @@ async function admitInTransaction(
     country: input.country, query: normalizeKeyword(input.keyword), activeStatus: input.activeStatus,
   });
   const params = canonicalParams(input);
+  const datasetName = input.datasetName?.trim() || autoDatasetName(params.keyword, input.country, now);
 
   const inserted = await client.query<{ id: string }>(
     `insert into public.collection_requests
@@ -209,7 +211,7 @@ async function admitInTransaction(
      returning id`,
     [
       input.requestedBy, input.requestKey, JSON.stringify(params), input.categoryId,
-      input.datasetName?.trim() || null, sourceUrl, reservedUsd,
+      datasetName, sourceUrl, reservedUsd,
     ],
   );
   const requestId = inserted.rows[0].id;
@@ -223,6 +225,21 @@ async function admitInTransaction(
   );
 
   return { ok: true, requestId, reused: false, reservedUsd };
+}
+
+/**
+ * The name the result will carry, decided here and never again.
+ *
+ * It exists before the provider is contacted, so the import step has nothing to
+ * invent at the end of a collection — a name chosen later could differ between
+ * an import and its retry. A caller's own name is kept exactly as given.
+ *
+ * The date is the admission date in Bangkok (UTC+7, no DST), because that is
+ * the day the person asking is actually having.
+ */
+export function autoDatasetName(keyword: string, country: string, now: Date): string {
+  const bangkokDay = new Date(now.getTime() + 7 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  return `${keyword} · ${country} · ${bangkokDay}`.slice(0, 200);
 }
 
 /**

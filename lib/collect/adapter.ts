@@ -198,7 +198,9 @@ function unresolvedReason(row: Row): string | null {
  * the provider's `total` can contradict exhaustion but never proves it. Anything
  * else is unknown (null) — SUCCEEDED alone proves nothing (C01-B).
  */
-function stopReason({ items, maxRecords, stop }: AdapterInput): "limit_reached" | "source_exhausted" | null {
+export function stopReason(
+  { items, maxRecords, stop }: Pick<AdapterInput, "items" | "maxRecords" | "stop">,
+): "limit_reached" | "source_exhausted" | null {
   if (items.length >= maxRecords) return "limit_reached";
   const contradicted = items.some((item) =>
     isRecord(item) && typeof item.total === "number" && items.length < item.total);
