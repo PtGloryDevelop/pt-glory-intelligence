@@ -160,6 +160,18 @@ const auditRows = async (client: pg.Client, id: string) => {
 const provider = (script: MockScript = {}): MockProvider =>
   createMockProvider(script, { PT_GLORY_ENV: "test" });
 
+/**
+ * Makes a cost read due, by the clock that decides it.
+ *
+ * The claim compares `cost_next_check_at` with the database's `now()`, and the
+ * host clock and the container's clock drift against each other by a few
+ * milliseconds in either direction. A fixture timestamp taken here can therefore
+ * sit in the database's future, and the row is then genuinely not due — which is
+ * C10 behaving correctly and a test asking the wrong question.
+ */
+const costDue = (client: pg.Client, id: string) =>
+  client.query("update public.collection_requests set cost_next_check_at = now() where id = $1", [id]);
+
 // --- authorization ---------------------------------------------------------------
 
 test("recovery is admin work, decided on the server", { skip }, async (t) => {
@@ -309,7 +321,11 @@ test("failing a collection keeps every piece of evidence", { skip }, async (t) =
   await setSettings(client);
 
   await t.test("an unsettled result: failed, with the run, dataset and observations intact", async () => {
-    const id = await unsettled(client, base, { cost_status: "provisional", cost_provisional_usd: "0.099800", cost_provisional_observed_at: STARTED_AT.toISOString(), cost_next_check_at: new Date().toISOString() });
+    const id = await unsettled(client, base, {
+      cost_status: "provisional", cost_provisional_usd: "0.099800",
+      cost_provisional_observed_at: STARTED_AT.toISOString(),
+    });
+    await costDue(client, id);
     const before = await stateOf(client, id);
     const outcome = await failCollection(id, admin, "the provider never finished writing the dataset");
     assert.equal(outcome.ok, true);
@@ -335,7 +351,8 @@ test("failing a collection keeps every piece of evidence", { skip }, async (t) =
   });
 
   await t.test("a failed collection's cost keeps reconciling", async () => {
-    const id = await unsettled(client, base, { cost_next_check_at: new Date().toISOString() });
+    const id = await unsettled(client, base);
+    await costDue(client, id);
     await failCollection(id, admin, "unrecoverable");
     const mock = provider({ run: mockRun({ runId: (await stateOf(client, id)).provider_run_id as string, status: "SUCCEEDED", usage: { reportedTotalUsd: "0.0998", chargedItems: 133, chargedStartEvents: 1 } }) });
     const cost = await reconcileCost(id, { provider: mock, now: new Date(STARTED_AT.getTime() + 60_000) });
