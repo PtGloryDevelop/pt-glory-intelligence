@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import pg from "pg";
-import { connect } from "./helpers.ts";
+import { connect, createAuthUser } from "./helpers.ts";
 
 /**
  * RLS matrix against a real PostgreSQL database.
@@ -62,11 +62,7 @@ async function asAnon<T>(client: pg.Client, fn: () => Promise<T>): Promise<T> {
 }
 
 async function seedUser(client: pg.Client, role: Role | null, tag: string): Promise<string> {
-  const { rows } = await client.query(
-    "insert into auth.users (id, email) values (gen_random_uuid(), $1) returning id",
-    [`rls-${tag}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.test`],
-  );
-  const id = rows[0].id as string;
+  const id = await createAuthUser(client, `rls-${tag}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.test`);
   if (role) {
     await client.query("insert into public.user_roles (user_id, role) values ($1, $2)", [id, role]);
   }

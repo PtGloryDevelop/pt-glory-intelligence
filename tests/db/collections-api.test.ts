@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { randomUUID } from "node:crypto";
 import type pg from "pg";
-import { connect } from "./helpers.ts";
+import { connect, createAuthUser } from "./helpers.ts";
 import { admitCollection } from "../../lib/collect/admission.ts";
 import { advance } from "../../lib/collect/machine.ts";
 import { createMockProvider, mockRun, type MockProvider, type MockScript } from "../../lib/collect/mock.ts";
@@ -64,15 +64,7 @@ async function snapshotSettings(client: pg.Client) {
 
 async function fixtures(client: pg.Client) {
   const user = async (label: string) => {
-    const { rows } = await client.query<{ id: string }>(
-      `insert into auth.users (id, instance_id, aud, role, email, encrypted_password,
-                               email_confirmed_at, created_at, updated_at)
-       values (gen_random_uuid(), '00000000-0000-0000-0000-000000000000', 'authenticated',
-               'authenticated', $1, '', now(), now(), now())
-       returning id`,
-      [`c13-${label}-${randomUUID()}@example.test`],
-    );
-    return rows[0].id;
+    return createAuthUser(client, `c13-${label}-${randomUUID()}@example.test`);
   };
   const analystId = await user("analyst");
   const otherId = await user("other");

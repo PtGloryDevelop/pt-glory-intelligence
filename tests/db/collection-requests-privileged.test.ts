@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { randomUUID } from "node:crypto";
-import { connect } from "./helpers.ts";
+import { connect, createAuthUser } from "./helpers.ts";
 
 /**
  * C04 — the server's own write path can run a collection request end to end.
@@ -45,14 +45,7 @@ test("the privileged server path owns the whole request lifecycle", { skip }, as
   });
 
   // Fixtures: a requester and a category, both inside the transaction.
-  const { rows: user } = await client.query<{ id: string }>(
-    `insert into auth.users (id, instance_id, aud, role, email, encrypted_password,
-                             email_confirmed_at, created_at, updated_at)
-     values (gen_random_uuid(), '00000000-0000-0000-0000-000000000000', 'authenticated',
-             'authenticated', $1, '', now(), now(), now())
-     returning id`,
-    [`c04-worker-${randomUUID()}@example.test`],
-  );
+  const userId = await createAuthUser(client, `c04-worker-${randomUUID()}@example.test`);
   const { rows: category } = await client.query<{ id: string }>(
     "insert into public.categories (name) values ($1) returning id",
     [`C04 worker ${randomUUID().slice(0, 8)}`],
@@ -68,7 +61,7 @@ test("the privileged server path owns the whole request lifecycle", { skip }, as
        values ($1, $2, $3::jsonb, $4, $5, $6, now())
        returning id, status`,
       [
-        user[0].id, randomUUID(),
+        userId, randomUUID(),
         JSON.stringify({ keyword: "วิตามิน", country: "TH", active_status: "active", max_records: 100 }),
         category[0].id, "https://www.facebook.com/ads/library/?q=test", "0.100000",
       ],

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { commitImport } from "../../lib/import/commit.ts";
 import { closePool } from "../../lib/db/privileged.ts";
-import { connect, resetTables, seedCategory, singleAdCanonical } from "./helpers.ts";
+import { connect, createAuthUser, resetTables, seedCategory, singleAdCanonical } from "./helpers.ts";
 
 /**
  * Brand mapping (migration 0033).
@@ -42,14 +42,11 @@ test("brand mapping", { skip, concurrency: 1 }, async (t) => {
       "select user_id from public.user_roles where role = $1 limit 1", [role],
     );
     if (rows[0]) return rows[0].user_id as string;
-    const created = await client.query(
-      "insert into auth.users (id, email) values (gen_random_uuid(), $1) returning id",
-      [`brand-${role}-${Date.now()}@example.test`],
-    );
+    const created = await createAuthUser(client, `brand-${role}-${Date.now()}@example.test`);
     await client.query(
-      "insert into public.user_roles (user_id, role) values ($1, $2)", [created.rows[0].id, role],
+      "insert into public.user_roles (user_id, role) values ($1, $2)", [created, role],
     );
-    return created.rows[0].id as string;
+    return created;
   };
   const analyst = await roleOf("analyst");
   const viewer = await roleOf("viewer");

@@ -3,7 +3,7 @@ import test from "node:test";
 import { commitImport } from "../../lib/import/commit.ts";
 import { closePool } from "../../lib/db/privileged.ts";
 import type { CanonicalImport } from "../../lib/domain/types.ts";
-import { connect, resetTables, seedCategory, singleAdCanonical } from "./helpers.ts";
+import { connect, createAuthUser, resetTables, seedCategory, singleAdCanonical } from "./helpers.ts";
 
 /**
  * Watchlist V1 (migration 0032).
@@ -400,14 +400,11 @@ test("watchlist v1", { skip, concurrency: 1 }, async (t) => {
     };
 
     const seedUser = async (role: string) => {
-      const { rows } = await client.query(
-        "insert into auth.users (id, email) values (gen_random_uuid(), $1) returning id",
-        [`wl-${role}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.test`],
-      );
+      const userId = await createAuthUser(client, `wl-${role}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.test`);
       await client.query(
-        "insert into public.user_roles (user_id, role) values ($1, $2)", [rows[0].id, role],
+        "insert into public.user_roles (user_id, role) values ($1, $2)", [userId, role],
       );
-      return rows[0].id as string;
+      return userId;
     };
 
     const alice = await seedUser("viewer");

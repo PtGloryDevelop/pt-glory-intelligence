@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { randomUUID } from "node:crypto";
 import type pg from "pg";
-import { connect } from "./helpers.ts";
+import { connect, createAuthUser } from "./helpers.ts";
 
 /**
  * C04 — the collection request ledger, asserted against the database.
@@ -18,19 +18,12 @@ const skip = process.env.DATABASE_URL ? false : "DATABASE_URL not set";
 /** A signed-up user and a category, because the request references both. */
 async function fixtures(client: pg.Client) {
   const email = `c04-${randomUUID()}@example.test`;
-  const { rows: user } = await client.query<{ id: string }>(
-    `insert into auth.users (id, instance_id, aud, role, email, encrypted_password,
-                             email_confirmed_at, created_at, updated_at)
-     values (gen_random_uuid(), '00000000-0000-0000-0000-000000000000', 'authenticated',
-             'authenticated', $1, '', now(), now(), now())
-     returning id`,
-    [email],
-  );
+  const userId = await createAuthUser(client, email);
   const { rows: category } = await client.query<{ id: string }>(
     "insert into public.categories (name) values ($1) returning id",
     [`C04 ${randomUUID().slice(0, 8)}`],
   );
-  return { userId: user[0].id, categoryId: category[0].id };
+  return { userId, categoryId: category[0].id };
 }
 
 type Row = Record<string, unknown>;

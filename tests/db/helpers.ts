@@ -151,3 +151,33 @@ export function singleAdCanonical(options: {
     quarantine: [],
   };
 }
+
+/**
+ * One signed-up person, written the way the auth service writes them.
+ *
+ * Four of `auth.users`' text columns — `confirmation_token`, `recovery_token`,
+ * `email_change_token_new` and `email_change` — have no default in this schema,
+ * and GoTrue stores an empty string in each. Its own row scanner then reads them
+ * as strings, so a fixture row that left them NULL makes every later
+ * `admin.listUsers()` fail with "converting NULL to string is unsupported" —
+ * which is how a Playwright run that shares this database ends up unable to sign
+ * anybody in.
+ *
+ * So fixtures create users here, once, in the shape the service expects.
+ */
+export async function createAuthUser(client: pg.Client, email: string): Promise<string> {
+  const { rows } = await client.query<{ id: string }>(
+    `insert into auth.users (
+       id, instance_id, aud, role, email, encrypted_password,
+       email_confirmed_at, created_at, updated_at,
+       confirmation_token, recovery_token, email_change_token_new, email_change
+     ) values (
+       gen_random_uuid(), '00000000-0000-0000-0000-000000000000', 'authenticated',
+       'authenticated', $1, '', now(), now(), now(),
+       '', '', '', ''
+     )
+     returning id`,
+    [email],
+  );
+  return rows[0].id;
+}

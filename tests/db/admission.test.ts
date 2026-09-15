@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { readFileSync, readdirSync } from "node:fs";
 import { join, sep } from "node:path";
 import type pg from "pg";
-import { connect } from "./helpers.ts";
+import { connect, createAuthUser } from "./helpers.ts";
 import { admitCollection, type AdmissionInput } from "../../lib/collect/admission.ts";
 import { closePool } from "../../lib/db/privileged.ts";
 
@@ -63,19 +63,12 @@ async function snapshotSettings(client: pg.Client) {
 }
 
 async function fixtures(client: pg.Client) {
-  const { rows: user } = await client.query<{ id: string }>(
-    `insert into auth.users (id, instance_id, aud, role, email, encrypted_password,
-                             email_confirmed_at, created_at, updated_at)
-     values (gen_random_uuid(), '00000000-0000-0000-0000-000000000000', 'authenticated',
-             'authenticated', $1, '', now(), now(), now())
-     returning id`,
-    [`c07-${randomUUID()}@example.test`],
-  );
+  const userId = await createAuthUser(client, `c07-${randomUUID()}@example.test`);
   const { rows: category } = await client.query<{ id: string }>(
     "insert into public.categories (name) values ($1) returning id",
     [`C07 ${randomUUID().slice(0, 8)}`],
   );
-  return { userId: user[0].id, categoryId: category[0].id };
+  return { userId, categoryId: category[0].id };
 }
 
 /** Every route file under app/, for the entry-point scan. */

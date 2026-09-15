@@ -3,7 +3,7 @@ import test from "node:test";
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import type pg from "pg";
-import { connect } from "./helpers.ts";
+import { connect, createAuthUser } from "./helpers.ts";
 import { reconcileCost, COST_CLAIM_SECONDS } from "../../lib/collect/cost.ts";
 import { closePool } from "../../lib/db/privileged.ts";
 import {
@@ -55,19 +55,12 @@ async function snapshotSettings(client: pg.Client) {
 }
 
 async function fixtures(client: pg.Client) {
-  const { rows: user } = await client.query<{ id: string }>(
-    `insert into auth.users (id, instance_id, aud, role, email, encrypted_password,
-                             email_confirmed_at, created_at, updated_at)
-     values (gen_random_uuid(), '00000000-0000-0000-0000-000000000000', 'authenticated',
-             'authenticated', $1, '', now(), now(), now())
-     returning id`,
-    [`c10-${randomUUID()}@example.test`],
-  );
+  const userId = await createAuthUser(client, `c10-${randomUUID()}@example.test`);
   const { rows: category } = await client.query<{ id: string }>(
     "insert into public.categories (name) values ($1) returning id",
     [`C10 ${randomUUID().slice(0, 8)}`],
   );
-  return { userId: user[0].id, categoryId: category[0].id };
+  return { userId, categoryId: category[0].id };
 }
 
 /** The run's charge-bearing start; the cost window is measured from it. */
