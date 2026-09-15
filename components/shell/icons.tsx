@@ -25,7 +25,8 @@ const base = {
 export type IconName =
   | "home" | "search" | "folder" | "layers" | "grid" | "building" | "image"
   | "chart" | "swords" | "sparkle" | "target" | "tag" | "trend" | "compare"
-  | "bookmark" | "upload" | "history" | "shield" | "brain" | "unlink" | "settings";
+  | "bookmark" | "upload" | "history" | "shield" | "brain" | "unlink" | "settings"
+  | "download" | "wallet";
 
 const PATHS: Record<IconName, React.ReactNode> = {
   home: <><path d="M4 10.5 12 4l8 6.5" /><path d="M6 10v9h12v-9" /></>,
@@ -44,6 +45,11 @@ const PATHS: Record<IconName, React.ReactNode> = {
   compare: <><path d="M12 4v16" /><path d="M5 8h4M5 12h4M5 16h4" /><path d="M15 8h4M15 12h4M15 16h4" /></>,
   bookmark: <path d="M7 4h10a1 1 0 0 1 1 1v15l-6-4-6 4V5a1 1 0 0 1 1-1z" />,
   upload: <><path d="M12 16V5" /><path d="m8 9 4-4 4 4" /><path d="M5 15v3a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3" /></>,
+  // Collecting: the arrow comes toward us, the mirror of upload.
+  download: <><path d="M12 5v11" /><path d="m8 12 4 4 4-4" /><path d="M5 15v3a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3" /></>,
+  // The collector's operating cost. A wallet, never a currency symbol: this is
+  // what PT Glory spends to collect, not anything about an advertiser's money.
+  wallet: <><rect x="3" y="6" width="18" height="13" rx="2" /><path d="M3 10h18" /><circle cx="17" cy="14.5" r="1.2" /></>,
   history: <><path d="M4 12a8 8 0 1 0 2.5-5.8" /><path d="M4 4v4h4" /><path d="M12 8v4.5l3 2" /></>,
   shield: <><path d="M12 4 5 7v5c0 4 3 6.6 7 8 4-1.4 7-4 7-8V7z" /><path d="m9.5 12 1.8 1.8 3.4-3.6" /></>,
   brain: <><path d="M9.5 5A2.5 2.5 0 0 0 7 7.5 2.5 2.5 0 0 0 5.5 12 2.5 2.5 0 0 0 7 16.5 2.5 2.5 0 0 0 9.5 19H12V5z" /><path d="M14.5 5A2.5 2.5 0 0 1 17 7.5 2.5 2.5 0 0 1 18.5 12 2.5 2.5 0 0 1 17 16.5 2.5 2.5 0 0 1 14.5 19H12" /></>,

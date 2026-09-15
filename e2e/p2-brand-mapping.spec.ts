@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Browser, type Page } from "@playwright/test";
 import { join } from "node:path";
 import { AUTH, CATEGORY_BRAND, TMP } from "./constants.ts";
 
@@ -23,7 +23,16 @@ const PAGE_C = "760000000000003";
 const BRAND_A = `กลอรี่คอฟฟี่ ${Date.now()}`;
 const BRAND_B = `คู่แข่งคอฟฟี่ ${Date.now()}`;
 
-async function importFixture(page: Page, file: string, name: string) {
+/**
+ * Imports one fixture the way an admin would.
+ *
+ * Manual import is admin-only since C14 — it is the recovery path, not a way to
+ * collect — so this step opens its own admin context. Everything the spec is
+ * actually about keeps whatever session it declared.
+ */
+async function importFixture(browser: Browser, file: string, name: string) {
+  const context = await browser.newContext({ storageState: join(AUTH, "admin.json") });
+  const page = await context.newPage();
   await page.goto("/import");
   await page.getByTestId("category-select").selectOption({ label: CATEGORY_BRAND });
   await page.getByTestId("file-input").setInputFiles(file);
@@ -32,6 +41,7 @@ async function importFixture(page: Page, file: string, name: string) {
   await page.getByTestId("dataset-name").fill(name);
   await page.getByTestId("commit-button").click();
   await page.waitForURL(/\/datasets\/[0-9a-f-]{36}/);
+  await context.close();
 }
 
 /** Creates a brand through the list form and returns the id from its URL. */
@@ -63,11 +73,8 @@ test.describe("P2.8 brand mapping", () => {
   let brandB = "";
 
   test.beforeAll(async ({ browser }) => {
-    const context = await browser.newContext({ storageState: join(AUTH, "analyst.json") });
-    const page = await context.newPage();
-    await importFixture(page, join(TMP, "brand-pages.json"), "brand-run-a");
-    await importFixture(page, join(TMP, "brand-pages-2.json"), "brand-run-b");
-    await context.close();
+    await importFixture(browser, join(TMP, "brand-pages.json"), "brand-run-a");
+    await importFixture(browser, join(TMP, "brand-pages-2.json"), "brand-run-b");
   });
 
   /* ------------------------------------------------------------ the queue */

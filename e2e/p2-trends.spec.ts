@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Browser, type Page } from "@playwright/test";
 import { join } from "node:path";
 import { AUTH, CATEGORY_TRENDS, TMP } from "./constants.ts";
 
@@ -17,7 +17,16 @@ const shot = (name: string) => join(OUT, `${name}.png`);
 /** The trends fixtures: page A gains an ad between the two collections. */
 const PAGE_A = "740000000000001";
 
-async function importFixture(page: Page, file: string, name: string) {
+/**
+ * Imports one fixture the way an admin would.
+ *
+ * Manual import is admin-only since C14 — it is the recovery path, not a way to
+ * collect — so this step opens its own admin context. Everything the spec is
+ * actually about keeps whatever session it declared.
+ */
+async function importFixture(browser: Browser, file: string, name: string) {
+  const context = await browser.newContext({ storageState: join(AUTH, "admin.json") });
+  const page = await context.newPage();
   await page.goto("/import");
   await page.getByTestId("category-select").selectOption({ label: CATEGORY_TRENDS });
   await page.getByTestId("file-input").setInputFiles(file);
@@ -26,6 +35,7 @@ async function importFixture(page: Page, file: string, name: string) {
   await page.getByTestId("dataset-name").fill(name);
   await page.getByTestId("commit-button").click();
   await page.waitForURL(/\/datasets\/[0-9a-f-]{36}/);
+  await context.close();
 }
 
 const read = async (locator: ReturnType<Page["locator"]>) =>
@@ -41,8 +51,8 @@ test.describe("P2.5 trends", () => {
     const context = await browser.newContext({ storageState: join(AUTH, "analyst.json") });
     const page = await context.newPage();
     // 45 days ago and 2 days ago: one collection in each comparison window.
-    await importFixture(page, join(TMP, "trends-old.json"), "tr-old");
-    await importFixture(page, join(TMP, "trends-new.json"), "tr-new");
+    await importFixture(browser, join(TMP, "trends-old.json"), "tr-old");
+    await importFixture(browser, join(TMP, "trends-new.json"), "tr-new");
 
     await page.goto("/categories");
     const row = page.locator("tr", { hasText: CATEGORY_TRENDS }).first();

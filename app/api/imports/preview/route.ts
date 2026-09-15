@@ -7,10 +7,16 @@ import { labelScope } from "@/lib/collect/labels";
 
 export const runtime = "nodejs";
 
-/** Reads and analyses the file. Writes nothing. */
+/**
+ * Reads and analyses the file. Writes nothing.
+ *
+ * Admin only (C14): manual import is recovery infrastructure, not a way to
+ * collect. An analyst collects through the normal path, which costs money and
+ * goes through admission; this one takes a file somebody already has.
+ */
 export async function POST(request: NextRequest) {
   try {
-    await requireRole("analyst");
+    await requireRole("admin");
   } catch (error) {
     if (error instanceof AuthorizationError) {
       return NextResponse.json({ error: error.message }, { status: error.status });

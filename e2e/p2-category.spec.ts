@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Browser, type Page } from "@playwright/test";
 import { join } from "node:path";
 import { AUTH, CATEGORY_WORKSPACE, TMP } from "./constants.ts";
 
@@ -14,7 +14,16 @@ import { AUTH, CATEGORY_WORKSPACE, TMP } from "./constants.ts";
 const OUT = join("test-artifacts", "visual", "p2-category");
 const shot = (name: string) => join(OUT, `${name}.png`);
 
-async function importFixture(page: Page, file: string, name: string) {
+/**
+ * Imports one fixture the way an admin would.
+ *
+ * Manual import is admin-only since C14 — it is the recovery path, not a way to
+ * collect — so this step opens its own admin context. Everything the spec is
+ * actually about keeps whatever session it declared.
+ */
+async function importFixture(browser: Browser, file: string, name: string) {
+  const context = await browser.newContext({ storageState: join(AUTH, "admin.json") });
+  const page = await context.newPage();
   await page.goto("/import");
   await page.getByTestId("category-select").selectOption({ label: CATEGORY_WORKSPACE });
   await page.getByTestId("file-input").setInputFiles(file);
@@ -23,6 +32,7 @@ async function importFixture(page: Page, file: string, name: string) {
   await page.getByTestId("dataset-name").fill(name);
   await page.getByTestId("commit-button").click();
   await page.waitForURL(/\/datasets\/[0-9a-f-]{36}/);
+  await context.close();
 }
 
 /** How many ads a link claims, read off the link itself. */
@@ -41,8 +51,8 @@ test.describe("P2.3 category workspace", () => {
     const page = await context.newPage();
     // Two runs, different queries, into the one seeded category — so the
     // workspace has multiple contributing datasets to be honest about.
-    await importFixture(page, join(TMP, "category-run-a.json"), "cat-run-one");
-    await importFixture(page, join(TMP, "category-run-b.json"), "cat-run-two");
+    await importFixture(browser, join(TMP, "category-run-a.json"), "cat-run-one");
+    await importFixture(browser, join(TMP, "category-run-b.json"), "cat-run-two");
 
     // This spec owns its own research category, so its aggregates cannot be
     // moved by whatever another spec imported into the shared one.

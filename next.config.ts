@@ -27,6 +27,12 @@ const nextConfig: NextConfig = {
   // `pg` must stay on the server. Bundling it into a client chunk would ship
   // DATABASE_URL handling code to the browser.
   serverExternalPackages: ["pg"],
+  experimental: {
+    // `forbidden()` and the `forbidden.tsx` boundary. A page that refuses a role
+    // has to answer 403 on the wire, not a 200 carrying a refusal in its body:
+    // a script, a crawler or a client library reads the status, not the screen.
+    authInterrupts: true,
+  },
   env: {
     PT_GLORY_COMMIT: buildCommit(),
     PT_GLORY_BUILT_AT: new Date().toISOString(),

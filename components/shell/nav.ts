@@ -1,3 +1,4 @@
+import { satisfies, type Role } from "../../lib/auth/role-model.ts";
 import type { IconName } from "./icons";
 
 /**
@@ -7,8 +8,13 @@ import type { IconName } from "./icons";
  * the shell reads as the finished product, but renders disabled: a future page
  * with no data behind it must never look available, and must never be populated
  * with facts the engine cannot support.
+ *
+ * `minRole` is the other half of that honesty. An entry a person may not use is
+ * not hidden with CSS — it never reaches their HTML at all, because the server
+ * filters this list before rendering. A menu is a promise about what somebody
+ * can do; showing one that answers 403 is a worse lie than showing nothing.
  */
-export type NavItem = { label: string; icon: IconName; href?: string };
+export type NavItem = { label: string; icon: IconName; href?: string; minRole?: Role };
 export type NavSection = { heading: string; items: NavItem[] };
 
 export const NAV: NavSection[] = [
@@ -58,7 +64,16 @@ export const NAV: NavSection[] = [
   {
     heading: "SYSTEM",
     items: [
-      { label: "นำเข้าข้อมูล", icon: "upload", href: "/import" },
+      // The collection a person actually asks for (C15). Listed from C14 so the
+      // shell is honest about what is coming, disabled until its page exists.
+      { label: "เก็บข้อมูลใหม่", icon: "download", minRole: "analyst" },
+      // The collector's own operating figures (C15): budget window, held
+      // reservations, what still needs a person. Admin work, never a user's.
+      { label: "ค่าเก็บข้อมูล", icon: "wallet", minRole: "admin" },
+      // Manual file import is recovery infrastructure now, not a way to collect:
+      // the label says so, and only an admin sees it. The capture-tool export is
+      // what it takes, and that still works exactly as before.
+      { label: "นำเข้าไฟล์ (กู้คืนระบบ)", icon: "upload", href: "/import", minRole: "admin" },
       { label: "Collection Runs", icon: "history" },
       { label: "Data Quality", icon: "shield" },
       { label: "AI Analysis History", icon: "brain" },
@@ -68,3 +83,19 @@ export const NAV: NavSection[] = [
     ],
   },
 ];
+
+/**
+ * The menu one role may see, decided on the server.
+ *
+ * Sections with nothing left in them disappear rather than leaving an empty
+ * heading: a viewer should not be able to tell which admin tools exist from the
+ * gaps in their own sidebar.
+ */
+export function visibleNav(role: Role): NavSection[] {
+  return NAV
+    .map((section) => ({
+      heading: section.heading,
+      items: section.items.filter((item) => !item.minRole || satisfies(role, item.minRole)),
+    }))
+    .filter((section) => section.items.length > 0);
+}

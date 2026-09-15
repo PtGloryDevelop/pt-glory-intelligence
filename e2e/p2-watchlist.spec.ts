@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Browser, type Page } from "@playwright/test";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { AUTH, CATEGORY_WATCH, TMP } from "./constants.ts";
@@ -22,7 +22,16 @@ const shot = (name: string) => join(OUT, `${name}.png`);
 const PAGE_ID = "750000000000001";
 const NEW_AD = "750000000000109";
 
-async function importFixture(page: Page, file: string, name: string) {
+/**
+ * Imports one fixture the way an admin would.
+ *
+ * Manual import is admin-only since C14 — it is the recovery path, not a way to
+ * collect — so this step opens its own admin context. Everything the spec is
+ * actually about keeps whatever session it declared.
+ */
+async function importFixture(browser: Browser, file: string, name: string) {
+  const context = await browser.newContext({ storageState: join(AUTH, "admin.json") });
+  const page = await context.newPage();
   await page.goto("/import");
   await page.getByTestId("category-select").selectOption({ label: CATEGORY_WATCH });
   await page.getByTestId("file-input").setInputFiles(file);
@@ -31,6 +40,7 @@ async function importFixture(page: Page, file: string, name: string) {
   await page.getByTestId("dataset-name").fill(name);
   await page.getByTestId("commit-button").click();
   await page.waitForURL(/\/datasets\/[0-9a-f-]{36}/);
+  await context.close();
 }
 
 /**
@@ -89,7 +99,7 @@ test.describe("P2.7 watchlist", () => {
   test.beforeAll(async ({ browser }) => {
     const context = await browser.newContext({ storageState: join(AUTH, "analyst.json") });
     const page = await context.newPage();
-    await importFixture(page, join(TMP, "watch-old.json"), "wl-baseline");
+    await importFixture(browser, join(TMP, "watch-old.json"), "wl-baseline");
 
     await page.goto("/categories");
     const row = page.locator("tr", { hasText: CATEGORY_WATCH }).first();
@@ -189,8 +199,8 @@ test.describe("P2.7 watchlist", () => {
 
   /* ------------------------------------------------- data after the baseline */
 
-  test("a later collection is what makes a signal non-zero", async ({ page }) => {
-    await importFixture(page, writeSecondRun(), "wl-after");
+  test("a later collection is what makes a signal non-zero", async ({ page, browser }) => {
+    await importFixture(browser, writeSecondRun(), "wl-after");
 
     await page.goto(`/watchlist/${watchId}`);
     // One ad first seen by PT Glory after the baseline, and it also started

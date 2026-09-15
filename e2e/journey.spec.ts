@@ -4,6 +4,13 @@ import { AUTH, CATEGORY, TMP } from "./constants.ts";
 import { resetData } from "./db.ts";
 
 const analyst = { storageState: join(AUTH, "analyst.json") };
+/**
+ * Manual import is admin-only since C14, so the journey that walks through the
+ * import screens signs in as an admin. What it asserts afterwards — the
+ * explorer, the drawer, the snapshot — is not about the role, and an admin
+ * satisfies every check an analyst would have made.
+ */
+const admin = { storageState: join(AUTH, "admin.json") };
 const GOLDEN = "tests/fixtures/golden-500.json";
 
 /** Upload → preview → confirm, returning the dataset URL the app lands on. */
@@ -29,7 +36,7 @@ async function showTable(page: Page) {
 }
 
 test.describe("import to explorer to drawer", () => {
-  test.use(analyst);
+  test.use(admin);
 
   // Other spec files import into the same database; this journey asserts on
   // absolute state ("no datasets yet", "exactly two observations"), so it needs
@@ -317,12 +324,47 @@ test.describe("viewer", () => {
 
   test("cannot import, and the server refuses even without the form", async ({ page }) => {
     await page.goto("/import");
-    await expect(page.getByTestId("viewer-notice")).toBeVisible();
+    await expect(page.getByTestId("forbidden-notice")).toBeVisible();
     await expect(page.getByTestId("file-input")).toHaveCount(0);
 
     const response = await page.request.post("/api/imports/commit", {
       multipart: { file: { name: "x.json", mimeType: "application/json", buffer: Buffer.from("{}") } },
     });
     expect(response.status()).toBe(403);
+  });
+});
+
+/**
+ * C14 moved manual import behind the admin role: it is how an admin recovers,
+ * not one of the ways a person collects. An analyst keeps every research
+ * surface and loses this one — including the part that does not depend on the
+ * form being on screen.
+ */
+test.describe("analyst after manual import became recovery", () => {
+  test.use(analyst);
+
+  test("sees the recovery notice instead of the form, and both routes refuse", async ({ page }) => {
+    await page.goto("/import");
+    await expect(page.getByTestId("forbidden-notice")).toBeVisible();
+    await expect(page.getByTestId("file-input")).toHaveCount(0);
+    // The page never names a provider or offers a choice between collectors.
+    await expect(page.locator("body")).not.toContainText(/apify|extension/i);
+
+    const file = { name: "x.json", mimeType: "application/json", buffer: Buffer.from("{}") };
+    expect((await page.request.post("/api/imports/preview", { multipart: { file } })).status()).toBe(403);
+    expect((await page.request.post("/api/imports/commit", { multipart: { file } })).status()).toBe(403);
+  });
+
+  test("keeps the research surfaces that are theirs", async ({ page }) => {
+    const html = await (await page.goto("/datasets"))!.text();
+    await expect(page).toHaveURL(/\/datasets/);
+    // The menu offers the collection path meant for them, not the file one.
+    // Scoped to the sidebar: the document also carries other boundaries' copy.
+    const sidebar = html.slice(
+      html.indexOf('data-testid="app-sidebar"'),
+      html.indexOf("</aside>", html.indexOf('data-testid="app-sidebar"')),
+    );
+    expect(sidebar).toContain("เก็บข้อมูลใหม่");
+    expect(sidebar).not.toContain("นำเข้าไฟล์ (กู้คืนระบบ)");
   });
 });

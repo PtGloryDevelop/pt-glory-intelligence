@@ -1,8 +1,8 @@
-import Link from "next/link";
+import { forbidden } from "next/navigation";
 import { requireActorOrRedirect } from "@/lib/auth/roles";
+import { satisfies } from "@/lib/auth/role-model";
 import { listCategories } from "@/lib/read/queries";
 import { PageHeader } from "@/components/shell/PageHeader";
-import { EmptyState } from "@/components/states/EmptyState";
 import { ImportClient } from "./import-client";
 
 export const dynamic = "force-dynamic";
@@ -12,26 +12,19 @@ export default async function ImportPage() {
   // layout's redirect cannot order this on the page's behalf.
   const actor = await requireActorOrRedirect();
 
-  // Hiding the form is a convenience, not the control: the commit route checks
-  // the role again and answers 403 regardless of what the browser sends.
-  if (actor.role === "viewer") {
-    return (
-      <>
-        <PageHeader title="นำเข้าข้อมูล" />
-        <EmptyState
-          testId="viewer-notice"
-          title="สิทธิ์ของคุณคือ viewer"
-          body="ดูข้อมูลได้ แต่ไม่สามารถนำเข้าได้"
-          action={<Link href="/datasets">ไปที่ชุดข้อมูล</Link>}
-        />
-      </>
-    );
-  }
+  // Hiding the form is a convenience, not the control: both import routes check
+  // the role again and answer 403 regardless of what the browser sends.
+  //
+  // Admin only since C14. Manual import is how an admin recovers — from a file
+  // a capture tool produced, or one kept from an earlier collection — and it is
+  // no longer one of the ways a person collects data. `forbidden()` makes the
+  // refusal a real 403 rather than a 200 with a message in it.
+  if (!satisfies(actor.role, "admin")) forbidden();
 
   return (
     <>
       <PageHeader
-        title="นำเข้าข้อมูล"
+        title="นำเข้าไฟล์ (กู้คืนระบบ)"
         description="อัปโหลดไฟล์ JSON ของ PT Glory · ขั้นตรวจจะไม่เขียนฐานข้อมูล"
       />
       <ImportClient categories={await listCategories()} />

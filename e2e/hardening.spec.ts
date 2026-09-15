@@ -29,7 +29,8 @@ test.describe("read API abuse cases", () => {
   let datasetId = "";
 
   test.beforeAll(async ({ browser }) => {
-    const context = await browser.newContext({ storageState: join(AUTH, "analyst.json") });
+    // The fixture is imported as an admin: C14 made manual import recovery work.
+    const context = await browser.newContext({ storageState: join(AUTH, "admin.json") });
     const page = await context.newPage();
     await page.goto("/import");
     await page.getByTestId("category-select").selectOption({ label: CATEGORY });
@@ -160,7 +161,14 @@ test.describe("read API abuse cases", () => {
     await assertNoLeak(missing);
   });
 
-  test("a commit with a malformed category id is a 400, not a 500", async ({ page }) => {
+  /**
+   * These two ask what the import routes do with bad input, so they ask as an
+   * admin: since C14 anyone else is refused before the input is looked at, and
+   * a 403 would tell us nothing about validation.
+   */
+  test("a commit with a malformed category id is a 400, not a 500", async ({ browser }) => {
+    const context = await browser.newContext({ storageState: join(AUTH, "admin.json") });
+    const page = await context.newPage();
     const response = await page.request.post("/api/imports/commit", {
       multipart: {
         file: { name: "x.json", mimeType: "application/json", buffer: Buffer.from("{}") },
@@ -170,11 +178,28 @@ test.describe("read API abuse cases", () => {
     });
     expect(response.status()).toBe(400);
     await assertNoLeak(response);
+    await context.close();
   });
 
-  test("a request with no file at all is a 400", async ({ page }) => {
+  test("a request with no file at all is a 400", async ({ browser }) => {
+    const context = await browser.newContext({ storageState: join(AUTH, "admin.json") });
+    const page = await context.newPage();
     const response = await page.request.post("/api/imports/preview", { multipart: {} });
     expect(response.status()).toBe(400);
+    await context.close();
+  });
+
+  test("and an analyst is refused before the input is read at all", async ({ page }) => {
+    // The session this describe runs as: analyst. C14 moved manual import
+    // behind the admin role, so the same malformed body never reaches validation.
+    const response = await page.request.post("/api/imports/commit", {
+      multipart: {
+        file: { name: "x.json", mimeType: "application/json", buffer: Buffer.from("{}") },
+        categoryId: "not-a-uuid",
+        datasetName: "x",
+      },
+    });
+    expect(response.status()).toBe(403);
   });
 });
 
@@ -200,7 +225,9 @@ test.describe("signed out", () => {
 });
 
 test.describe("untrusted file content", () => {
-  test.use({ storageState: join(AUTH, "analyst.json") });
+  // Walking the import screens is admin work since C14; what is being
+  // tested is the file, not the role.
+  test.use({ storageState: join(AUTH, "admin.json") });
 
   test("hostile copy renders as text and hostile URLs never load", async ({ page }) => {
     await page.goto("/import");

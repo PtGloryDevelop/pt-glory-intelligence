@@ -18,7 +18,9 @@ const SLICE = join(TMP, "fresh-slice.json");
 test.describe("durable preview archive", () => {
   test.describe.configure({ mode: "serial" });
   test.skip(!FRESH || !existsSync(FRESH), "set FRESH_EXPORT to a recent collector export");
-  test.use({ storageState: join(AUTH, "analyst.json") });
+  // The import step is admin-only since C14; the archive assertions that
+  // follow are about storage, not about who is signed in.
+  test.use({ storageState: join(AUTH, "admin.json") });
 
   let datasetUrl = "";
 

@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Browser, type Page } from "@playwright/test";
 import { join } from "node:path";
 import { AUTH, CATEGORY, TMP } from "./constants.ts";
 
@@ -18,7 +18,16 @@ const shot = (name: string) => join(OUT, `${name}.png`);
 /** The timeline pair has its own page, so no other spec adds runs to its history. */
 const FIXTURE_PAGE = "720000000000001";
 
-async function importFixture(page: Page, file: string, name: string) {
+/**
+ * Imports one fixture the way an admin would.
+ *
+ * Manual import is admin-only since C14 — it is the recovery path, not a way to
+ * collect — so this step opens its own admin context. Everything the spec is
+ * actually about keeps whatever session it declared.
+ */
+async function importFixture(browser: Browser, file: string, name: string) {
+  const context = await browser.newContext({ storageState: join(AUTH, "admin.json") });
+  const page = await context.newPage();
   await page.goto("/import");
   await page.getByTestId("category-select").selectOption({ label: CATEGORY });
   await page.getByTestId("file-input").setInputFiles(file);
@@ -27,7 +36,9 @@ async function importFixture(page: Page, file: string, name: string) {
   await page.getByTestId("dataset-name").fill(name);
   await page.getByTestId("commit-button").click();
   await page.waitForURL(/\/datasets\/[0-9a-f-]{36}/);
-  return page.url().split("/").pop()!;
+  const datasetId = page.url().split("/").pop()!;
+  await context.close();
+  return datasetId;
 }
 
 /** How many ads a link claims, read off the link itself. */
@@ -43,12 +54,9 @@ test.describe("P2.2 page timeline", () => {
   const scopeAll = "all";
 
   test.beforeAll(async ({ browser }) => {
-    const context = await browser.newContext({ storageState: join(AUTH, "analyst.json") });
-    const page = await context.newPage();
     // Two runs of the same page, a few days apart, under different queries.
-    firstDataset = await importFixture(page, join(TMP, "pages-timeline-a.json"), "tl-first");
-    await importFixture(page, join(TMP, "pages-timeline-b.json"), "tl-second");
-    await context.close();
+    firstDataset = await importFixture(browser, join(TMP, "pages-timeline-a.json"), "tl-first");
+    await importFixture(browser, join(TMP, "pages-timeline-b.json"), "tl-second");
   });
 
   const timeline = (scope: string, extra = "") =>

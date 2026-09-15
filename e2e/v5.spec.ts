@@ -110,12 +110,13 @@ async function openFirstCard(page: Page) {
 
 test.describe("V5 final consistency", () => {
   test.describe.configure({ mode: "serial" });
-  test.use({ storageState: join(AUTH, "analyst.json") });
+  // /import is in the route matrix, and C14 made it admin-only.
+  test.use({ storageState: join(AUTH, "admin.json") });
 
   let dataset = "";
 
   test.beforeAll(async ({ browser }) => {
-    const context = await browser.newContext({ storageState: join(AUTH, "analyst.json") });
+    const context = await browser.newContext({ storageState: join(AUTH, "admin.json") });
     const page = await context.newPage();
     dataset = await datasetUrl(page);
     await context.close();
@@ -511,7 +512,7 @@ test.describe("V5 final consistency", () => {
     await anonymous.close();
 
     const context = await browser.newContext({
-      storageState: join(AUTH, "analyst.json"), viewport: { width: 1440, height: 1000 },
+      storageState: join(AUTH, "admin.json"), viewport: { width: 1440, height: 1000 },
     });
     const page = await context.newPage();
     for (const [width, height, name] of [

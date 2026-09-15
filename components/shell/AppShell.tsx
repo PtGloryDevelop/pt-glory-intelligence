@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { NAV } from "./nav.ts";
+import type { NavSection } from "./nav.ts";
 import { Icon } from "./icons.tsx";
 import { BrandLockup, BrandMark } from "../BrandMark.tsx";
 import { signOut } from "../../app/(app)/sign-out.ts";
@@ -13,10 +13,15 @@ import styles from "./AppShell.module.css";
  * Sidebar + main column for every authenticated page.
  *
  * Client-side only for the collapse toggle and the active-route highlight. It
- * receives the actor's role as a prop rather than reading it — authorization
- * stays on the server, and the shell only displays what the server decided.
+ * receives the actor's role AND the menu that role may see as props rather than
+ * reading either — authorization stays on the server, and the shell only
+ * displays what the server decided. Filtering here instead would ship every
+ * admin label to every browser and call CSS a permission.
  */
-export function AppShell({ role, children }: { role: string; children: React.ReactNode }) {
+export function AppShell(
+  { role, sections, children }:
+  { role: string; sections: NavSection[]; children: React.ReactNode },
+) {
   const pathname = usePathname();
   const [railed, setRailed] = useState(false);
   const [open, setOpen] = useState(false);
@@ -51,7 +56,7 @@ export function AppShell({ role, children }: { role: string; children: React.Rea
             * section, still visible so the shape of the product is legible, but
             * never in the way of the thing somebody came to open.
             */}
-          {NAV.map((section) => (
+          {sections.map((section) => (
             <div key={section.heading}>
               <div className={styles.heading}>{section.heading}</div>
               {[...section.items]

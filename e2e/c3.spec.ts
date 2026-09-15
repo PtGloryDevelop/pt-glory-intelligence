@@ -34,13 +34,14 @@ async function overflowsSideways(page: Page): Promise<boolean> {
 
 test.describe("C3 dataset and import", () => {
   test.describe.configure({ mode: "serial" });
-  test.use({ storageState: join(AUTH, "analyst.json") });
+  // The subject is the import screen, which C14 made admin-only.
+  test.use({ storageState: join(AUTH, "admin.json") });
 
   let completedUrl = "";
   let partialUrl = "";
 
   test.beforeAll(async ({ browser }) => {
-    const context = await browser.newContext({ storageState: join(AUTH, "analyst.json") });
+    const context = await browser.newContext({ storageState: join(AUTH, "admin.json") });
     const page = await context.newPage();
 
     // A completed dataset and a partial one, imported through the real flow.

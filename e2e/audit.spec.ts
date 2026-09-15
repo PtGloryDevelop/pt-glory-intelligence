@@ -64,7 +64,7 @@ test.describe("v2/v3 audit capture", () => {
 
   test("import states at every viewport", async ({ browser }) => {
     await resetData();
-    const context = await browser.newContext({ storageState: join(AUTH, "analyst.json") });
+    const context = await browser.newContext({ storageState: join(AUTH, "admin.json") });
     const page = await context.newPage();
     const assertStyles = guardStyles(page);
 
@@ -103,7 +103,7 @@ test.describe("v2/v3 audit capture", () => {
 
   test("dataset detail states at every viewport", async ({ browser }) => {
     await resetData();
-    const context = await browser.newContext({ storageState: join(AUTH, "analyst.json") });
+    const context = await browser.newContext({ storageState: join(AUTH, "admin.json") });
     const page = await context.newPage();
     const assertStyles = guardStyles(page);
 
@@ -134,7 +134,7 @@ test.describe("v2/v3 audit capture", () => {
 
   test("explorer states at every viewport", async ({ browser }) => {
     await resetData();
-    const context = await browser.newContext({ storageState: join(AUTH, "analyst.json") });
+    const context = await browser.newContext({ storageState: join(AUTH, "admin.json") });
     const page = await context.newPage();
     const assertStyles = guardStyles(page);
 
@@ -185,7 +185,7 @@ test.describe("v2/v3 audit capture", () => {
   });
 
   test("drawer and viewer states", async ({ browser }) => {
-    const context = await browser.newContext({ storageState: join(AUTH, "analyst.json") });
+    const context = await browser.newContext({ storageState: join(AUTH, "admin.json") });
     const page = await context.newPage();
     const assertStyles = guardStyles(page);
 
@@ -207,7 +207,7 @@ test.describe("v2/v3 audit capture", () => {
     });
     const viewerPage = await viewer.newPage();
     await viewerPage.goto("/import");
-    await viewerPage.getByTestId("viewer-notice").waitFor();
+    await viewerPage.getByTestId("forbidden-notice").waitFor();
     await viewerPage.screenshot({ path: shot("import-viewer-1440"), fullPage: true });
     await viewer.close();
 
@@ -240,7 +240,7 @@ test.describe("creative-filled render path", () => {
   test.describe.configure({ mode: "serial" });
 
   test("grid and drawer with media served", async ({ browser }) => {
-    const context = await browser.newContext({ storageState: join(AUTH, "analyst.json") });
+    const context = await browser.newContext({ storageState: join(AUTH, "admin.json") });
     const page = await context.newPage();
 
     await page.route("**/*", async (route) => {

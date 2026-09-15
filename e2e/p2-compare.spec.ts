@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Browser, type Page } from "@playwright/test";
 import { join } from "node:path";
 import { AUTH, CATEGORY_COMPARE, TMP } from "./constants.ts";
 
@@ -18,7 +18,16 @@ const shot = (name: string) => join(OUT, `${name}.png`);
 const PAGE_A = "730000000000001";
 const PAGE_B = "730000000000002";
 
-async function importFixture(page: Page, file: string, name: string) {
+/**
+ * Imports one fixture the way an admin would.
+ *
+ * Manual import is admin-only since C14 — it is the recovery path, not a way to
+ * collect — so this step opens its own admin context. Everything the spec is
+ * actually about keeps whatever session it declared.
+ */
+async function importFixture(browser: Browser, file: string, name: string) {
+  const context = await browser.newContext({ storageState: join(AUTH, "admin.json") });
+  const page = await context.newPage();
   await page.goto("/import");
   await page.getByTestId("category-select").selectOption({ label: CATEGORY_COMPARE });
   await page.getByTestId("file-input").setInputFiles(file);
@@ -27,7 +36,9 @@ async function importFixture(page: Page, file: string, name: string) {
   await page.getByTestId("dataset-name").fill(name);
   await page.getByTestId("commit-button").click();
   await page.waitForURL(/\/datasets\/[0-9a-f-]{36}/);
-  return page.url().split("/").pop()!;
+  const datasetId = page.url().split("/").pop()!;
+  await context.close();
+  return datasetId;
 }
 
 const read = async (locator: ReturnType<Page["locator"]>) =>
@@ -44,8 +55,8 @@ test.describe("P2.4 page compare", () => {
     const context = await browser.newContext({ storageState: join(AUTH, "analyst.json") });
     const page = await context.newPage();
     // Its own category, so no other spec can move these numbers.
-    firstDataset = await importFixture(page, join(TMP, "category-run-a.json"), "cmp-run-one");
-    await importFixture(page, join(TMP, "category-run-b.json"), "cmp-run-two");
+    firstDataset = await importFixture(browser, join(TMP, "category-run-a.json"), "cmp-run-one");
+    await importFixture(browser, join(TMP, "category-run-b.json"), "cmp-run-two");
 
     await page.goto("/categories");
     const row = page.locator("tr", { hasText: CATEGORY_COMPARE }).first();

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getActor } from "@/lib/auth/roles";
 import { AppShell } from "@/components/shell/AppShell";
+import { visibleNav } from "@/components/shell/nav";
 
 export const dynamic = "force-dynamic";
 
@@ -15,5 +16,11 @@ export const dynamic = "force-dynamic";
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const actor = await getActor();
   if (!actor) redirect("/login");
-  return <AppShell role={actor.role}>{children}</AppShell>;
+  // The menu is decided here, by the role the server resolved: an entry the
+  // caller may not use never reaches their HTML.
+  return (
+    <AppShell role={actor.role} sections={visibleNav(actor.role)}>
+      {children}
+    </AppShell>
+  );
 }

@@ -13,8 +13,9 @@ export async function POST(request: NextRequest) {
   let actor;
   try {
     // Before anything else: the write path runs on a connection that bypasses
-    // RLS, so this check is the only authorization boundary it has.
-    actor = await requireRole("analyst");
+    // RLS, so this check is the only authorization boundary it has. Admin only
+    // since C14 — manual import is the recovery path, not a normal collection.
+    actor = await requireRole("admin");
   } catch (error) {
     if (error instanceof AuthorizationError) {
       return NextResponse.json({ error: error.message }, { status: error.status });

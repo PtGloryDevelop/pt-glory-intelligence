@@ -38,7 +38,7 @@ test.describe("visual capture", () => {
 
   test("authenticated shell", async ({ browser }) => {
     await resetData();
-    const context = await browser.newContext({ storageState: join(AUTH, "analyst.json") });
+    const context = await browser.newContext({ storageState: join(AUTH, "admin.json") });
     const page = await context.newPage();
 
     // One dataset so the dataset surfaces have something real to render.
@@ -83,7 +83,7 @@ test.describe("visual capture", () => {
    */
   test("import phases and the partial dataset", async ({ browser }) => {
     await resetData();
-    const context = await browser.newContext({ storageState: join(AUTH, "analyst.json") });
+    const context = await browser.newContext({ storageState: join(AUTH, "admin.json") });
     const page = await context.newPage();
     await page.setViewportSize({ width: 1440, height: 1000 });
 
@@ -153,7 +153,7 @@ test.describe("visual capture", () => {
   /** V3: the Explorer in every state a researcher works in. */
   test("ads explorer", async ({ browser }) => {
     await resetData();
-    const context = await browser.newContext({ storageState: join(AUTH, "analyst.json") });
+    const context = await browser.newContext({ storageState: join(AUTH, "admin.json") });
     const page = await context.newPage();
     await page.setViewportSize({ width: 1440, height: 1000 });
 
@@ -218,14 +218,14 @@ test.describe("visual capture", () => {
     await context.close();
   });
 
-  test("viewer sees no import form", async ({ browser }) => {
+  test("viewer sees the recovery notice, not the import form", async ({ browser }) => {
     const context = await browser.newContext({
       storageState: join(AUTH, "viewer.json"),
       viewport: { width: 1440, height: 1000 },
     });
     const page = await context.newPage();
     await page.goto("/import");
-    await page.getByTestId("viewer-notice").waitFor();
+    await page.getByTestId("forbidden-notice").waitFor();
     await page.screenshot({ path: shot("import-viewer-1440"), fullPage: true, animations: "disabled" });
     await context.close();
   });
