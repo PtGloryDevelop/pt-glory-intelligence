@@ -137,14 +137,27 @@ type Settings = {
   maxExportBytes: number | null;
 };
 
+/**
+ * States a claim may take. `queued` is the only one whose transition performs
+ * the single paid start, so a caller that must never start a run (a poll from a
+ * progress page) claims from the second list instead. The exclusion is in the
+ * claim's own SQL: nothing decides it by reading the row first and acting later.
+ */
+const CLAIMABLE = [
+  "queued", "starting", "provider_start_uncertain", "running", "settling", "importing",
+];
+const CLAIMABLE_WITHOUT_START = CLAIMABLE.filter((status) => status !== "queued");
+
 export async function advance(
   requestId: string,
-  deps: { provider: CollectionProvider; now?: Date; worker?: string },
+  deps: { provider: CollectionProvider; now?: Date; worker?: string; allowStart?: boolean },
 ): Promise<AdvanceOutcome> {
   const worker = deps.worker ?? `worker-${process.pid}`;
+  // Default true: the scheduler and the user's own POST may start a run.
+  const allowStart = deps.allowStart !== false;
 
   // 1. Claim. One worker at a time, decided by the database.
-  const claim = await withTransaction(async (client) => claimRequest(client, requestId, worker));
+  const claim = await withTransaction(async (client) => claimRequest(client, requestId, worker, allowStart));
   if (!claim) return { requestId, action: "not_claimed", from: null, to: null };
   const { request, settings, markedForStart } = claim;
 
@@ -170,7 +183,12 @@ export async function advance(
  * transaction. `starting` with no run id means a worker died mid-start: that is
  * uncertain, and it is never restarted.
  */
-async function claimRequest(client: PoolClient, requestId: string, worker: string) {
+async function claimRequest(
+  client: PoolClient,
+  requestId: string,
+  worker: string,
+  allowStart: boolean,
+) {
   const settings = await readSettings(client);
   const claimed = await client.query<RequestRow>(
     `update public.collection_requests
@@ -180,9 +198,9 @@ async function claimRequest(client: PoolClient, requestId: string, worker: strin
             updated_at = now()
       where id = $1
         and (
-          status in ('queued', 'starting', 'provider_start_uncertain', 'running',
-                     -- C09 owns these two.
-                     'settling', 'importing')
+          -- C09 owns settling and importing. The queued state is absent from
+          -- this list when the caller is not allowed to start a run.
+          status = any($4::text[])
           -- Finished, with the one post-commit step still owed. The canonical
           -- import is done; only the media enqueue is retried here.
           or (status = 'succeeded' and media_enqueued_at is null)
@@ -202,7 +220,7 @@ async function claimRequest(client: PoolClient, requestId: string, worker: strin
                 import_attempted_at, media_enqueued_at, result_item_count,
                 result_modified_at, result_pagination_total, result_observed_at,
                 result_settle_started_at, result_settle_reopened_at`,
-    [requestId, worker, settings.leaseSeconds],
+    [requestId, worker, settings.leaseSeconds, allowStart ? CLAIMABLE : CLAIMABLE_WITHOUT_START],
   );
   if (claimed.rowCount === 0) return null;
   const request = claimed.rows[0];

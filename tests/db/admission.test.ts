@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { randomUUID } from "node:crypto";
 import { readFileSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { join, sep } from "node:path";
 import type pg from "pg";
 import { connect } from "./helpers.ts";
 import { admitCollection, type AdmissionInput } from "../../lib/collect/admission.ts";
@@ -615,14 +615,21 @@ test("the request belongs to the caller, and nothing exposes admission yet", { s
     assert.equal(rows[0].requested_by, base.userId, "admission never attributes to anyone else");
   });
 
-  await t.test("no route exposes admission in this ticket", () => {
-    // The authorization precondition is the caller's: admission is internal
-    // infrastructure, and the HTTP surface that will enforce analyst-or-above
-    // arrives with its own ticket. Until then there is no entry point at all,
-    // so no viewer can reach it.
+  await t.test("exactly one route reaches admission, and it authorizes first", () => {
+    // The authorization precondition is the caller's. C13 gave admission its
+    // one HTTP entry point; every other route must stay out of it, and that one
+    // must refuse anyone below analyst before it calls in.
     const routes = walkRoutes("app");
     const callers = routes.filter((file) => readFileSync(file, "utf8").includes("collect/admission"));
-    assert.deepEqual(callers, [], "an entry point must arrive with its own authorization test");
+    assert.deepEqual(
+      callers.map((file) => file.split(sep).join("/")),
+      ["app/api/collections/route.ts"],
+      "an entry point must arrive with its own authorization test",
+    );
+    const source = readFileSync(callers[0], "utf8");
+    assert.match(source, /requireRole\("analyst"\)/);
+    // And the check happens before admission is called.
+    assert.ok(source.indexOf('requireRole("analyst")') < source.indexOf("admitCollection("));
   });
 });
 
