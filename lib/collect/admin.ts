@@ -385,3 +385,100 @@ export async function updateCollectorSettings(
     return { ok: true, changed };
   });
 }
+
+// --- what still needs a person ----------------------------------------------------
+
+export type RecoveryQueueItem = {
+  id: string;
+  status: string;
+  errorClass: string | null;
+  /** Scrubbed and bounded when it was stored. Admin diagnostics only. */
+  errorDetail: string | null;
+  keyword: string | null;
+  datasetName: string | null;
+  createdAt: string;
+  startedAt: string | null;
+  providerRunId: string | null;
+  costStatus: string;
+  costReservedUsd: string | null;
+  reservationReleasedAt: string | null;
+  /** The recovery actions this row is actually eligible for (C11's own rules). */
+  actions: string[];
+};
+
+/**
+ * Every request waiting for a decision, and what may be done about each.
+ *
+ * The eligibility shown here mirrors C11's own conditions so a button does not
+ * appear for something the action would refuse. C11 checks again regardless —
+ * this decides what to render, never what is allowed.
+ */
+export async function listRecoveryQueue(actor: Actor | null): Promise<RecoveryQueueItem[]> {
+  requireAdmin(actor);
+  return withTransaction(async (client) => {
+    const { rows } = await client.query<{
+      id: string; status: string; error_class: string | null; error_detail: string | null;
+      params: { keyword?: string } | null; dataset_name: string | null;
+      created_at: Date; started_at: Date | null; provider_run_id: string | null;
+      provider_dataset_id: string | null; cost_status: string; cost_reserved_usd: string | null;
+      cost_next_check_at: Date | null; reservation_released_at: Date | null; requires_admin: boolean;
+    }>(
+      `select id, status, error_class, error_detail, params, dataset_name, created_at, started_at,
+              provider_run_id, provider_dataset_id, cost_status, cost_reserved_usd,
+              cost_next_check_at, reservation_released_at, requires_admin
+         from public.collection_requests
+        where requires_admin = true
+           or (status = 'failed' and error_class = 'provider_start_unknown'
+               and reservation_released_at is null)
+           or (provider_run_id is not null and cost_next_check_at is null
+               and cost_status in ('reserved', 'provisional', 'unreported'))
+        order by created_at desc
+        limit 100`,
+    );
+
+    return rows.map((row) => ({
+      id: row.id,
+      status: row.status,
+      errorClass: row.error_class,
+      errorDetail: row.error_detail,
+      keyword: typeof row.params?.keyword === "string" ? row.params.keyword : null,
+      datasetName: row.dataset_name,
+      createdAt: row.created_at.toISOString(),
+      startedAt: row.started_at?.toISOString() ?? null,
+      providerRunId: row.provider_run_id,
+      costStatus: row.cost_status,
+      costReservedUsd: row.cost_reserved_usd,
+      reservationReleasedAt: row.reservation_released_at?.toISOString() ?? null,
+      actions: [
+        row.requires_admin && row.status === "settling" && row.error_class === "provider_result_unsettled"
+          && row.provider_dataset_id !== null ? "retry_settlement" : null,
+        row.requires_admin && row.status === "provider_start_uncertain" && row.provider_run_id === null
+          ? "reconcile_original_start" : null,
+        row.requires_admin ? "fail_collection" : null,
+        row.provider_run_id !== null && row.cost_next_check_at === null && row.cost_status !== "final"
+          ? "retry_cost_reconciliation" : null,
+        row.status === "failed" && row.error_class === "provider_start_unknown"
+          && row.provider_run_id === null && row.cost_status === "unreported"
+          && row.reservation_released_at === null ? "release_unresolved_reservation" : null,
+      ].filter((action): action is string => action !== null),
+    }));
+  });
+}
+
+/** Current collector settings, for the admin form. No secret lives in this table. */
+export async function readCollectorSettings(actor: Actor | null): Promise<Record<string, unknown>> {
+  requireAdmin(actor);
+  return withTransaction(async (client) => {
+    const { rows } = await client.query<{ key: string; value: unknown }>(
+      "select key, value from public.app_settings where key like 'collector.%' order by key",
+    );
+    const settings: Record<string, unknown> = {};
+    for (const row of rows) {
+      const name = row.key.replace(/^collector\./, "");
+      // Only what the allowlist already governs: a key nobody may write is a
+      // key nobody needs to read here either.
+      if (name in COLLECTOR_SETTING_RULES) settings[name] = row.value;
+    }
+    return settings;
+  });
+}

@@ -51,7 +51,7 @@ export default async function TrendsPage({ searchParams }: { searchParams: Promi
   await requireActorOrRedirect();
   const query = await searchParams;
 
-  const scope = parseScope(one(query.scope));
+  const scope = parseScope(one(query.scope)??'all');
   if (!scope) return <Chooser />;
 
   const rawPage = one(query.page);

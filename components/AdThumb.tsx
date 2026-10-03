@@ -5,6 +5,7 @@ import { type Media } from "@/lib/media";
 import { MEDIA_STATE_MESSAGE, resolveMedia } from "@/lib/media/resolve";
 import { formatIdentity } from "@/lib/media/format";
 import styles from "./AdThumb.module.css";
+import { AdImage } from "./AdImage";
 
 /**
  * The creative in a table row: small, fixed, and scannable down a column.
@@ -49,8 +50,7 @@ export function AdThumb({ ad }: {
 
   return (
     <span className={styles.wrap}>
-      {/* eslint-disable-next-line @next/next/no-img-element -- remote CDN / signed storage */}
-      <img
+      <AdImage sizes="48px"
         className={styles.thumb} src={resolved.src} alt="" loading="lazy"
         onError={() => setBroken(true)}
         data-testid="row-media" data-media-kind={resolved.kind}

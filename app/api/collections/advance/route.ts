@@ -1,5 +1,5 @@
 import { after, NextResponse, type NextRequest } from "next/server";
-import { createApifyProvider } from "@/lib/collect/apify";
+import { providerFromSettings } from "@/lib/collect/provider-factory";
 import { processOneWork, selectOneDueWork, type AdvanceWorkItem } from "@/lib/collect/advance-scheduler";
 import { reconcileCost } from "@/lib/collect/cost";
 import { authenticateCollectionAdvance } from "@/lib/collect/machine-auth";
@@ -82,11 +82,18 @@ async function processWork(config: SchedulerConfig): Promise<void> {
     return;
   }
 
-  let provider: ReturnType<typeof createApifyProvider>;
+  let provider;
   try {
-    provider = createApifyProvider({ actor: config.actor, build: config.actorBuild });
+    // One provider-selection point, shared with the request paths: a sweep must
+    // never talk to a different collector than the one a person's own request
+    // would have used.
+    provider = await providerFromSettings();
   } catch (error) {
     console.error("collection advance provider unavailable", { error: safeError(error) });
+    return;
+  }
+  if (provider === null) {
+    console.error("collection advance skipped: the collector is not configured");
     return;
   }
 

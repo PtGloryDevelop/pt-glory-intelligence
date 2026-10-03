@@ -62,8 +62,14 @@ const FORBIDDEN = [
 const DENIALS =
   /(ไม่ใช่|ไม่ได้บอก|ไม่มี|ไม่ได้แปลว่า)(ส่วนแบ่งตลาด|งบโฆษณา|ยอดขาย|การเข้าถึง|การมีส่วนร่วม|โฆษณาที่ชนะ)/g;
 
-test("no forbidden performance metric is named anywhere in the interface", () => {
+// Owned reports have an independent, authorized performance source. Keep this
+// exception bounded to those routes; the Ad Library contract is unchanged.
+const OWNED_SURFACES = [join("app", "(app)", "owned-ads") + "/", join("app", "api", "owned-ads") + "/",join('app','(app)','owned-performance.tsx'),join('app','(app)','compare','ads')+'/',join('app','(app)','dashboard.tsx'),join('app','api','dashboard')+'/']
+  .map((path) => path.replaceAll("\\", "/"));
+
+test("public competitor surfaces never claim unavailable performance metrics", () => {
   for (const { file, text } of renderedSource()) {
+    if (OWNED_SURFACES.some((prefix) => file.replaceAll("\\", "/").startsWith(prefix))) continue;
     const claims = text.replace(DENIALS, " ");
     for (const pattern of FORBIDDEN) {
       assert.ok(
@@ -72,6 +78,13 @@ test("no forbidden performance metric is named anywhere in the interface", () =>
       );
     }
   }
+});
+
+test('mixed own/rival screens read financial fields only from owned data',()=>{
+  const comparison=readFileSync(join('app','(app)','compare','ads','comparison.tsx'),'utf8');
+  assert.doesNotMatch(comparison,/\bb\??\.(?:spend|roas|purchases|purchase_value|conversations|impressions)\b/);
+  const dashboard=readFileSync(join('app','(app)','dashboard.tsx'),'utf8');
+  assert.doesNotMatch(dashboard,/\brivals\??\.(?:spend|roas|purchases|purchase_value|conversations|impressions)\b/);
 });
 
 /**

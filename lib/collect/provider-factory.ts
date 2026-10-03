@@ -1,5 +1,6 @@
 import { withTransaction } from "../db/privileged.ts";
 import { createApifyProvider } from "./apify.ts";
+import { createFakeProvider, fakeProviderEnabled } from "./fake-provider.ts";
 import type { CollectionProvider } from "./provider.ts";
 
 /**
@@ -11,6 +12,11 @@ import type { CollectionProvider } from "./provider.ts";
  * never an error for the person who asked.
  */
 export async function providerFromSettings(): Promise<CollectionProvider | null> {
+  // The browser suite drives whole collections against a real server, and doing
+  // that against the real provider would spend money on every run. Both guards
+  // live in the fake itself: dev or test only, and an explicit flag.
+  if (fakeProviderEnabled()) return createFakeProvider();
+
   const { rows } = await withTransaction((client) => client.query<{ key: string; value: unknown }>(
     "select key, value from public.app_settings where key in ('collector.actor', 'collector.actor_build')",
   ));

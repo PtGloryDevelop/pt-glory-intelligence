@@ -1,238 +1,72 @@
-/*
- * The toolbar carries six primary controls and stays readable at 1280. Everything
- * else lives behind Advanced, because a wall of twenty filters is a worse tool
- * than six filters and a door.
- */
-.toolbar {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  display: flex;
-  align-items: flex-end;
-  gap: 8px;
-  flex-wrap: wrap;
-  padding: 10px 12px;
-  margin-bottom: 10px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-}
-
-.label {
-  display: block;
-  font-size: var(--fs-label);
-  letter-spacing: 0.06em;
-  font-weight: 700;
-  color: var(--muted);
-  text-transform: uppercase;
-  margin-bottom: 2px;
-}
-
-.field, .sort { min-width: 0; }
-/*
- * Sized to content within a range rather than pinned at one width. The old hard
- * 190px cap clipped longer Thai option labels while leaving short ones adrift in
- * empty space, and the same number was repeated in four places.
- */
-.field select, .sort select {
-  min-height: 38px;
-  width: 100%;
-  min-width: 9rem;
-  max-width: 15rem;
-}
-
-/* Search is the primary research control, so it takes the room first. */
-.search { flex: 2 1 300px; min-width: 220px; }
-.search input { width: 100%; min-height: 40px; font-size: var(--fs-body); }
-
-.pageFilter { display: grid; gap: 4px; }
-.pageFilter input { min-height: 34px; width: 100%; min-width: 9rem; max-width: 15rem; }
-.pageFilter select { min-height: 38px; width: 100%; min-width: 9rem; max-width: 15rem; }
-
-.advancedButton { min-height: 38px; font-weight: 600; }
-
-.viewToggle { display: flex; gap: 4px; margin-left: auto; }
-.viewToggle button { min-height: 38px; }
-.viewOn { background: var(--brand-tint-strong); border-color: var(--brand); font-weight: 600; }
-
-/* Applied filters, each removable, so the state of the query is never implicit. */
-.chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
-/*
- * Each chip names its filter and its value in words, so the state is legible
- * without relying on the tint to carry it. 44px is the touch target, not a
- * decorative height.
- */
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 6px 12px;
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--brand);
-  background: var(--brand-tint);
-  font-size: var(--fs-meta);
-  font-weight: 600;
-  min-height: 34px;
-}
-.chip:hover { background: var(--brand-tint-strong); }
-/* Secondary to the chips: clearing everything is the bigger, rarer action. */
-.clearAll {
-  border: 0;
-  background: none;
-  color: var(--muted);
-  font-size: var(--fs-meta);
-  font-weight: 600;
-  text-decoration: underline;
-  min-height: 34px;
-  padding: 0 8px;
-}
-.clearAll:hover { color: var(--brand-ink); background: none; }
-
-.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
-
-.advanced {
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--surface);
-  padding: 14px;
-  margin-bottom: 12px;
-}
-.advancedGrid {
-  display: grid;
-  /* Groups size to their own content instead of stretching to the tallest. */
-  align-items: start;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: 12px;
-}
-.group {
-  display: grid;
-  gap: 8px;
-  align-content: start;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  padding: 10px 12px;
-  margin: 0;
-}
-.group legend {
-  font-size: var(--fs-meta);
-  font-weight: 700;
-  padding: 0 4px;
-  color: var(--brand-ink);
-}
-.group input, .group select { width: 100%; min-height: 36px; }
-
-.toggle { display: grid; gap: 4px; font-size: var(--fs-meta); }
-.hint { font-size: var(--fs-eyebrow); color: var(--muted); margin: 0; }
-
-.note { color: var(--muted); font-size: var(--fs-meta); margin: 0; }
-
-/* Count and caveat on one line, so the grid starts near the top of the view. */
-.resultBar {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-  margin-bottom: 12px;
-}
-.resultCount { margin: 0; font-size: var(--fs-body); }
-.resultCount strong { font-size: var(--fs-section); }
-
-/* Grid is the research mode: 4 columns on a wide desktop, never 5. */
-.grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
-  margin-bottom: 14px;
-}
-@media (max-width: 1439px) { .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (max-width: 1023px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 640px)  { .grid { grid-template-columns: minmax(0, 1fr); } }
-
-/*
- * Table mode is the analyst view: dense rows, a fixed creative column to scan
- * down, and horizontal scroll rather than a stack of pseudo-cards. Grid remains
- * the natural mode on a phone.
- */
-.tableScroll {
-  overflow-x: auto;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-}
-.tableScroll table { margin: 0; }
-.tableScroll th {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  white-space: nowrap;
-}
-.tableScroll td { vertical-align: middle; padding: 6px 12px; }
-
-.thCreative { width: 72px; }
-.thNum { text-align: right; }
-
-.creativeCell { width: 72px; padding: 6px 12px; }
-.thumbButton {
-  padding: 0;
-  border: 0;
-  background: none;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  display: block;
-}
-.thumbButton:hover { background: none; }
-.thumbButton:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
-
-.pageCell {
-  max-width: 180px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-weight: 600;
-}
-
-/* Two lines of copy: one is too little to judge an ad, three is a paragraph. */
-.copyCell {
-  max-width: 380px;
-  min-width: 240px;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  color: var(--muted);
-  white-space: normal;
-}
-
-.platformCell {
-  max-width: 15rem;
-  font-size: var(--fs-meta);
-  color: var(--muted);
-  white-space: normal;
-}
-.numCell { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
-
-.pager { display: flex; gap: 8px; margin-top: 12px; }
-.pager button { min-height: 44px; }
-
-@media (max-width: 640px) {
-  .viewToggle { margin-left: 0; }
-  /* Full width on a phone: a capped control beside empty space helps nobody. */
-  .field, .sort, .pageFilter { flex: 1 1 100%; }
-  .field select, .sort select, .pageFilter input, .pageFilter select { max-width: none; }
-}
-
-/*
- * Below 900px the shell shows its own sticky topbar (z-index 30) at top: 0, and
- * a second sticky layer at the same offset simply slides underneath it.
- *
- * The toolbar drops out of sticky rather than adopting an offset: on a tablet or
- * phone the toolbar is tall enough that pinning it would eat the screen the
- * results need, and an offset would couple this file to the shell's topbar
- * height forever. 900px is the shell's own topbar breakpoint, not a number
- * chosen to satisfy a screenshot.
- */
-@media (max-width: 900px) {
-  .toolbar { position: static; }
-}
+.explorerHeading { display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:20px; }
+.explorerHeading h2 { font-size:var(--fs-section); font-weight:600; }
+.toolbar { display:flex; align-items:flex-end; gap:16px; flex-wrap:wrap; padding:18px; margin-bottom:24px; background:var(--surface); border:1px solid var(--line); border-radius:12px; }
+.label { display:block; font-size:var(--fs-meta); font-weight:500; color:var(--ink); margin-bottom:8px; }
+.field,.sort { flex:1 1 120px; min-width:0; }
+.toolbar input,.toolbar select { min-height:44px; font-size:var(--fs-meta); border:1px solid var(--line); border-radius:8px; background:var(--surface); padding:10px 12px; width:100%; }
+.search { flex:1 1 100%; }
+.search input { font-size:var(--fs-meta); min-height:44px; background:var(--surface); }
+.simpleToolbar .search { flex:2 1 320px; }
+.simpleToolbar > .field { flex:1 1 180px; }
+.pageFilter { flex:1.5 1 160px; min-width:0; display:grid; gap:4px; }
+.pageFilter .label { margin-bottom:2px; }
+.pageFilter input { min-height:40px; padding:8px 10px; }
+.advancedButton { font-size:var(--fs-meta); min-height:44px; border:1px solid var(--line); border-radius:8px; }
+.viewToggle { display:flex; gap:4px; margin-left:auto; padding:3px; background:var(--surface-sunken); border-radius:7px; }
+.viewToggle button { padding:8px 12px; min-height:38px; font-size:var(--fs-meta); background:none; border:0; }
+.viewToggle .viewOn { background:var(--surface); color:var(--ink); box-shadow:0 1px 3px rgba(27,31,39,.06); }
+.chips { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:18px; }
+.chip { display:flex; align-items:center; gap:8px; padding:7px 12px; min-height:38px; border:1px solid var(--line); border-radius:8px; background:var(--surface); font-size:var(--fs-meta); color:var(--ink); }
+.clearAll { border:0; padding:7px 10px; background:none; font-size:var(--fs-meta); text-decoration:underline; color:var(--muted); }
+.sr { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
+.advanced { border:1px solid var(--line); border-radius:12px; background:var(--surface); padding:20px; margin-bottom:20px; }
+.advancedGrid { display:grid; align-items:start; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:16px; }
+.group { display:grid; gap:10px; align-content:start; border:1px solid var(--line); border-radius:8px; padding:12px; margin:0; min-width:0; }
+.group legend { font-size:var(--fs-meta); font-weight:500; color:var(--ink); padding:0 6px; }
+.group input,.group select { width:100%; min-height:42px; font-size:var(--fs-meta); padding:8px; border:1px solid var(--line); border-radius:8px; }
+.toggle { display:grid; gap:6px; font-size:var(--fs-meta); }
+.hint { font-size:var(--fs-meta); color:var(--muted); margin:10px 0 0; }
+.note { color:var(--muted); font-size:var(--fs-meta); margin:0; }
+.resultBar { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:18px; }
+.resultCount { margin:0; font-size:var(--fs-meta); color:var(--muted); }
+.resultCount strong { font-size:var(--fs-subhead); color:var(--ink); font-weight:600; margin:0 3px; }
+.grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:20px; margin-bottom:28px; }
+.selectableCard { display:flex; flex-direction:column; min-width:0; gap:8px; }
+.selectableCard > article { flex:1; order:0; }
+.compareChoice { display:flex; align-items:center; gap:9px; min-height:40px; color:var(--muted); font-size:var(--fs-meta); cursor:pointer; order:1; }
+.compareChoice input { width:15px; height:15px; accent-color:var(--brand-ink); margin:0; }
+.companyCompare { display:flex; justify-content:center; align-items:center; order:1; padding:10px 14px; min-height:44px; border:1px solid var(--brand-ink); border-radius:8px; background:var(--brand-ink); color:#fff; font-weight:500; font-size:var(--fs-meta); text-decoration:none; }
+.companyCompare:hover { filter:brightness(.94); color:#fff; }
+.compareBar { position:sticky; top:12px; z-index:20; display:flex; align-items:center; flex-wrap:wrap; gap:14px; padding:16px 20px; margin-bottom:24px; background:var(--surface); color:var(--ink); border:1px solid var(--line); border-radius:12px; box-shadow:0 3px 12px rgba(27,31,39,.06); }
+.compareBar span { margin-right:auto; font-size:var(--fs-meta); }
+.compareBar button { font-size:var(--fs-meta); color:var(--ink); background:var(--surface); }
+.compareBar button[data-testid="compare-selected"]:not(:disabled) { background:var(--brand-ink); border-color:var(--brand-ink); color:#ffffff; }
+.compareBar button:disabled { opacity:.55; }
+.comparison { padding:24px; margin-bottom:28px; border:1px solid var(--line); border-radius:12px; background:var(--surface); }
+.comparison h3 { margin:0 0 6px; font-size:var(--fs-subhead); }
+.compareGrid { display:grid; grid-auto-flow:column; grid-auto-columns:minmax(260px,1fr); gap:20px; overflow-x:auto; padding:20px 0 0; }
+.compareColumn { min-width:0; }
+.compareColumn > article { height:auto; }
+.compareColumn dl { margin:18px 0; }
+.compareColumn dt { color:var(--muted); font-size:var(--fs-meta); margin-top:18px; border-top:1px solid var(--line); padding-top:14px; }
+.compareColumn dd { margin:8px 0 0; white-space:pre-wrap; overflow-wrap:anywhere; font-size:var(--fs-meta); }
+.compareColumn button { font-size:var(--fs-meta); }
+.compareTitle { height:3.6em; line-height:1.8; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.compareCopy { margin:0; height:7.2em; line-height:1.8; display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden; }
+.compareColumn .readMore { padding:4px 0; border:0; background:none; color:var(--brand-ink); text-decoration:underline; }
+.tableScroll { overflow-x:auto; background:var(--surface); border:1px solid var(--line); border-radius:10px; }
+.tableScroll table { margin:0; }
+.tableScroll th { white-space:nowrap; }
+.tableScroll td { vertical-align:middle; padding:10px 12px; }
+.thCreative,.creativeCell { width:72px; }
+.thNum,.numCell { text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums; }
+.thumbButton { padding:0; border:0; background:none; border-radius:6px; display:block; }
+.pageCell { max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:500; }
+.copyCell { max-width:380px; min-width:220px; color:var(--muted); white-space:normal; font-size:var(--fs-meta); }
+.platformCell { max-width:180px; font-size:var(--fs-meta); color:var(--muted); white-space:normal; }
+.pager { display:flex; justify-content:flex-end; gap:8px; margin-top:24px; }
+.pager button { min-height:42px; font-size:var(--fs-meta); }
+@media(min-width:1600px) { .grid { grid-template-columns:repeat(4,minmax(0,1fr)); } }
+@media(max-width:1120px) { .grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:900px) { .compareBar { top:68px; } }
+@media(max-width:700px) { .grid { grid-template-columns:1fr; } .toolbar { padding:16px; gap:12px; } .field,.sort { flex:1 1 40%; } .pageFilter { flex:1 1 100%; } .viewToggle { margin-left:0; } .comparison { padding:16px; } }

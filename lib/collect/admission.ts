@@ -1,6 +1,7 @@
 import type { PoolClient } from "pg";
 import { withTransaction } from "../db/privileged.ts";
 import { buildAdLibraryUrl } from "./url.ts";
+import { ABSOLUTE_MAX_RECORDS } from "./limits.ts";
 import {
   CONCURRENCY_SLOT_STATES, assessBudget, microsToUsd,
   type CollectorSettings, type RequestAccounting,
@@ -31,11 +32,7 @@ import {
  */
 export const ADMISSION_LOCK_NAMESPACE = "pt_glory.collector.admission";
 
-/**
- * The hard ceiling on a single request, under the contract's MAX_RECORDS
- * (5,000) with room for the unresolved rows an export may also carry.
- */
-export const ABSOLUTE_MAX_RECORDS = 4_970;
+export { ABSOLUTE_MAX_RECORDS } from "./limits.ts";
 
 export type AdmissionInput = {
   /** The signed-in user. Authorization happens before this is called. */

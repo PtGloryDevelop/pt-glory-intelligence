@@ -24,6 +24,18 @@ function buildCommit(): string {
 }
 
 const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "fbcdn.net", port: "", pathname: "/**" },
+      { protocol: "https", hostname: "**.fbcdn.net", port: "", pathname: "/**" },
+    ],
+    deviceSizes: [640, 960, 1280, 1600],
+    imageSizes: [48, 96, 128, 256, 384, 512],
+    qualities: [85],
+    formats: ["image/webp"],
+    maximumRedirects: 0,
+    dangerouslyAllowLocalIP: false,
+  },
   // `pg` must stay on the server. Bundling it into a client chunk would ship
   // DATABASE_URL handling code to the browser.
   serverExternalPackages: ["pg"],

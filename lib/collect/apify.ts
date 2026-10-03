@@ -293,6 +293,9 @@ export function createApifyProvider(config: ApifyConfig): CollectionProvider {
   };
 }
 
+/** Expose readiness without copying the server credential to a UI module. */
+export function apifyTokenConfigured():boolean{return Boolean(process.env.APIFY_TOKEN);}
+
 /**
  * What this client can judge without asking the provider. A request that fails
  * here never reaches the wire, which is the only refusal it can prove by itself.

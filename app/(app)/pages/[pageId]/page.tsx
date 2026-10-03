@@ -313,6 +313,7 @@ export default async function PageDetailPage({ params, searchParams }: {
       ) : null}
 
       <PageEvidence
+        canAnalyze={satisfies(actor.role,'analyst')}
         pageId={pageId}
         scope={scopeParam}
         recentDays={days}

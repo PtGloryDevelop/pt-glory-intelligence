@@ -49,7 +49,7 @@ export default async function ComparePage({ searchParams }: { searchParams: Prom
   await requireActorOrRedirect();
   const query = await searchParams;
 
-  const scope = parseScope(one(query.scope));
+  const scope = parseScope(one(query.scope)??'all');
   const rawA = one(query.a);
   const rawB = one(query.b);
   const pageA = isComparablePageId(rawA) ? rawA : null;

@@ -1,0 +1,42 @@
+/* Progress reads top to bottom: what is happening, then what came of it. */
+.page { display: grid; gap: 16px; }
+
+.status {
+  display: grid;
+  gap: 6px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.badge { font-size: var(--fs-subhead); font-weight: 700; }
+.guidance { margin: 0; }
+.meta { margin: 0; font-size: var(--fs-meta); color: var(--muted); }
+
+.result {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.counts, .scope { display: flex; flex-wrap: wrap; gap: 20px; margin: 0; }
+.counts dt, .scope dt { font-size: var(--fs-meta); color: var(--muted); }
+.counts dd, .scope dd { margin: 2px 0 0; font-weight: 600; }
+.scope {
+  padding: 14px 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.partial { margin: 0; color: var(--warn-ink); }
+.open {
+  padding: 9px 16px;
+  border-radius: 8px;
+  background: var(--brand);
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
+}

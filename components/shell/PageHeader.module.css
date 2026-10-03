@@ -1,64 +1,9 @@
-/*
- * Solves the empty-top problem without a marketing hero: an eyebrow anchors the
- * page in the product, the title carries the display face, and a short thin
- * accent rule gives the block a bottom edge so the content below has something
- * to sit against.
- */
-.header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 20px;
-  flex-wrap: wrap;
-  padding-bottom: 16px;
-  margin-bottom: var(--gap-section);
-  border-bottom: 1px solid var(--line);
-}
-
-/*
- * The 320px is a minimum COLUMN width, expressed as min-width rather than
- * flex-basis on purpose.
- *
- * As `flex: 1 1 320px` it was correct only while .header was a row. The mobile
- * rule below flips the header to `flex-direction: column`, and flex-basis
- * follows the main axis — so on a phone the basis became a 320px reserved
- * HEIGHT, and the title block rendered as a ~337px box holding ~90px of text.
- * min-width has no meaning on the block axis, so this reads the same in both
- * directions and needs no breakpoint-specific override.
- */
-.text { flex: 1 1 auto; min-width: min(320px, 100%); }
-
-.back {
-  display: inline-block;
-  font-size: var(--fs-meta);
-  margin-bottom: 8px;
-}
-
-.eyebrow { margin-bottom: 6px; }
-
-.titleRow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-
-/* A short brand rule under the title — restrained accent, not a banner. */
-.rule {
-  display: block;
-  width: 36px;
-  height: 3px;
-  border-radius: var(--radius-pill);
-  background: var(--brand);
-  margin-top: 10px;
-}
-
-.description {
-  color: var(--muted);
-  font-size: var(--fs-body);
-  margin: 8px 0 0;
-  max-width: 62ch;
-}
-
-.actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-
-@media (max-width: 768px) {
-  .header { flex-direction: column; align-items: stretch; gap: 14px; }
-  .actions { width: 100%; }
-  .actions > * { flex: 1 1 auto; }
-}
+.header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:20px; margin-bottom:28px; padding:4px 0 0; }
+.text { flex:1; min-width:min(320px,100%); }
+.back { display:inline-block; margin-bottom:12px; font-size:var(--fs-meta); }
+.eyebrow { margin-bottom:8px; }
+.titleRow { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.rule { display:none; }
+.description { color:var(--muted); font-size:var(--fs-body); margin:8px 0 0; max-width:70ch; }
+.actions { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+@media(max-width:640px) { .header { align-items:flex-start; gap:16px; } .actions { width:100%; } }

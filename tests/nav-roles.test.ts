@@ -17,6 +17,12 @@ const labels = (role: Role) => visibleNav(role).flatMap((section) => section.ite
 const itemFor = (role: Role, label: string) =>
   visibleNav(role).flatMap((section) => section.items).find((item) => item.label === label);
 
+test('overview is the shared entry; owned daily performance remains analyst-only', () => {
+  for(const role of ['viewer','analyst','admin'] as const)assert.equal(itemFor(role,'ภาพรวม')?.href,'/');
+  assert.equal(itemFor('viewer','แอดของเรา'),undefined);
+  for(const role of ['analyst','admin'] as const)assert.equal(itemFor(role,'แอดของเรา')?.href,'/owned-ads/performance');
+});
+
 test("manual import is an admin entry, and says what it is for", () => {
   const item = itemFor("admin", "นำเข้าไฟล์ (กู้คืนระบบ)");
   assert.ok(item, "the admin keeps the recovery import");
@@ -50,13 +56,17 @@ test("an admin sees everything the other two do, and the admin entries as well",
   assert.ok(admin.includes("นำเข้าไฟล์ (กู้คืนระบบ)"));
 });
 
-test("the two C15 entries are listed without a destination", () => {
-  // C14 adds the menu; C15 adds the pages. An href now would be a link to a
-  // page that does not exist, which is worse than a disabled entry.
-  for (const [role, label] of [["analyst", "เก็บข้อมูลใหม่"], ["admin", "ค่าเก็บข้อมูล"]] as const) {
+test("the two collection entries lead to the pages C15 built", () => {
+  // C14 added these entries with no href, because linking to a page that did
+  // not exist yet is worse than a dead entry. C15 built both pages, so the
+  // menu now goes somewhere — and each page authorizes on the server itself.
+  for (const [role, label, href] of [
+    ["analyst", "เก็บข้อมูลใหม่", "/collect"],
+    ["admin", "ค่าเก็บข้อมูล", "/collector"],
+  ] as const) {
     const item = itemFor(role, label);
     assert.ok(item, label);
-    assert.equal(item.href, undefined, `${label} must not link anywhere yet`);
+    assert.equal(item.href, href, label);
   }
 });
 

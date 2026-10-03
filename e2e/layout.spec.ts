@@ -164,13 +164,14 @@ test.describe("role-aware navigation", () => {
     for (const label of ADMIN_ONLY) {
       expect(sidebar, `an analyst's menu must not contain ${label}`).not.toContain(label);
     }
-    // The entry exists but leads nowhere until C15 builds the page.
-    await expect(page.locator('[aria-disabled="true"]', { hasText: "เก็บข้อมูลใหม่" })).toHaveCount(1);
-    await expect(page.locator('a[href="/collect"]')).toHaveCount(0);
+    // C14 left this entry disabled because its page did not exist yet; C15
+    // built the page, so it is now a real link and nothing is disabled.
+    await expect(page.getByTestId("nav-/collect")).toHaveAttribute("href", "/collect");
+    await expect(page.locator('[aria-disabled="true"]', { hasText: "เก็บข้อมูลใหม่" })).toHaveCount(0);
     await context.close();
   });
 
-  test("an admin receives all three, and only the import one is a link", async ({ browser }) => {
+  test("an admin receives all three, and every one of them is a link", async ({ browser }) => {
     const context = await browser.newContext({ storageState: join(AUTH, "admin.json") });
     const page = await context.newPage();
     await page.goto("/datasets");
@@ -178,13 +179,14 @@ test.describe("role-aware navigation", () => {
     for (const label of ["เก็บข้อมูลใหม่", ...ADMIN_ONLY]) {
       await expect(page.getByText(label)).toHaveCount(1);
     }
-    // The recovery import works; the two C15 entries are disabled placeholders.
-    await expect(page.getByTestId("nav-/import")).toHaveAttribute("href", "/import");
-    for (const label of ["เก็บข้อมูลใหม่", "ค่าเก็บข้อมูล"]) {
-      await expect(page.locator('[aria-disabled="true"]', { hasText: label })).toHaveCount(1);
+    // All three pages exist as of C15, so none of these three is a placeholder
+    // any more — and each entry goes where its label says.
+    for (const href of ["/import", "/collect", "/collector"]) {
+      await expect(page.getByTestId(`nav-${href}`)).toHaveAttribute("href", href);
     }
-    // Neither has a destination yet, so neither can 404.
-    await expect(page.locator('a[href="/collect"], a[href="/collector"]')).toHaveCount(0);
+    for (const label of ["เก็บข้อมูลใหม่", "ค่าเก็บข้อมูล", "นำเข้าไฟล์ (กู้คืนระบบ)"]) {
+      await expect(page.locator('[aria-disabled="true"]', { hasText: label })).toHaveCount(0);
+    }
     await context.close();
   });
 });

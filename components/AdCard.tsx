@@ -6,6 +6,7 @@ import { MEDIA_STATE_MESSAGE, resolveMedia } from "@/lib/media/resolve";
 import { formatIdentity } from "@/lib/media/format";
 import { thaiDate } from "@/lib/format/date";
 import { StatusBadge } from "./StatusBadge";
+import { AdImage } from "./AdImage";
 import styles from "./AdCard.module.css";
 
 /**
@@ -37,12 +38,12 @@ export type AdCardData = {
   archive_status?: string | null;
 };
 
-export function AdCard({ ad, onOpen }: { ad: AdCardData; onOpen: () => void }) {
+export function AdCard({ ad, onOpen, compact = false }: { ad: AdCardData; onOpen: () => void; compact?: boolean }) {
   const identity = formatIdentity(ad.display_format);
   const reused = ad.collation_count && ad.collation_count > 1 ? ad.collation_count : null;
 
   return (
-    <article className={styles.card} data-testid={`ad-card-${ad.ad_archive_id}`}>
+    <article className={`${styles.card} ${compact ? styles.compact : ""}`} data-testid={`ad-card-${ad.ad_archive_id}`}>
       {/* The whole card opens the drawer, not just the image. */}
       <button
         type="button"
@@ -51,6 +52,17 @@ export function AdCard({ ad, onOpen }: { ad: AdCardData; onOpen: () => void }) {
         onClick={onOpen}
         aria-label={`เปิดรายละเอียดโฆษณาของ ${ad.page_name ?? "เพจที่ไม่ทราบชื่อ"}`}
       >
+        <div className={styles.identity}>
+          <span className={styles.avatar} aria-hidden>{(ad.page_name ?? "?").slice(0, 1)}</span>
+          <span className={styles.identityText}>
+            <strong>{ad.page_name ?? "ไม่ทราบชื่อเพจ"}</strong>
+            <small>Library ID · {ad.ad_archive_id}</small>
+          </span>
+        </div>
+        <div className={styles.statusLine}>
+          <StatusBadge isActive={ad.is_active} />
+          <span>เริ่ม {thaiDate(ad.start_date)}</span>
+        </div>
         <div className={styles.frame}>
           <Preview ad={ad} />
           {identity ? (
@@ -67,12 +79,7 @@ export function AdCard({ ad, onOpen }: { ad: AdCardData; onOpen: () => void }) {
         </div>
 
         <div className={styles.body}>
-          <div className={styles.head}>
-            <span className={styles.page} title={ad.page_name ?? undefined}>
-              {ad.page_name ?? "—"}
-            </span>
-            <StatusBadge isActive={ad.is_active} />
-          </div>
+          {ad.title ? <strong className={styles.title}>{ad.title}</strong> : null}
 
           <p className={styles.copy} data-testid={`card-copy-${ad.ad_archive_id}`}>
             {ad.body_text ?? ad.title ?? "—"}
@@ -87,10 +94,11 @@ export function AdCard({ ad, onOpen }: { ad: AdCardData; onOpen: () => void }) {
 
           <div className={styles.foot}>
             <span>
-              เริ่ม {thaiDate(ad.start_date)} · {ad.ad_age_days} วัน
+              อายุแอด {ad.ad_age_days} วัน
             </span>
             {reused ? <span className={styles.reuseInline}>ใช้ซ้ำ {reused}</span> : null}
           </div>
+          <span className={styles.inspect}>ดูรายละเอียด <span aria-hidden>↗</span></span>
         </div>
       </button>
     </article>
@@ -140,8 +148,7 @@ function Preview({ ad }: { ad: AdCardData }) {
   // A still even for a video: the poster is the frame the collector captured,
   // and a grid of autoplaying video is not a research tool.
   return (
-    // eslint-disable-next-line @next/next/no-img-element -- remote CDN / signed storage, no loader
-    <img
+    <AdImage
       className={styles.media}
       src={resolved.src}
       alt=""

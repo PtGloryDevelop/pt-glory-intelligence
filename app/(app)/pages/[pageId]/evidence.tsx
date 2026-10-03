@@ -24,7 +24,8 @@ type Row = AdCardData & { media: Media; archive_url?: string | null; archive_sta
 
 const PAGE_SIZE = 24;
 
-export function PageEvidence({ pageId, scope, recentDays, datasetId, counts }: {
+export function PageEvidence({ pageId, scope, recentDays, datasetId, counts, canAnalyze=false }: {
+  canAnalyze?:boolean;
   pageId: string;
   scope: string;
   recentDays: number;
@@ -170,7 +171,7 @@ export function PageEvidence({ pageId, scope, recentDays, datasetId, counts }: {
       {selected ? (
         // The frozen drawer. In dataset scope it is pinned to that dataset's
         // snapshot; in a wider scope it opens in master context and says so.
-        <AdDrawer adArchiveId={selected} datasetId={datasetId} onClose={() => setSelected(null)} />
+        <AdDrawer adArchiveId={selected} datasetId={datasetId} canAnalyze={canAnalyze} onClose={() => setSelected(null)} />
       ) : null}
     </Panel>
   );

@@ -1,0 +1,96 @@
+/* Money first, then what is waiting, then the knobs that change both. */
+.page { display: grid; gap: 18px; }
+
+.card {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.title { margin: 0; font-size: var(--fs-section); }
+.meta { margin: 0; font-size: var(--fs-meta); color: var(--muted); }
+.note { font-size: var(--fs-meta); color: var(--muted); }
+.detail { margin: 4px 0 0; font-size: var(--fs-meta); color: var(--muted); word-break: break-word; }
+
+.figures { display: flex; flex-wrap: wrap; gap: 28px; margin: 0; }
+.figures dt { font-size: var(--fs-meta); color: var(--muted); }
+.figures dd { margin: 2px 0 2px; font-size: var(--fs-title); font-weight: 700; }
+.figures span { display: block; max-width: 30ch; }
+
+.provisional {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--warn-tint);
+  color: var(--warn-ink);
+  font-size: var(--fs-meta);
+}
+.warning {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--warn-tint);
+  color: var(--warn-ink);
+}
+
+.queue { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.queueItem {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: space-between;
+  align-items: start;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.queueName { display: block; font-weight: 600; }
+
+.actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.action {
+  padding: 7px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--brand);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.action:disabled { opacity: 0.55; cursor: not-allowed; }
+.secondary {
+  padding: 7px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: inherit;
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.settingsForm { display: grid; gap: 10px; }
+.settingsForm textarea,
+.card textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: inherit;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--fs-meta);
+}
+.connectionFields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; }
+.connectionFields label { display:grid; gap:8px; font-size:var(--fs-eyebrow); font-weight:500; }
+.connectionFields input { width:100%; min-width:0; padding:10px 12px; min-height:42px; border:1px solid var(--line); border-radius:7px; background:var(--paper); }
+.connectionFields small { font-size:var(--fs-eyebrow); color:var(--muted); font-weight:400; overflow-wrap:anywhere; }
+.enabledChoice { display:flex; align-items:center; gap:10px; margin:10px 0; font-size:var(--fs-eyebrow); }
+.enabledChoice input { accent-color:var(--brand-ink); width:17px; height:17px; }
+.advancedSettings { font-size:var(--fs-eyebrow); color:var(--muted); }
+.advancedSettings summary { cursor:pointer; padding:10px 0; }
+.card[data-testid="collector-settings"] { order:-1; padding:28px; gap:18px; }
+.action { background:#1c4e3c; color:white; font-size:var(--fs-eyebrow); font-weight:500; }
+@media(max-width:640px) { .connectionFields { grid-template-columns:1fr; } .card[data-testid="collector-settings"] { padding:20px; } }

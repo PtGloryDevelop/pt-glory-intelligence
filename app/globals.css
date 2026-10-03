@@ -1,118 +1,80 @@
-/*
- * Design tokens — Amendment A1 (orange), 2026-09-02.
- *
- * Every colour pairing in here was measured rather than eyeballed. The rule that
- * makes the palette hold together: bright colours are FILLS, charcoal is the text
- * on top of them. Charcoal clears AA on every fill below (4.83 on orange through
- * 10.41 on yellow). White does not — white on #F26522 is 3.15 — so there is no
- * white-on-brand token here on purpose.
- */
+
 :root {
-  /* Surfaces — large areas stay cream/warm white, never saturated */
-  --paper: #f5eedf;
-  --surface: #fff8f1;
-  --surface-pink: #f3e1e8;
-  --surface-sunken: #f0e7d8;
 
-  /* Text and lines */
-  --ink: #2c241f;
-  --muted: #6c5d54;
-  --line: #e8dccf;
-  /* The line a pink surface needs: --line disappears against it. */
-  --line-pink: #e6cdd7;
+  --paper: #f7f8fa;
+  --surface: #ffffff;
+  --surface-pink: #f4f5f7;
+  --surface-sunken: #f2f3f5;
 
-  /* Brand */
-  --brand: #f26522;
-  --brand-deep: #e95a1f;
-  --brand-ink: #a83c10;       /* orange AS TEXT; --brand is 2.73 on cream, unusable */
-  --brand-tint: rgba(242, 101, 34, 0.1);
-  --brand-tint-strong: rgba(242, 101, 34, 0.16);
 
-  /* Supporting accents — charts, tags, categorical groups. Fills only. */
+  --ink: #1b1f27;
+  --muted: #5f6672;
+  --line: #e5e7eb;
+
+  --line-pink: #e5e7eb;
+
+
+  --brand: #d1d5db;
+  --brand-deep: #b8bec8;
+  --brand-ink: #2563eb;
+  --brand-tint: #f4f5f7;
+  --brand-tint-strong: #edeff2;
+
+
   --accent-coral: #ff7a66;
   --accent-pink: #f2a3cc;
-  --accent-blue: #19a7f2;
-  --accent-blue-ink: #0b5f8c;  /* blue AS TEXT/glyph on a blue tint */
+  --accent-blue: #2563eb;
+  --accent-blue-ink: #1d4ed8;
   --accent-green: #27c98b;
   --accent-yellow: #f5d437;
   --accent-lavender: #b8b4f5;
   --accent-green-deep: #2f5d2e;
 
-  /* Semantic — these stay semantic and are never re-pointed at the brand */
+
   --ok-ink: #2f5d2e;
   --ok-tint: rgba(39, 201, 139, 0.16);
   --warn-ink: #8a5a00;
   --warn-tint: rgba(245, 212, 55, 0.28);
   --danger: #b3261e;
   --danger-tint: rgba(179, 38, 30, 0.1);
-  --neutral-tint: rgba(108, 93, 84, 0.12);
+  --neutral-tint: #eef2f7;
 
-  /* Focus is an accessibility affordance, not a brand colour. Orange at 2.73
-     cannot serve as a focus ring, so this stays blue. */
+
   --focus: #1d4ed8;
 
-  /*
-   * Type scale — handoff §4.3, closed in V5.
-   *
-   * Nine roles, and every size in the product is one of them. The V5 sweep
-   * found 9, 13.5, 15, 17, 19, 21 and 22px living as literals in six modules,
-   * each one a local decision about the same handful of jobs. Naming the roles
-   * is what stops the tenth from being added.
-   *
-   *   --fs-page-title  page titles and large figures (the display role)
-   *   --fs-title       standalone card headline, brand name at large size
-   *   --fs-subhead     card and panel headline inside a page
-   *   --fs-section     section headings (h2)
-   *   --fs-title-sm    compact panel title, small figure
-   *   --fs-body        body, tables, navigation, controls
-   *   --fs-meta        metadata and helper text
-   *   --fs-label       form labels and table headers
-   *   --fs-eyebrow     uppercase section and stat labels
-   */
-  --fs-page-title: 24px;
-  --fs-title: 19px;
-  --fs-subhead: 17px;
-  --fs-section: 16px;
-  --fs-title-sm: 15px;
-  --fs-body: 14px;
-  --fs-meta: 12.5px;
-  /*
-   * Two label roles, not three sizes invented per component. The audit found
-   * 10.5 / 11 / 11.5px competing across ContextBar, KPIStat, the shell and the
-   * Explorer, all meaning "small label".
-   *
-   *   --fs-eyebrow  uppercase section and stat labels, letter-spaced
-   *   --fs-label    form labels and table headers, sentence case
-   */
-  --fs-eyebrow: 11px;
-  --fs-label: 11.5px;
 
-  /* Shape and spacing — handoff §4.4 */
+  --fs-page-title: 32px;
+  --fs-title: 22px;
+  --fs-subhead: 18px;
+  --fs-section: 20px;
+  --fs-title-sm: 16px;
+  --fs-body: 15px;
+  --fs-meta: 13px;
+
+  --fs-eyebrow: 12px;
+  --fs-label: 13px;
+
+
   --radius: 12px;
   --radius-sm: 8px;
   --radius-pill: 999px;
   --gap-page: 24px;
   --gap-section: 28px;
   --pad-card: 18px;
-  --shadow: 0 1px 2px rgba(44, 36, 31, 0.04), 0 4px 14px rgba(44, 36, 31, 0.05);
+  --shadow: 0 1px 3px rgba(27, 31, 39, 0.04);
 
-  /*
-   * Typography. --font-display and --font-ui are injected on <html> by
-   * next/font in app/layout.tsx; the fallbacks here are what renders if that
-   * ever fails to load, so Thai still has a real face to fall back to.
-   */
+
   --display: var(--font-display), "Noto Sans Thai", system-ui, sans-serif;
   --ui: var(--font-ui), "Noto Sans Thai", "Leelawadee UI", system-ui, sans-serif;
 
 
-  /* Layout — a sparse operational page should not stretch across 1440px */
   --content-max: 1180px;
   --content-max-wide: 1440px;
 
-  /* Shell */
-  --sidebar-w: 228px;
+
+  --sidebar-w: 216px;
   --sidebar-w-rail: 68px;
-  --topbar-h: 56px;
+  --topbar-h: 64px;
 }
 
 * { box-sizing: border-box; }
@@ -127,18 +89,12 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/*
- * Personality lives in the product name, page titles, section headings and big
- * numbers — and stops there. Tables and forms stay on the UI face, because a
- * display face in a dense data table costs legibility for nothing.
- */
 h1, h2, h3 { font-family: var(--display); line-height: 1.45; margin: 0; }
 h1 { font-size: var(--fs-page-title); font-weight: 600; letter-spacing: -0.015em; }
 h2 { font-size: var(--fs-section); font-weight: 600; letter-spacing: -0.01em; }
-h3 { font-size: var(--fs-body); font-weight: 600; }
+h3 { font-size: var(--fs-title-sm); font-weight: 600; }
 p { margin: 0 0 12px; }
 
-/* Large figures read as display type wherever they appear. */
 [data-numeral] {
   font-family: var(--display);
   font-weight: 600;
@@ -146,35 +102,30 @@ p { margin: 0 0 12px; }
   letter-spacing: -0.01em;
 }
 
-/* Section labels above a block of content. */
 [data-eyebrow] {
   font-family: var(--ui);
   font-size: var(--fs-eyebrow);
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--brand-ink);
+  color: var(--muted);
 }
 
-/* Link hover thickens the underline rather than shifting the hue: --brand-deep
-   as text on cream is 3.06 and would make a link harder to read on hover. */
 a { color: var(--brand-ink); text-underline-offset: 2px; }
 a:hover { text-decoration-thickness: 2px; }
 
 :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
 
-/* Form controls — the app has no component library, so the base elements carry
-   the token system directly. */
 input, select, textarea, button { font: inherit; color: inherit; }
 
-input[type="text"], input[type="email"], input[type="password"], select, textarea {
+input[type="text"], input[type="search"], input[type="email"], input[type="password"], select, textarea {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   padding: 8px 10px;
   min-height: 40px;
 }
-input:hover, select:hover { border-color: #d9c9b4; }
+input:hover, select:hover { border-color: #94a3b8; }
 
 button {
   border-radius: var(--radius-sm);
@@ -184,12 +135,7 @@ button {
   cursor: pointer;
 }
 button:hover:not(:disabled) { background: var(--surface-sunken); }
-/*
- * Disabled at 0.5 opacity measured 3.06:1 — legible but faint. Keeping the text
- * at full strength and dimming only the surface says "this control exists and
- * is unavailable" rather than "this control is fading away", and it cannot be
- * mistaken for a loading state.
- */
+
 button:disabled {
   cursor: not-allowed;
   background: var(--surface-sunken);
@@ -205,21 +151,16 @@ button[data-variant="primary"]:disabled {
   font-weight: 600;
 }
 
-/* Primary call to action: orange fill, charcoal label. Charcoal on #F26522 is
-   4.83:1; white would be 3.15 and fail. */
 button[data-variant="primary"] {
-  background: var(--brand);
-  border-color: var(--brand-deep);
-  color: var(--ink);
+  background: var(--brand-ink);
+  border-color: var(--brand-ink);
+  color: #ffffff;
   font-weight: 600;
 }
-/* Hover keeps the same fill on purpose: charcoal on --brand-deep measures 4.31
-   and would drop the label below AA the moment the pointer arrives. The state
-   change is carried by the ring and border instead. */
+
 button[data-variant="primary"]:hover:not(:disabled) {
-  background: var(--brand);
-  border-color: var(--brand-ink);
-  box-shadow: 0 0 0 3px var(--brand-tint-strong);
+  background: #1d4ed8;
+  border-color: #1d4ed8;
 }
 
 table { border-collapse: collapse; width: 100%; font-size: var(--fs-body); }
@@ -234,20 +175,16 @@ th {
   white-space: nowrap;
 }
 tbody tr:last-child td { border-bottom: 0; }
-tbody tr:hover { background: var(--brand-tint); }
+tbody tr:hover { background: var(--surface-sunken); }
 
-/*
- * A link that acts as a page action. Uses the same fill and charcoal label as a
- * primary button so the two never disagree about what 'primary' looks like.
- */
 [data-cta] {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: var(--brand);
-  border: 1px solid var(--brand-deep);
+  background: var(--brand-ink);
+  border: 1px solid var(--brand-ink);
   border-radius: var(--radius-sm);
-  color: var(--ink);
+  color: #ffffff;
   font-weight: 600;
   font-size: var(--fs-body);
   padding: 9px 16px;
@@ -255,7 +192,7 @@ tbody tr:hover { background: var(--brand-tint); }
   text-decoration: none;
 }
 [data-cta]:hover {
-  color: var(--ink);
-  border-color: var(--brand-ink);
-  box-shadow: 0 0 0 3px var(--brand-tint-strong);
+  color: #ffffff;
+  background: #1d4ed8;
+  border-color: #1d4ed8;
 }

@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { requireActorOrRedirect } from "@/lib/auth/roles";
+import { requireActorOrRedirect, satisfies } from "@/lib/auth/roles";
 import { thaiDateTime } from "@/lib/format/date";
 import { getDatasetContext, getDatasetQuality } from "@/lib/read/queries";
 import { labelProvenance } from "@/lib/collect/labels";
@@ -20,7 +20,7 @@ export default async function DatasetPage({ params }: { params: Promise<{ id: st
 
   // Awaited before any read: layout and page render concurrently, so the
   // layout's redirect cannot order this on the page's behalf.
-  await requireActorOrRedirect();
+  const actor=await requireActorOrRedirect();
 
   const runContext = await getDatasetContext(id);
   if (!runContext) notFound();
@@ -125,6 +125,7 @@ export default async function DatasetPage({ params }: { params: Promise<{ id: st
       {/* Coverage travels with the filters so "มีลิงก์ปลายทาง" can say how many
           ads the field was readable on, instead of implying the rest have none. */}
       <Explorer
+        canAnalyze={satisfies(actor.role,'analyst')}
         datasetId={id}
         coverage={quality.map((row) => ({
           field: row.field, present_count: row.present_count, total_count: row.total_count,

@@ -279,4 +279,5 @@ insert into public.app_settings (key, value) values
   ('collector.actor', '"curious_coder/facebook-ads-library-scraper"'::jsonb),
   ('collector.countries', '["TH"]'::jsonb),
   -- Fail closed. C16 is the only gate that flips this.
-  ('collector.enabled', 'false'::jsonb);
+  ('collector.enabled', 'false'::jsonb)
+on conflict (key) do nothing;

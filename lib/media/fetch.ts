@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
+import { isAllowedMediaHost as isAllowedHost } from "../media.ts";
+export { isAllowedMediaHost as isAllowedHost } from "../media.ts";
 
 /**
  * Server-side fetch of one archival candidate.
@@ -58,11 +60,6 @@ const fail = (reason: FailureReason): FetchFailure => ({ ok: false, reason });
  * `evil-fbcdn.net` and `fbcdn.net.attacker.example`. The leading dot is what
  * makes this a domain boundary rather than a string coincidence.
  */
-export function isAllowedHost(hostname: string): boolean {
-  const host = hostname.toLowerCase().replace(/\.$/, "");
-  return host === "fbcdn.net" || host.endsWith(".fbcdn.net");
-}
-
 /**
  * Addresses the server must never be talked into contacting. Checked against
  * resolved addresses, not the hostname, because a name we allow can still point

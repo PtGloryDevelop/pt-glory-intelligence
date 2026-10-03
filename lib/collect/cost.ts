@@ -339,16 +339,19 @@ async function readCostSettings(client: PoolClient): Promise<CostSettings> {
 }
 
 /**
- * The provider's figure as exact decimal text, or null.
- *
- * Money is never parsed into a float here; the text is checked and carried
- * through to a numeric column. A shape nobody documented fails closed.
+ * Match PostgreSQL numeric(12,6) rounding before comparing observations.
+ * Provider JSON numbers can carry sub-micro noise; comparing that noise with
+ * a stored six-decimal figure would restart settlement forever. No float math.
  */
-function usdText(value: string | null): string | null {
+export function usdText(value: string | null): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
   if (!/^\d+(\.\d+)?$/.test(trimmed)) return null;
-  return trimmed;
+  const [whole, fraction = ""] = trimmed.split(".");
+  const micros = BigInt(whole) * 1_000_000n + BigInt((fraction + "000000").slice(0, 6))
+    + (fraction.length > 6 && fraction[6] >= "5" ? 1n : 0n);
+  if (micros > 999_999_999_999n) return null;
+  return `${micros / 1_000_000n}.${(micros % 1_000_000n).toString().padStart(6, "0")}`;
 }
 
 /** Decimal-text equality, so "0.0998" and "0.09980" are the same money. */

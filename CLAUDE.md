@@ -2,9 +2,9 @@
 
 ## Mission
 
-Build an internal company system named **PT Glory Intelligence** for collecting, storing, searching, comparing, and analyzing Meta Ads Library data collected by PT Glory.
+Build an internal company system named **PT Glory Intelligence** for researching competitor ads and analyzing the company's own ads. Competitor research uses collected Meta Ads Library data; owned-ad performance uses separately authorized account reports.
 
-This is not a generic analytics dashboard and not a public SaaS product. It is an internal Competitive Advertising Intelligence system.
+This is an internal company product, not a public SaaS product. The user expanded the scope to include owned ads on 2026-09-28; see `docs/adr/0003-support-competitor-and-owned-ads.md`.
 
 ## Mandatory Operating Rules
 
@@ -42,6 +42,8 @@ Unless a future source explicitly provides it, the system must NOT claim or disp
 - Market share
 
 Do not infer any of these from ad count, ad age, collation, page likes, or creative reuse.
+
+Owned-ad reports may display performance fields actually supplied by that source. Keep their identity, reporting period, attribution meaning and financial access separate from public competitor observations. The Ad Library validation rules still apply to the Ad Library pipeline.
 
 ### 4. Internal-only product
 
@@ -310,3 +312,13 @@ Produce and get approval for:
 11. What cannot be supported by current data
 
 Do not start implementation until the feature is sufficiently specified.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

@@ -16,12 +16,12 @@ test("every up migration has a matching down migration", () => {
   }
 });
 
-test("migrations are numbered 0001..0041 with no gaps", () => {
+test("migrations are numbered 0001..0042 with no gaps", () => {
   const numbers = up.map((f) => Number(f.slice(0, 4)));
-  assert.deepEqual(numbers, Array.from({ length: 41 }, (_, i) => i + 1));
+  assert.deepEqual(numbers, Array.from({ length: 42 }, (_, i) => i + 1));
 });
 
-test("all 18 tables are created", () => {
+test("all 19 tables are created", () => {
   const expected = [
     "user_roles", "categories", "collection_runs", "datasets", "pages",
     "page_observations", "ads", "ad_observations", "dataset_ads",
@@ -36,12 +36,13 @@ test("all 18 tables are created", () => {
     // Phase 15 C04 (0037): one row per collection a person asked for, with the
     // state machine's invariants enforced as constraints.
     "collection_requests",
+    "owned_ad_reports",
   ];
   for (const table of expected) {
     assert.match(allUp, new RegExp(`create table public\\.${table}\\b`), `missing ${table}`);
   }
   const created = [...allUp.matchAll(/create table public\.(\w+)/g)].map((m) => m[1]);
-  assert.equal(created.length, 18, `expected 18 tables, found ${created.length}`);
+  assert.equal(created.length, 19, `expected 19 tables, found ${created.length}`);
 });
 
 test("ads.ad_archive_id is NOT NULL UNIQUE and is_active stays nullable", () => {
@@ -220,6 +221,7 @@ test("every function a migration creates is dropped by its rollback", () => {
     "current_user_role",
     "dataset_ads_facets", "dataset_ads_page", "dataset_context", "dataset_list",
     "evergreen_threshold_days", "jsonb_text_array",
+    "owned_ad_report_rows_valid",
     // Page Intelligence (0026) and its timeline (0027). Read-only, like every
     // function above them.
     "page_activity", "page_ads", "page_brand",

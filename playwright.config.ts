@@ -40,6 +40,8 @@ export default defineConfig({
         // Imports its own fixture and needs the seeded sessions; own project.
         /p2-pages\.spec\.ts/, /p2-timeline\.spec\.ts/, /p2-category\.spec\.ts/, /p2-compare\.spec\.ts/,
         /p2-trends\.spec\.ts/, /p2-watchlist\.spec\.ts/, /p2-brand-mapping\.spec\.ts/,
+        // Needs the fake collector and owns the collector settings; own project.
+        /collect\.spec\.ts/,
       ],
     },
     {
@@ -101,6 +103,18 @@ export default defineConfig({
         /p2-category\.spec\.ts/, /p2-compare\.spec\.ts/, /p2-trends\.spec\.ts/,
         /p2-watchlist\.spec\.ts/, /p2-brand-mapping\.spec\.ts/,
       ],
+      use: { ...devices["Desktop Chrome"] },
+      timeout: 300_000,
+    },
+    {
+      // C15 collection UX. Drives whole collections against the deterministic
+      // fake provider, so it needs COLLECTOR_FAKE_PROVIDER=1 and PT_GLORY_ENV=test
+      // in the environment — without both, the fake refuses to exist and this
+      // project would be talking to a real, paid collector. Its own project
+      // because of that, and because it owns the collector settings while it runs.
+      name: "collect",
+      dependencies: ["setup"],
+      testMatch: [GUARD, /collect\.spec\.ts/],
       use: { ...devices["Desktop Chrome"] },
       timeout: 300_000,
     },

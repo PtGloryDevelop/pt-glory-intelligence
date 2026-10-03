@@ -2,10 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { NavSection } from "./nav.ts";
 import { Icon } from "./icons.tsx";
-import { BrandLockup, BrandMark } from "../BrandMark.tsx";
 import { signOut } from "../../app/(app)/sign-out.ts";
 import styles from "./AppShell.module.css";
 
@@ -25,24 +24,62 @@ export function AppShell(
   const pathname = usePathname();
   const [railed, setRailed] = useState(false);
   const [open, setOpen] = useState(false);
+  const sidebar = useRef<HTMLElement>(null);
+  const menuButton = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const opener = menuButton.current;
+    const mobile = window.matchMedia('(max-width: 900px)');
+    const resized = () => { if (!mobile.matches) setOpen(false); };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    sidebar.current?.querySelector<HTMLAnchorElement>('a')?.focus();
+    function keyboard(event: KeyboardEvent) {
+      if (event.key === 'Escape') setOpen(false);
+      if (event.key !== 'Tab') return;
+      const controls = [...(sidebar.current?.querySelectorAll<HTMLElement>('a[href],button:not([disabled]),summary') ?? [])].filter(element => element.getClientRects().length > 0);
+      const first = controls[0]; const last = controls.at(-1);
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    }
+    document.addEventListener('keydown', keyboard);
+    mobile.addEventListener('change', resized);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', keyboard);
+      mobile.removeEventListener('change', resized);
+      opener?.focus();
+    };
+  }, [open]);
 
   // A dataset page carries the research grid, which genuinely wants the canvas.
   // Every other page reads better at a fixed measure.
-  const isWide = /^\/datasets\/[^/]+/.test(pathname);
+  const isWide = pathname === "/" || /^\/datasets\/[^/]+/.test(pathname)
+    || pathname === "/competitors" || pathname === "/owned-ads" || pathname === "/owned-ads/performance" || pathname === "/compare/ads" || pathname === "/command-center";
 
-  const isActive = (href: string) =>
-    href === "/" ? pathname === "/" : pathname.startsWith(href);
+  const activeItem=sections.flatMap(section=>section.items).filter(item=>item.href&&(item.href==='/'?pathname==='/':pathname===item.href||pathname.startsWith(`${item.href}/`))).sort((a,b)=>(b.href?.length??0)-(a.href?.length??0))[0];
+  const isActive = (href: string) => activeItem?.href===href;
 
   return (
     <div className={styles.shell}>
+      <a href="#workspace-content" className={styles.skipLink}>ข้ามไปเนื้อหา</a>
       <aside
+        ref={sidebar}
+        id="workspace-menu"
+        role={open ? 'dialog' : undefined}
+        aria-label={open ? 'เมนูหลัก' : undefined}
+        aria-modal={open || undefined}
         className={[styles.sidebar, railed ? styles.rail : "", open ? styles.open : ""].join(" ")}
         data-testid="app-sidebar"
         data-state={railed ? "rail" : "expanded"}
       >
         <div className={styles.brand}>
-          <span className={styles.lockup}><BrandLockup tagline="Ads Intelligence" /></span>
-          <span className={styles.markOnly}><BrandMark /></span>
+          <Link href="/" className={styles.wordmark} aria-label="PT Glory หน้าแรก">
+            <span className={styles.logo}>pg.</span>
+            <span className={styles.lockup}>PT GLORY<small>AD INTELLIGENCE</small></span>
+          </Link>
+          <button type="button" className={styles.mobileClose} aria-label="ปิดเมนูหลัก" onClick={() => setOpen(false)}>×</button>
         </div>
 
         <nav className={styles.nav} aria-label="เมนูหลัก">
@@ -56,9 +93,9 @@ export function AppShell(
             * section, still visible so the shape of the product is legible, but
             * never in the way of the thing somebody came to open.
             */}
-          {sections.map((section) => (
-            <div key={section.heading}>
-              <div className={styles.heading}>{section.heading}</div>
+          {sections.map((section,index) => {
+            const links=<>
+              {index===0?<div className={styles.heading}>{section.heading}</div>:null}
               {[...section.items]
                 .sort((a, b) => Number(Boolean(b.href)) - Number(Boolean(a.href)))
                 .map((item) =>
@@ -95,11 +132,13 @@ export function AppShell(
                   </span>
                 ),
               )}
-            </div>
-          ))}
+            </>;
+            return index===0?<div key={section.heading}>{links}</div>:<details key={section.heading} className={styles.advanced} open={section.items.some(item=>item.href&&isActive(item.href))||undefined}><summary>{section.heading}</summary>{links}</details>;
+          })}
         </nav>
 
-        <button type="button" className={styles.collapse} onClick={() => setRailed((v) => !v)}>
+        <div className={styles.workspaceNote}><span>พื้นที่วิจัยของทีม</span><small>ค้นหลักฐาน · เปรียบเทียบ · ตัดสินใจ</small></div>
+        <button type="button" className={styles.collapse} aria-label={railed ? 'ขยายเมนู' : 'ย่อเมนู'} aria-expanded={!railed} onClick={() => setRailed((v) => !v)}>
           {railed ? "»" : "« ย่อเมนู"}
         </button>
         <div className={styles.footer}>
@@ -121,20 +160,23 @@ export function AppShell(
         />
       ) : null}
 
-      <div className={styles.main}>
+      <div className={styles.main} inert={open}>
         <div className={styles.topbar}>
-          <button type="button" onClick={() => setOpen(true)} aria-label="เปิดเมนู">☰</button>
-          <BrandLockup />
+          <button ref={menuButton} type="button" onClick={() => setOpen(true)} aria-label="เปิดเมนู" aria-expanded={open} aria-controls="workspace-menu">☰</button>
+          <span className={styles.breadcrumb}>PT GLORY <span>/</span> <strong>{activeItem?.label??'ข้อมูลการตลาด'}</strong></span>
+          <span className={styles.sourceTag}>พื้นที่วิเคราะห์ของทีม</span>
         </div>
         {/* A dataset page carries the research grid, which genuinely wants the
             canvas. Every other page reads better at a fixed measure. */}
-        <div
+        <main
+          id="workspace-content"
+          tabIndex={-1}
           className={styles.content}
           data-testid="shell-content"
           data-width={isWide ? "wide" : undefined}
         >
           {children}
-        </div>
+        </main>
       </div>
     </div>
   );

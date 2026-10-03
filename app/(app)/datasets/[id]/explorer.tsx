@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { AdDrawer } from "@/components/AdDrawer";
 import { AdCard, type AdCardData } from "@/components/AdCard";
 import { AdThumb } from "@/components/AdThumb";
@@ -14,6 +15,7 @@ import {
 } from "@/lib/explorer/filters";
 import type { Media } from "@/lib/media";
 import { thaiDate } from "@/lib/format/date";
+import { toggleComparison } from "@/lib/explorer/comparison";
 import styles from "./explorer.module.css";
 
 type Row = AdCardData & {
@@ -38,8 +40,11 @@ export function dash(value: unknown): string {
   return String(value);
 }
 
-export function Explorer({ datasetId, coverage = [] }: {
+export function Explorer({ datasetId, coverage = [], preserveDatasetInUrl = false, simple = false, canAnalyze=false }: {
   datasetId: string;
+  canAnalyze?:boolean;
+  simple?: boolean;
+  preserveDatasetInUrl?: boolean;
   /** Dataset quality rows, used to say how readable a presence filter is. */
   coverage?: Coverage[];
 }) {
@@ -56,10 +61,16 @@ export function Explorer({ datasetId, coverage = [] }: {
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [facets, setFacets] = useState<Facet[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
+  const [comparison, setComparison] = useState<Row[]>([]);
+  const [comparing, setComparing] = useState(false);
+  const [failure, setFailure] = useState<{ request: string; message: string } | null>(null);
+  const [retry, setRetry] = useState(0);
   const [result, setResult] = useState<{ key: string; rows: Row[]; total: number } | null>(null);
 
   const query = toQuery(filters, sort, offset);
   const key = query.toString();
+  const requestKey = `${datasetId}:${key}:${retry}`;
+  const error = failure?.request === requestKey ? failure.message : null;
 
   // Back and forward move between research states rather than leaving the page.
   useEffect(() => {
@@ -74,11 +85,14 @@ export function Explorer({ datasetId, coverage = [] }: {
   }, []);
 
   useEffect(() => {
-    const url = `${window.location.pathname}${key ? `?${key}` : ""}`;
+    const urlQuery = new URLSearchParams(key);
+    if (preserveDatasetInUrl) urlQuery.set("dataset", datasetId);
+    const search = urlQuery.toString();
+    const url = `${window.location.pathname}${search ? `?${search}` : ""}`;
     if (url !== `${window.location.pathname}${window.location.search}`) {
       window.history.pushState(null, "", url);
     }
-  }, [key]);
+  }, [key, datasetId, preserveDatasetInUrl]);
 
   useEffect(() => {
     let live = true;
@@ -87,14 +101,21 @@ export function Explorer({ datasetId, coverage = [] }: {
     request.set("offset", String(offset));
     request.set("facets", "1");
     fetch(`/api/datasets/${datasetId}/ads?${request.toString()}`)
-      .then((response) => response.json())
+      .then((response) => {
+        if (!response.ok) throw new Error("โหลดแอดไม่สำเร็จ กรุณาลองอีกครั้ง");
+        return response.json();
+      })
       .then((payload) => {
         if (!live) return;
+        setFailure(null);
         setResult({ key, rows: payload.rows ?? [], total: payload.total ?? 0 });
         if (payload.facets) setFacets(payload.facets);
+      })
+      .catch(() => {
+        if (live) setFailure({ request: requestKey, message: "โหลดแอดไม่สำเร็จ กรุณาลองอีกครั้ง" });
       });
     return () => { live = false; };
-  }, [datasetId, key, offset]);
+  }, [datasetId, key, offset, requestKey]);
 
   const loading = result?.key !== key;
   const rows = result?.rows ?? [];
@@ -116,19 +137,41 @@ export function Explorer({ datasetId, coverage = [] }: {
   const facetLabel = (facet: string, value: string) =>
     facets.find((row) => row.facet === facet && row.value === value)?.label;
 
+  const choose = (row: Row) => setComparison((current) => toggleComparison(current, row));
+  const compareControl = (row: Row) => {
+    if(simple)return <Link className={styles.companyCompare} data-testid={`rival-compare-${row.ad_archive_id}`}
+      href={`/compare/ads?${new URLSearchParams({dataset:datasetId,rival:row.ad_archive_id})}`}>เลือกเปรียบเทียบ</Link>;
+    const checked = comparison.some((ad) => ad.ad_archive_id === row.ad_archive_id);
+    return <label className={styles.compareChoice}>
+      <input type="checkbox" checked={checked} disabled={!checked && comparison.length >= 4}
+        data-testid={`compare-ad-${row.ad_archive_id}`} onChange={() => choose(row)} />
+      เลือกเปรียบเทียบ
+    </label>;
+  };
+
   return (
     <section data-testid="explorer">
-      <h2>Ads Explorer</h2>
+      <div className={styles.explorerHeading}>
+        <h2>{simple?"แอดในรอบนี้":"สำรวจครีเอทีฟ"}</h2>
+        <p className={styles.note}>{simple?"เลือกแอดเพื่อเทียบกับของเรา":"เลือก 2–4 แอดเพื่อเปรียบเทียบ"}</p>
+      </div>
 
-      <div className={styles.toolbar} data-testid="filter-toolbar">
+      <div className={`${styles.toolbar} ${simple?styles.simpleToolbar:""}`} data-testid="filter-toolbar">
         <label className={styles.search} htmlFor="f-search">
-          <span className={styles.label}>ค้นข้อความ</span>
+          <span className={styles.label}>{simple?"ค้นสินค้าในรอบนี้":"ค้นข้อความ"}</span>
           <input
-            id="f-search" data-testid="filter-search" value={filters.search ?? ""}
-            placeholder="ค้นในข้อความโฆษณาและหัวเรื่อง"
+            id="f-search" type="search" data-testid="filter-search" value={filters.search ?? ""}
+            placeholder={simple?"เช่น กาแฟ ลดราคา หรือสินค้าที่เราขาย":"ค้นข้อความ จุดขาย หรือข้อเสนอในคลังนี้…"}
             onChange={(event) => set("search", event.target.value)}
           />
         </label>
+        {simple?<Select id="f-page" label="เพจคู่แข่ง" value={filters.page??""} onChange={v=>set("page",v)}
+          options={options("page").map(row=>[row.value,`${row.label} (${row.n})`])} />:null}
+
+        {simple?<button type="button" data-testid="advanced-toggle" className={styles.advancedButton}
+          aria-expanded={advancedOpen} onClick={()=>setAdvancedOpen(open=>!open)}>ตัวกรองเพิ่มเติม</button>:null}
+
+        {!simple||advancedOpen?<>
 
         {/* The three states are always offered, even when the snapshot happens
             to contain none of one of them: "no inactive ads here" is an answer,
@@ -144,16 +187,16 @@ export function Explorer({ datasetId, coverage = [] }: {
           options={options("cta_type").map((row) => [row.value, `${row.label} (${row.n})`])} />
         <Select id="f-platform" label="แพลตฟอร์ม" value={filters.platform ?? ""} onChange={(v) => set("platform", v)}
           options={options("publisher_platform").map((row) => [row.value, `${row.label} (${row.n})`])} />
-        <PageFilter
+        {!simple?<PageFilter
           value={filters.page ?? ""}
           onChange={(v) => set("page", v)}
           options={options("page")}
-        />
+        />:null}
 
-        <button type="button" data-testid="advanced-toggle" className={styles.advancedButton}
+        {!simple?<button type="button" data-testid="advanced-toggle" className={styles.advancedButton}
           aria-expanded={advancedOpen} onClick={() => setAdvancedOpen((open) => !open)}>
           ตัวกรองขั้นสูง{advancedCount(filters) ? ` (${advancedCount(filters)})` : ""}
-        </button>
+        </button>:null}
 
         <label className={styles.sort} htmlFor="f-sort">
           <span className={styles.label}>เรียงตาม</span>
@@ -175,6 +218,7 @@ export function Explorer({ datasetId, coverage = [] }: {
             ตาราง
           </button>
         </div>
+        </>:null}
       </div>
 
       {applied.length ? (
@@ -208,16 +252,49 @@ export function Explorer({ datasetId, coverage = [] }: {
           {total > 0 ? ` · แสดง ${offset + 1}–${offset + rows.length}` : ""}
         </p>
         <p className={styles.note}>
-          แพลตฟอร์มและหมวดเพจเป็นฟิลด์หลายค่า — ผลรวมจึงเกิน 100% ได้
+          ข้อมูลโฆษณาสาธารณะ · อ้างอิงสถานะตามรอบที่เก็บ
         </p>
       </div>
 
-      {loading ? <LoadingSkeleton rows={4} /> : null}
+      {error ? <div role="alert" className={styles.resultBar}>
+        <p>{error}</p><button type="button" onClick={() => setRetry((value) => value + 1)}>ลองอีกครั้ง</button>
+      </div> : loading ? <LoadingSkeleton rows={4} /> : null}
+
+      {comparison.length > 0 ? <div className={styles.compareBar}>
+        <span aria-live="polite">เลือกแล้ว {comparison.length} / 4 แอด</span>
+        <button type="button" disabled={comparison.length < 2} aria-expanded={comparing}
+          data-testid="compare-selected" onClick={() => setComparing((value) => !value)}>
+          {comparing ? "ปิดการเปรียบเทียบ" : "เปรียบเทียบแอด"}
+        </button>
+        <button type="button" onClick={() => { setComparison([]); setComparing(false); }}>ล้างที่เลือก</button>
+      </div> : null}
+
+      {comparing && comparison.length >= 2 ? <section className={styles.comparison} data-testid="creative-comparison" aria-label="เปรียบเทียบครีเอทีฟ">
+        <h3>เปรียบเทียบแอดที่เลือก</h3>
+        <p className={styles.note}>ข้อมูลตามรอบที่เก็บ · อายุและจำนวนการใช้ซ้ำไม่ได้บอกผลตอบแทนของแอด</p>
+        <div className={styles.compareGrid}>
+          {comparison.map((row) => <div key={row.ad_archive_id} className={styles.compareColumn}>
+            <AdCard ad={row} compact onOpen={() => setSelected(row.ad_archive_id)} />
+            <dl>
+              <dt>Library ID</dt><dd>{row.ad_archive_id}</dd>
+              <dt>หัวเรื่อง</dt><dd className={styles.compareTitle}>{dash(row.title)}</dd>
+              <dt>ข้อความโฆษณา</dt><dd><p className={styles.compareCopy}>{dash(row.body_text)}</p>
+                <button type="button" className={styles.readMore} onClick={() => setSelected(row.ad_archive_id)}>อ่านข้อความทั้งหมด</button>
+              </dd>
+              <dt>CTA</dt><dd>{dash(row.cta_text ?? row.cta_type)}</dd>
+              <dt>แพลตฟอร์ม</dt><dd>{dash(row.publisher_platform)}</dd>
+              <dt>เริ่มแสดง</dt><dd>{thaiDate(row.start_date)}</dd>
+              <dt>พบครั้งแรก</dt><dd>{thaiDate(row.first_seen_at)}</dd>
+            </dl>
+            <button type="button" onClick={() => choose(row)}>นำออกจากการเปรียบเทียบ</button>
+          </div>)}
+        </div>
+      </section> : null}
 
       {/* "This dataset is empty" and "your filters matched nothing" are
           different answers. Showing the filter version for an empty dataset
           would send someone hunting for a filter they never set. */}
-      {!loading && rows.length === 0 ? (
+      {!error && !loading && rows.length === 0 ? (
         applied.length === 0 ? (
           <EmptyState
             testId="explorer-empty"
@@ -238,15 +315,18 @@ export function Explorer({ datasetId, coverage = [] }: {
         )
       ) : null}
 
-      {!loading && rows.length && view === "grid" ? (
+      {!error && !loading && rows.length && view === "grid" ? (
         <div className={styles.grid} data-testid="ads-grid">
           {rows.map((row) => (
-            <AdCard key={row.ad_archive_id} ad={row} onOpen={() => setSelected(row.ad_archive_id)} />
+            <div key={row.ad_archive_id} className={styles.selectableCard}>
+              {compareControl(row)}
+              <AdCard ad={row} onOpen={() => setSelected(row.ad_archive_id)} />
+            </div>
           ))}
         </div>
       ) : null}
 
-      {!loading && rows.length && view === "table" ? (
+      {!error && !loading && rows.length && view === "table" ? (
         // Nine columns do not fit a phone; the table scrolls inside itself
         // rather than dragging the page sideways.
         <div className={styles.tableScroll}>
@@ -258,7 +338,7 @@ export function Explorer({ datasetId, coverage = [] }: {
                 <th>CTA</th><th>แพลตฟอร์ม</th>
                 <th className={styles.thNum}>เริ่มแสดง</th>
                 <th className={styles.thNum}>อายุ (วัน)</th>
-                <th>สถานะ</th>
+                <th>สถานะ</th><th>เปรียบเทียบ</th>
               </tr>
             </thead>
             <tbody>
@@ -286,6 +366,7 @@ export function Explorer({ datasetId, coverage = [] }: {
                   <td data-testid={`active-${row.ad_archive_id}`}>
                     <StatusBadge isActive={row.is_active} />
                   </td>
+                  <td>{compareControl(row)}</td>
                 </tr>
               ))}
             </tbody>
@@ -294,18 +375,18 @@ export function Explorer({ datasetId, coverage = [] }: {
       ) : null}
 
       <div className={styles.pager}>
-        <button type="button" data-testid="prev-page" disabled={offset === 0}
+        <button type="button" data-testid="prev-page" disabled={loading || !!error || offset === 0}
           onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}>
           ก่อนหน้า
         </button>
-        <button type="button" data-testid="next-page" disabled={offset + PAGE_SIZE >= total}
+        <button type="button" data-testid="next-page" disabled={loading || !!error || offset + PAGE_SIZE >= total}
           onClick={() => setOffset(offset + PAGE_SIZE)}>
           ถัดไป
         </button>
       </div>
 
       {selected ? (
-        <AdDrawer adArchiveId={selected} datasetId={datasetId} onClose={() => setSelected(null)} />
+        <AdDrawer adArchiveId={selected} datasetId={datasetId} canAnalyze={canAnalyze} onClose={() => setSelected(null)} />
       ) : null}
     </section>
   );
@@ -456,10 +537,10 @@ function PageFilter({ value, onChange, options }: {
     <div className={styles.pageFilter}>
       <span className={styles.label}>เพจ</span>
       <input
-        data-testid="f-page-search" value={search} placeholder="ค้นชื่อเพจ"
+        data-testid="f-page-search" aria-label="ค้นชื่อเพจในตัวกรอง" value={search} placeholder="ค้นชื่อเพจ"
         onChange={(event) => setSearch(event.target.value)}
       />
-      <select data-testid="f-page" value={value} onChange={(event) => onChange(event.target.value)}>
+      <select data-testid="f-page" aria-label="เลือกเพจ" value={value} onChange={(event) => onChange(event.target.value)}>
         <option value="">ทั้งหมด ({options.length})</option>
         {matching.slice(0, 200).map((row) => (
           <option key={row.value} value={row.value}>{row.label} ({row.n})</option>

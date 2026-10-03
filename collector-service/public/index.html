@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>PT Glory Collector Service Prototype</title>
+  <style>
+    :root { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color:#161616; background:#f6f6f7; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; }
+    .shell { max-width:1120px; margin:0 auto; padding:40px 24px 72px; }
+    .eyebrow { letter-spacing:.12em; font-size:12px; font-weight:800; color:#6d6d72; }
+    h1 { margin:8px 0 8px; font-size:38px; line-height:1.05; }
+    .lead { max-width:760px; margin:0 0 28px; color:#626267; font-size:16px; line-height:1.6; }
+    .grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(340px,.78fr); gap:20px; }
+    .card { background:#fff; border:1px solid #e3e3e6; border-radius:18px; padding:22px; box-shadow:0 10px 30px rgba(0,0,0,.035); }
+    .card h2 { margin:0 0 18px; font-size:18px; }
+    label { display:block; font-size:13px; font-weight:750; margin:14px 0 7px; }
+    input, select { width:100%; border:1px solid #d7d7dc; background:#fff; border-radius:11px; min-height:44px; padding:0 12px; font:inherit; outline:none; }
+    input:focus, select:focus { border-color:#919199; box-shadow:0 0 0 3px rgba(0,0,0,.05); }
+    .row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    button, .button { border:0; border-radius:11px; min-height:44px; padding:0 16px; font:inherit; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; text-decoration:none; }
+    button.primary { width:100%; margin-top:20px; background:#171719; color:white; }
+    button.secondary, .button.secondary { background:#ededf0; color:#232326; }
+    button.danger { background:#fff0f0; color:#a42828; }
+    button:disabled { opacity:.45; cursor:not-allowed; }
+    .status-head { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .pill { display:inline-flex; border-radius:999px; background:#ededf0; padding:7px 10px; font-size:12px; font-weight:850; text-transform:uppercase; }
+    .pill.running { background:#fff4cd; }
+    .pill.finished { background:#dff7e6; }
+    .pill.failed, .pill.cancelled { background:#ffe5e5; }
+    .progress-line { margin:24px 0 9px; display:flex; justify-content:space-between; font-size:13px; }
+    .track { height:10px; border-radius:999px; background:#ececef; overflow:hidden; }
+    .bar { height:100%; width:0; background:#242428; transition:width .25s ease; }
+    .stats { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:18px; }
+    .stat { border:1px solid #ececef; border-radius:12px; padding:12px; }
+    .stat strong { font-size:20px; display:block; }
+    .stat span { font-size:12px; color:#737379; }
+    .quality { margin-top:16px; display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+    .quality > div { background:#f7f7f8; border-radius:10px; padding:10px; }
+    .quality b { display:block; }
+    .quality small { color:#74747a; }
+    .message { margin-top:16px; min-height:44px; padding:12px; border-radius:11px; background:#f7f7f8; color:#55555b; font-size:13px; line-height:1.5; word-break:break-word; }
+    .actions { display:flex; gap:10px; margin-top:16px; flex-wrap:wrap; }
+    .arch { margin-top:20px; }
+    .flow { display:grid; grid-template-columns:repeat(5,1fr); align-items:center; gap:8px; }
+    .flow div { text-align:center; padding:14px 8px; border:1px solid #e5e5e8; border-radius:12px; background:white; font-size:13px; font-weight:750; }
+    .note { margin-top:18px; padding:14px; background:#fff8dc; border-radius:12px; color:#61562b; font-size:13px; line-height:1.55; }
+    code { background:#f0f0f2; padding:2px 5px; border-radius:5px; }
+    @media (max-width:800px) { .grid { grid-template-columns:1fr; } .flow { grid-template-columns:1fr; } h1 { font-size:31px; } }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <div class="eyebrow">PT GLORY · FAST COLLECTOR DEMO</div>
+    <h1>เก็บ Meta Ads โดยไม่ต้องเปิด Ads Library เอง</h1>
+    <p class="lead">Prototype v0.2.14 เน้นงาน 500–1,000 Ads: Direct pagination ต่อเนื่องแบบ fast path, ตรวจ source exhaustion / cursor cycle และหยุด recovery loop ที่ไม่เพิ่มข้อมูล เพื่อให้ throughput เข้าใกล้ระดับ Apify มากขึ้น</p>
+
+    <section class="grid">
+      <div class="card">
+        <h2>สร้าง Collection Job</h2>
+        <form id="jobForm">
+          <label for="keyword">Keyword</label>
+          <input id="keyword" value="ฮายอง" required />
+          <div class="row">
+            <div>
+              <label for="country">Country</label>
+              <select id="country"><option value="TH">Thailand (TH)</option><option value="US">United States (US)</option><option value="SG">Singapore (SG)</option></select>
+            </div>
+            <div>
+              <label for="target">Target</label>
+              <input id="target" type="number" min="1" max="1000" value="500" />
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <label for="status">Ad status</label>
+              <select id="status"><option value="active">Active</option><option value="all">All</option><option value="inactive">Inactive</option></select>
+            </div>
+            <div>
+              <label for="mediaType">Media</label>
+              <select id="mediaType"><option value="all">All</option><option value="image">Image</option><option value="video">Video</option></select>
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <label for="engine">Collector Engine</label>
+              <select id="engine">
+                <option value="network_first">Fast Network-first (แนะนำ)</option>
+                <option value="dom_only">Stable DOM</option>
+              </select>
+            </div>
+            <div>
+              <label for="workerMode">Browser Worker</label>
+              <select id="workerMode">
+                <option value="local_chrome">Google Chrome บนเครื่อง</option>
+                <option value="bundled_chromium">Playwright Chromium</option>
+              </select>
+            </div>
+          </div>
+          <button id="startBtn" class="primary" type="submit">Start Collector</button>
+        </form>
+        <div class="note">Fast Network-first จะใช้ DOM แค่ bootstrap/enrichment เท่าที่จำเป็น จากนั้นให้ Direct GraphQL เป็นตัวขับ pagination หลัก หาก direct หยุดจึงใช้ scroll trigger แบบจำกัด ไม่มี proxy/fingerprint spoofing และไม่หลบ login/checkpoint</div>
+      </div>
+
+      <div class="card">
+        <div class="status-head">
+          <h2 style="margin:0">Job Status</h2>
+          <span id="statusPill" class="pill">idle</span>
+        </div>
+        <div class="progress-line"><span>Progress</span><b id="progressText">0 / 0</b></div>
+        <div class="track"><div id="bar" class="bar"></div></div>
+        <div class="stats">
+          <div class="stat"><strong id="accepted">0</strong><span>Accepted</span></div>
+          <div class="stat"><strong id="detected">0</strong><span>Detected</span></div>
+          <div class="stat"><strong id="rounds">0</strong><span>Rounds</span></div>
+          <div class="stat"><strong id="jobId">—</strong><span>Job ID</span></div>
+          <div class="stat"><strong id="networkAds">0</strong><span>Network Ads</span></div>
+          <div class="stat"><strong id="replays">0</strong><span>Direct Pages</span></div>
+          <div class="stat"><strong id="scrolls">0</strong><span>Scroll Triggers</span></div>
+          <div class="stat"><strong id="elapsed">—</strong><span>Elapsed</span></div>
+          <div class="stat"><strong id="engineNow">—</strong><span>Engine</span></div>
+          <div class="stat"><strong id="graphql">0</strong><span>GraphQL Responses</span></div>
+          <div class="stat"><strong id="warmup">—</strong><span>Warm-up</span></div>
+        </div>
+        <div class="quality">
+          <div><b id="qCore">—</b><small>Core</small></div>
+          <div><b id="qIdentity">—</b><small>Identity</small></div>
+          <div><b id="qScope">—</b><small>Scope</small></div>
+        </div>
+        <div id="message" class="message">พร้อมสร้าง Job ใหม่</div>
+        <div class="actions">
+          <a id="downloadBtn" class="button secondary" hidden>Download JSON</a>
+          <button id="cancelBtn" class="danger" type="button" hidden>Cancel</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="arch">
+      <div class="flow">
+        <div>PT Glory Web</div><div>→ API Job</div><div>→ Local Chrome Worker</div><div>→ Network-first + DOM fallback</div><div>→ JSON / Database</div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    let eventSource = null;
+    let activeJobId = null;
+
+    function render(job) {
+      const status = job?.status || 'idle';
+      const progress = job?.progress || {};
+      const target = Number(job?.input?.target || progress.target || 0);
+      const count = Number(progress.count || 0);
+      $('statusPill').textContent = status;
+      $('statusPill').className = `pill ${status}`;
+      $('progressText').textContent = `${count} / ${target}`;
+      $('bar').style.width = `${target ? Math.min(100, count / target * 100) : 0}%`;
+      $('accepted').textContent = count;
+      $('detected').textContent = progress.detectedCount ?? count;
+      $('rounds').textContent = progress.rounds ?? 0;
+      $('networkAds').textContent = progress.networkAds ?? 0;
+      $('replays').textContent = progress.replaySuccesses ?? 0;
+      $('scrolls').textContent = progress.scrollTriggers ?? progress.result?.network_diagnostics?.network_dominant?.total_scroll_triggers ?? 0;
+      $('graphql').textContent = progress.graphqlResponses ?? progress.result?.network_diagnostics?.graphql_responses ?? 0;
+      const warmupAttempts = progress.warmupAttempts ?? progress.result?.collection?.warmup?.attempts?.length;
+      const warmupCurrent = progress.warmupAttempt;
+      const warmupMax = progress.warmupMaxAttempts;
+      const warmupRecovered = progress.warmupRecovered ?? progress.result?.collection?.warmup?.recovered;
+      $('warmup').textContent = warmupCurrent
+        ? `${warmupCurrent}/${warmupMax || '?'}…`
+        : warmupAttempts ? `${warmupAttempts}${warmupRecovered ? ' ✓' : ''}` : '—';
+      const elapsedMs = progress.result?.performance?.elapsed_ms ?? progress.elapsedMs;
+      $('elapsed').textContent = elapsedMs != null ? `${(Number(elapsedMs) / 1000).toFixed(1)}s` : '—';
+      $('engineNow').textContent = progress.engine || job?.input?.engine || '—';
+      $('jobId').textContent = job?.id ? job.id.replace(/^job-/, '').slice(-10) : '—';
+      $('qCore').textContent = progress.quality?.core != null ? `${progress.quality.core}%` : '—';
+      $('qIdentity').textContent = progress.quality?.identity != null ? `${progress.quality.identity}%` : '—';
+      $('qScope').textContent = progress.quality?.scope != null ? `${progress.quality.scope}%` : '—';
+      $('message').textContent = job?.error || progress.message || progress.reason || progress.state || '—';
+      $('downloadBtn').hidden = status !== 'finished';
+      $('cancelBtn').hidden = !['queued','running'].includes(status);
+      $('startBtn').disabled = ['queued','running'].includes(status);
+      if (status === 'finished' && job?.id) $('downloadBtn').href = `/api/jobs/${job.id}/export`;
+    }
+
+    function watchJob(id) {
+      eventSource?.close();
+      eventSource = new EventSource(`/api/jobs/${id}/events`);
+      eventSource.onmessage = (event) => {
+        const job = JSON.parse(event.data);
+        render(job);
+        if (['finished','failed','cancelled'].includes(job.status)) eventSource.close();
+      };
+    }
+
+    $('jobForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const payload = {
+        keyword: $('keyword').value,
+        country: $('country').value,
+        target: Number($('target').value),
+        status: $('status').value,
+        mediaType: $('mediaType').value,
+        workerMode: $('workerMode').value,
+        engine: $('engine').value
+      };
+      const response = await fetch('/api/jobs', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+      const body = await response.json();
+      if (!response.ok) return render({ status:'failed', error:body.error, input:payload, progress:{target:payload.target} });
+      activeJobId = body.id;
+      render(body);
+      watchJob(body.id);
+    });
+
+    $('cancelBtn').addEventListener('click', async () => {
+      if (!activeJobId) return;
+      await fetch(`/api/jobs/${activeJobId}`, { method:'DELETE' });
+    });
+  </script>
+</body>
+</html>

@@ -68,6 +68,7 @@ export async function connect(): Promise<pg.Client> {
 export async function resetTables(client: pg.Client): Promise<void> {
   assertDestructiveAllowed(process.env.DATABASE_URL, "truncate of the fixture tables");
   await client.query(`truncate table
+    public.owned_ad_reports,
     public.audit_logs, public.import_quarantine, public.dataset_quality,
     public.dataset_ads, public.ad_observations, public.ads,
     public.page_observations, public.pages, public.datasets,

@@ -25,7 +25,7 @@
 
 .tint {
   background: var(--brand-tint);
-  border-color: rgba(242, 101, 34, 0.22);
+  border-color: var(--brand-deep);
 }
 
 .head {

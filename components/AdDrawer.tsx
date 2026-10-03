@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from 'next/link';
 import { mediaPresentation, type Media } from "@/lib/media";
 import { MEDIA_STATE_MESSAGE, resolveMedia } from "@/lib/media/resolve";
 import { formatIdentity } from "@/lib/media/format";
@@ -41,14 +42,15 @@ type History = {
   publisher_platform: string[] | null; cta_type: string | null; collation_count: number | null;
 };
 
-export function AdDrawer({ adArchiveId, datasetId, onClose }: {
-  adArchiveId: string; datasetId: string | null; onClose: () => void;
+export function AdDrawer({ adArchiveId, datasetId, onClose, compareHref, canAnalyze=false }: {
+  adArchiveId: string; datasetId: string | null; onClose: () => void; compareHref?:string; canAnalyze?:boolean;
 }) {
   const [state, setState] = useState<
     { status: "loading" } | { status: "missing" } | { status: "ready"; detail: Detail; history: History[] }
   >({ status: "loading" });
-  const drawerRef = useRef<HTMLDivElement>(null);
+  const drawerRef = useRef<HTMLDialogElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
+  const [catalogLink,setCatalogLink]=useState<string|undefined>();
 
   useEffect(() => {
     let live = true;
@@ -64,52 +66,41 @@ export function AdDrawer({ adArchiveId, datasetId, onClose }: {
     return () => { live = false; };
   }, [adArchiveId, datasetId]);
 
-  /*
-   * Dialog behaviour: Escape closes, focus moves in on open and returns to
-   * whatever opened it on close, and Tab stays inside while it is open. A panel
-   * that traps focus behind an overlay is unusable by keyboard, and one that
-   * drops focus to the top of the document loses the reader's place in a grid
-   * of thirty cards.
-   */
   useEffect(() => {
-    const opener = document.activeElement as HTMLElement | null;
-    closeRef.current?.focus();
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") { event.stopPropagation(); onClose(); return; }
-      if (event.key !== "Tab") return;
-
-      const focusable = drawerRef.current?.querySelectorAll<HTMLElement>(
-        'a[href], button:not([disabled]), input, select, textarea, video[controls], [tabindex]:not([tabindex="-1"])',
-      );
-      if (!focusable || focusable.length === 0) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
-      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+    const element=drawerRef.current;
+    const opener=document.activeElement as HTMLElement|null;
+    const overflow=document.body.style.overflow;
+    document.body.style.overflow='hidden';
+    element?.showModal();closeRef.current?.focus();
+    return ()=>{
+      element?.close();document.body.style.overflow=overflow;
+      if(opener?.isConnected)opener.focus({preventScroll:true});
     };
-
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("keydown", onKeyDown);
-      // Back to the card or row that opened this, not to the top of the page.
-      if (opener && document.contains(opener)) opener.focus();
-    };
-  }, [onClose]);
+  }, []);
 
   const detail = state.status === "ready" ? state.detail : null;
   const title = detail?.page_name ?? "รายละเอียดโฆษณา";
+  useEffect(()=>{
+    if(!canAnalyze||compareHref||datasetId||!detail?.observed_at)return;
+    const controller=new AbortController();
+    fetch(`/api/catalog/ads?ad=${encodeURIComponent(adArchiveId)}&limit=1`,{signal:controller.signal}).then(async response=>{
+      if(!response.ok)return;const body=await response.json();const row=body.rows?.[0];
+      if(row?.dataset_id&&row.ad_archive_id===adArchiveId&&Date.parse(row.observed_at)===Date.parse(detail.observed_at!))setCatalogLink(`/compare/ads?${new URLSearchParams({dataset:row.dataset_id,rival:adArchiveId})}`);
+    }).catch(()=>{});
+    return ()=>controller.abort();
+  },[canAnalyze,compareHref,datasetId,detail?.observed_at,adArchiveId]);
+  const comparison=compareHref??(canAnalyze&&datasetId?`/compare/ads?${new URLSearchParams({dataset:datasetId,rival:adArchiveId})}`:catalogLink);
 
   return (
     <>
-      <button type="button" className={styles.scrim} aria-label="ปิดรายละเอียดโฆษณา" onClick={onClose} />
-      <div
+      <dialog
         ref={drawerRef}
-        role="dialog"
         aria-modal="true"
         aria-label={`รายละเอียดโฆษณา ${title}`}
         data-testid="ad-drawer"
         className={styles.drawer}
+        onCancel={event=>{event.preventDefault();onClose();}}
+        onClick={event=>{if(event.target===event.currentTarget)onClose();}}
       >
         <header className={styles.header}>
           <div className={styles.headerText}>
@@ -124,8 +115,8 @@ export function AdDrawer({ adArchiveId, datasetId, onClose }: {
             {detail ? (
               <p className={styles.contextLine} data-testid="drawer-context" data-context={detail.context}>
                 {detail.context === "dataset"
-                  ? `ข้อมูลใน Dataset นี้ · Snapshot ${thaiDateTime(detail.observed_at)}`
-                  : "สถานะล่าสุดจากทุกรอบ (ไม่ใช่ snapshot ของ Dataset ใด)"}
+                  ? `ข้อมูลรอบที่เลือก · เก็บเมื่อ ${thaiDateTime(detail.observed_at)}`
+                  : `ข้อมูลที่พบล่าสุด · ${thaiDateTime(detail.observed_at)}`}
               </p>
             ) : null}
           </div>
@@ -148,7 +139,8 @@ export function AdDrawer({ adArchiveId, datasetId, onClose }: {
           ) : null}
           {state.status === "ready" ? <Body detail={state.detail} history={state.history} /> : null}
         </div>
-      </div>
+        {comparison&&state.status==='ready'?<footer className={styles.actions}><span>เลือกแอดนี้ แล้วหาแอดของเราที่ขายสินค้าคล้ายกันมาเทียบ</span><Link href={comparison}>เทียบกับแอดของเรา →</Link></footer>:null}
+      </dialog>
     </>
   );
 }
@@ -158,10 +150,11 @@ function Body({ detail, history }: { detail: Detail; history: History[] }) {
   const categories = detail.page_categories?.length ? detail.page_categories.join(" · ") : "—";
 
   return (
-    <>
-      <section className={styles.section}>
-        <Creative detail={detail} />
+    <div className={styles.reading}>
+      <section className={styles.creativeSection}>
+        <AdCreative detail={detail} />
       </section>
+      <div className={styles.detailSections}>
 
       {/* Copy first after the creative: it is what an ad actually says. */}
       {detail.body_text || detail.title || detail.caption ? (
@@ -236,7 +229,8 @@ function Body({ detail, history }: { detail: Detail; history: History[] }) {
         <h3 className={styles.sectionTitle}>ประวัติการสังเกต</h3>
         <ObservationHistory history={history} currentObservedAt={detail.observed_at} />
       </section>
-    </>
+      </div>
+    </div>
   );
 }
 
@@ -282,7 +276,7 @@ function destinationLabel(url: string): string {
  * distinct — an archived poster is never reported as "no media" merely because
  * the original CDN link has expired.
  */
-function Creative({ detail }: { detail: Detail }) {
+export function AdCreative({ detail }: { detail: Pick<Detail, 'display_format' | 'media' | 'archive_url' | 'archive_status'> }) {
   const [sourceBroken, setSourceBroken] = useState(false);
   const [imageBroken, setImageBroken] = useState(false);
   const identity = formatIdentity(detail.display_format);
@@ -418,7 +412,7 @@ function ObservationHistory({ history, currentObservedAt }: {
             <div className={styles.observationHead}>
               <span className={styles.observationDate}>{thaiDateTime(row.observed_at)}</span>
               {isCurrent ? (
-                <span className={styles.currentTag}>Snapshot ปัจจุบันใน Dataset นี้</span>
+                <span className={styles.currentTag}>ข้อมูลรอบที่เลือก</span>
               ) : null}
               <StatusBadge isActive={row.is_active} />
             </div>

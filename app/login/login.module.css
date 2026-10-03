@@ -1,69 +1,15 @@
-/*
- * Identity, not a marketing page.
- *
- * The soft-pink band is the level-2 surface doing brand work where there is no
- * data to carry it — it is the reason the screen still reads as PT Glory with
- * the orange button hidden.
- */
-.wrap {
-  min-height: 100vh;
-  display: grid;
-  place-items: center;
-  padding: 24px;
-  background:
-    radial-gradient(120% 80% at 50% 0%, var(--surface-pink) 0%, transparent 60%),
-    var(--paper);
-}
-
-.card {
-  width: 100%;
-  max-width: 400px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  overflow: hidden;
-}
-
-.head {
-  background: var(--surface-pink);
-  border-bottom: 1px solid var(--line-pink);
-  padding: 26px 26px 22px;
-}
-
-.body { padding: 22px 26px 26px; }
-
-.welcome {
-  font-family: var(--display);
-  font-size: var(--fs-title);
-  font-weight: 600;
-  letter-spacing: -0.015em;
-  margin: 18px 0 4px;
-}
-.sub { color: var(--muted); font-size: var(--fs-meta); margin: 0; }
-
-.form { display: grid; gap: 16px; }
-.field { display: grid; gap: 6px; font-size: var(--fs-meta); color: var(--muted); font-weight: 600; }
-.field input {
-  width: 100%;
-  min-height: 46px;
-  font-size: var(--fs-body);
-  color: var(--ink);
-  background: var(--paper);
-}
-.field input:focus { background: var(--surface); }
-
-.submit { min-height: 48px; width: 100%; justify-content: center; }
-
-.foot {
-  margin: 18px 0 0;
-  font-size: var(--fs-meta);
-  color: var(--muted);
-  text-align: center;
-}
-
-@media (max-width: 480px) {
-  .wrap { padding: 16px; place-items: start center; padding-top: 40px; }
-  .head { padding: 22px 20px 18px; }
-  .body { padding: 20px; }
-}
+.wrap { min-height:100vh; display:grid; place-items:center; padding:40px 24px; background:#122b29; }
+.card { width:100%; max-width:460px; background:var(--surface); border-radius:18px; overflow:hidden; box-shadow:0 24px 80px #0003; }
+.head { display:flex; align-items:center; gap:14px; padding:32px 36px; border-bottom:1px solid var(--line); }
+.logo { display:grid; place-items:center; width:48px; height:48px; background:#c8eee0; color:#122b29; font-size:var(--fs-page-title); letter-spacing:-2px; font-weight:700; border-radius:12px; }
+.wordmark { font-size:var(--fs-title-sm); font-weight:700; letter-spacing:2px; }
+.wordmark span { display:block; font-size:var(--fs-eyebrow); letter-spacing:2.5px; color:var(--muted); margin-top:4px; }
+.body { padding:32px 36px; }
+.welcome { font-family:var(--ui); font-size:var(--fs-title); font-weight:500; margin:0 0 10px; }
+.sub { color:var(--muted); font-size:var(--fs-eyebrow); margin:0 0 24px; }
+.form { display:grid; gap:18px; }
+.field { display:grid; gap:8px; font-size:var(--fs-eyebrow); color:var(--muted); font-weight:500; }
+.field input { width:100%; min-height:46px; color:var(--ink); background:var(--paper); }
+.submit { min-height:48px; width:100%; }
+.foot { margin:24px 0 0; font-size:var(--fs-eyebrow); color:var(--muted); text-align:center; }
+@media(max-width:480px) { .wrap { padding:20px; } .head,.body { padding:26px; } }

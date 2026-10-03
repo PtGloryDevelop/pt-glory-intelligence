@@ -26,7 +26,7 @@ const ui = IBM_Plex_Sans_Thai({
 
 export const metadata: Metadata = {
   title: "PT Glory Intelligence",
-  description: "ระบบวิเคราะห์โฆษณาคู่แข่งภายในของ PT Glory",
+  description: "คลังแอดคู่แข่งและรายงานแอดของบริษัท PT Glory",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

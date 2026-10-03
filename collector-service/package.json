@@ -1,0 +1,27 @@
+{
+  "name": "pt-glory-collector-service-prototype",
+  "version": "0.2.14",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.mjs",
+    "dev": "node --watch src/server.mjs",
+    "audit:fixture": "node scripts/audit-fixture.mjs",
+    "test:network": "node scripts/test-network-parser.mjs",
+    "test:access": "node scripts/test-access-guard.mjs",
+    "test:graphql": "node scripts/test-graphql-inspector.mjs",
+    "test:direct": "node scripts/test-direct-pagination.mjs",
+    "test:minscroll": "node scripts/test-minimal-scroll.mjs",
+    "test:untiltarget": "node scripts/test-direct-until-target.mjs",
+    "test:reentry": "node scripts/test-network-reentry.mjs",
+    "test:targetaware": "node scripts/test-target-aware-direct.mjs",
+    "test:early": "node scripts/test-early-template.mjs",
+    "test:responsepivot": "node scripts/test-response-pivot.mjs",
+    "test:latch": "node scripts/test-ready-latch.mjs",
+    "test:singlepivot": "node scripts/test-single-pivot.mjs",
+    "test:longrun": "node scripts/test-long-run-pagination.mjs"
+  },
+  "dependencies": {
+    "playwright": "^1.59.0"
+  }
+}

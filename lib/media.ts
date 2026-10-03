@@ -21,6 +21,21 @@
 /** Raw shape as stored in `ad_observations.media`. Every field is optional. */
 export type Media = { images?: unknown[]; videos?: unknown[]; cards?: unknown[] } | null;
 
+/** Domain boundary shared by archive fetching and responsive image delivery. */
+export function isAllowedMediaHost(hostname: string): boolean {
+  const host = hostname.toLowerCase().replace(/\.$/, "");
+  return host === "fbcdn.net" || host.endsWith(".fbcdn.net");
+}
+
+export function canOptimizeAdImage(src: string): boolean {
+  try {
+    const url = new URL(src);
+    return url.protocol === "https:" && !url.port && !url.username && !url.password
+      && !url.searchParams.has("access_token") && !/\.(mp4|webm|mov)$/i.test(url.pathname)
+      && isAllowedMediaHost(url.hostname);
+  } catch { return false; }
+}
+
 export type ImageMedia = { kind: "image"; src: string };
 export type VideoMedia = { kind: "video"; src: string; poster: string | null };
 export type PresentableMedia = ImageMedia | VideoMedia;

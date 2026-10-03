@@ -1,230 +1,71 @@
-.shell {
-  display: flex;
-  min-height: 100vh;
-}
-
-/* ---------- Sidebar ---------- */
-
-.sidebar {
-  width: var(--sidebar-w);
-  flex: 0 0 var(--sidebar-w);
-  background: var(--surface);
-  border-right: 1px solid var(--line);
-  display: flex;
-  flex-direction: column;
-  position: sticky;
-  top: 0;
-  height: 100vh;
-  overflow-y: auto;
-  transition: width 0.15s ease, flex-basis 0.15s ease;
-}
-
-.rail {
-  width: var(--sidebar-w-rail);
-  flex-basis: var(--sidebar-w-rail);
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 16px 14px;
-  border-bottom: 1px solid var(--line);
-  min-height: var(--topbar-h);
-}
-
-/* Two brand treatments, swapped by width rather than re-rendered. */
-.lockup { display: block; }
-.markOnly { display: none; }
-.rail .lockup { display: none; }
-.rail .markOnly { display: block; }
-
-.nav { padding: 10px 8px 20px; flex: 1; }
-
-.heading {
-  font-size: var(--fs-eyebrow);
-  letter-spacing: 0.09em;
-  font-weight: 700;
-  color: var(--muted);
-  padding: 14px 10px 6px;
-}
-/*
- * Rail mode: the section name becomes a rule.
- *
- * It used to shrink to 9px with overflow hidden, which silently truncated
- * "INTELLIGENCE" into an unreadable smear inside a 68px column. A divider says
- * the same thing — these items are one group — and the text stays in the
- * accessibility tree for anyone navigating by structure.
- */
-.rail .heading { font-size: 0; padding: 12px 14px 6px; }
-.rail .heading::after { content: ""; display: block; height: 1px; background: var(--line); }
-
-.item,
-.disabled {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  border-radius: var(--radius-sm);
-  font-size: var(--fs-body);
-  min-height: 38px;
-  border-left: 3px solid transparent;
-  text-decoration: none;
-}
-
-.item { color: var(--ink); }
-.item:hover { background: var(--surface-sunken); color: var(--ink); }
-
-/*
- * Active nav is a light orange tint, not a solid orange block — the label stays
- * charcoal and the brand colour appears as the left indicator.
- */
-.active {
-  background: var(--brand-tint);
-  border-left-color: var(--brand);
-  font-weight: 600;
-  color: var(--ink);
-}
-.active:hover { background: var(--brand-tint-strong); }
-
-/* A page that does not exist yet must not look available. */
-.disabled {
-  color: var(--muted);
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
-/* Icons inherit currentColor, so the nav tints them by state and nothing else. */
-.icon {
-  display: grid;
-  place-items: center;
-  flex: 0 0 18px;
-  color: var(--muted);
-}
-.item:hover .icon { color: var(--ink); }
-.active .icon { color: var(--brand); }
-.disabled .icon { color: var(--muted); }
-
-/* line-height leaves room for Thai marks; overflow:hidden would otherwise
-   crop them off the top and bottom of the label. */
-.label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.9; }
-.rail .label { display: none; }
-.rail .item, .rail .disabled { justify-content: center; padding-left: 0; padding-right: 0; }
-
-.footer {
-  border-top: 1px solid var(--line);
-  padding: 12px 14px;
-  font-size: var(--fs-meta);
-  color: var(--muted);
-}
-.footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.rail .footer { text-align: center; padding: 12px 4px; flex-direction: column; gap: 6px; }
-
-.signOut {
-  min-height: 32px;
-  padding: 0 10px;
-  font-size: var(--fs-meta);
-}
-
-.collapse {
-  margin: 0 8px 10px;
-  width: calc(100% - 16px);
-  min-height: 34px;
-  font-size: var(--fs-meta);
-}
-
-/* ---------- Main column ---------- */
-
-.main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-
-.topbar {
-  display: none;
-  align-items: center;
-  gap: 12px;
-  height: var(--topbar-h);
-  padding: 0 14px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--line);
-  position: sticky;
-  top: 0;
-  z-index: 30;
-}
-
-/*
- * Operational pages get a reading width; the Explorer opts out with
- * data-width="wide" because a research grid genuinely wants the canvas.
- */
-.content { padding: var(--gap-page); width: 100%; max-width: var(--content-max); }
-.content[data-width="wide"] { max-width: var(--content-max-wide); }
-
+.shell { display: flex; min-height: 100vh; }
+.skipLink { position: fixed; top: -80px; left: 12px; z-index: 100; padding: 10px 16px; border-radius: var(--radius-sm); color: #ffffff; background: var(--brand-ink); text-decoration: none; }
+.skipLink:focus { top: 12px; color: #ffffff; }
+.sidebar { width: var(--sidebar-w); flex: 0 0 var(--sidebar-w); display: flex; flex-direction: column; position: sticky; top: 0; height: 100dvh; overflow-y: auto; background: #ffffff; color: var(--ink); border-right: 1px solid var(--line); }
+.brand { display: flex; align-items: center; justify-content: space-between; padding: 26px 20px 24px; }
+.wordmark { display: flex; align-items: center; gap: 9px; color: var(--ink); text-decoration: none; min-width: 0; }
+.logo { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 9px; background: var(--ink); color: #ffffff; font-size:var(--fs-title); font-weight: 700; letter-spacing: -1.5px; flex: none; }
+.lockup { font-size:var(--fs-meta); font-weight: 700; letter-spacing: .4px; white-space: nowrap; }
+.lockup small { display: block; color: var(--muted); font-size:var(--fs-eyebrow); font-weight: 500; letter-spacing: .5px; margin-top: 2px; }
+.nav { padding: 0 12px; flex: 1; }
+.heading { padding: 16px 12px 8px; color: var(--muted); font-size:var(--fs-eyebrow); font-weight: 500; }
+.advanced { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 8px; }
+.advanced summary { color: var(--muted); font-size:var(--fs-meta); padding: 10px 12px; cursor: pointer; min-height: 42px; }
+.rail .advanced summary { font-size: 0; padding: 8px; }
+.rail .advanced summary::after { content: '•••'; font-size:var(--fs-meta); }
+.item { display: flex; align-items: center; gap: 11px; padding: 10px 12px; border-radius: 8px; min-height: 46px; color: var(--muted); text-decoration: none; margin: 4px 0; font-size:var(--fs-meta); border: 1px solid transparent; }
+.item:hover { background: #f7f8fa; color: var(--ink); }
+.active, .active:hover { background: #e6f0ff; color: #1d4ed8; border-color: transparent; font-weight: 600; }
+.icon { display: grid; place-items: center; flex: 0 0 18px; }
+.label { min-width:0; white-space:normal; overflow-wrap:anywhere; line-height:1.6; }
+.disabled { display: flex; align-items: center; gap: 11px; padding: 10px 12px; color: var(--muted); font-size:var(--fs-meta); opacity: .65; }
+.soon { font-size:var(--fs-eyebrow); margin-left: auto; }
+.workspaceNote { margin: 28px 20px 14px; padding-top: 16px; border-top: 1px solid var(--line); font-size:var(--fs-meta); color: var(--muted); }
+.workspaceNote small { display: block; font-size:var(--fs-eyebrow); margin-top: 5px; color: var(--muted); line-height: 1.7; }
+.footer { display: grid; gap: 12px; padding: 16px 20px; border-top: 1px solid var(--line); color: var(--muted); font-size:var(--fs-eyebrow); }
+.footer form { margin: 0; }
+.signOut, .collapse { background: transparent; color: var(--muted); border-color: var(--line); font-size:var(--fs-meta); }
+.signOut { width: 100%; min-height: 40px; }
+.signOut:hover, .collapse:hover { background: var(--surface-sunken); color: var(--ink); }
+.collapse { margin: 0 20px 16px; padding: 8px 12px; min-height: 38px; }
+.rail { width: var(--sidebar-w-rail); flex-basis: var(--sidebar-w-rail); }
+.rail .brand { padding: 22px 16px; }
+.rail .lockup, .rail .label, .rail .workspaceNote, .rail .soon { display: none; }
+.rail .heading { font-size: 0; border-top: 1px solid var(--line); margin-top: 14px; padding: 6px; }
+.rail .item { justify-content: center; padding: 10px; }
+.rail .footer { padding: 12px 6px; text-align: center; }
+.rail .signOut { padding: 6px 2px; font-size:var(--fs-eyebrow); }
+.rail .collapse { margin: 10px; }
+.main { flex: 1; min-width: 0; }
+.topbar { min-height: var(--topbar-h); display: flex; align-items: center; justify-content: space-between; padding: 0 32px; border-bottom: 1px solid var(--line); background: var(--surface); }
+.topbar > button, .mobileClose { display: none; }
+.breadcrumb { display: flex; gap: 12px; align-items: center; color: var(--muted); font-size:var(--fs-meta); }
+.breadcrumb strong { color: var(--ink); font-size:var(--fs-meta); font-weight: 500; }
+.sourceTag { font-size:var(--fs-eyebrow); color: var(--muted); }
+.content { padding: 32px 32px 56px; max-width: var(--content-max); width: 100%; margin: auto; }
+.content[data-width='wide'] { max-width: none; }
+.content:has([data-testid='dashboard']) { background: linear-gradient(140deg,#f3f8ff 0%,#f8fbff 55%,#f6faff 100%); min-height:calc(100dvh - var(--topbar-h)); }
 .scrim { display: none; }
-
-/* ---------- Responsive — handoff §11 ---------- */
-
-@media (max-width: 1439px) {
-  .sidebar { width: var(--sidebar-w-rail); flex-basis: var(--sidebar-w-rail); }
-  .sidebar .lockup { display: none; }
-  .sidebar .markOnly { display: block; }
-  .sidebar .label { display: none; }
-  .sidebar .item, .sidebar .disabled { justify-content: center; padding-left: 0; padding-right: 0; }
-  .sidebar .heading { font-size: 0; padding: 12px 14px 6px; }
-  .sidebar .heading::after { content: ""; display: block; height: 1px; background: var(--line); }
-  .sidebar .footer { text-align: center; padding: 12px 4px; }
+@media (max-width: 1100px) { .content { padding: 24px 20px 40px; } .topbar { padding: 0 20px; } }
+@media (max-width: 900px) {
+  .sidebar, .sidebar.rail { position: fixed; inset: 0 auto 0 0; z-index: 50; width: 232px; transform: translateX(-100%); transition: transform .18s ease; visibility: hidden; }
+  .sidebar.open { transform: translateX(0); visibility: visible; }
+  .rail .brand { padding: 22px 16px 20px; }
+  .rail .lockup, .rail .label, .rail .workspaceNote { display: block; }
+  .rail .item { justify-content: flex-start; padding: 9px 10px; }
+  .rail .heading { font-size:var(--fs-eyebrow); border: 0; margin-top: 0; padding: 16px 12px 8px; }
+  .rail .advanced summary { font-size:var(--fs-meta); padding: 10px 12px; }
+  .rail .advanced summary::after { display: none; }
+  .rail .footer { padding: 14px 16px; text-align: left; }
+  .rail .signOut { padding: 8px 14px; font-size:var(--fs-meta); }
+  .mobileClose { display: grid; place-items: center; width: 34px; height: 34px; border: 0; padding: 0; font-size:var(--fs-title); color: var(--muted); }
+  .topbar { position: sticky; top: 0; z-index: 30; min-height: 56px; padding: 0 16px; gap: 12px; }
+  .topbar > button { display: grid; place-items: center; width: 36px; height: 36px; padding: 0; color: var(--muted); font-size:var(--fs-subhead); }
+  .breadcrumb { margin-right: auto; font-size:var(--fs-eyebrow); gap: 8px; }
+  .sourceTag { display: none; }
+  .content { padding: 22px 16px 32px; }
+  .scrim { display: block; position: fixed; inset: 0; z-index: 40; border: 0; border-radius: 0; background: rgba(27, 31, 39, .3); }
+  .scrim:hover:not(:disabled) { background: rgba(27, 31, 39, .3); }
   .collapse { display: none; }
 }
-
-/* Below tablet the sidebar leaves the flow entirely and slides over the page. */
-@media (max-width: 900px) {
-  .topbar { display: flex; }
-  .content { padding: 16px; }
-
-  .sidebar {
-    position: fixed;
-    z-index: 50;
-    top: 0;
-    left: 0;
-    width: var(--sidebar-w);
-    flex-basis: 0;
-    transform: translateX(-100%);
-    transition: transform 0.18s ease;
-    box-shadow: var(--shadow);
-  }
-  .sidebar .lockup { display: block; }
-  .sidebar .markOnly { display: none; }
-  .sidebar .label { display: block; }
-  .sidebar .item, .sidebar .disabled { justify-content: flex-start; padding-left: 10px; padding-right: 10px; }
-  .sidebar .heading { text-align: left; padding-left: 10px; font-size: var(--fs-eyebrow); }
-  .sidebar .footer { text-align: left; padding: 12px 14px; }
-
-  .open { transform: translateX(0); }
-
-  .scrim {
-    display: block;
-    position: fixed;
-    inset: 0;
-    z-index: 40;
-    background: rgba(44, 36, 31, 0.35);
-    border: 0;
-    border-radius: 0;
-  }
-}
-
-/* "coming soon", on the entries that have no route yet. Small and quiet: it is
-   a fact about the menu, not an advertisement. */
-.soon {
-  margin-left: auto;
-  font-size: var(--fs-eyebrow);
-  letter-spacing: 0.02em;
-  padding: 1px 6px;
-  border-radius: var(--radius-pill);
-  background: var(--neutral-tint);
-  color: var(--muted);
-  white-space: nowrap;
-}
-.rail .soon { display: none; }
+@media (prefers-reduced-motion: reduce) { .sidebar { transition: none; } }

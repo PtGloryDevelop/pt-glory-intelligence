@@ -255,8 +255,13 @@ test("every route states its own authorization", () => {
   assert.match(route("collections", "[id]", "diagnostics", "route.ts"), /getActor\(\)/);
   assert.match(route("collector", "usage", "route.ts"), /getActor\(\)/);
   assert.match(route("collector", "settings", "route.ts"), /getActor\(\)/);
+  // Every admin service entry point checks for itself: the three C13 shipped
+  // (diagnostics, usage, settings update) and the two C15 needed for the admin
+  // page (the recovery queue and reading the settings back).
   const admin = readFileSync(join("lib", "collect", "admin.ts"), "utf8");
-  assert.equal(admin.match(/requireAdmin\(actor\)/g)?.length, 3);
+  const exported = admin.match(/^export async function \w+/gm) ?? [];
+  assert.equal(exported.length, 5);
+  assert.equal(admin.match(/requireAdmin\(actor\)/g)?.length, exported.length);
 });
 
 test("the normal read path selects the user-safe view, by name", () => {

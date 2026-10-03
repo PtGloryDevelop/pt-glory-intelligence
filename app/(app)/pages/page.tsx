@@ -26,11 +26,10 @@ export default async function PagesPage({ searchParams }: { searchParams: Promis
   await requireActorOrRedirect();
   const params = await searchParams;
 
-  const scope = parseScope(one(params.scope));
+  const scope = parseScope(one(params.scope)??'all');
 
-  // No scope, no numbers. Every figure on this surface is an aggregate, and an
-  // aggregate with no stated scope is a claim about "the market" — which this
-  // product has no standing to make. So the reader picks first.
+  // Open the team's full catalog by default; an invalid explicit scope still
+  // requires a choice rather than silently widening the evidence.
   if (!scope) return <ScopeChooser />;
 
   const sort = pageSortKey(one(params.sort)) ?? DEFAULT_PAGE_SORT;
