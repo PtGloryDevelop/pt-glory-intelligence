@@ -1,0 +1,978 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PT Glory Ad Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anuphan:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: full-height left rail + one working column; each page = summary first, detail below */
+:root{
+  --ground:#F3F5F8; --surface:#FFFFFF; --sunken:#EDF0F4; --line:#E0E4EB; --line-strong:#CBD2DC;
+  --ink:#111827; --ink-2:#465063; --ink-3:#7A8496;
+  --accent:#1D4ED8; --accent-ink:#FFFFFF; --accent-weak:#E7EDFC;
+  --rival:#0E7A6E; --rival-weak:#E0F2EF;
+  --good:#15803D; --good-weak:#E4F4E9; --warn:#B45309; --warn-weak:#FCF0E1; --bad:#B91C1C; --bad-weak:#FBE8E8;
+  --t1a:#C9D6F5; --t1b:#8EA6E6; --t2a:#CFE7DF; --t2b:#86C2AE; --t3a:#F2DCC4; --t3b:#DDA977; --t4a:#E3D3EE; --t4b:#B597D1;
+  --shadow:0 1px 2px rgba(17,24,39,.05),0 4px 16px rgba(17,24,39,.05);
+  --f-display:"Anuphan","IBM Plex Sans Thai","Noto Sans Thai",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans Thai","Noto Sans Thai",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  --r:10px; --r-sm:7px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --ground:#0D1219; --surface:#151C26; --sunken:#1B2430; --line:#263040; --line-strong:#334053;
+  --ink:#E8ECF2; --ink-2:#AAB4C3; --ink-3:#7E899A;
+  --accent:#7FA2FF; --accent-ink:#0D1219; --accent-weak:#1B2949;
+  --rival:#52C6B5; --rival-weak:#12302C;
+  --good:#5CCB86; --good-weak:#14301F; --warn:#F0A957; --warn-weak:#35260F; --bad:#F38080; --bad-weak:#3A1B1B;
+  --t1a:#26365E; --t1b:#3C5596; --t2a:#1F3D35; --t2b:#2F6B5A; --t3a:#45311C; --t3b:#7A5530; --t4a:#382A47; --t4b:#5E4679;
+  --shadow:0 1px 2px rgba(0,0,0,.3);
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0D1219; --surface:#151C26; --sunken:#1B2430; --line:#263040; --line-strong:#334053;
+  --ink:#E8ECF2; --ink-2:#AAB4C3; --ink-3:#7E899A;
+  --accent:#7FA2FF; --accent-ink:#0D1219; --accent-weak:#1B2949;
+  --rival:#52C6B5; --rival-weak:#12302C;
+  --good:#5CCB86; --good-weak:#14301F; --warn:#F0A957; --warn-weak:#35260F; --bad:#F38080; --bad-weak:#3A1B1B;
+  --t1a:#26365E; --t1b:#3C5596; --t2a:#1F3D35; --t2b:#2F6B5A; --t3a:#45311C; --t3b:#7A5530; --t4a:#382A47; --t4b:#5E4679;
+  --shadow:0 1px 2px rgba(0,0,0,.3);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font:15px/1.6 var(--f-body);-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+.num{font-variant-numeric:tabular-nums}
+.mono{font-family:var(--f-mono);font-size:.82em;letter-spacing:0}
+
+/* shell */
+.app{display:grid;grid-template-columns:236px minmax(0,1fr);min-height:100%}
+.rail{position:sticky;top:0;height:100vh;background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:20px 14px;gap:22px}
+.brand{display:flex;align-items:center;gap:10px;padding:0 6px}
+.mark{width:34px;height:34px;border-radius:8px;background:var(--ink);color:var(--surface);display:grid;place-items:center;font:700 17px/1 var(--f-display)}
+.brand b{display:block;font:700 13px/1.2 var(--f-display);letter-spacing:.06em}
+.brand small{display:block;font-size:10.5px;letter-spacing:.14em;color:var(--ink-3)}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav a{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--r-sm);color:var(--ink-2);text-decoration:none;font-weight:500}
+.nav a svg{width:18px;height:18px;flex:none}
+.nav a:hover{background:var(--sunken);color:var(--ink)}
+.nav a[aria-current="page"]{background:var(--accent-weak);color:var(--accent)}
+.nav a.soon{color:var(--ink-3)}
+.nav a .tag{margin-left:auto;font-size:10.5px;padding:1px 6px;border-radius:99px;background:var(--sunken);color:var(--ink-3)}
+.nav-label{font-size:11px;letter-spacing:.12em;color:var(--ink-3);padding:0 10px 4px}
+.rail-foot{margin-top:auto;font-size:12.5px;color:var(--ink-3);padding:0 8px;display:grid;gap:4px}
+
+.main{min-width:0;display:flex;flex-direction:column}
+.topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:color-mix(in srgb,var(--ground) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 28px}
+.proto{font-size:12px;color:var(--ink-3);margin-right:auto}
+.proto b{color:var(--ink-2);font-weight:600}
+.fresh{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;padding:5px 10px;border:1px solid var(--line);border-radius:99px;background:var(--surface);color:var(--ink-2);white-space:nowrap}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--good);flex:none}
+.dot.warn{background:var(--warn)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid var(--line-strong);background:var(--surface);border-radius:var(--r-sm);padding:7px 13px;font-weight:500;font-size:14px;cursor:pointer;color:var(--ink);text-decoration:none;white-space:nowrap}
+.btn:hover{border-color:var(--ink-3)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--accent);padding-inline:8px}
+.btn.ghost:hover{background:var(--accent-weak)}
+.btn.sm{padding:4px 10px;font-size:13px}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+
+.page{padding-block:26px 64px;padding-inline:28px;max-width:1320px;width:100%;display:flex;flex-direction:column;gap:22px}
+.page[hidden]{display:none!important}
+.head{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.head > div:first-child{margin-right:auto;min-width:0}
+h1{font:700 30px/1.25 var(--f-display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+h2{font:600 18px/1.35 var(--f-display);margin:0;text-wrap:balance}
+h3{font:600 15px/1.4 var(--f-body);margin:0}
+.sub{color:var(--ink-2);margin:4px 0 0;font-size:14px}
+.seg{display:inline-flex;background:var(--sunken);border-radius:var(--r-sm);padding:3px;gap:2px}
+.seg button{border:0;background:transparent;padding:5px 12px;border-radius:5px;font-size:13.5px;color:var(--ink-2);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow);font-weight:600}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);min-width:0}
+.panel-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:16px 18px 12px}
+.panel-h h2{margin-right:auto}
+.panel-h .hint{font-size:12.5px;color:var(--ink-3)}
+
+/* KPIs */
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow)}
+.kpi{background:var(--surface);padding:16px 18px;display:grid;gap:2px;min-width:0}
+.kpi .lbl{font-size:13px;color:var(--ink-2)}
+.kpi .val{font:600 27px/1.25 var(--f-display);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.kpi .val small{font:500 13px var(--f-body);color:var(--ink-3);margin-left:4px}
+.kpi .cmp{font-size:12.5px;color:var(--ink-3);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.delta{display:inline-flex;align-items:center;gap:3px;font-weight:600;font-size:12.5px;padding:1px 7px;border-radius:99px;font-variant-numeric:tabular-nums}
+.delta.good{background:var(--good-weak);color:var(--good)}
+.delta.bad{background:var(--bad-weak);color:var(--bad)}
+.delta.flat{background:var(--sunken);color:var(--ink-2)}
+
+/* overview grid */
+.ov{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(0,1fr);gap:22px;align-items:start}
+.stack{display:flex;flex-direction:column;gap:22px;min-width:0}
+
+/* update feed */
+.feed{list-style:none;margin:0;padding:0 18px 8px}
+.feed li{display:grid;grid-template-columns:64px minmax(0,1fr);gap:14px;padding:14px 0;border-top:1px solid var(--line)}
+.feed li:first-child{border-top:0}
+.kind{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;letter-spacing:.02em;padding:2px 8px;border-radius:99px}
+.kind.ours{background:var(--accent-weak);color:var(--accent)}
+.kind.rival{background:var(--rival-weak);color:var(--rival)}
+.kind.data{background:var(--sunken);color:var(--ink-2)}
+.sev{font-size:12px;font-weight:600}
+.sev.warn{color:var(--warn)} .sev.good{color:var(--good)} .sev.bad{color:var(--bad)}
+.feed h3{font-size:15.5px;margin:5px 0 2px}
+.feed p{margin:0;color:var(--ink-2);font-size:13.5px}
+.feed .acts{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.metaline{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+
+/* thumbs (stand-ins for real creatives) */
+.thumb{position:relative;width:64px;aspect-ratio:1;max-width:100%;border-radius:8px;overflow:hidden;background:linear-gradient(140deg,var(--ta),var(--tb));flex:none}
+.thumb.h1{--ta:var(--t1a);--tb:var(--t1b)} .thumb.h2{--ta:var(--t2a);--tb:var(--t2b)} .thumb.h3{--ta:var(--t3a);--tb:var(--t3b)} .thumb.h4{--ta:var(--t4a);--tb:var(--t4b)}
+.thumb .fmt{position:absolute;left:5px;bottom:5px;font:600 10px/1 var(--f-mono);background:rgba(0,0,0,.55);color:#fff;padding:3px 5px;border-radius:4px;display:flex;align-items:center;gap:3px}
+.thumb.sm{width:44px}
+.thumb.lg{width:100%;aspect-ratio:4/5;border-radius:var(--r-sm)}
+.thumb.lg .fmt{font-size:12px;padding:5px 8px;left:10px;bottom:10px}
+.thumb .ph{position:absolute;inset:0;display:grid;place-items:center;color:rgba(0,0,0,.35);font:600 12px var(--f-body);text-align:center;padding:10px}
+
+/* rival side panel */
+.unit-block{padding:4px 18px 14px;border-top:1px solid var(--line)}
+.unit-block:first-of-type{border-top:0}
+.unit-name{display:flex;align-items:baseline;gap:8px;padding:12px 0 8px}
+.unit-name b{font:600 13px var(--f-mono)}
+.unit-name span{color:var(--ink-2);font-size:13.5px}
+.rcard{display:grid;grid-template-columns:56px minmax(0,1fr);gap:12px}
+.rcard .thumb{width:56px}
+.rcard h3{font-size:14.5px}
+.offer{display:inline-block;margin:4px 0;font-weight:600;font-size:14px;color:var(--ink);background:var(--warn-weak);padding:2px 8px;border-radius:6px}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}
+.chip{font-size:12px;padding:1px 8px;border-radius:99px;border:1px solid var(--line);color:var(--ink-2);background:var(--surface);white-space:nowrap}
+.chip.pending{border-style:dashed;color:var(--warn);border-color:var(--warn)}
+.empty-unit{font-size:13.5px;color:var(--ink-3);padding:6px 0 4px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+
+/* readiness */
+.ready{list-style:none;margin:0;padding:2px 18px 16px;display:grid;gap:12px}
+.ready li{display:grid;gap:5px}
+.ready .row{display:flex;justify-content:space-between;gap:10px;font-size:13.5px}
+.ready .row span:last-child{color:var(--ink-2);font-variant-numeric:tabular-nums;white-space:nowrap}
+.bar{height:6px;border-radius:99px;background:var(--sunken);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--warn);border-radius:99px}
+
+/* tables */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{font-size:12px;font-weight:600;color:var(--ink-3);text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--surface)}
+th.r,td.r{text-align:right}
+th button{border:0;background:none;padding:0;font:inherit;color:inherit;cursor:pointer;display:inline-flex;gap:4px;align-items:center}
+th button[aria-pressed="true"]{color:var(--accent)}
+td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:middle;font-variant-numeric:tabular-nums}
+tbody tr{cursor:pointer}
+tbody tr:hover td{background:var(--sunken)}
+tbody tr:last-child td{border-bottom:0}
+.adcell{display:flex;gap:12px;align-items:center;min-width:260px}
+.adcell b{display:block;font-weight:600}
+.adcell small{display:block;color:var(--ink-3);font-size:12.5px;line-height:1.4;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.unit{font:500 12px var(--f-mono);padding:2px 7px;border-radius:5px;background:var(--sunken);color:var(--ink-2);white-space:nowrap}
+.unit.none{background:var(--warn-weak);color:var(--warn);font-family:var(--f-body)}
+.status{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--ink-2);white-space:nowrap}
+.status .dot.off{background:var(--ink-3)}
+.vs{font-size:11.5px;display:block;font-weight:600}
+.vs.good{color:var(--good)} .vs.bad{color:var(--bad)}
+.spark{width:96px;height:30px;display:block}
+.spark .area{fill:var(--accent-weak)} .spark .line{fill:none;stroke:var(--accent);stroke-width:1.6} .spark .end{fill:var(--accent)}
+.tbl-foot{font-size:12.5px;color:var(--ink-3);padding:10px 18px 14px;display:flex;gap:12px;flex-wrap:wrap;justify-content:space-between}
+
+/* filters */
+.filters{display:flex;gap:10px;flex-wrap:wrap;align-items:end;padding:14px 18px;border-bottom:1px solid var(--line)}
+.field{display:grid;gap:4px;min-width:0}
+.field label{font-size:12px;color:var(--ink-3)}
+.field input,.field select{border:1px solid var(--line-strong);background:var(--surface);border-radius:var(--r-sm);padding:7px 10px;font-size:14px;min-width:0}
+.field.grow{flex:1 1 240px}
+.field.grow input{width:100%}
+
+/* grid view */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px;padding:18px}
+.card{border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--surface);cursor:pointer;display:flex;flex-direction:column}
+.card:hover{border-color:var(--ink-3)}
+.card .thumb{width:100%;aspect-ratio:4/3;border-radius:0}
+.card .body{padding:12px 14px;display:grid;gap:8px}
+.card .top{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.mini{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.mini div{display:grid}
+.mini span{font-size:11.5px;color:var(--ink-3)}
+.mini b{font-weight:600;font-variant-numeric:tabular-nums;font-size:14px}
+
+/* drawer */
+.scrim{position:fixed;inset:0;background:rgba(10,14,22,.35);z-index:40}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(460px,100%);background:var(--surface);border-left:1px solid var(--line);z-index:41;display:flex;flex-direction:column;box-shadow:-12px 0 32px rgba(0,0,0,.12)}
+.drawer-h{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line)}
+.drawer-h h2{margin-right:auto}
+.drawer-b{overflow:auto;padding:18px;display:grid;gap:16px}
+.drawer-f{padding:12px 18px calc(12px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.facts{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden}
+.facts div{background:var(--surface);padding:10px 12px;display:grid}
+.facts span{font-size:12px;color:var(--ink-3)}
+.facts b{font:600 18px var(--f-display);font-variant-numeric:tabular-nums}
+.adtext{white-space:pre-line;font-size:14px;color:var(--ink-2);background:var(--sunken);border-radius:var(--r-sm);padding:12px 14px;margin:0}
+.x{border:0;background:transparent;font-size:22px;line-height:1;cursor:pointer;color:var(--ink-2);padding:4px 8px;border-radius:6px}
+.x:hover{background:var(--sunken)}
+
+/* compare */
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.side{padding:16px 18px;display:grid;gap:12px;align-content:start}
+.side .who{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.side .who h2{margin-right:auto}
+.side .media{display:grid;grid-template-columns:132px minmax(0,1fr);gap:14px;align-items:start}
+.side .media .thumb{width:132px}
+.cmp-tbl td,.cmp-tbl th{vertical-align:top}
+.cmp-tbl tbody tr{cursor:default}
+.cmp-tbl tbody tr:hover td{background:transparent}
+.cmp-tbl td:first-child{color:var(--ink-2);font-size:13.5px;white-space:nowrap;width:150px}
+.cmp-tbl tr.diff td:not(:first-child){background:var(--warn-weak)}
+.cmp-tbl tr.diff:hover td:not(:first-child){background:var(--warn-weak)}
+.src{display:block;font-size:11.5px;color:var(--ink-3);margin-top:2px}
+.flag{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;color:var(--bad)}
+.legend{display:flex;gap:14px;font-size:12.5px;color:var(--ink-3);flex-wrap:wrap}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;background:var(--warn-weak);border:1px solid var(--warn);vertical-align:-2px;margin-right:5px}
+.plan{padding:4px 18px 18px;display:grid;gap:16px}
+.choices{display:flex;gap:8px;flex-wrap:wrap}
+.choices button{border:1px solid var(--line-strong);background:var(--surface);border-radius:99px;padding:6px 14px;font-size:14px;cursor:pointer}
+.choices button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.plan textarea,.plan input[type=text]{width:100%;border:1px solid var(--line-strong);background:var(--surface);border-radius:var(--r-sm);padding:9px 12px;font-size:14px;resize:vertical}
+.prefill{font-size:12px;color:var(--ink-3)}
+.plan-foot{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+
+/* popover + toast */
+.pop{position:absolute;right:28px;top:52px;width:min(380px,calc(100vw - 32px));background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 12px 32px rgba(0,0,0,.14);padding:14px 16px;display:grid;gap:12px;z-index:30}
+.pop .src-row{display:grid;gap:3px;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.pop .src-row:last-of-type{border-bottom:0;padding-bottom:0}
+.pop .src-row .top{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.pop p{margin:0;font-size:13px;color:var(--ink-2)}
+.pop .cost{font-size:12.5px;background:var(--sunken);border-radius:6px;padding:6px 9px;color:var(--ink-2)}
+.pop .free{font-size:12.5px;color:var(--good)}
+.toast{position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--surface);padding:10px 16px;border-radius:8px;font-size:14px;z-index:60;max-width:calc(100vw - 32px);box-shadow:0 8px 24px rgba(0,0,0,.2)}
+
+.note{font-size:12.5px;color:var(--ink-3)}
+
+/* rivals */
+.ugroup-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:14px 18px;border-bottom:1px solid var(--line);background:var(--sunken);border-radius:var(--r) var(--r) 0 0}
+.ugroup-h b{font:600 13px var(--f-mono)}
+.ugroup-h .uname{font-weight:600;margin-right:auto}
+.kw{font-size:12px;padding:1px 8px;border-radius:99px;background:var(--surface);border:1px solid var(--line);color:var(--ink-2)}
+.prow{display:grid;grid-template-columns:56px minmax(0,1.5fr) minmax(0,1.1fr) auto;gap:16px;align-items:center;padding:14px 18px;border-top:1px solid var(--line)}
+.prow:first-of-type{border-top:0}
+.prow .thumb{width:56px}
+.prow h3{font-size:15px;cursor:pointer}
+.prow h3:hover{color:var(--accent)}
+.pstats{display:grid;grid-template-columns:repeat(2,max-content);gap:6px 20px}
+.pstats div{display:grid}
+.pstats span{font-size:11.5px;color:var(--ink-3)}
+.pstats b{font-weight:600;font-variant-numeric:tabular-nums;font-size:14px}
+.pacts{display:grid;gap:6px;justify-items:end}
+.rel{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+.rel button{border:1px solid var(--line-strong);background:var(--surface);border-radius:99px;padding:2px 10px;font-size:12.5px;cursor:pointer;color:var(--ink-2)}
+.rel button:hover{border-color:var(--ink-3);color:var(--ink)}
+.rel button[aria-pressed="true"]{background:var(--rival);border-color:var(--rival);color:var(--surface)}
+.chip.ok{border-color:var(--rival);color:var(--rival);background:var(--rival-weak)}
+.chip.claim{border-color:var(--bad);color:var(--bad);background:var(--bad-weak)}
+.btn.on{background:var(--rival-weak);border-color:var(--rival);color:var(--rival)}
+.collapsed{padding:14px 18px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;color:var(--ink-2);font-size:14px}
+.switch{display:flex;gap:10px;align-items:flex-start;font-size:14px}
+.switch input{margin-top:4px;width:16px;height:16px;accent-color:var(--accent)}
+.side-body{padding:2px 18px 16px;display:grid;gap:12px}
+.est{background:var(--sunken);border-radius:var(--r-sm);padding:10px 12px;font-size:13px;color:var(--ink-2);display:grid;gap:2px}
+.est b{font:600 18px var(--f-display);color:var(--ink);font-variant-numeric:tabular-nums}
+.cap{display:flex;gap:8px;align-items:center;font-size:13.5px;flex-wrap:wrap}
+.cap input{width:80px;border:1px solid var(--line-strong);background:var(--surface);border-radius:var(--r-sm);padding:5px 8px}
+.kwrow{display:grid;gap:5px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.kwrow:last-of-type{border-bottom:0}
+.kwrow .chips{margin:0}
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px 18px;border-bottom:1px solid var(--line)}
+.toolbar .note{margin-left:auto}
+.empty{padding:36px 24px;text-align:center;display:grid;gap:8px;justify-items:center}
+.empty h3{font-size:16px}
+.empty p{margin:0;color:var(--ink-2);font-size:14px;max-width:52ch}
+.card .ver{position:absolute;top:8px;right:8px;font-size:11.5px;font-weight:600;background:var(--surface);color:var(--ink);padding:2px 7px;border-radius:99px}
+.card .thumb{position:relative}
+.card .what{font-size:13.5px;color:var(--ink-2);line-height:1.45}
+.card .pg{font-weight:600;font-size:14px}
+.timeline{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.timeline li{display:grid;grid-template-columns:76px minmax(0,1fr);gap:10px;font-size:14px}
+.timeline span{color:var(--ink-3);font-size:12.5px}
+.mini-thumbs{display:flex;gap:8px;flex-wrap:wrap}
+@media (max-width:760px){
+  .prow{grid-template-columns:56px minmax(0,1fr)}
+  .prow .pstats,.prow .pacts{grid-column:1 / -1}
+  .pacts{justify-items:start}.rel{justify-content:flex-start}
+}
+
+@media (max-width:1100px){
+  .ov{grid-template-columns:minmax(0,1fr)}
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:860px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .rail{position:static;height:auto;flex-direction:row;align-items:center;gap:12px;padding:10px 16px;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line)}
+  .brand small,.nav-label,.rail-foot,.nav a .tag{display:none}
+  .nav{flex-direction:row}
+  .nav a{padding:7px 10px;white-space:nowrap}
+  .topbar{padding:10px 16px}
+  .page{padding-inline:16px}
+  .pair{grid-template-columns:minmax(0,1fr)}
+  .pop{right:16px}
+}
+@media (max-width:520px){
+  h1{font-size:24px}
+  .kpis{grid-template-columns:minmax(0,1fr)}
+  .side .media{grid-template-columns:minmax(0,1fr)}
+  .side .media .thumb{width:100%;aspect-ratio:4/3}
+  .feed li{grid-template-columns:minmax(0,1fr)}
+  .feed li .thumb{display:none}
+}
+@media (prefers-reduced-motion:no-preference){
+  .drawer{animation:slide .18s ease-out}
+  @keyframes slide{from{transform:translateX(24px);opacity:.6}to{transform:none;opacity:1}}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="rail">
+    <div class="brand"><div class="mark">pg.</div><div><b>PT GLORY</b><small>AD INTELLIGENCE</small></div></div>
+    <nav class="nav" aria-label="เมนูหลัก">
+      <a href="#overview" data-route="overview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h14V10"/></svg>ภาพรวม</a>
+      <a href="#ads" data-route="ads"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/></svg>แอดของเรา</a>
+      <a href="#rivals" data-route="rivals"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4-4"/></svg>คู่แข่ง</a>
+      <a href="#compare" data-route="compare"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="7.5" height="14" rx="1.5"/><rect x="13.5" y="5" width="7.5" height="14" rx="1.5"/></svg>เทียบและวางแผน</a>
+    </nav>
+    <nav class="nav" aria-label="ผู้ดูแล">
+      <div class="nav-label">ผู้ดูแลระบบ</div>
+      <a href="#settings" class="soon" data-soon="ตั้งค่าเก็บรวมหมวดหมู่ ชุดข้อมูล แบรนด์คู่แข่ง และการนำเข้าไว้ที่นี่ (เห็นเฉพาะ admin)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3 1a7 7 0 0 0-2-1.2L14.2 3h-4l-.4 2.7a7 7 0 0 0-2 1.2l-2.3-1-2 3.4 2 1.5a7 7 0 0 0 0 2.4l-2 1.5 2 3.4 2.3-1a7 7 0 0 0 2 1.2l.4 2.7h4l.4-2.7a7 7 0 0 0 2-1.2l2.3 1 2-3.4-2-1.5c.1-.4.1-.8.1-1.2Z"/></svg>ตั้งค่า</a>
+    </nav>
+    <div class="rail-foot"><span>สิทธิ์ analyst</span><span>ต้นแบบ UI v2 · 3 ต.ค. 2569</span></div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="proto"><b>ต้นแบบ</b> · ตัวเลขจริงจากสรุป 3 ต.ค. · รูปแอดเป็นภาพแทน · กดได้แต่ไม่บันทึกจริง</div>
+      <span class="fresh"><span class="dot"></span>แอดเรา ข้อมูลถึง 2 ต.ค. 16:33</span>
+      <span class="fresh"><span class="dot warn"></span>คู่แข่ง เก็บล่าสุด 1 ต.ค. 16:26</span>
+      <button class="btn sm" id="updBtn" aria-expanded="false" aria-controls="updPop">อัปเดตข้อมูล</button>
+      <div class="pop" id="updPop" hidden>
+        <div class="src-row">
+          <div class="top"><h3>แอดของเรา</h3><button class="btn sm primary" data-toast="ต้นแบบ: จะดึงข้อมูลล่าสุดจาก Ads Management">นำเข้าตอนนี้</button></div>
+          <p>จาก Ads Management · ล่าสุด 2 ต.ค. 16:33 · 72 บัญชี</p>
+          <span class="free">ไม่มีค่าใช้จ่าย</span>
+        </div>
+        <div class="src-row">
+          <div class="top"><h3>แอดคู่แข่ง</h3><button class="btn sm" disabled>เลือกเพจก่อน</button></div>
+          <p>จาก Apify · ล่าสุด 1 ต.ค. 16:26 · เพจที่ติดตาม 0 เพจ</p>
+          <span class="cost">ค่าใช้จ่ายโดยประมาณแสดงตรงนี้ก่อนกดทุกครั้ง · รอบทดสอบ 1 ต.ค. ใช้ USD 0.021 ได้ 28 แอด</span>
+        </div>
+        <p class="note">ค้นหา กรอง และเทียบ อ่านจากข้อมูลที่เก็บแล้ว ไม่มีค่าใช้จ่าย</p>
+      </div>
+    </div>
+
+    <!-- ===================== OVERVIEW ===================== -->
+    <section class="page" id="p-overview" data-page="overview">
+      <div class="head">
+        <div>
+          <h1>สัปดาห์นี้มีอะไรเปลี่ยน</h1>
+          <p class="sub">26 ก.ย. – 2 ต.ค. 2569 เทียบกับ 19 – 25 ก.ย. · แอดเราสกุล THB</p>
+        </div>
+        <div class="seg" role="group" aria-label="ช่วงเวลา">
+          <button aria-pressed="true">7 วัน</button><button data-toast="ต้นแบบมีเฉพาะช่วง 7 วัน">14 วัน</button><button data-toast="ต้นแบบมีเฉพาะช่วง 7 วัน">30 วัน</button>
+        </div>
+      </div>
+
+      <div class="kpis">
+        <div class="kpi"><span class="lbl">ค่าแอด</span><span class="val">2,922,791<small>บาท</small></span><span class="cmp"><span class="delta flat">▲ 8.0%</span>ก่อนหน้า 2,705,470</span></div>
+        <div class="kpi"><span class="lbl">ROAS (Meta)</span><span class="val">2.23</span><span class="cmp"><span class="delta good">▲ 8.7%</span>ก่อนหน้า 2.06</span></div>
+        <div class="kpi"><span class="lbl">ทักจากแอด</span><span class="val">40,190</span><span class="cmp"><span class="delta good">▲ 11.9%</span>ก่อนหน้า 35,910</span></div>
+        <div class="kpi"><span class="lbl">ค่าทัก</span><span class="val">72.72<small>บาท</small></span><span class="cmp"><span class="delta good">▼ 3.5%</span>ก่อนหน้า 75.34</span></div>
+      </div>
+
+      <div class="ov">
+        <div class="stack">
+          <section class="panel" aria-labelledby="feedH">
+            <div class="panel-h"><h2 id="feedH">อัปเดตที่ควรรู้</h2><span class="hint">ระบบคัดจากตัวเลขสัปดาห์นี้ · เรียงตามผลกระทบต่อค่าแอด</span></div>
+            <ul class="feed" id="feed"></ul>
+          </section>
+
+          <section class="panel" aria-labelledby="topH">
+            <div class="panel-h"><h2 id="topH">แอดใช้งบสูงสุด</h2><a class="btn ghost sm" href="#ads">ดูทั้ง 3,812 แอด →</a></div>
+            <div class="tbl-wrap"><table id="topTbl"></table></div>
+          </section>
+        </div>
+
+        <div class="stack">
+          <section class="panel" aria-labelledby="rivH">
+            <div class="panel-h"><h2 id="rivH">คู่แข่งที่ชนกับสินค้าเรา</h2></div>
+            <div class="unit-block">
+              <div class="unit-name"><b>U15</b><span>Multi Green Veggie</span></div>
+              <div class="rcard">
+                <div class="thumb h2"><span class="fmt">▶ VDO</span></div>
+                <div>
+                  <h3>เวอร์น่าพลัสวิตามินผัก-เพจบริษัท</h3>
+                  <span class="offer">1 แถม 1 เพียง 490.- ส่งฟรี</span>
+                  <div class="chips"><span class="chip">วิดีโอ</span><span class="chip">CTA ส่งข้อความ</span><span class="chip">เก็บ 10 ก.ย.</span><span class="chip pending">สินค้าคล้ายกัน · รอทีมยืนยัน</span></div>
+                  <div style="margin-top:8px"><a class="btn sm" href="#compare">เทียบกับ RE โปร 9.9</a></div>
+                </div>
+              </div>
+            </div>
+            <div class="unit-block">
+              <div class="unit-name"><b>U13</b><span>Lunary วิตามินผลไม้ลดหุ่น</span></div>
+              <div class="rcard">
+                <div class="thumb h3"><span class="fmt">IMG</span></div>
+                <div>
+                  <h3>Veggy Ultimate สลายไขมัน หุ่นสวย</h3>
+                  <p class="note" style="margin:2px 0 0">28 แอดที่เก็บไว้ · 16 แอดยิงนาน · พบล่าสุด 10 ก.ย.</p>
+                  <div class="chips"><span class="chip pending">สินค้าทดแทน? · รอทีมยืนยัน</span></div>
+                  <div style="margin-top:8px"><button class="btn sm" data-goto="match">ดูในหน้าคู่แข่ง</button></div>
+                </div>
+              </div>
+            </div>
+            <div class="unit-block">
+              <div class="empty-unit">ยูนิตอื่นยังไม่มีคำค้น ระบบจึงยังหาคู่แข่งให้ไม่ได้ <button class="btn sm" data-toast="ต้นแบบ: ให้หัวหน้ายูนิตใส่ 3–5 คำค้นต่อยูนิต">ตั้งคำค้นยูนิต</button></div>
+            </div>
+          </section>
+
+          <section class="panel" aria-labelledby="rdyH">
+            <div class="panel-h"><h2 id="rdyH">ข้อมูลพร้อมแค่ไหน</h2></div>
+            <ul class="ready">
+              <li><div class="row"><span>เพจของเรามีชื่ออ่านได้</span><span>3 / 73 เพจ</span></div><div class="bar"><i style="width:4%"></i></div></li>
+              <li><div class="row"><span>แอดงบสูงสุดที่ผูกยูนิตแล้ว</span><span>2 / 6 แอด</span></div><div class="bar"><i style="width:33%"></i></div></li>
+              <li><div class="row"><span>เพจคู่แข่งที่จับคู่แบรนด์แล้ว</span><span>0 / 357 เพจ</span></div><div class="bar"><i style="width:0%"></i></div></li>
+              <li><div class="row"><span>ยูนิตที่ตั้งคำค้นคู่แข่งแล้ว</span><span>ยังไม่ตั้ง</span></div><div class="bar"><i style="width:0%"></i></div></li>
+              <li><div class="row"><span>เก็บแอดคู่แข่งอัตโนมัติ</span><span>ปิดอยู่</span></div></li>
+            </ul>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== OUR ADS ===================== -->
+    <section class="page" id="p-ads" data-page="ads" hidden>
+      <div class="head">
+        <div>
+          <h1>แอดของเรา</h1>
+          <p class="sub">3,812 แอดที่มีค่าแอดใน 26 ก.ย. – 2 ต.ค. · จากคลังทั้งหมด 73,360 แอด</p>
+        </div>
+        <div class="seg" role="group" aria-label="มุมมอง">
+          <button id="vTable" aria-pressed="true">ตาราง</button><button id="vGrid" aria-pressed="false">ครีเอทีฟ</button>
+        </div>
+      </div>
+
+      <section class="panel">
+        <div class="filters">
+          <div class="field grow"><label for="q">ค้นหา</label><input id="q" type="search" placeholder="ชื่อแอด แคมเปญ หรือเพจ"></div>
+          <div class="field"><label for="fUnit">ยูนิต</label>
+            <select id="fUnit"><option value="">ทุกยูนิต</option><option>U12</option><option>U21</option><option value="none">ยังไม่ผูกยูนิต</option></select></div>
+          <div class="field"><label for="fStatus">แอด</label>
+            <select id="fStatus"><option value="">มีค่าแอดในช่วงนี้</option><option value="on">กำลังแสดง</option><option value="off">หยุดแล้ว</option></select></div>
+          <div class="field"><label for="fSort">เรียงตาม</label>
+            <select id="fSort"><option value="spend">ค่าแอดสูงสุด</option><option value="roas">ROAS สูงสุด</option><option value="cpc">ค่าทักต่ำสุด</option><option value="chats">ทักมากสุด</option></select></div>
+        </div>
+        <div id="adsTable" class="tbl-wrap"><table id="mainTbl"></table></div>
+        <div id="adsGrid" class="cards" hidden></div>
+        <div class="tbl-foot"><span id="countLine"></span><span>สีเขียว/แดงเทียบกับภาพรวม (ROAS 2.23 · ค่าทัก 72.72) · เส้นกราฟในต้นแบบเป็นรูปร่างประกอบ</span></div>
+      </section>
+    </section>
+
+    <!-- ===================== COMPARE ===================== -->
+    <section class="page" id="p-compare" data-page="compare" hidden>
+      <div class="head">
+        <div>
+          <h1>เทียบและวางแผน</h1>
+          <p class="sub">ระบบดึงข้อเสนอจากข้อความแอดให้ก่อน ทีมแก้เฉพาะจุดที่ผิด แล้วบันทึกสิ่งที่จะทดลอง</p>
+        </div>
+        <button class="btn" data-toast="ต้นแบบ: เพิ่มคู่แข่งได้สูงสุด 4 ตัวในสินค้าเดียวกัน">+ เพิ่มคู่แข่งมาเทียบ</button>
+      </div>
+
+      <div class="pair">
+        <section class="panel side">
+          <div class="who"><span class="kind ours">แอดเรา</span><h2>RE โปร 9.9</h2><a class="btn sm" href="#ads">เปลี่ยน</a></div>
+          <div class="media">
+            <div class="thumb lg h2"><span class="ph">ภาพแทนครีเอทีฟ<br>"9.9 โปรลดอลัง 6 ชิ้น 1,090"</span><span class="fmt">IMG</span></div>
+            <div style="display:grid;gap:10px;min-width:0">
+              <p class="note" style="margin:0"><span class="unit">U15</span> [P4] Dwawa-Multi GreenVeggie ราชินีผักเขียว · กำลังแสดง</p>
+              <div class="facts">
+                <div><span>ค่าแอด</span><b>22,345.95</b></div>
+                <div><span>ROAS (Meta)</span><b>5.64</b></div>
+                <div><span>ทัก</span><b>317</b></div>
+                <div><span>ค่าทัก</span><b>70.49</b></div>
+              </div>
+              <span class="note">3 ก.ย. – 2 ต.ค. 2569 · Ad 120251002840220632</span>
+            </div>
+          </div>
+          <p class="adtext">9.9 โปรลดอลังการ ความดันกระเจิง ไขมันหลอดเลือดกระจุย 1 เซต ไขมันLDLลดเหลือ 90 #ราชินีผงผัก 46 ชนิด … 7วันฟื้นฟูหลอดเลือดถาวร ค่าไขมันกลับมาดี หมอเบายาแล้ว
+🥬 ผงผักนาโนมัลติกรีนเวจจี้ 5 กระปุก · 🍵 ชาเขียวแม่แย้ม 1 ซอง
+** แถมฟรีกระบอกน้ำ Youth Has You ** · 🚚 ส่งฟรีทุกออเดอร์ มีเก็บปลายทาง</p>
+        </section>
+
+        <section class="panel side">
+          <div class="who"><span class="kind rival">คู่แข่ง</span><h2>เวอร์น่าพลัสวิตามินผัก</h2><button class="btn sm" data-goto="match">เปลี่ยน</button></div>
+          <div class="media">
+            <div class="thumb lg h3"><span class="ph">ภาพแทนวิดีโอ<br>"การันตี 10 กล่อง"</span><span class="fmt">▶ VDO</span></div>
+            <div style="display:grid;gap:10px;min-width:0">
+              <p class="note" style="margin:0">เพจบริษัท · พบว่ากำลังใช้งาน · <span class="chip pending">สินค้าคล้ายกัน · รอทีมยืนยัน</span></p>
+              <div class="facts">
+                <div><span>ค่าแอด</span><b>—</b></div>
+                <div><span>ROAS</span><b>—</b></div>
+              </div>
+              <span class="note">Ads Library ไม่มีค่าแอดหรือยอดขายของคู่แข่ง · เก็บ 10 ก.ย. 2569 · ID 1000412283040832</span>
+            </div>
+          </div>
+          <p class="adtext">พิเศษ วันนี้เท่านั้น 1 แถม 1 เพียง 490.- ส่งฟรี
+กล้าท้าลอง! 1กล่อง ลง10ล.+ #เจ้าแรกในไทย นวัตกรรมแคปซูล 2 ชั้น … ✅ บล็อคแป้ง ✅ บล็อคไขมัน ✅ สลายเซลลูไลท์ … หมดแล้วหมดเลย 👉 1 แถม 1 เพียง 490.- ส่งฟรีให้ถึงหน้าบ้าน</p>
+        </section>
+      </div>
+
+      <section class="panel">
+        <div class="panel-h"><h2>เทียบทีละหัวข้อ</h2>
+          <div class="legend"><span><i></i>สองฝั่งต่างกัน</span><span>ระบบดึงจากข้อความ · แก้ได้</span></div>
+        </div>
+        <div class="tbl-wrap">
+          <table class="cmp-tbl">
+            <thead><tr><th>หัวข้อ</th><th>แอดเรา · RE โปร 9.9</th><th>คู่แข่ง · เวอร์น่าพลัส</th></tr></thead>
+            <tbody>
+              <tr class="diff"><td>ข้อเสนอ</td><td><b>6 ชิ้น 1,090.-</b><span class="src">ผงผัก 5 กระปุก + ชาแม่แย้ม 1 ซอง</span></td><td><b>1 แถม 1 เพียง 490.-</b><span class="src">ได้ 2 กล่อง</span></td></tr>
+              <tr class="diff"><td>ราคาต่อชิ้นโดยประมาณ</td><td class="num">≈ 182 บาท<span class="src">1,090 ÷ 6 · คำนวณโดยระบบ</span></td><td class="num">≈ 245 บาท<span class="src">490 ÷ 2 · คำนวณโดยระบบ</span></td></tr>
+              <tr class="diff"><td>ของแถม</td><td>กระบอกน้ำ Youth Has You</td><td>แถมสินค้าอีก 1 กล่อง</td></tr>
+              <tr><td>ค่าส่ง</td><td>ส่งฟรี · มีเก็บปลายทาง</td><td>ส่งฟรี</td></tr>
+              <tr class="diff"><td>ความเร่งด่วน</td><td>โปร 9.9 <span class="src">ช่วงโปรผ่านไปแล้ว แต่แอดยังแสดง</span></td><td>"วันนี้เท่านั้น" · "หมดแล้วหมดเลย"</td></tr>
+              <tr class="diff"><td>คำเปิด</td><td>"9.9 โปรลดอลังการ ความดันกระเจิง"<span class="src">เปิดด้วยโปรและผลต่อร่างกาย</span></td><td>"พิเศษ วันนี้เท่านั้น 1 แถม 1"<span class="src">เปิดด้วยราคา</span></td></tr>
+              <tr class="diff"><td>รูปแบบ</td><td>ภาพนิ่ง</td><td>วิดีโอ</td></tr>
+              <tr class="diff"><td>CTA</td><td>ไม่มีข้อมูล</td><td>ส่งข้อความ</td></tr>
+              <tr><td>คำอ้างสุขภาพ</td><td><span class="flag">⚠ อ้างผลรักษา</span><span class="src">"ฟื้นฟูหลอดเลือดถาวร" "หมอเบายาแล้ว" · ให้ทีมตรวจ</span></td><td><span class="flag">⚠ อ้างผลเกินจริง</span><span class="src">"บล็อคแป้ง บล็อคไขมัน" · ให้ทีมตรวจ</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="tbl-foot"><span>ป้าย ⚠ เป็นการคัดกรองให้คนตรวจ ไม่ใช่ความเห็นทางกฎหมาย</span><button class="btn ghost sm" data-toast="ต้นแบบ: กดที่ช่องเพื่อแก้ค่าที่ระบบดึงมา">แก้ค่าที่ระบบดึงมา</button></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-h"><h2>เราจะทดลองอะไร</h2><span class="hint">สถานะ: ร่าง</span></div>
+        <div class="plan">
+          <div class="field"><label>แนวทาง</label>
+            <div class="choices" role="group" aria-label="แนวทาง" id="approach">
+              <button aria-pressed="false">คงเดิมและติดตาม</button>
+              <button aria-pressed="true">ทดลองครีเอทีฟ</button>
+              <button aria-pressed="false">ทดลองข้อเสนอ</button>
+              <button aria-pressed="false">ตรวจเพิ่มก่อนตัดสินใจ</button>
+            </div>
+          </div>
+          <div class="field"><label for="hyp">สิ่งที่จะเปลี่ยนและเหตุผล</label>
+            <textarea id="hyp" rows="3" placeholder="เช่น ทำวิดีโอสั้นเปิดด้วยราคาแบบคู่แข่ง โดยคงข้อเสนอ 6 ชิ้น 1,090 ซึ่งถูกกว่าต่อชิ้น"></textarea></div>
+          <div class="field"><label for="metric">วัดผลด้วย</label>
+            <input id="metric" type="text" value="ค่าทักและ ROAS (Meta) ของแอดใหม่ 7 วัน เทียบ RE โปร 9.9 (70.49 บาท · 5.64)">
+            <span class="prefill">ระบบเติมจากผลแอดเราให้ก่อน แก้ได้</span></div>
+          <div class="plan-foot">
+            <button class="btn primary" id="savePlan">บันทึกแผน</button>
+            <span class="note">ทีมเห็นแผนนี้ในเมนูแผนทดลอง · ไม่เปลี่ยนแอดหรืองบจริง</span>
+          </div>
+        </div>
+      </section>
+    </section>
+    <!-- ===================== RIVALS ===================== -->
+    <section class="page" id="p-rivals" data-page="rivals" hidden>
+      <div class="head">
+        <div>
+          <h1>คู่แข่ง</h1>
+          <p class="sub">892 แอดจาก 357 เพจ ใน 3 รอบเก็บ · เก็บล่าสุด 1 ต.ค. 2569 16:26</p>
+        </div>
+        <div class="seg" role="group" aria-label="มุมมองคู่แข่ง" id="rTabs">
+          <button data-tab="match" aria-pressed="true">ชนกับสินค้าเรา</button>
+          <button data-tab="new" aria-pressed="false">ใหม่สัปดาห์นี้</button>
+          <button data-tab="all" aria-pressed="false">แอดทั้งหมด</button>
+        </div>
+      </div>
+
+      <!-- tab: match -->
+      <div class="ov" data-tab-body="match">
+        <div class="stack" id="matchList"></div>
+        <div class="stack">
+          <section class="panel" aria-labelledby="colH">
+            <div class="panel-h"><h2 id="colH">การเก็บข้อมูล</h2></div>
+            <div class="side-body">
+              <div class="row" style="display:flex;justify-content:space-between;font-size:14px"><span>เพจที่ติดตาม</span><b class="num" id="trackedN">0 เพจ</b></div>
+              <label class="switch"><input type="checkbox" id="autoWeekly" disabled><span>เก็บแอดใหม่ของเพจที่ติดตามอัตโนมัติ สัปดาห์ละครั้ง<br><span class="note" id="autoHint">กด "ติดตาม" ที่เพจอย่างน้อย 1 เพจก่อน</span></span></label>
+              <div class="est" id="costEst"><span>ค่าใช้จ่ายโดยประมาณ</span><b>—</b><span>ยังไม่มีเพจที่ติดตาม</span></div>
+              <div class="cap"><label for="capUsd">หยุดเก็บเมื่อถึง</label><span>USD</span><input id="capUsd" type="number" value="5" min="0" step="1"><span>ต่อเดือน</span></div>
+              <p class="note" style="margin:0">ประมาณจากรอบทดสอบ 1 ต.ค. (USD 0.021 ได้ 28 แอด) สมมติเพจละราว 30 แอดต่อรอบ</p>
+            </div>
+          </section>
+          <section class="panel" aria-labelledby="kwH">
+            <div class="panel-h"><h2 id="kwH">คำค้นของยูนิต</h2><span class="hint">ตัวอย่าง · หัวหน้ายูนิตเป็นคนใส่</span></div>
+            <div class="side-body">
+              <div class="kwrow"><div><b class="mono">U15</b> Multi Green Veggie</div><div class="chips"><span class="kw">ผงผัก</span><span class="kw">ดีท็อกซ์</span><span class="kw">ไขมันในเลือด</span></div></div>
+              <div class="kwrow"><div><b class="mono">U13</b> Lunary</div><div class="chips"><span class="kw">วิตามินลดหุ่น</span><span class="kw">คุมหิว</span></div></div>
+              <div class="kwrow"><div><b class="mono">U24</b> Zenova OIL</div><div class="chips"><span class="kw">น้ำมันลดไขมัน</span></div></div>
+              <button class="btn sm" data-toast="ต้นแบบ: ใส่ 3–5 คำต่อยูนิต แล้วระบบใช้หาเพจที่ขายของคล้ายกัน">+ ใส่คำค้นยูนิตอื่น</button>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <!-- tab: new -->
+      <section class="panel" data-tab-body="new" hidden>
+        <div class="toolbar">
+          <label class="switch" style="align-items:center"><input type="checkbox" id="onlyMatch" checked><span>แสดงเฉพาะที่ชนกับสินค้าเรา</span></label>
+          <span class="note">เห็นครั้งแรกใน 26 ก.ย. – 2 ต.ค. · 10 แอด จาก 6 เพจ</span>
+        </div>
+        <div id="newBody"></div>
+      </section>
+
+      <!-- tab: all -->
+      <section class="panel" data-tab-body="all" hidden>
+        <div class="filters">
+          <div class="field grow"><label for="rq">ค้นหา</label><input id="rq" type="search" placeholder="ชื่อเพจ ข้อความ หรือข้อเสนอ"></div>
+          <div class="field"><label for="rUnit">ชนกับยูนิต</label><select id="rUnit"><option value="">ทุกยูนิต</option><option>U15</option><option>U13</option><option>U24</option><option value="none">ยังไม่จัด / ไม่เกี่ยว</option></select></div>
+          <div class="field"><label for="rFmt">รูปแบบ</label><select id="rFmt"><option value="">ทั้งหมด</option><option value="v">วิดีโอ</option><option value="i">ภาพ</option></select></div>
+          <div class="field"><label for="rDays">ยิงมาอย่างน้อย</label><select id="rDays"><option value="0">ทุกช่วง</option><option value="30">30 วัน</option><option value="90">90 วัน</option></select></div>
+          <label class="switch" style="align-items:center;padding-bottom:6px"><input type="checkbox" id="rOffer"><span>มีราคา/ข้อเสนอ</span></label>
+        </div>
+        <div class="cards" id="rGrid"></div>
+        <div class="tbl-foot"><span id="rCount"></span><span>แอดเดียวกันหลายเวอร์ชันรวมเป็นการ์ดเดียว · "ยิงมา" นับจากวันเริ่มที่ Ads Library แสดง</span></div>
+      </section>
+    </section>
+  </div>
+</div>
+
+<div class="scrim" id="scrim" hidden></div>
+<aside class="drawer" id="drawer" hidden aria-labelledby="dTitle" role="dialog" aria-modal="true">
+  <div class="drawer-h"><h2 id="dTitle"></h2><button class="x" id="dClose" aria-label="ปิด">×</button></div>
+  <div class="drawer-b" id="dBody"></div>
+  <div class="drawer-f" id="dFoot"></div>
+</aside>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+const AVG = { roas: 2.23, cpc: 72.72 };
+const ADS = [
+  { name:"U11", acct:"U11 - [P1] วิตามินดูแลผู้หญิง D'Lellise - เพจหลักบริษัท", unit:null, on:false, spend:11296.28, d:-7.17, roas:4.73, chats:155, cpc:72.88, h:"h4", spark:[.55,.62,.7,.6,.55,.4,.25],
+    text:"อยากจะถามดูว่าวันนี้เธอเริ่มคันหรือยังงงงง 1 บทเพลงสำหรับดิเลลลิเซ่ 😍 #DLellise #ProbioVitaBalance …" },
+  { name:"VDO248", acct:"U11 - [P1] วิตามินดูแลผู้หญิง D'Lellise - เพจหลักบริษัท", unit:null, on:false, spend:7728.34, d:null, roas:2.67, chats:155, cpc:49.86, h:"h4", spark:[.2,.3,.75,.9,.6,.5,.45] },
+  { name:"VDO277", acct:"U13 - [P3] Lunary-วิตามินผลไม้ลดหุ่น สูตรลับเฉพาะแบรนด์ดีวาวา", unit:null, on:true, spend:6077.57, d:91.95, roas:1.75, chats:66, cpc:92.08, h:"h3", spark:[.3,.3,.85,.85,.8,.55,.25] },
+  { name:"VDO 105", acct:"U21 - [P3] ลีวองโกลว์ ชาเถาวัลย์เปรียง สูตร3", unit:"U21", on:false, spend:5987.33, d:435.43, roas:3.81, chats:113, cpc:52.99, h:"h2", spark:[.1,.2,.8,.5,.65,.45,.35] },
+  { name:"VDO 140", acct:"U11 - [P1] วิตามินดูแลผู้หญิง D'Lellise - เพจหลักบริษัท", unit:null, on:false, spend:5818.77, d:21, roas:1.11, chats:135, cpc:43.10, h:"h4", spark:[.9,.45,.55,.5,.45,.42,.42] },
+  { name:"VDO 374", acct:"U12 - [P1] เจสัน เอ็ม - วิตามินบำรุงต่อมลูกหมาก เพจบริษัท", unit:"U12", on:true, spend:5435.15, d:null, roas:4.43, chats:97, cpc:56.03, h:"h1", spark:[.7,.6,.65,.5,.3,.32,.33] }
+];
+const FEED = [
+  { kind:"ours", sev:["warn","ควรตรวจ"], ad:2, title:"VDO277 ค่าทัก 92.08 บาท สูงกว่าภาพรวม 27%",
+    body:"U13 Lunary · ค่าแอดเพิ่ม 92% ในสัปดาห์นี้ ขณะที่ ROAS 1.75 ต่ำกว่าภาพรวม (2.23) · กำลังแสดง", acts:[["ดูแอด","ad"],["เทียบกับคู่แข่ง","#compare"]] },
+  { kind:"ours", sev:["good","โอกาส"], ad:3, title:"VDO 105 ใช้ค่าแอดเพิ่ม 435% และค่าทักถูกกว่าภาพรวม 27%",
+    body:"U21 ลีวองโกลว์ · ROAS 3.81 · ค่าทัก 52.99 บาท · สถานะล่าสุด: หยุดชุดแอด ตรวจว่าตั้งใจหยุดหรือไม่", acts:[["ดูแอด","ad"]] },
+  { kind:"ours", sev:["warn","ควรตรวจ"], ad:4, title:"VDO 140 ทักถูกที่สุดในแอดงบสูง แต่ ROAS 1.11",
+    body:"ทัก 135 ครั้ง ค่าทัก 43.10 บาท แต่ Meta รายงานยอดซื้อต่ำ · ดูข้อเสนอและการปิดการขาย (% ปิดจริงรอเชื่อมระบบขาย)", acts:[["ดูแอด","ad"]] },
+  { kind:"rival", sev:["warn","ข้อมูลยังไม่ตรง"], title:"10 แอดคู่แข่งที่เพิ่งพบ ส่วนใหญ่ไม่ใช่คู่แข่งตรง",
+    body:"มาจากคำค้น \"วิตามิน\" คำเดียว เช่น เพจรีวิวสกินแคร์ในเซเว่น · ตั้งคำค้นต่อยูนิตเพื่อให้ระบบหาเพจที่ขายของคล้ายเรา", acts:[["เลือกเพจที่จะติดตาม","goto:match"],["ดู 10 แอดที่เพิ่งพบ","goto:new"]] },
+  { kind:"data", sev:["warn","ต้องแก้ข้อมูล"], title:"4 ใน 6 แอดงบสูงสุดยังไม่ผูกยูนิต",
+    body:"แอดในบัญชี U11 [P1] และ U13 [P3] · ผูกเพจเข้ายูนิตใน Ads Management แล้วตัวเลขรายยูนิตจะครบ", acts:[["ดูรายการ","#ads?none"]] }
+];
+const KIND = { ours:"แอดเรา", rival:"คู่แข่ง", data:"ข้อมูล" };
+
+const fmt = (n, d=2) => n == null ? "—" : n.toLocaleString("th-TH",{minimumFractionDigits:d,maximumFractionDigits:d});
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+const vsCls = (v, avg, lowerBetter) => { const r = v/avg; if (lowerBetter) return r < .9 ? "good" : r > 1.1 ? "bad" : ""; return r > 1.1 ? "good" : r < .9 ? "bad" : ""; };
+function thumb(a, size=""){ return `<div class="thumb ${a.h} ${size}"><span class="fmt">▶ VDO</span></div>`; }
+function unitTag(a){ return a.unit ? `<span class="unit">${a.unit}</span>` : `<span class="unit none">ยังไม่ผูกยูนิต</span>`; }
+function status(a){ return `<span class="status"><span class="dot ${a.on?"":"off"}"></span>${a.on?"กำลังแสดง":"หยุดชุดแอด"}</span>`; }
+function spark(p){
+  const w=96,h=30,pad=3, pts=p.map((v,i)=>[pad+i*(w-2*pad)/(p.length-1), h-pad-v*(h-2*pad)]);
+  const line=pts.map(q=>q.map(n=>n.toFixed(1)).join(",")).join(" "); const last=pts[pts.length-1];
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" aria-hidden="true"><polygon class="area" points="${pad},${h-pad} ${line} ${w-pad},${h-pad}"/><polyline class="line" points="${line}"/><circle class="end" cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="2.4"/></svg>`;
+}
+function deltaSpan(d){ if (d == null) return `<span class="vs" style="color:var(--ink-3)">ไม่มีช่วงเทียบ</span>`; return `<span class="vs" style="color:var(--ink-2)">${d>0?"▲":"▼"} ${Math.abs(d).toFixed(d>=100?0:1)}%</span>`; }
+
+/* overview feed */
+document.getElementById("feed").innerHTML = FEED.map((f,i) => `
+  <li>
+    ${f.ad != null ? thumb(ADS[f.ad]) : `<div class="thumb ${f.kind==="rival"?"h2":"h1"}" style="opacity:.55"></div>`}
+    <div>
+      <div class="metaline"><span class="kind ${f.kind}">${KIND[f.kind]}</span><span class="sev ${f.sev[0]}">${f.sev[1]}</span></div>
+      <h3>${esc(f.title)}</h3>
+      <p>${esc(f.body)}</p>
+      <div class="acts">${f.acts.map(([l,t],j)=>`<button class="btn sm ${j?"":"primary"}" data-act="${esc(t)}" data-ad="${f.ad??""}">${esc(l)}</button>`).join("")}</div>
+    </div>
+  </li>`).join("");
+
+/* overview top table (compact) */
+document.getElementById("topTbl").innerHTML = `<thead><tr><th>แอด</th><th>ยูนิต</th><th class="r">ค่าแอด</th><th class="r">ROAS</th><th class="r">ค่าทัก</th></tr></thead><tbody>${
+  ADS.map((a,i)=>`<tr data-i="${i}"><td><div class="adcell" style="min-width:200px">${thumb(a,"sm")}<div style="min-width:0"><b>${esc(a.name)}</b><small>${esc(a.acct)}</small></div></div></td><td>${unitTag(a)}</td><td class="r">${fmt(a.spend)}</td><td class="r"><span class="${"vs "+vsCls(a.roas,AVG.roas)}" style="font-size:14px">${fmt(a.roas)}</span></td><td class="r"><span class="${"vs "+vsCls(a.cpc,AVG.cpc,true)}" style="font-size:14px">${fmt(a.cpc)}</span></td></tr>`).join("")
+}</tbody>`;
+
+/* ads page */
+const st = { q:"", unit:"", status:"", sort:"spend", view:"table" };
+function filtered(){
+  let r = ADS.map((a,i)=>({...a,i}));
+  if (st.q) r = r.filter(a => (a.name+a.acct).toLowerCase().includes(st.q.toLowerCase()));
+  if (st.unit === "none") r = r.filter(a => !a.unit); else if (st.unit) r = r.filter(a => a.unit === st.unit);
+  if (st.status === "on") r = r.filter(a => a.on); if (st.status === "off") r = r.filter(a => !a.on);
+  const s = st.sort; r.sort((x,y)=> s==="cpc" ? x.cpc-y.cpc : y[s]-x[s]);
+  return r;
+}
+function renderAds(){
+  const r = filtered();
+  document.getElementById("countLine").textContent = `ต้นแบบแสดง ${r.length} จาก 6 แถวจริง · ระบบจริงแบ่งหน้าจาก 3,812 แอด`;
+  const sortTh = (k,label,cls="r") => `<th class="${cls}"><button data-sort="${k}" aria-pressed="${st.sort===k}">${label}${st.sort===k?" ↓":""}</button></th>`;
+  document.getElementById("mainTbl").innerHTML = `<thead><tr><th>แอด</th><th>ยูนิต</th><th>สถานะล่าสุด</th>${sortTh("spend","ค่าแอด")}${sortTh("roas","ROAS (Meta)")}${sortTh("chats","ทัก")}${sortTh("cpc","ค่าทัก")}<th>7 วัน</th><th></th></tr></thead><tbody>${
+    r.length ? r.map(a=>`<tr data-i="${a.i}">
+      <td><div class="adcell">${thumb(a)}<div style="min-width:0"><b>${esc(a.name)}</b><small>${esc(a.acct)}</small></div></div></td>
+      <td>${unitTag(a)}</td><td>${status(a)}</td>
+      <td class="r">${fmt(a.spend)}${deltaSpan(a.d)}</td>
+      <td class="r"><span class="vs ${vsCls(a.roas,AVG.roas)}" style="font-size:14px">${fmt(a.roas)}</span></td>
+      <td class="r">${a.chats.toLocaleString("th-TH")}</td>
+      <td class="r"><span class="vs ${vsCls(a.cpc,AVG.cpc,true)}" style="font-size:14px">${fmt(a.cpc)}</span></td>
+      <td>${spark(a.spark)}</td>
+      <td><a class="btn sm" href="#compare" data-stop>เทียบ</a></td></tr>`).join("")
+    : `<tr><td colspan="9" style="text-align:center;padding:32px;color:var(--ink-3)">ไม่พบแอดที่ตรงกับตัวกรอง · ลองล้างคำค้นหรือเลือก "ทุกยูนิต"</td></tr>`
+  }</tbody>`;
+  document.getElementById("adsGrid").innerHTML = r.map(a=>`<article class="card" data-i="${a.i}">
+      <div class="thumb ${a.h}"><span class="fmt">▶ VDO</span></div>
+      <div class="body"><div class="top"><b>${esc(a.name)}</b>${unitTag(a)}</div>
+      <div class="mini"><div><span>ค่าแอด</span><b>${fmt(a.spend,0)}</b></div><div><span>ROAS</span><b class="vs ${vsCls(a.roas,AVG.roas)}" style="font-size:14px">${fmt(a.roas)}</b></div><div><span>ค่าทัก</span><b class="vs ${vsCls(a.cpc,AVG.cpc,true)}" style="font-size:14px">${fmt(a.cpc)}</b></div></div>
+      ${status(a)}</div></article>`).join("") || `<p class="note">ไม่พบแอดที่ตรงกับตัวกรอง</p>`;
+}
+document.getElementById("q").addEventListener("input", e => { st.q = e.target.value; renderAds(); });
+document.getElementById("fUnit").addEventListener("change", e => { st.unit = e.target.value; renderAds(); });
+document.getElementById("fStatus").addEventListener("change", e => { st.status = e.target.value; renderAds(); });
+document.getElementById("fSort").addEventListener("change", e => { st.sort = e.target.value; renderAds(); });
+document.getElementById("mainTbl").addEventListener("click", e => {
+  const b = e.target.closest("[data-sort]"); if (b){ st.sort = b.dataset.sort; document.getElementById("fSort").value = st.sort; renderAds(); return; }
+  if (e.target.closest("[data-stop]")) { toast("ต้นแบบใช้คู่ตัวอย่าง RE โปร 9.9 กับเวอร์น่าพลัส"); return; }
+  const tr = e.target.closest("tr[data-i]"); if (tr) openDrawer(+tr.dataset.i);
+});
+document.getElementById("topTbl").addEventListener("click", e => { const tr = e.target.closest("tr[data-i]"); if (tr) openDrawer(+tr.dataset.i); });
+document.getElementById("adsGrid").addEventListener("click", e => { const c = e.target.closest("[data-i]"); if (c) openDrawer(+c.dataset.i); });
+const setView = v => { st.view = v; document.getElementById("vTable").setAttribute("aria-pressed", v==="table"); document.getElementById("vGrid").setAttribute("aria-pressed", v==="grid");
+  document.getElementById("adsTable").hidden = v!=="table"; document.getElementById("adsGrid").hidden = v!=="grid"; };
+document.getElementById("vTable").onclick = () => setView("table");
+document.getElementById("vGrid").onclick = () => setView("grid");
+
+/* drawer */
+const drawer = document.getElementById("drawer"), scrim = document.getElementById("scrim");
+let lastFocus = null;
+function openDrawer(i){
+  const a = ADS[i]; lastFocus = document.activeElement;
+  document.getElementById("dTitle").textContent = a.name;
+  document.getElementById("dBody").innerHTML = `
+    <div class="thumb lg ${a.h}"><span class="ph">ภาพแทนครีเอทีฟ</span><span class="fmt">▶ VDO</span></div>
+    <div class="metaline">${unitTag(a)}${status(a)}</div>
+    <p class="note" style="margin:0">${esc(a.acct)}</p>
+    <div class="facts">
+      <div><span>ค่าแอด (บาท)</span><b>${fmt(a.spend)}</b></div><div><span>ROAS (Meta)</span><b>${fmt(a.roas)}</b></div>
+      <div><span>ทัก</span><b>${a.chats}</b></div><div><span>ค่าทัก (บาท)</span><b>${fmt(a.cpc)}</b></div>
+    </div>
+    <span class="note">26 ก.ย. – 2 ต.ค. 2569 · ภาพรวม ROAS 2.23 · ค่าทัก 72.72</span>
+    <div><h3 style="margin-bottom:6px">ข้อความในแอด</h3><p class="adtext">${a.text ? esc(a.text) : "ต้นแบบไม่มีข้อความของแอดนี้"}</p></div>
+    ${a.unit ? "" : `<p class="note" style="margin:0;color:var(--warn)">แอดนี้ยังไม่ผูกยูนิต ระบบจึงยังเสนอคู่แข่งที่เกี่ยวข้องไม่ได้</p>`}`;
+  document.getElementById("dFoot").innerHTML = `<button class="btn" data-toast="ต้นแบบ: เปิดวิดีโอเมื่อผู้ใช้กด">ดูวิดีโอ</button><a class="btn primary" href="#compare" data-close data-closetoast="ต้นแบบใช้คู่ตัวอย่าง RE โปร 9.9 กับเวอร์น่าพลัส">เทียบกับคู่แข่ง</a>`;
+  showDrawer();
+}
+function showDrawer(){ drawer.hidden = false; scrim.hidden = false; document.getElementById("dClose").focus(); }
+function closeDrawer(){ drawer.hidden = true; scrim.hidden = true; lastFocus && lastFocus.focus && lastFocus.focus(); }
+document.getElementById("dClose").onclick = closeDrawer; scrim.onclick = closeDrawer;
+document.getElementById("dFoot").addEventListener("click", e => { const c = e.target.closest("[data-close]"); if (c) { closeDrawer(); if (c.dataset.closetoast) toast(c.dataset.closetoast); } });
+document.addEventListener("keydown", e => { if (e.key === "Escape") { if (!drawer.hidden) closeDrawer(); if (!pop.hidden) togglePop(false); } });
+
+/* feed actions */
+document.getElementById("feed").addEventListener("click", e => {
+  const b = e.target.closest("[data-act]"); if (!b) return; const t = b.dataset.act;
+  if (t === "ad") openDrawer(+b.dataset.ad);
+  else if (t.startsWith("toast:")) toast(t.slice(6));
+  else if (t.startsWith("goto:")) { rv.tab = t.slice(5); location.hash = "#rivals"; }
+  else if (t === "#ads?none") { st.unit = "none"; document.getElementById("fUnit").value = "none"; location.hash = "#ads"; }
+  else location.hash = t;
+});
+
+/* compare */
+document.getElementById("approach").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return;
+  [...e.currentTarget.children].forEach(x => x.setAttribute("aria-pressed", x === b)); });
+document.getElementById("savePlan").onclick = () => toast("บันทึกแผนแล้ว (ต้นแบบ: ไม่ได้บันทึกจริง)");
+
+/* update popover */
+const pop = document.getElementById("updPop"), updBtn = document.getElementById("updBtn");
+function togglePop(open){ pop.hidden = !open; updBtn.setAttribute("aria-expanded", open); }
+updBtn.onclick = e => { e.stopPropagation(); togglePop(pop.hidden); };
+document.addEventListener("click", e => { if (!pop.hidden && !pop.contains(e.target) && e.target !== updBtn) togglePop(false); });
+
+/* toast + misc */
+let tt; function toast(m){ const t = document.getElementById("toast"); t.textContent = m; t.hidden = false; clearTimeout(tt); tt = setTimeout(()=> t.hidden = true, 2600); }
+document.addEventListener("click", e => { const b = e.target.closest("[data-toast]"); if (b) toast(b.dataset.toast);
+  const s = e.target.closest("[data-soon]"); if (s) { e.preventDefault(); toast(s.dataset.soon); } });
+
+/* ===== rivals ===== */
+const UNITS = { U15:"Multi Green Veggie", U13:"Lunary วิตามินผลไม้ลดหุ่น", U24:"Zenova OIL ลดไขมัน" };
+const REL = { direct:"คู่แข่งตรง", sub:"สินค้าทดแทน", none:"ไม่เกี่ยว" };
+const PAGES = [
+  { id:"verna", unit:"U15", name:"เวอร์น่าพลัสวิตามินผัก-เพจบริษัท", guess:"direct", rel:null, tracked:false, h:"h3", fmt:"▶ VDO",
+    ads:2, longest:115, seen:"10 ก.ย.", offer:"1 แถม 1 · 490.-", why:"ขายวิตามินผักลดไขมัน · คำค้น \"ผงผัก\"",
+    offers:[["ภาพ · ยิงมา 115 วัน","หลุดจอง 100 สิทธิ์สุดท้าย · 1 แถม 1 490.- · 2 แถม 3 1,000.-"],["วิดีโอ · ยิงมา 41 วัน","พิเศษ วันนี้เท่านั้น 1 แถม 1 เพียง 490.- ส่งฟรี"]] },
+  { id:"veggyslim", unit:"U15", name:"Veggy วิตามินผักลดพุง", guess:"direct", rel:null, tracked:false, h:"h2", fmt:"▶ VDO",
+    ads:1, longest:49, seen:"ก.ย.", offer:"1 แถม 1 · 390.-", why:"วิตามินผัก · ราคาต่ำกว่าเวอร์น่าพลัส 100 บาท",
+    offers:[["วิดีโอ · ยิงมา 49 วัน","วันนี้เท่านั้น 1 แถม 1 เพียง 390.- ส่งฟรี"]] },
+  { id:"veggyult", unit:"U13", name:"Veggy Ultimate สลายไขมัน หุ่นสวย", guess:"sub", rel:null, tracked:false, h:"h3", fmt:"IMG",
+    ads:28, evergreen:16, longest:135, seen:"10 ก.ย.", offer:"\"7 วัน ลด 10 โล\"", claim:true, why:"ลดน้ำหนัก แต่เป็นผงผัก ไม่ใช่วิตามินผลไม้",
+    offers:[["ภาพ · ยิงมา 135 วัน","เวจจี้ อัลติเมท · 7 วัน ลด 10 โล"]] },
+  { id:"hyme", unit:"U24", name:"Hyme", guess:"sub", rel:null, tracked:false, h:"h4", fmt:"IMG",
+    ads:1, longest:115, seen:"ก.ย.", offer:null, why:"น้ำมันสกัดรวม Daily Oils Blend · กลุ่มเดียวกับ Zenova OIL",
+    offers:[["ภาพ · ยิงมา 115 วัน","พัฒนาสูตรใหม่ Daily Oils Blend 11 ชนิด"]] }
+];
+const NEWADS = [
+  { page:"รีวิวจริตกะเทย", n:2, what:"วิตามินรวมแบรนด์ลุงหมอ · โปร 15.6 · ขายผ่าน Shopee/Lazada", days:401, fmt:"หลายภาพ", h:"h1" },
+  { page:"ใช้ตามเลยค่ะ", n:2, what:"มัดรวมสกินแคร์ในเซเว่น", days:403, fmt:"หลายภาพ", h:"h2" },
+  { page:"เนยตุ่นรีวิว", n:2, what:"รวมสกินแคร์ตุนซ้ำ · พิกัดเซเว่น", days:374, fmt:"หลายภาพ", h:"h4" },
+  { page:"Scotch Family", n:2, what:"ใหม่! สก๊อตรังนกหวานน้อย · CTA Shop now", days:41, fmt:"ภาพ", h:"h3" }
+];
+const RADS = [
+  { page:"เวอร์น่าพลัสวิตามินผัก", unit:"U15", v:true, offer:"1 แถม 1 · 490.-", what:"พิเศษ วันนี้เท่านั้น ส่งฟรี", days:41, h:"h3" },
+  { page:"เวอร์น่าพลัสวิตามินผัก", unit:"U15", v:false, offer:"2 แถม 3 · 1,000.-", what:"หลุดจอง 100 สิทธิ์สุดท้าย", days:115, h:"h3" },
+  { page:"Veggy วิตามินผักลดพุง", unit:"U15", v:true, offer:"1 แถม 1 · 390.-", what:"วันนี้เท่านั้น ส่งฟรี", days:49, h:"h2" },
+  { page:"Veggy Ultimate สลายไขมัน", unit:"U13", v:false, offer:null, claim:"7 วัน ลด 10 โล", what:"เวจจี้ อัลติเมท ผงผักลดน้ำหนัก", days:135, h:"h3" },
+  { page:"Hyme", unit:"U24", v:false, offer:null, what:"Daily Oils Blend สูตรใหม่ 11 ชนิด", days:115, h:"h4" },
+  { page:"Aura Bangkok Clinic", unit:null, v:false, offer:"990.-", what:"Collagen Boost · หลายภาพ", days:309, h:"h4" },
+  { page:"Scotch Family", unit:null, v:false, offer:null, what:"ใหม่! สก๊อตรังนกหวานน้อย", days:41, ver:2, h:"h3" },
+  { page:"ใช้ตามเลยค่ะ", unit:null, v:false, offer:null, what:"มัดรวมสกินแคร์ในเซเว่น", days:403, ver:2, h:"h2" },
+  { page:"รีวิวจริตกะเทย", unit:null, v:false, offer:null, what:"วิตามินรวม · โปร 15.6", days:401, ver:2, h:"h1" },
+  { page:"GetGlow Clinic", unit:null, v:false, offer:"ลดเกือบ 10,000.-", what:"The Glow Selection", days:32, h:"h1" },
+  { page:"Bangkok Clinic Loyal", unit:null, v:true, offer:"2,999.-", what:"Ultraformer", days:90, h:"h2" },
+  { page:"Mr_vet.th", unit:null, v:false, offer:null, what:"ชื่อสินค้าจากแคตตาล็อก (แหล่งข้อมูลไม่ส่งมา)", days:58, dpa:true, h:"h4" }
+];
+const rv = { tab:"match", onlyMatch:true, q:"", unit:"", fmt:"", days:0, offer:false };
+const relChip = p => p.rel ? `<span class="chip ok">${REL[p.rel]} · ทีมยืนยันแล้ว</span>` : `<span class="chip pending">${REL[p.guess]}? · ระบบเสนอ</span>`;
+const perPageRun = 30 * 0.021 / 28;
+function renderMatch(){
+  const units = [...new Set(PAGES.filter(p=>p.rel!=="none").map(p=>p.unit))];
+  const hiddenN = PAGES.filter(p=>p.rel==="none").length;
+  document.getElementById("matchList").innerHTML = units.map(u => `
+    <section class="panel">
+      <div class="ugroup-h"><b>${u}</b><span class="uname">${UNITS[u]}</span>${u==="U15"?'<span class="kw">ผงผัก</span><span class="kw">ดีท็อกซ์</span><span class="kw">ไขมันในเลือด</span>':""}</div>
+      ${PAGES.filter(p=>p.unit===u && p.rel!=="none").map(p=>`
+        <div class="prow" data-p="${p.id}">
+          <div class="thumb ${p.h}"><span class="fmt">${p.fmt}</span></div>
+          <div style="min-width:0">
+            <h3 data-open="${p.id}">${esc(p.name)}</h3>
+            <div class="chips">${relChip(p)}${p.offer?`<span class="chip ${p.claim?"claim":""}">${p.claim?"⚠ ":""}${esc(p.offer)}</span>`:""}</div>
+            <p class="note" style="margin:4px 0 0">${esc(p.why)}</p>
+          </div>
+          <div class="pstats">
+            <div><span>แอดที่เก็บ</span><b>${p.ads}</b></div>
+            ${p.evergreen?`<div><span>ยิงนาน</span><b>${p.evergreen}</b></div>`:""}
+            <div><span>ยิงนานสุด</span><b>${p.longest} วัน</b></div>
+            <div><span>เห็นล่าสุด</span><b>${p.seen}</b></div>
+          </div>
+          <div class="pacts">
+            <div class="rel" role="group" aria-label="ความสัมพันธ์">${["direct","sub","none"].map(k=>`<button data-rel="${k}" data-id="${p.id}" aria-pressed="${p.rel===k}">${REL[k]}</button>`).join("")}</div>
+            <div style="display:flex;gap:6px"><button class="btn sm ${p.tracked?"on":""}" data-track="${p.id}">${p.tracked?"✓ ติดตามแล้ว":"ติดตาม"}</button><a class="btn sm" href="#compare">เทียบกับแอดเรา</a></div>
+          </div>
+        </div>`).join("")}
+    </section>`).join("") + `
+    <section class="panel"><div class="collapsed"><span><b>${353 + hiddenN}</b> เพจยังไม่จัดหรือไม่เกี่ยวกับสินค้าเรา เช่น คลินิกความงาม เพจรีวิวสกินแคร์ สก๊อตรังนก</span><button class="btn sm" data-goto="all" data-unit="none">ดูแอดของเพจเหล่านี้</button></div></section>`;
+  const n = PAGES.filter(p=>p.tracked).length;
+  document.getElementById("trackedN").textContent = `${n} เพจ`;
+  const auto = document.getElementById("autoWeekly"); auto.disabled = n === 0; if (!n) auto.checked = false;
+  document.getElementById("autoHint").textContent = n ? "ระบบเก็บเฉพาะแอดใหม่ของเพจที่ติดตาม และหยุดเมื่อถึงเพดาน" : "กด \"ติดตาม\" ที่เพจอย่างน้อย 1 เพจก่อน";
+  const run = n * perPageRun, cap = +document.getElementById("capUsd").value || 0, month = run * 4.3;
+  document.getElementById("costEst").innerHTML = n
+    ? `<span>ค่าใช้จ่ายโดยประมาณ</span><b>USD ${run.toFixed(2)} ต่อรอบ</b><span>≈ USD ${month.toFixed(2)} ต่อเดือนถ้าเก็บสัปดาห์ละครั้ง${month > cap ? " · เกินเพดานที่ตั้งไว้" : " · ต่ำกว่าเพดานที่ตั้งไว้"}</span>`
+    : `<span>ค่าใช้จ่ายโดยประมาณ</span><b>—</b><span>ยังไม่มีเพจที่ติดตาม</span>`;
+}
+function renderNew(){
+  const body = document.getElementById("newBody");
+  if (rv.onlyMatch) {
+    body.innerHTML = `<div class="empty"><h3>สัปดาห์นี้ยังไม่พบแอดใหม่ของคู่แข่งที่ชนกับสินค้าเรา</h3>
+      <p>10 แอดที่เห็นครั้งแรกมาจากคำค้น "วิตามิน" คำเดียว และยังไม่มีเพจที่ติดตาม จึงได้เพจรีวิวสกินแคร์และสก๊อตรังนกเป็นส่วนใหญ่</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center"><button class="btn primary sm" data-goto="match">เลือกเพจที่จะติดตาม</button><button class="btn sm" id="showAllNew">ดูทั้ง 10 แอด</button></div></div>`;
+    document.getElementById("showAllNew").onclick = () => { rv.onlyMatch = false; document.getElementById("onlyMatch").checked = false; renderNew(); };
+    return;
+  }
+  body.innerHTML = `<ul class="feed" style="padding-top:4px">${NEWADS.map(a=>`
+    <li><div class="thumb ${a.h}"><span class="fmt">${a.fmt==="ภาพ"?"IMG":"IMG×"}</span></div>
+      <div><div class="metaline"><span class="kind rival">${esc(a.page)}</span><span class="note">${a.n} แอด · เห็นครั้งแรก 1 ต.ค.</span><span class="chip">ยังไม่จัดยูนิต</span></div>
+      <h3>${esc(a.what)}</h3>
+      <p>${a.fmt} · <b style="color:var(--ink)">ยิงมาแล้ว ${a.days} วัน</b> ${a.days>100?"· ระบบเพิ่งเห็น ไม่ได้แปลว่าเพิ่งเริ่มยิง":""}</p>
+      <div class="acts"><button class="btn sm" data-toast="ต้นแบบ: ตั้งเพจนี้ว่าไม่เกี่ยว แล้วระบบจะซ่อนในรอบต่อไป">ไม่เกี่ยวกับเรา</button><button class="btn sm" data-toast="ต้นแบบ: เลือกยูนิตที่เพจนี้ชน">จัดเข้ายูนิต</button></div></div></li>`).join("")}</ul>
+    <div class="tbl-foot"><span>ต้นแบบแสดง 8 จาก 10 แอด · อีก 2 แอดจาก 2 เพจ</span></div>`;
+}
+function renderAll(){
+  let r = RADS.filter(a => (!rv.q || (a.page+a.what+(a.offer||"")).toLowerCase().includes(rv.q.toLowerCase()))
+    && (!rv.unit || (rv.unit==="none" ? !a.unit : a.unit===rv.unit))
+    && (!rv.fmt || (rv.fmt==="v" ? a.v : !a.v)) && a.days >= rv.days && (!rv.offer || a.offer));
+  document.getElementById("rCount").textContent = `ต้นแบบแสดง ${r.length} จาก 12 · ระบบจริงมี 892 แอด`;
+  document.getElementById("rGrid").innerHTML = r.length ? r.map(a=>`
+    <article class="card" data-toast="ต้นแบบ: เปิดหลักฐานแอดพร้อมรอบเก็บและ Library ID">
+      <div class="thumb ${a.h}"><span class="fmt">${a.v?"▶ VDO":a.dpa?"DPA":"IMG"}</span>${a.ver?`<span class="ver">${a.ver} เวอร์ชัน</span>`:""}</div>
+      <div class="body">
+        <div class="top"><span class="pg">${esc(a.page)}</span>${a.unit?`<span class="unit">${a.unit}</span>`:""}</div>
+        ${a.offer?`<span class="offer" style="justify-self:start;margin:0">${esc(a.offer)}</span>`:""}
+        ${a.claim?`<span class="chip claim" style="justify-self:start">⚠ "${esc(a.claim)}"</span>`:""}
+        <span class="what" ${a.dpa?'style="font-style:italic"':""}>${esc(a.what)}</span>
+        <span class="note">ยิงมา ${a.days} วัน</span>
+      </div></article>`).join("")
+    : `<div class="empty" style="grid-column:1/-1"><h3>ไม่พบแอดที่ตรงกับตัวกรอง</h3><p>ลองเลือก "ทุกยูนิต" หรือลดจำนวนวันที่ยิงมา</p></div>`;
+}
+function openPage(id){
+  const p = PAGES.find(x=>x.id===id); lastFocus = document.activeElement;
+  document.getElementById("dTitle").textContent = p.name;
+  document.getElementById("dBody").innerHTML = `
+    <div class="metaline"><span class="unit">${p.unit}</span>${relChip(p)}</div>
+    <div class="facts">
+      <div><span>แอดที่เก็บ</span><b>${p.ads}</b></div><div><span>ยิงนานสุด</span><b>${p.longest} วัน</b></div>
+      <div><span>ยิงนาน (เกิน 30 วัน)</span><b>${p.evergreen ?? "—"}</b></div><div><span>เห็นล่าสุด</span><b>${p.seen}</b></div>
+    </div>
+    <div><h3 style="margin-bottom:8px">ข้อเสนอที่เห็น</h3><ul class="timeline">${p.offers.map(([m,t])=>`<li><span>${esc(m)}</span><div>${esc(t)}</div></li>`).join("")}</ul></div>
+    <div><h3 style="margin-bottom:8px">แอดของเพจ</h3><div class="mini-thumbs">${Array.from({length:Math.min(p.ads,6)},()=>`<div class="thumb sm ${p.h}"></div>`).join("")}${p.ads>6?`<span class="note" style="align-self:center">+${p.ads-6} แอด</span>`:""}</div></div>
+    <p class="note" style="margin:0">ค่าแอดและยอดขายของคู่แข่งไม่มีใน Ads Library · เพจไม่เท่ากับแบรนด์</p>`;
+  document.getElementById("dFoot").innerHTML = `<button class="btn ${p.tracked?"on":""}" data-track="${p.id}" data-close>${p.tracked?"✓ ติดตามแล้ว":"ติดตาม"}</button><a class="btn primary" href="#compare" data-close>เทียบกับแอดเรา</a>`;
+  showDrawer();
+}
+function setTab(t){
+  rv.tab = t;
+  document.querySelectorAll("#rTabs button").forEach(b => b.setAttribute("aria-pressed", b.dataset.tab === t));
+  document.querySelectorAll("[data-tab-body]").forEach(el => el.hidden = el.dataset.tabBody !== t);
+  ({ match:renderMatch, new:renderNew, all:renderAll })[t]();
+}
+document.getElementById("rTabs").addEventListener("click", e => { const b = e.target.closest("[data-tab]"); if (b) setTab(b.dataset.tab); });
+document.getElementById("onlyMatch").addEventListener("change", e => { rv.onlyMatch = e.target.checked; renderNew(); });
+document.getElementById("capUsd").addEventListener("input", renderMatch);
+document.getElementById("autoWeekly").addEventListener("change", e => toast(e.target.checked ? "เปิดเก็บอัตโนมัติสัปดาห์ละครั้ง (ต้นแบบ)" : "ปิดเก็บอัตโนมัติแล้ว (ต้นแบบ)"));
+[["rq","input","q"],["rUnit","change","unit"],["rFmt","change","fmt"],["rDays","change","days"]].forEach(([id,ev,k]) =>
+  document.getElementById(id).addEventListener(ev, e => { rv[k] = k==="days" ? +e.target.value : e.target.value; renderAll(); }));
+document.getElementById("rOffer").addEventListener("change", e => { rv.offer = e.target.checked; renderAll(); });
+document.addEventListener("click", e => {
+  const rel = e.target.closest("[data-rel]");
+  if (rel) { const p = PAGES.find(x=>x.id===rel.dataset.id); const k = rel.dataset.rel; p.rel = p.rel === k ? null : k;
+    if (p.rel === "none") toast(`ย้าย ${p.name} ไปกลุ่มไม่เกี่ยวแล้ว · ระบบจะไม่เสนอกับ ${p.unit} อีก`);
+    else if (p.rel) toast(`ยืนยันว่าเป็น${REL[p.rel]}ของ ${p.unit} แล้ว`);
+    renderMatch(); return; }
+  const tr = e.target.closest("[data-track]");
+  if (tr) { const p = PAGES.find(x=>x.id===tr.dataset.track); p.tracked = !p.tracked; toast(p.tracked ? `ติดตาม ${p.name} แล้ว` : `เลิกติดตาม ${p.name}`); renderMatch(); return; }
+  const op = e.target.closest("[data-open]"); if (op) { openPage(op.dataset.open); return; }
+  const g = e.target.closest("[data-goto]");
+  if (g) { if (g.dataset.unit) { rv.unit = g.dataset.unit; document.getElementById("rUnit").value = g.dataset.unit; } if (location.hash !== "#rivals") location.hash = "#rivals"; setTab(g.dataset.goto); }
+});
+
+/* router */
+const ROUTES = ["overview","ads","rivals","compare"];
+function route(){
+  const r = ROUTES.includes(location.hash.slice(1)) ? location.hash.slice(1) : "overview";
+  document.querySelectorAll("[data-page]").forEach(p => p.hidden = p.dataset.page !== r);
+  document.querySelectorAll(".nav a[data-route]").forEach(a => { if (a.dataset.route === r) a.setAttribute("aria-current","page"); else a.removeAttribute("aria-current"); });
+  if (r === "ads") renderAds();
+  if (r === "rivals") setTab(rv.tab);
+  window.scrollTo(0,0);
+}
+window.addEventListener("hashchange", route);
+renderAds(); route();
+</script>
+</body>
+</html>
