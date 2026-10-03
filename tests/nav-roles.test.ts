@@ -45,7 +45,7 @@ test("a viewer sees none of the three", () => {
     assert.ok(!visible.includes(label), `${label} must not reach a viewer`);
   }
   // What a viewer does have is the research they came for.
-  assert.ok(visible.includes("Dataset"));
+  assert.ok(visible.includes("รอบเก็บข้อมูล"));
   assert.ok(visible.includes("หมวดหมู่"));
 });
 

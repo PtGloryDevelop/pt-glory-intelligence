@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getActor } from "@/lib/auth/roles";
 import { AppShell } from "@/components/shell/AppShell";
 import { visibleNav } from "@/components/shell/nav";
+import { getFreshness } from "@/lib/shell/freshness";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +20,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // The menu is decided here, by the role the server resolved: an entry the
   // caller may not use never reaches their HTML.
   return (
-    <AppShell role={actor.role} sections={visibleNav(actor.role)}>
+    <AppShell role={actor.role} sections={visibleNav(actor.role)} freshness={await getFreshness(actor.role)}>
       {children}
     </AppShell>
   );

@@ -4,27 +4,28 @@ import type { IconName } from "./icons";
 export type NavItem = { label: string; icon: IconName; href?: string; minRole?: Role };
 export type NavSection = { heading: string; items: NavItem[] };
 
+// UI v2: four jobs up front; everything else stays one click away, folded.
 export const NAV: NavSection[] = [
   { heading: "พื้นที่ทำงาน", items: [
     { label: "ภาพรวม", icon: "home", href: "/" },
     { label: "แอดของเรา", icon: "grid", href: "/owned-ads/performance", minRole: "analyst" },
-    { label: "Command Center", icon: "chart", href: "/command-center", minRole: "analyst" },
-    { label: "ส่องคู่แข่ง", icon: "search", href: "/competitors" },
-    { label: "เปรียบเทียบแอด", icon: "compare", href: "/compare/ads", minRole: "analyst" },
-    { label: "รายการติดตาม", icon: "bookmark", href: "/watchlist" },
+    { label: "คู่แข่ง", icon: "search", href: "/competitors" },
+    { label: "เทียบและวางแผน", icon: "compare", href: "/compare/ads", minRole: "analyst" },
   ] },
-  { heading: "เครื่องมือวิเคราะห์", items: [
-    { label: "คลังแอดทั้งหมด", icon: "building", href: "/owned-ads", minRole: "analyst" },
-    { label: "เพจ / แบรนด์", icon: "building", href: "/pages" },
+  { heading: "เครื่องมือเพิ่มเติม", items: [
+    { label: "Command Center", icon: "chart", href: "/command-center", minRole: "analyst" },
+    { label: "รายการติดตาม", icon: "bookmark", href: "/watchlist" },
+    { label: "คลังแอดเราทั้งหมด", icon: "building", href: "/owned-ads", minRole: "analyst" },
+    { label: "เพจคู่แข่ง", icon: "building", href: "/pages" },
     { label: "เปรียบเทียบเพจ", icon: "compare", href: "/compare" },
     { label: "แนวโน้ม", icon: "trend", href: "/trends" },
-    { label: "แบรนด์", icon: "building", href: "/brands" },
   ] },
-  { heading: "จัดการข้อมูล", items: [
+  { heading: "ตั้งค่าข้อมูล", items: [
     { label: "เก็บข้อมูลใหม่", icon: "search", href: "/collect", minRole: "analyst" },
     { label: "หมวดหมู่", icon: "folder", href: "/categories" },
-    { label: "Dataset", icon: "layers", href: "/datasets" },
-    { label: "Unmapped Pages", icon: "unlink", href: "/unmapped-pages" },
+    { label: "รอบเก็บข้อมูล", icon: "layers", href: "/datasets" },
+    { label: "แบรนด์คู่แข่ง", icon: "building", href: "/brands" },
+    { label: "เพจที่ยังไม่จับคู่แบรนด์", icon: "unlink", href: "/unmapped-pages" },
     { label: "ค่าเก็บข้อมูล", icon: "wallet", href: "/collector", minRole: "admin" },
     { label: "นำเข้าไฟล์ (กู้คืนระบบ)", icon: "upload", href: "/import", minRole: "admin" },
   ] },

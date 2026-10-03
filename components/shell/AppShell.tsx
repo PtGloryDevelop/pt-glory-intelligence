@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { NavSection } from "./nav.ts";
+import type { Freshness } from "../../lib/shell/freshness.ts";
 import { Icon } from "./icons.tsx";
 import { signOut } from "../../app/(app)/sign-out.ts";
 import styles from "./AppShell.module.css";
@@ -18,8 +19,8 @@ import styles from "./AppShell.module.css";
  * admin label to every browser and call CSS a permission.
  */
 export function AppShell(
-  { role, sections, children }:
-  { role: string; sections: NavSection[]; children: React.ReactNode },
+  { role, sections, freshness, children }:
+  { role: string; sections: NavSection[]; freshness?: Freshness; children: React.ReactNode },
 ) {
   const pathname = usePathname();
   const [railed, setRailed] = useState(false);
@@ -164,7 +165,13 @@ export function AppShell(
         <div className={styles.topbar}>
           <button ref={menuButton} type="button" onClick={() => setOpen(true)} aria-label="เปิดเมนู" aria-expanded={open} aria-controls="workspace-menu">☰</button>
           <span className={styles.breadcrumb}>PT GLORY <span>/</span> <strong>{activeItem?.label??'ข้อมูลการตลาด'}</strong></span>
-          <span className={styles.sourceTag}>พื้นที่วิเคราะห์ของทีม</span>
+          <span className={styles.freshness} data-testid="shell-freshness">
+            {[freshness?.owned, freshness?.rivals].filter(chip => chip != null).map(chip => (
+              <span key={chip.label} className={styles.fresh} title={chip.stale ? "ข้อมูลเก่ากว่าที่ควร" : undefined}>
+                <span className={chip.stale ? styles.dotWarn : styles.dot} aria-hidden />{chip.label}
+              </span>
+            ))}
+          </span>
         </div>
         {/* A dataset page carries the research grid, which genuinely wants the
             canvas. Every other page reads better at a fixed measure. */}

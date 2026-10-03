@@ -151,7 +151,7 @@ test.describe("role-aware navigation", () => {
     for (const label of [...ADMIN_ONLY, "เก็บข้อมูลใหม่"]) {
       expect(sidebar, `a viewer's menu must not contain ${label}`).not.toContain(label);
     }
-    expect(sidebar).toContain("Dataset");
+    expect(sidebar).toContain("รอบเก็บข้อมูล");
     await context.close();
   });
 
