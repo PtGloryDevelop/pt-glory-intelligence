@@ -87,8 +87,12 @@ try {
       const check = await service.from("meta_entities").select("meta_entity_id",{head:true,count:"exact"}).eq("ad_account_id",account.id).eq("level","ad");
       if (check.error || check.count!==inventory.length || new Set(inventory.map(r=>r.meta_entity_id)).size!==inventory.length) throw new Error("Source inventory changed while reading; refresh again");
       const adMetadata = new Map(inventory.map(row=>[row.meta_entity_id,row]));
+      // Only ads that spent in the stored history (90 days). The full inventory (~73k, mostly old
+      // zero-spend ads) does not fit the free database twice over; no screen ranks a never-spent ad.
+      const delivered = new Set(loaded.rows.filter(row=>Number(row.spend)>0).map(row=>row.meta_entity_id));
       // Keep the existing inventory/report's 30-day totals unchanged.
       const rows = companyRows({metaAccountId:account.meta_account_id,name:account.name ?? account.meta_account_id,currency:account.currency},inventory,metadata.filter(r=>r.level!=="ad"),loaded.rows.filter(row=>row.insight_date>=start),pageNames)
+        .filter(row=>delivered.has(row.ad_id))
         .map(row=>({...row,creative_id:adMetadata.get(row.ad_id)?.creative_id??null,video_id:adMetadata.get(row.ad_id)?.creative_video_id??null,created_time:adMetadata.get(row.ad_id)?.created_time??null}));
       const daily = loaded.rows.map(row=>{
         if (!isOwnedPerformanceDate(row.insight_date) || row.insight_date<historyStart || row.insight_date>end || !/^\d{1,32}$/.test(row.meta_entity_id)) throw new Error("Invalid daily identity/date");
@@ -138,9 +142,9 @@ try {
     if (dailyVerified.count!==expectedDaily) throw new Error("Incomplete daily source sync");
     await lock.query("update owned_library_syncs set status='completed',finished_at=now(),daily_ready=true,daily_from=$2,daily_to=$3 where id=$1",[jobId,dailyVerified.first_date,dailyVerified.last_date]);
     await lock.query("insert into audit_logs(actor,action,entity_type,entity_id,after) values($1,'owned_library.sync_completed','owned_library_sync',$2,$3::jsonb)",[requestedBy,jobId,JSON.stringify({...verified,daily:dailyVerified})]);
-    // Keep current and previous snapshots. Remove older successfully replaced
-    // versions only after the new one has been published atomically.
-    await lock.query("delete from owned_library_syncs where status<>'running' and id not in (select id from owned_library_syncs where status='completed' order by finished_at desc limit 2) and id<>$1",[jobId]);
+    // Keep only the snapshot just published (storage budget); the previous one is removed
+    // in the same transaction, so readers switch from old to new with nothing in between.
+    await lock.query("delete from owned_library_syncs where status<>'running' and id<>$1",[jobId]);
     await lock.query("COMMIT");
     console.log(JSON.stringify({jobId,status:"completed",...verified}));
   }

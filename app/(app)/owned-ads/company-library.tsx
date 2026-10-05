@@ -106,7 +106,7 @@ export function CompanyLibrary({ initialFilters }: { initialFilters: OwnedLibrar
   const snapshot=result?.data.snapshot; const progress=result?.data.progress; const total=result?.data.total ?? 0;
   const displayDate=(value:string|null|undefined)=>value?new Date(value).toLocaleString("th-TH"):"—";
   return <>
-    <PageHeader title="นำเข้าแอดเรา" description="คลังแอดทั้งหมดจาก Ads Management รวมแอดที่ไม่มีค่าแอด · กดอัปเดตข้อมูลเพื่อนำเข้ารอบล่าสุด"
+    <PageHeader title="นำเข้าแอดเรา" description="แอดจาก Ads Management ที่มีค่าแอดใน 90 วันล่าสุด · กดอัปเดตข้อมูลเพื่อนำเข้ารอบล่าสุด"
       actions={<button type="button" data-testid="company-sync" onClick={()=>void sync()} disabled={watching||running}>อัปเดตข้อมูล</button>} />
     {error?<p role="alert">{error} <button type="button" onClick={()=>setRefresh(value=>value+1)}>ลองเปิดใหม่</button></p>:null}
     <div className={styles.connection} data-testid="company-source">
@@ -115,7 +115,7 @@ export function CompanyLibrary({ initialFilters }: { initialFilters: OwnedLibrar
     {watching||running?<p role="status" data-testid="company-sync-progress">กำลังซิงค์ {progress?.status==="running"?`${progress.completed_accounts} / ${progress.accounts.length} บัญชี · ${(progress.ad_count ?? 0).toLocaleString("th-TH")} แอด`:"เตรียมเชื่อมต่อ…"} · ใช้งานชุดข้อมูลก่อนหน้าได้ระหว่างรอ</p>:null}
     {progress?.status==="failed"?<p role="alert">{progress.error}</p>:null}
     <div className={styles.filterBar}>
-    <label className={styles.spendFilter}><input type="checkbox" checked={hasSpend} onChange={event=>{setHasSpend(event.target.checked);setPage(0);}}/>มีค่าแอดในช่วงผลลัพธ์ · ปิดเพื่อดูแอดทั้งคลัง</label>
+    <label className={styles.spendFilter}><input type="checkbox" checked={hasSpend} onChange={event=>{setHasSpend(event.target.checked);setPage(0);}}/>มีค่าแอดในช่วงผลลัพธ์ (30 วัน) · ปิดเพื่อดูแอดที่ใช้งบใน 90 วัน</label>
     <div className={styles.librarySearch}>
       <label className={styles.label}>ค้นหาแอดของเรา<input type="search" data-testid="company-search" maxLength={160} value={search} placeholder="พิมพ์ชื่อสินค้า เพจ หรือแคมเปญ เช่น กาแฟ" onChange={e=>{setSearch(e.target.value);setPage(0);}} /></label>
       {(search||account||status)?<button type="button" onClick={()=>{setSearch("");setAccount("");setStatus("");setPage(0);}}>ล้างตัวกรอง</button>:null}
