@@ -24,6 +24,15 @@ export function AppShell(
   { role: string; sections: NavSection[]; freshness?: Freshness; children: React.ReactNode },
 ) {
   const pathname = usePathname();
+  // The layout renders once; re-read the chips on every navigation so a collection shows up without a reload.
+  const [liveFreshness, setLiveFreshness] = useState<Freshness | undefined>(undefined);
+  useEffect(() => {
+    let live = true;
+    fetch("/api/shell/freshness").then(response => response.ok ? response.json() : null)
+      .then((data: Freshness | null) => { if (live && data) setLiveFreshness(data); }).catch(() => {});
+    return () => { live = false; };
+  }, [pathname]);
+  const chips = liveFreshness ?? freshness;
   const [railed, setRailed] = useState(false);
   const [open, setOpen] = useState(false);
   const sidebar = useRef<HTMLElement>(null);
@@ -167,7 +176,7 @@ export function AppShell(
           <button ref={menuButton} type="button" onClick={() => setOpen(true)} aria-label="เปิดเมนู" aria-expanded={open} aria-controls="workspace-menu">☰</button>
           <span className={styles.breadcrumb}>PT GLORY <span>/</span> <strong>{activeItem?.label??'ข้อมูลการตลาด'}</strong></span>
           <span className={styles.freshness} data-testid="shell-freshness">
-            {[freshness?.owned, freshness?.rivals].filter(chip => chip != null).map(chip => (
+            {[chips?.owned, chips?.rivals].filter(chip => chip != null).map(chip => (
               <span key={chip.label} className={styles.fresh} title={chip.stale ? "ข้อมูลเก่ากว่าที่ควร" : undefined}>
                 <span className={chip.stale ? styles.dotWarn : styles.dot} aria-hidden />{chip.label}
               </span>

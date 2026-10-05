@@ -64,15 +64,15 @@
 
 .tableWrap { position: relative; overflow-x: auto; }
 .table { width: 100%; border-collapse: collapse; font-size: var(--fs-meta); }
-.table th { text-align: left; font-size: var(--fs-eyebrow); font-weight: 600; color: var(--muted); padding: 8px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
-.table td { padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: middle; font-variant-numeric: tabular-nums; }
+.table th { text-align: left; font-size: var(--fs-eyebrow); font-weight: 600; color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.table td { padding: 10px; border-bottom: 1px solid var(--line); vertical-align: middle; font-variant-numeric: tabular-nums; }
 .table tbody tr:last-child td { border-bottom: 0; }
 .table tbody tr:hover td { background: var(--paper); }
 .r { text-align: right !important; }
 .srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-.adCell { display: flex; align-items: center; gap: 12px; min-width: 240px; }
+.adCell { display: flex; align-items: center; gap: 10px; min-width: 220px; }
 .adCell b { display: block; font-weight: 600; }
-.adCell small { display: block; color: var(--muted); font-size: var(--fs-eyebrow); max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.adCell small { display: block; color: var(--muted); font-size: var(--fs-eyebrow); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .unit { display: inline-block; font-size: var(--fs-eyebrow); padding: 1px 8px; border-radius: 6px; background: var(--surface-sunken); color: var(--muted); white-space: nowrap; }
 .unitNone { background: var(--warn-tint); color: var(--warn-ink); }
 .sub { display: block; font-size: var(--fs-eyebrow); color: var(--muted); }
@@ -99,7 +99,7 @@
 .ready > li > div { display: flex; justify-content: space-between; gap: 10px; font-size: var(--fs-meta); }
 .ready > li > div span:last-child { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .bar { display: block; height: 6px; border-radius: var(--radius-pill); background: var(--surface-sunken); overflow: hidden; }
-.bar i { display: block; height: 100%; background: var(--warn-ink); border-radius: var(--radius-pill); }
+.bar i { display: block; height: 100%; background: var(--brand-ci); border-radius: var(--radius-pill); }
 
 @media (max-width: 1100px) { .grid { grid-template-columns: minmax(0, 1fr); } .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 560px) {
