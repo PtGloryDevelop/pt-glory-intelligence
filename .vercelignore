@@ -1,0 +1,9 @@
+# Never upload secrets, local backups or test artefacts.
+.env*
+.scratch/
+.next/
+node_modules/
+test-results/
+playwright-report/
+e2e/
+docs/prototype/
