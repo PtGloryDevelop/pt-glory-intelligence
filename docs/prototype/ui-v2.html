@@ -263,26 +263,36 @@ tbody tr:last-child td{border-bottom:0}
 .note{font-size:12.5px;color:var(--ink-3)}
 
 
-/* AI compare */
-.tray{display:flex;gap:10px;flex-wrap:wrap;padding:4px 18px 14px}
-.tchip{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:var(--r);padding:8px 6px 8px 8px;min-width:200px;max-width:260px;background:var(--surface)}
-.tchip b{display:block;font-size:14px;line-height:1.35}
-.tchip .kind{font-size:11px;padding:0 6px}
-.tadd{border:1px dashed var(--line-strong);background:transparent;border-radius:var(--r);padding:8px 16px;min-width:160px;cursor:pointer;display:grid;gap:2px;justify-items:start;font-weight:600;color:var(--accent)}
-.picker{border-top:1px solid var(--line)}
-.card.picked{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-weak)}
-.run{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:12px 18px 16px;border-top:1px solid var(--line)}
-.ai-tag{font-size:12px;padding:2px 9px;border-radius:99px;background:var(--warn-weak);color:var(--warn)}
-.cmp5{min-width:860px}
+/* AI compare v2: one table, ads as columns, our ad is the anchor */
+.run-note{margin:-6px 18px 10px}
+.run-note:empty{display:none}
+.warn-note{color:var(--warn)}
+.cmp5{min-width:900px;table-layout:fixed}
 .cmp5 th,.cmp5 td{vertical-align:top}
+.cmp5 .dimh{width:150px}
+.cmp5 thead th{white-space:normal;padding:12px;border-bottom:1px solid var(--line)}
 .cmp5 tbody tr{cursor:default}
 .cmp5 tbody tr:hover td{background:transparent}
-.cmp5 td:first-child{color:var(--ink-2);font-size:13.5px;white-space:nowrap;width:150px}
-.cmp5 tr.perf td,.cmp5 tr.perf:hover td{background:var(--sunken)}
-.colh{display:flex;gap:8px;align-items:center;white-space:normal}
-.colh b{display:block;font-size:13.5px;color:var(--ink);line-height:1.3}
-.colh .kind{font-size:11px;padding:0 6px}
+.cmp5 td:first-child{color:var(--ink-2);font-size:13.5px}
+.cmp5 .anchor{background:var(--accent-weak)}
+.cmp5 tbody tr:hover td.anchor{background:var(--accent-weak)}
+.adcol{display:grid;gap:6px;align-content:start;color:var(--ink);font-weight:400;font-size:13.5px}
+.adcol-top{display:flex;align-items:center;gap:6px}
+.adcol-top .x{margin-left:auto;font-size:18px;padding:0 6px}
+.adcol .thumb.lg{aspect-ratio:1;border-radius:var(--r-sm)}
+.adcol b{font-size:14.5px;line-height:1.35}
+.adcol .unit{justify-self:start}
+.adcol-offer{color:var(--ink-2);line-height:1.45;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.adcol-m{font-size:12.5px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:4px 7px;font-variant-numeric:tabular-nums}
+.addcol{width:100%;min-height:240px;border:1px dashed var(--line-strong);border-radius:var(--r);background:transparent;cursor:pointer;display:grid;place-content:center;gap:4px;color:var(--accent);font-weight:600;text-align:center}
+.addcol span:first-child{font-size:26px;line-height:1}
+.addcol:hover{background:var(--accent-weak)}
+.pending-cell{color:var(--line-strong)}
+.picker{border-top:1px solid var(--line)}
+.card.picked{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-weak)}
+.ai-tag{font-size:12px;padding:2px 9px;border-radius:99px;background:var(--warn-weak);color:var(--warn)}
 .aib{display:inline-block;margin-left:6px;font:600 10px var(--f-mono);padding:0 5px;border-radius:4px;background:var(--accent-weak);color:var(--accent);vertical-align:1px}
+.anchor .aib{background:var(--surface)}
 .sum{display:grid;grid-template-columns:1fr 1fr;gap:22px;padding:4px 18px 16px}
 .sum h3{margin-bottom:8px}
 .sum ol,.sum ul{margin:0;padding-left:20px;display:grid;gap:12px;font-size:14px}
@@ -561,25 +571,18 @@ tbody tr:last-child td{border-bottom:0}
 
       <div class="stack" data-ctab="cmp">
         <section class="panel">
-          <div class="panel-h"><h2>ชุดที่เทียบ</h2><span class="hint" id="setHint"></span></div>
-          <div class="tray" id="tray"></div>
+          <div class="panel-h"><h2>เทียบแอด</h2><span class="hint" id="setHint"></span>
+            <button class="btn primary" id="runAi">วิเคราะห์ด้วย AI</button></div>
+          <p class="note run-note" id="runNote"></p>
+          <div class="tbl-wrap"><table class="cmp5" id="cmpTable"></table></div>
           <div class="picker" id="picker" hidden>
             <div class="toolbar">
               <div class="seg" role="group" aria-label="แหล่งแอด" id="pickTabs"><button data-src="rival" aria-pressed="true">คู่แข่งที่ชนกับ U15</button><button data-src="ours" aria-pressed="false">แอดของเรา</button></div>
-              <span class="note">เลือกได้รวมสูงสุด 5 แอด · ผสมแอดเรากับคู่แข่งได้</span>
+              <button class="btn ghost sm" id="pickClose">ปิด</button>
             </div>
             <div class="cards" id="pickGrid"></div>
           </div>
-          <div class="run">
-            <button class="btn primary" id="runAi">วิเคราะห์ด้วย AI</button>
-            <span class="note" id="runNote"></span>
-          </div>
-        </section>
-
-        <section class="panel" id="aiResult" hidden>
-          <div class="panel-h"><h2>เทียบทีละหัวข้อ</h2><span class="ai-tag">ตัวอย่างผล AI · ต้นแบบยังไม่ได้เรียก AI จริง</span></div>
-          <div class="tbl-wrap"><table class="cmp5" id="cmpTable"></table></div>
-          <div class="tbl-foot"><span>ช่องที่มีป้าย AI ให้ทีมแก้ได้ · ⚠ คือคำอ้างที่ควรตรวจ ไม่ใช่ความเห็นทางกฎหมาย · ราคาต่อชิ้นและอายุแอดคำนวณจากข้อมูลจริง ไม่ใช่ AI</span></div>
+          <div class="tbl-foot"><span>ป้าย AI ให้ทีมแก้ได้ · ⚠ คือคำอ้างที่ควรตรวจ ไม่ใช่ความเห็นทางกฎหมาย · ราคาต่อชิ้นและอายุแอดคำนวณจากข้อมูลจริง</span><span class="ai-tag" id="aiTag" hidden>ตัวอย่างผล AI · ต้นแบบยังไม่ได้เรียก AI จริง</span></div>
         </section>
 
         <section class="panel" id="aiSummary" hidden>
@@ -587,7 +590,7 @@ tbody tr:last-child td{border-bottom:0}
           <div class="sum" id="sumBody"></div>
           <div class="plan-foot" style="padding:0 18px 18px">
             <button class="btn primary" id="savePlan">บันทึกไอเดียที่เลือกเป็นแผนทดลอง</button>
-            <span class="note">ทีมแก้ข้อความได้ก่อนบันทึก · ไม่เปลี่ยนแอดหรืองบจริง</span>
+            <span class="note">แก้ข้อความได้ก่อนบันทึก · ไม่เปลี่ยนแอดหรืองบจริง</span>
           </div>
         </section>
       </div>
@@ -958,26 +961,19 @@ const SUMMARY = {
 };
 const cmp = { set:[...DEFAULT_SET], picker:false, src:"rival", analyzed:new Set(), shown:false, ideas:new Set([0]) };
 const sideChip = id => `<span class="kind ${CADS[id].side==="ours"?"ours":"rival"}">${CADS[id].side==="ours"?"แอดเรา":"คู่แข่ง"}</span>`;
-function renderTray(){
-  document.getElementById("tray").innerHTML = cmp.set.map(id => `<div class="tchip"><div class="thumb sm ${CADS[id].h}"><span class="fmt">${CADS[id].fmt}</span></div><div>${sideChip(id)}<b>${esc(CADS[id].name)}</b><span class="note"><span class="unit">${CADS[id].unit}</span>${cmp.analyzed.has(id)?" · วิเคราะห์แล้ว":""}</span></div><button class="x" data-rm="${id}" aria-label="เอาออก">×</button></div>`).join("")
-    + (cmp.set.length < 5 ? `<button class="tadd" id="addAd">+ เพิ่มแอด<span class="note">อีก ${5-cmp.set.length} ช่อง</span></button>` : "");
-  const ours = cmp.set.filter(id=>CADS[id].side==="ours").length;
-  document.getElementById("setHint").textContent = `${cmp.set.length}/5 แอด · แอดเรา ${ours} · คู่แข่ง ${cmp.set.length-ours}`;
-  const fresh = cmp.set.filter(id=>!cmp.analyzed.has(id)).length;
-  const run = document.getElementById("runAi"); run.disabled = cmp.set.length < 2;
-  document.getElementById("runNote").textContent = cmp.set.length < 2 ? "เลือกอย่างน้อย 2 แอด"
-    : fresh ? `วิเคราะห์ใหม่ ${fresh} แอด · แอดที่เคยวิเคราะห์ใช้ผลเดิม ไม่เสียซ้ำ · ค่าใช้จ่ายโดยประมาณแสดงตรงนี้ก่อนกด (ขึ้นกับ AI ที่เลือก: OpenAI หรือ Claude)`
-    : "ทุกแอดเคยวิเคราะห์แล้ว · เปิดผลเดิมได้ทันที ไม่มีค่าใช้จ่าย";
-  run.textContent = fresh ? "วิเคราะห์ด้วย AI" : "เปิดผลวิเคราะห์";
-  const pk = document.getElementById("picker"); pk.hidden = !cmp.picker; if (cmp.picker) renderPicker();
-}
-function renderPicker(){
-  const ids = Object.keys(CADS).filter(id => CADS[id].side===cmp.src);
-  document.querySelectorAll("#pickTabs button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.src===cmp.src));
-  document.getElementById("pickGrid").innerHTML = ids.map(id => { const a = CADS[id], on = cmp.set.includes(id);
-    return `<article class="card ${on?"picked":""}" data-pick="${id}"><div class="thumb ${a.h}"><span class="fmt">${a.fmt}</span></div><div class="body"><div class="top"><span class="pg">${esc(a.name)}</span><span class="unit">${a.unit}</span></div><span class="what">${esc(a.offer)}</span><span class="note">${on?"✓ อยู่ในชุดแล้ว":a.age}</span></div></article>`; }).join("");
+const ordered = () => [...cmp.set.filter(id=>CADS[id].side==="ours"), ...cmp.set.filter(id=>CADS[id].side!=="ours")];
+function colHead(id){
+  const a = CADS[id], ours = a.side==="ours";
+  return `<th class="${ours?"anchor":""}"><div class="adcol">
+    <div class="adcol-top">${sideChip(id)}${ours?'<span class="note">ตัวตั้ง</span>':""}<button class="x" data-rm="${id}" aria-label="เอา ${esc(a.name)} ออก">×</button></div>
+    <div class="thumb lg ${a.h}"><span class="fmt">${a.fmt}</span></div>
+    <b>${esc(a.name)}</b><span class="unit">${a.unit}</span>
+    <span class="adcol-offer">${esc(a.offer)}</span>
+    ${a.metrics?`<span class="adcol-m">${esc(a.metrics)}</span>`:'<span class="note">ไม่มีค่าแอดของคู่แข่ง</span>'}
+  </div></th>`;
 }
 function cell(id,k){
+  if (!cmp.shown || !cmp.analyzed.has(id)) return '<span class="pending-cell">—</span>';
   const a = CADS[id];
   if (k==="claim") return a.claim.map(c=>`<span class="${c.startsWith("⚠")?"flag":"note"}" style="display:block">${esc(c)}</span>`).join("");
   if (k==="age") return `${esc(a.age)}<span class="src">ข้อมูลจริง</span>`;
@@ -985,33 +981,53 @@ function cell(id,k){
   return `${esc(a[k])}<span class="aib">AI</span>`;
 }
 function renderCompare(){
-  document.getElementById("aiResult").hidden = !cmp.shown; document.getElementById("aiSummary").hidden = !cmp.shown;
-  if (!cmp.shown) return;
-  const ids = cmp.set;
-  document.getElementById("cmpTable").innerHTML = `<thead><tr><th>หัวข้อ</th>${ids.map(id=>`<th><div class="colh"><div class="thumb sm ${CADS[id].h}"><span class="fmt">${CADS[id].fmt}</span></div><div>${sideChip(id)}<b>${esc(CADS[id].name)}</b></div></div></th>`).join("")}</tr></thead><tbody>
-    <tr class="perf"><td>ผลแอด (ข้อมูลจริง)</td>${ids.map(id=>`<td>${CADS[id].metrics?esc(CADS[id].metrics):'<span class="note">Ads Library ไม่มีค่าแอดหรือยอดขายของคู่แข่ง</span>'}</td>`).join("")}</tr>
-    ${DIMS.map(([k,l])=>`<tr><td>${l}</td>${ids.map(id=>`<td>${cell(id,k)}</td>`).join("")}</tr>`).join("")}</tbody>`;
+  const ids = ordered(), ours = ids.filter(id=>CADS[id].side==="ours").length;
+  const addCol = ids.length < 5 ? `<th><button class="addcol" id="addAd"><span>+</span>เพิ่มแอดมาเทียบ<span class="note">อีก ${5-ids.length} ช่อง</span></button></th>` : "";
+  const age = new Set(ids.map(id=>cmp.analyzed.has(id)));
+  document.getElementById("cmpTable").innerHTML = `<thead><tr><th class="dimh"></th>${ids.map(colHead).join("")}${addCol}</tr></thead><tbody>
+    ${DIMS.map(([k,l])=>`<tr><td>${l}</td>${ids.map(id=>`<td class="${CADS[id].side==="ours"?"anchor":""}">${cell(id,k)}</td>`).join("")}${addCol?"<td></td>":""}</tr>`).join("")}</tbody>`;
+  document.getElementById("setHint").textContent = `${ids.length}/5 แอด · แอดเรา ${ours} · คู่แข่ง ${ids.length-ours}`;
+  const fresh = ids.filter(id=>!cmp.analyzed.has(id)).length, run = document.getElementById("runAi"), note = document.getElementById("runNote");
+  run.disabled = !ours || ids.length < 2;
+  run.textContent = fresh ? `วิเคราะห์ด้วย AI (${fresh} แอด)` : "วิเคราะห์ครบแล้ว";
+  if (!fresh) run.disabled = true;
+  note.textContent = !ours ? "เพิ่มแอดของเราอย่างน้อย 1 ตัวเป็นตัวตั้ง" : ids.length < 2 ? "เพิ่มคู่แข่งอย่างน้อย 1 ตัว"
+    : fresh ? `แอดที่เคยวิเคราะห์ใช้ผลเดิม · ค่าใช้จ่ายโดยประมาณจะขึ้นก่อนยืนยัน` : "";
+  note.classList.toggle("warn-note", !ours);
+  document.getElementById("aiTag").hidden = !cmp.shown;
+  document.getElementById("picker").hidden = !cmp.picker; if (cmp.picker) renderPicker();
+  renderSummary(ids);
+}
+function renderPicker(){
+  const ids = Object.keys(CADS).filter(id => CADS[id].side===cmp.src);
+  document.querySelectorAll("#pickTabs button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.src===cmp.src));
+  document.getElementById("pickGrid").innerHTML = ids.map(id => { const a = CADS[id], on = cmp.set.includes(id);
+    return `<article class="card ${on?"picked":""}" data-pick="${id}"><div class="thumb ${a.h}"><span class="fmt">${a.fmt}</span></div><div class="body"><div class="top"><span class="pg">${esc(a.name)}</span><span class="unit">${a.unit}</span></div><span class="what">${esc(a.offer)}</span><span class="note">${on?"✓ อยู่ในชุดแล้ว":a.age}</span></div></article>`; }).join("");
+}
+function renderSummary(ids){
+  const box = document.getElementById("aiSummary"), done = cmp.shown && ids.every(id=>cmp.analyzed.has(id));
+  box.hidden = !done; if (!done) return;
   const isDefault = DEFAULT_SET.every(id=>ids.includes(id)) && ids.length===DEFAULT_SET.length;
   const ev = list => list.filter(id=>CADS[id]).map(id=>`<span class="evc">${esc(CADS[id].name)}</span>`).join("");
   document.getElementById("sumBody").innerHTML = isDefault ? `
     <div><h3>จุดที่ต่างกันจริง</h3><ol>${SUMMARY.diff.map(([t,e])=>`<li>${esc(t)}<div class="evs">${ev(e)}</div></li>`).join("")}</ol></div>
     <div><h3>ไอเดียทดลองสำหรับแอดเรา</h3><ul class="ideas">${SUMMARY.ideas.map(([t,e],i)=>`<li><label><input type="checkbox" data-idea="${i}" ${cmp.ideas.has(i)?"checked":""}> <span contenteditable="true" data-ideatext="${i}">${esc(t)}</span></label><div class="evs">${ev(e)}</div></li>`).join("")}</ul></div>`
-    : `<div class="empty" style="grid-column:1/-1"><h3>ต้นแบบมีสรุปตัวอย่างเฉพาะชุดเริ่มต้น</h3><p>ระบบจริงให้ AI สรุปจุดต่างและไอเดียทดลองของชุดที่เลือกทุกครั้ง · ตารางด้านบนแสดงผลรายแอดของชุดนี้ได้</p></div>`;
+    : `<div class="empty" style="grid-column:1/-1"><h3>ต้นแบบมีสรุปตัวอย่างเฉพาะชุดเริ่มต้น</h3><p>ระบบจริงให้ AI สรุปจุดต่างและไอเดียทดลองของชุดที่เลือกทุกครั้ง</p></div>`;
   document.getElementById("savePlan").disabled = !isDefault;
 }
-document.getElementById("tray").addEventListener("click", e => {
-  const rm = e.target.closest("[data-rm]"); if (rm) { cmp.set = cmp.set.filter(id=>id!==rm.dataset.rm); renderTray(); renderCompare(); return; }
-  if (e.target.closest("#addAd")) { cmp.picker = !cmp.picker; renderTray(); }
+document.getElementById("cmpTable").addEventListener("click", e => {
+  const rm = e.target.closest("[data-rm]"); if (rm) { cmp.set = cmp.set.filter(id=>id!==rm.dataset.rm); renderCompare(); return; }
+  if (e.target.closest("#addAd")) { cmp.picker = true; if (!cmp.set.some(id=>CADS[id].side==="ours")) cmp.src = "ours"; renderCompare(); document.getElementById("picker").scrollIntoView({behavior:"smooth",block:"nearest"}); }
 });
+document.getElementById("pickClose").onclick = () => { cmp.picker = false; renderCompare(); };
 document.getElementById("pickTabs").addEventListener("click", e => { const b = e.target.closest("[data-src]"); if (b) { cmp.src = b.dataset.src; renderPicker(); } });
 document.getElementById("pickGrid").addEventListener("click", e => { const c = e.target.closest("[data-pick]"); if (!c) return; const id = c.dataset.pick;
   if (cmp.set.includes(id)) cmp.set = cmp.set.filter(x=>x!==id); else if (cmp.set.length < 5) cmp.set.push(id); else { toast("เลือกได้สูงสุด 5 แอด"); return; }
-  renderTray(); renderCompare(); });
+  renderCompare(); });
 document.getElementById("runAi").onclick = () => {
   const btn = document.getElementById("runAi"), fresh = cmp.set.filter(id=>!cmp.analyzed.has(id));
-  btn.disabled = true; btn.textContent = fresh.length ? `กำลังวิเคราะห์ ${fresh.length} แอด…` : "กำลังเปิด…";
-  setTimeout(() => { fresh.forEach(id=>cmp.analyzed.add(id)); cmp.shown = true; cmp.picker = false; renderTray(); renderCompare();
-    document.getElementById("aiResult").scrollIntoView({behavior:"smooth",block:"start"}); if (fresh.length) toast(`วิเคราะห์ ${fresh.length} แอดแล้ว (ต้นแบบ: ผลตัวอย่าง)`); }, fresh.length ? 900 : 200);
+  btn.disabled = true; btn.textContent = `กำลังวิเคราะห์ ${fresh.length} แอด…`;
+  setTimeout(() => { fresh.forEach(id=>cmp.analyzed.add(id)); cmp.shown = true; cmp.picker = false; renderCompare(); toast(`วิเคราะห์ ${fresh.length} แอดแล้ว (ต้นแบบ: ผลตัวอย่าง)`); }, 900);
 };
 document.getElementById("sumBody").addEventListener("change", e => { const c = e.target.closest("[data-idea]"); if (c) { const i = +c.dataset.idea; c.checked ? cmp.ideas.add(i) : cmp.ideas.delete(i); } });
 document.getElementById("savePlan").onclick = () => {
@@ -1023,7 +1039,7 @@ document.getElementById("savePlan").onclick = () => {
     baseName:CADS[ours].name, base:CADS[ours].base, stage:0, result:null });
   setCTab("plans"); window.scrollTo(0,0); toast("บันทึกแผนแล้ว · ทีมเห็นในแท็บแผนทดลอง (ต้นแบบ)");
 };
-renderTray(); renderCompare();
+renderCompare();
 
 /* update popover */
 const pop = document.getElementById("updPop"), updBtn = document.getElementById("updBtn");
