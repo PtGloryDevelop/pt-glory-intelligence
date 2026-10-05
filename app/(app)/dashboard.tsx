@@ -111,7 +111,7 @@ export function Dashboard({canAnalyze}:{canAnalyze:boolean}){
   function updateRow(item:DashboardUpdate){
     const row=item.ad?rowByKey.get(reviewAdKey(item.ad)):undefined;
     return <li key={item.id} className={seen.includes(item.id)?styles.isSeen:undefined}>
-      {row?<OwnedThumb url={images[reviewAdKey(row)]} video={Boolean(row.video_id)} name={row.ad_name}/>:<span className={`${styles.thumb} ${styles.thumbKind}`} aria-hidden>{item.kind==='rival'?'คู่แข่ง':'ข้อมูล'}</span>}
+      {row?<OwnedThumb url={images[reviewAdKey(row)]===null?row.creative_url??null:images[reviewAdKey(row)]} video={Boolean(row.video_id)} name={row.ad_name}/>:<span className={`${styles.thumb} ${styles.thumbKind}`} aria-hidden>{item.kind==='rival'?'คู่แข่ง':'ข้อมูล'}</span>}
       <div className={styles.feedBody}>
         <div className={styles.meta}><span className={`${styles.kind} ${styles[item.kind]}`}>{KIND[item.kind]}</span><span className={`${styles.sev} ${styles[item.severity]}`}>{item.label}</span></div>
         <h3>{item.title}</h3><p>{item.body}</p>
@@ -175,7 +175,7 @@ export function Dashboard({canAnalyze}:{canAnalyze:boolean}){
             <tbody>{top.map((row:OwnedPerformanceRow)=>{
               const series=data.rowSeries?.[reviewAdKey(row)];const enough=(row.conversations??0)>=MIN_CHATS;
               return <tr key={reviewAdKey(row)}>
-                <td><div className={styles.adCell}><OwnedThumb url={images[reviewAdKey(row)]} video={Boolean(row.video_id)} name={row.ad_name}/><div><b>{row.ad_name}</b><small>{row.page_name??row.account_name}</small></div></div></td>
+                <td><div className={styles.adCell}><OwnedThumb url={images[reviewAdKey(row)]===null?row.creative_url??null:images[reviewAdKey(row)]} video={Boolean(row.video_id)} name={row.ad_name}/><div><b>{row.ad_name}</b><small>{row.page_name??row.account_name}</small></div></div></td>
                 <td>{row.unit_names.length?<span className={styles.unit}>{row.unit_names.join(', ')}</span>:<span className={`${styles.unit} ${styles.unitNone}`}>ยังไม่ผูกยูนิต</span>}</td>
                 <td className={styles.r}>{num(row.spend)}{series?.change!=null?<span className={styles.sub}>{series.change>0?'▲':'▼'} {Math.abs(series.change).toFixed(Math.abs(series.change)>=100?0:1)}%</span>:null}</td>
                 <td className={`${styles.r} ${vs(rowRoas(row),summary?.roas,true)}`}>{num(rowRoas(row))}</td>
