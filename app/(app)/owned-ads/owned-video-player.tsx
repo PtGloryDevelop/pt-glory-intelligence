@@ -26,7 +26,8 @@ export function OwnedVideoPlayer({ ad, url, mediaLoading = false, autoLoad = fal
   }, [ad.account_id, ad.ad_id, requested]);
   return <div className={styles.videoPlayer}>
     {current?.preview && !current.url ? <div className={styles.videoPreview}>
-      <p>พรีวิววิดีโอจาก Meta · กด ▶ เพื่อเล่น</p>
+      {/* Some browsers block facebook.com frames inside other sites (tracking prevention, ad blockers); a full tab is never blocked. */}
+      <p>พรีวิววิดีโอจาก Meta · กด ▶ เพื่อเล่น · ถ้ากรอบว่าง <a href={current.preview} target="_blank" rel="noopener noreferrer">เปิดวิดีโอในแท็บใหม่ ↗</a></p>
       <iframe src={current.preview} title={`วิดีโอ ${ad.ad_name}`} data-testid="owned-video-preview" sandbox="allow-scripts allow-same-origin" allow="autoplay; fullscreen" allowFullScreen referrerPolicy="no-referrer" />
     </div> : <Creative url={url} videoUrl={current?.url} name={ad.ad_name} mediaLoading={mediaLoading} detail />}
     {!requested && ad.video_id ? <button type="button" className={styles.watchVideo} onClick={() => setRequested(true)}>▶ ดูวิดีโอ</button> : null}
