@@ -11,6 +11,7 @@ import type { OwnedPerformanceData } from '@/lib/owned-ads/performance';
 import { resolveMedia } from '@/lib/media/resolve';
 import { summarizeOwnedReport } from '@/lib/owned-ads/model';
 import { COMPARISON_DECISIONS, comparisonDraftKey, comparisonSelectionKey, mergeComparisonSelection, parseComparisonDraft, parseComparisonSelection, rivalFromDetail, type ComparisonDraft, type ComparisonSelection, type Rival } from './selection';
+import { AiCompare, MAX_COMPARE, compareId, type CompareAd } from './ai-compare';
 import styles from './comparison.module.css';
 
 type Dataset = { id: string; name: string; source: string; collected: string; count: number };
@@ -61,6 +62,8 @@ export function AdComparison({ datasets, seed, initialOwned, initialPeriod, init
   const rivalKey = JSON.stringify([dataset, rivalQuery, rivalPage]);
   const ownLoading = ownLoadedKey !== ownKey;
   const rivalLoading = rivalLoadedKey !== rivalKey;
+  const [extras, setExtras] = useState<CompareAd[]>([]);
+  const [adding, setAdding] = useState<'own' | 'rival' | null>(null);
   const [images, setImages] = useState<Record<string, string>>({});
   const [videoIds, setVideoIds] = useState<Record<string, string | null>>({});
   const selection = { account: a?.account_id ?? '', owned: a?.ad_id ?? '', dataset: b?.dataset_id ?? '', rival: b?.ad_archive_id ?? '' };
@@ -95,6 +98,18 @@ export function AdComparison({ datasets, seed, initialOwned, initialPeriod, init
   }, [performanceSource, returnHref]);
 
   function openStep(next: Step) { focusStep.current = next; setStep(next); }
+  // The pair (a, b) anchors the page; extras ride along for the AI table only (not kept in the URL).
+  const compareAds: CompareAd[] = a && b ? [{ kind: 'own', ad: a }, ...extras.filter(item => item.kind === 'own'), { kind: 'rival', ad: b }, ...extras.filter(item => item.kind === 'rival')] : [];
+  function addCompare(item: CompareAd) {
+    if (compareAds.length < MAX_COMPARE && !compareAds.some(other => compareId(other) === compareId(item))) setExtras([...extras, item]);
+    setAdding(null); openStep('review');
+  }
+  function removeCompare(item: CompareAd) {
+    const next = extras.find(other => other.kind === item.kind);
+    if (a && item.kind === 'own' && compareId(item) === compareId({ kind: 'own', ad: a })) { if (next?.kind === 'own') { setA(next.ad); setExtras(extras.filter(other => other !== next)); } return; }
+    if (b && item.kind === 'rival' && compareId(item) === compareId({ kind: 'rival', ad: b })) { if (next?.kind === 'rival') { setB(next.ad); setExtras(extras.filter(other => other !== next)); } return; }
+    setExtras(extras.filter(other => compareId(other) !== compareId(item)));
+  }
 
   useEffect(() => {
     if (focusStep.current !== step) return;
@@ -232,6 +247,7 @@ export function AdComparison({ datasets, seed, initialOwned, initialPeriod, init
     </nav>
     {restoreError ? <p className={styles.notice} role="alert">{restoreError} <button type="button" onClick={() => setRestoreError('')}>ปิด</button></p> : null}
     {restoring ? <p role="status" className={styles.muted}>กำลังเปิดแอดที่เลือกไว้…</p> : null}
+    {adding && step !== 'review' ? <p className={styles.notice} role="status">กำลังเลือก{adding === 'own' ? 'แอดของเรา' : 'แอดคู่แข่ง'}เพิ่มเพื่อเทียบด้วย AI ({compareAds.length}/{MAX_COMPARE}) <button type="button" onClick={() => { setAdding(null); openStep('review'); }}>ยกเลิก</button></p> : null}
 
     {step !== 'review' ? <aside className={styles.context} aria-label="แอดที่เลือกเปรียบเทียบ" data-testid="compare-selection-tray">
       <div className={styles.contextPair}>
@@ -256,7 +272,7 @@ export function AdComparison({ datasets, seed, initialOwned, initialPeriod, init
       {!performanceSource ? <details className={styles.filters}><summary>ตัวกรองเพิ่มเติม{account ? ' · เลือกบัญชีแล้ว' : ''}</summary><label>บัญชีโฆษณา<select value={account} onChange={event => { setAccount(event.target.value); setOwnPage(0); }}><option value="">ทุกบัญชี</option>{owned?.snapshot?.accounts.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label></details> : null}
       {ownError ? <p role="alert">{ownError} <button type="button" onClick={() => setRefresh(value => value + 1)}>ลองใหม่</button></p> : ownLoading ? <p role="status" className={styles.loading}>กำลังเปิดแอดของเรา…</p> : <>
         <p className={styles.resultCount}>พบ {number(owned?.total ?? 0)} แอด{a ? ' · แอดที่เลือกยังอยู่ แม้เปลี่ยนคำค้น' : ''}</p>
-        <div className={styles.grid} data-testid="compare-owned-grid">{owned?.rows.map(ad => <button type="button" key={ownId(ad)} className={styles.choice} data-testid={'compare-own-' + ad.ad_id} disabled={restoring} aria-pressed={a ? ownId(a) === ownId(ad) : false} onClick={() => { setA(ad); setPeriod(owned.snapshot); openStep(b ? 'review' : 'rival'); }}>
+        <div className={styles.grid} data-testid="compare-owned-grid">{owned?.rows.map(ad => <button type="button" key={ownId(ad)} className={styles.choice} data-testid={'compare-own-' + ad.ad_id} disabled={restoring} aria-pressed={a ? ownId(a) === ownId(ad) : false} onClick={() => { if (adding === 'own') { addCompare({ kind: 'own', ad }); return; } setA(ad); setPeriod(owned.snapshot); openStep(b ? 'review' : 'rival'); }}>
           <Creative url={images[ownId(ad)] ?? ad.creative_url} name={ad.ad_name} />
           <span className={styles.cardBody}><strong>{ownName(ad)}</strong><span className={styles.cardMeta}>{ad.page_name ?? ad.account_name}</span><span className={styles.cardCopy}>{ad.body_text ?? ad.campaign_name}</span><span className={styles.cardStats}><span>ค่าแอด<strong>{number(ad.spend)} {ad.currency}</strong></span><span>ROAS (Meta)<strong>{number(summarizeOwnedReport([ad]).roas.value)}</strong></span></span><span className={styles.choose}>{a && ownId(a) === ownId(ad) ? '✓ เลือกไว้แล้ว' : 'เลือกแอดนี้ →'}</span></span>
         </button>)}</div>
@@ -274,7 +290,7 @@ export function AdComparison({ datasets, seed, initialOwned, initialPeriod, init
       <details className={styles.filters}><summary>ตัวกรองเพิ่มเติม{dataset ? ' · จำกัดแหล่งข้อมูลแล้ว' : ''}</summary><label>แหล่งข้อมูลที่ต้องการค้น<select data-testid="compare-dataset" value={dataset} onChange={event => { setDataset(event.target.value); setRivalPage(0); }}><option value="">คลังคู่แข่งทั้งหมด</option>{datasets.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><p className={styles.muted}>การเปลี่ยนตัวกรองจะไม่เปลี่ยนแอดที่เลือกเปรียบเทียบไว้</p></details>
       {rivalError ? <p role="alert">{rivalError} <button type="button" onClick={() => setRefresh(value => value + 1)}>ลองใหม่</button></p> : rivalLoading ? <p role="status" className={styles.loading}>กำลังเปิดแอดคู่แข่ง…</p> : <>
         <p className={styles.resultCount} data-testid="compare-rival-scope">{dataset ? 'ค้นในแหล่งข้อมูลที่เลือก' : 'ค้นในคลังคู่แข่งทั้งหมด'} · พบ {number(rivals?.total ?? 0)} แอด</p>
-        <div className={styles.grid} data-testid="compare-rival-grid">{rivals?.rows.map(ad => <button type="button" key={ad.dataset_id + ':' + ad.ad_archive_id} className={styles.choice} data-testid={'compare-rival-' + ad.ad_archive_id} disabled={restoring || !ad.dataset_id} aria-pressed={b?.ad_archive_id === ad.ad_archive_id && b?.dataset_id === ad.dataset_id} onClick={() => { setB(ad); openStep(a ? 'review' : 'owned'); }}>
+        <div className={styles.grid} data-testid="compare-rival-grid">{rivals?.rows.map(ad => <button type="button" key={ad.dataset_id + ':' + ad.ad_archive_id} className={styles.choice} data-testid={'compare-rival-' + ad.ad_archive_id} disabled={restoring || !ad.dataset_id} aria-pressed={b?.ad_archive_id === ad.ad_archive_id && b?.dataset_id === ad.dataset_id} onClick={() => { if (adding === 'rival') { addCompare({ kind: 'rival', ad }); return; } setB(ad); openStep(a ? 'review' : 'owned'); }}>
           <Creative url={rivalImage(ad)} name={ad.page_name ?? ad.ad_archive_id} />
           <span className={styles.cardBody}><strong>{ad.page_name ?? 'ไม่ทราบชื่อเพจ'}</strong><span className={styles.cardCopy}>{ad.title ?? ad.body_text ?? 'ไม่มีข้อความที่บันทึกไว้'}</span><span className={styles.cardMeta}>{ad.is_active === null ? 'ไม่ทราบสถานะ' : ad.is_active ? 'กำลังใช้งาน' : 'ไม่ใช้งาน'} · {ad.display_format ?? 'ไม่ระบุรูปแบบ'}</span><span className={styles.choose}>{b?.ad_archive_id === ad.ad_archive_id && b?.dataset_id === ad.dataset_id ? '✓ เลือกไว้แล้ว' : 'เลือกแอดนี้ →'}</span></span>
         </button>)}</div>
@@ -309,6 +325,9 @@ export function AdComparison({ datasets, seed, initialOwned, initialPeriod, init
           <Link href={'/pages/' + b.page_id + '?scope=dataset:' + b.dataset_id}>ดูเพจและติดตามคู่แข่ง ↗</Link>
         </section>
       </div>
+      <AiCompare ads={compareAds} images={images} ourThrough={period?.date_end ?? null}
+        onAdd={kind => { setAdding(kind); openStep(kind === 'own' ? 'owned' : 'rival'); }} onRemove={removeCompare}
+        onIdea={text => { updateDraft('hypothesis', hypothesis ? hypothesis + '\n' + text : text); const heading = document.getElementById('compare-plan-heading'); heading?.focus({ preventScroll: true }); heading?.scrollIntoView({ block: 'start' }); }} />
       <section id="compare-plan" className={styles.panel} data-testid="compare-business">
         <div className={styles.sectionHead}><div><span className={styles.sideLabel}>03 · แผนทดลองของทีม</span><h2 id="compare-plan-heading" tabIndex={-1}>เราจะทดลองอะไรต่อ?</h2><p>ระบุเหตุผลจากคู่แอดนี้ แล้วกำหนดสิ่งที่จะวัดด้วยข้อมูลของเรา</p></div><span className={styles.draftState} data-testid="compare-draft-status">{draftUnavailable ? 'บันทึกร่างในเบราว์เซอร์ไม่ได้ · ดาวน์โหลดแผนเก็บไว้ได้' : 'เก็บร่างอัตโนมัติในเบราว์เซอร์นี้ · แยกตามคู่แอด'}</span></div>
         <label>สิ่งที่จะทำกับแอดเรา<select data-testid="compare-decision" value={decision} onChange={event => updateDraft('decision', event.target.value)}><option value="">เลือกแนวทางที่ทีมต้องการทดลอง</option>{COMPARISON_DECISIONS.map(value => <option key={value}>{value}</option>)}</select></label>
