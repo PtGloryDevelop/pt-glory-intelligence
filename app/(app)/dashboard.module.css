@@ -76,7 +76,7 @@
 .unit { display: inline-block; font-size: var(--fs-eyebrow); padding: 1px 8px; border-radius: 6px; background: var(--surface-sunken); color: var(--muted); white-space: nowrap; }
 .unitNone { background: var(--warn-tint); color: var(--warn-ink); }
 .sub { display: block; font-size: var(--fs-eyebrow); color: var(--muted); }
-.spark { color: var(--accent-blue); }
+.spark { color: var(--brand-ci); }
 .rowActs { display: flex; gap: 10px; white-space: nowrap; }
 .rowActs a { color: var(--accent-blue-ink); text-decoration: none; font-weight: 500; }
 .rowActs a:hover { text-decoration: underline; }

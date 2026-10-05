@@ -16,15 +16,19 @@
 
   --brand: #d1d5db;
   --brand-deep: #b8bec8;
-  --brand-ink: #2563eb;
-  --brand-tint: #f4f5f7;
-  --brand-tint-strong: #edeff2;
+  /* PT Glory CI pink #D34B82 is 4.12:1 on white: logo, highlights and charts only.
+     Text, links and button fills use a slightly deeper pink that clears AA (5.18:1 on white, 4.87:1 on paper).
+     Brown is not used in the product UI. */
+  --brand-ci: #d34b82;
+  --brand-ink: #c0396f;
+  --brand-tint: #fdf0f5;
+  --brand-tint-strong: #fadbe8;
 
 
   --accent-coral: #ff7a66;
   --accent-pink: #f2a3cc;
-  --accent-blue: #2563eb;
-  --accent-blue-ink: #1d4ed8;
+  --accent-blue: #c0396f; /* name kept for compatibility: primary action colour */
+  --accent-blue-ink: #b23468;
   --accent-green: #27c98b;
   --accent-yellow: #f5d437;
   --accent-lavender: #b8b4f5;
@@ -40,7 +44,7 @@
   --neutral-tint: #eef2f7;
 
 
-  --focus: #1d4ed8;
+  --focus: #b23468;
 
 
   --fs-page-title: 32px;
@@ -159,8 +163,8 @@ button[data-variant="primary"] {
 }
 
 button[data-variant="primary"]:hover:not(:disabled) {
-  background: #1d4ed8;
-  border-color: #1d4ed8;
+  background: var(--accent-blue-ink);
+  border-color: var(--accent-blue-ink);
 }
 
 table { border-collapse: collapse; width: 100%; font-size: var(--fs-body); }
@@ -193,6 +197,6 @@ tbody tr:hover { background: var(--surface-sunken); }
 }
 [data-cta]:hover {
   color: #ffffff;
-  background: #1d4ed8;
-  border-color: #1d4ed8;
+  background: var(--accent-blue-ink);
+  border-color: var(--accent-blue-ink);
 }
