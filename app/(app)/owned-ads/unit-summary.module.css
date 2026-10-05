@@ -1,0 +1,26 @@
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); min-width: 0; }
+.head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; padding: 16px var(--pad-card) 10px; }
+.head h2 { font-family: var(--display); font-size: var(--fs-subhead); font-weight: 600; margin: 0 auto 0 0; }
+.head span { font-size: var(--fs-eyebrow); color: var(--muted); }
+.loading, .problem { margin: 0; padding: 4px var(--pad-card) 16px; font-size: var(--fs-meta); color: var(--muted); }
+.problem { color: var(--danger); }
+.tableWrap { position: relative; overflow-x: auto; }
+.table { width: 100%; border-collapse: collapse; font-size: var(--fs-meta); }
+.table th { text-align: left; font-size: var(--fs-eyebrow); font-weight: 600; color: var(--muted); padding: 8px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.table th button { border: 0; background: none; padding: 0; min-height: 0; font: inherit; color: inherit; cursor: pointer; }
+.table th button[aria-pressed='true'] { color: var(--accent-blue-ink); }
+.table td { padding: 9px 12px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.table tbody tr { cursor: pointer; }
+.table tbody tr:hover td { background: var(--paper); }
+.table tbody tr:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.active td { background: var(--brand-tint-strong) !important; }
+.unassigned { cursor: default !important; }
+.r { text-align: right !important; }
+.unit { display: inline-block; font-size: var(--fs-eyebrow); font-weight: 600; padding: 1px 8px; border-radius: 6px; background: var(--surface-sunken); color: var(--ink); }
+.none { background: var(--warn-tint); color: var(--warn-ink); font-weight: 500; }
+.delta { display: inline-flex; align-items: center; margin-left: 4px; padding: 0 7px; border-radius: var(--radius-pill); font-size: var(--fs-eyebrow); font-weight: 600; }
+.flat { background: var(--neutral-tint); color: var(--muted); }
+.good { background: var(--ok-tint); color: var(--ok-ink); }
+.bad { background: var(--danger-tint); color: var(--danger); }
+.foot { display: flex; gap: 12px; justify-content: space-between; flex-wrap: wrap; padding: 10px var(--pad-card) 14px; font-size: var(--fs-eyebrow); color: var(--muted); }
+.foot button { border: 0; background: none; color: var(--accent-blue-ink); font-size: var(--fs-meta); font-weight: 500; cursor: pointer; min-height: 0; padding: 0; }

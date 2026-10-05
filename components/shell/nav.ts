@@ -13,7 +13,6 @@ export const NAV: NavSection[] = [
     { label: "เทียบและวางแผน", icon: "compare", href: "/compare/ads", minRole: "analyst" },
   ] },
   { heading: "เครื่องมือเพิ่มเติม", items: [
-    { label: "Command Center", icon: "chart", href: "/command-center", minRole: "analyst" },
     { label: "รายการติดตาม", icon: "bookmark", href: "/watchlist" },
     { label: "คลังแอดเราทั้งหมด", icon: "building", href: "/owned-ads", minRole: "analyst" },
     { label: "เพจคู่แข่ง", icon: "building", href: "/pages" },

@@ -84,7 +84,13 @@ export function ownedPerformancePeriod(query: OwnedPerformanceQuery, coverage: O
     case "yesterday": return { from: shift(today, -1), to: shift(today, -1) };
     case "this-month": return { from: month, to: today };
     case "last-month": { const to = shift(month, -1); return { from: `${to.slice(0, 7)}-01`, to }; }
-    default: return { from: shift(today, -(Number(query.period.slice(0, -1)) - 1)), to: today };
+    default: {
+      // Rolling windows end on the last finished day that has data, so a 7-day view never counts
+      // unimported or unfinished days as zeros against a complete previous window.
+      const yesterday = shift(today, -1);
+      const to = coverage && coverage.to < yesterday ? coverage.to : yesterday;
+      return { from: shift(to, -(Number(query.period.slice(0, -1)) - 1)), to };
+    }
   }
 }
 

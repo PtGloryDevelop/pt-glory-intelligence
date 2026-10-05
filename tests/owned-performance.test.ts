@@ -6,8 +6,11 @@ test("performance filters validate boundaries and calendar periods preserve real
   const query = (input = "") => parseOwnedPerformanceQuery(new URLSearchParams(input));
   const midnight = new Date("2026-09-30T18:00:00Z"); // Oct 1 in Bangkok.
   const coverage = { from: "2026-09-02", to: "2026-09-30" };
-  assert.deepEqual(ownedPerformancePeriod(query(), coverage, midnight), { from: "2026-09-25", to: "2026-10-01" });
-  assert.deepEqual(ownedPerformancePeriod(query("period=3d"), null, midnight), { from: "2026-09-29", to: "2026-10-01" });
+  // Rolling presets end on the last finished day with data (never today, never past coverage).
+  assert.deepEqual(ownedPerformancePeriod(query(), coverage, midnight), { from: "2026-09-24", to: "2026-09-30" });
+  assert.deepEqual(ownedPerformancePeriod(query("period=3d"), null, midnight), { from: "2026-09-28", to: "2026-09-30" });
+  const fiveOct = new Date("2026-10-05T03:00:00Z"), stale = { from: "2026-09-02", to: "2026-10-02" };
+  assert.deepEqual(ownedPerformancePeriod(query("period=7d"), stale, fiveOct), { from: "2026-09-26", to: "2026-10-02" });
   assert.deepEqual(ownedPerformancePeriod(query("period=this-month"), coverage, midnight), { from: "2026-10-01", to: "2026-10-01" });
   assert.deepEqual(ownedPerformancePeriod(query("period=last-month"), coverage, midnight), { from: "2026-09-01", to: "2026-09-30" });
   assert.deepEqual(ownedPerformancePeriod(query("period=today"), coverage, midnight), { from: "2026-10-01", to: "2026-10-01" });
