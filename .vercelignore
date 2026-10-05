@@ -7,3 +7,5 @@ test-results/
 playwright-report/
 e2e/
 docs/prototype/
+backups/
+test-artifacts/
