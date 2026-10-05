@@ -46,7 +46,7 @@ export function UnitSummary({ query, activeUnit, onPick }: { query: string; acti
       <span>{data ? `${thaiDate(data.period.from)} – ${thaiDate(data.period.to)}${data.previous ? ` เทียบ ${thaiDate(data.previous.from)} – ${thaiDate(data.previous.to)}` : ""} · คลิกยูนิตเพื่อกรองแอดด้านล่าง` : "ช่วงเดียวกับรายการแอด"}</span>
     </div>
     {error ? <p className={styles.problem} role="alert">{error} <button type="button" onClick={() => setRetry(v => v + 1)}>ลองใหม่</button></p> : null}
-    {!data && !error ? <p className={styles.loading} role="status">กำลังรวมผลรายยูนิต… ครั้งแรกของแต่ละช่วงอาจใช้เวลาหลายวินาที</p> : null}
+    {!data && !error ? <p className={styles.loading} role="status">กำลังรวมผลรายยูนิต…</p> : null}
     {data ? <>
       <div className={styles.tableWrap}><table className={styles.table}>
         <thead><tr><th>ยูนิต</th><th className={styles.r}>แอดที่มีค่าแอด</th>{head("spend", "ค่าแอด")}{head("change", "เปลี่ยน")}{head("roas", "ROAS (Meta)")}{head("cpc", "ค่าทัก")}</tr></thead>
@@ -61,8 +61,8 @@ export function UnitSummary({ query, activeUnit, onPick }: { query: string; acti
             <td className={styles.r}>{num(row.current?.roas)} <Delta value={pct(row.current?.roas, row.previous?.roas)} goodUp={true} /></td>
             <td className={styles.r}>{num(row.current?.cost_per_conversation)} <Delta value={pct(row.current?.cost_per_conversation, row.previous?.cost_per_conversation)} goodUp={false} /></td>
           </tr>)}
-          <tr className={styles.unassigned}><td><span className={`${styles.unit} ${styles.none}`}>ยังไม่ผูกยูนิต</span></td><td className={styles.r}>—</td><td className={styles.r}>{num(data.unassigned.spend, 0)}</td>
-            <td className={styles.r}>{data.unassigned.share != null ? <span className={`${styles.delta} ${styles.flat}`}>{data.unassigned.share.toFixed(1)}% ของค่าแอด</span> : "—"}</td><td className={styles.r}>—</td><td className={styles.r}>—</td></tr>
+          <tr className={styles.unassigned}><td><span className={`${styles.unit} ${styles.none}`}>ยังไม่ผูกยูนิต</span></td><td className={styles.r}>{data.unassigned.totals?.ad_count ?? "—"}</td><td className={styles.r}>{num(data.unassigned.spend, 0)}</td>
+            <td className={styles.r}>{data.unassigned.share != null ? <span className={`${styles.delta} ${styles.flat}`}>{data.unassigned.share.toFixed(1)}% ของค่าแอด</span> : "—"}</td><td className={styles.r}>{num(data.unassigned.totals?.roas)}</td><td className={styles.r}>{num(data.unassigned.totals?.cost_per_conversation)}</td></tr>
         </tbody>
       </table></div>
       <div className={styles.foot}>
