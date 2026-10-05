@@ -323,3 +323,17 @@ function errorMessage(body: unknown): string {
   }
   return "";
 }
+
+/** The provider's own account figure: counts every run, including ones no longer in our database. */
+export async function readApifyAccountUsage(): Promise<{usedUsd: number; limitUsd: number; cycleStart: string | null; cycleEnd: string | null} | null> {
+  const token = process.env.APIFY_TOKEN;
+  if (!token) return null;
+  try {
+    const response = await fetch('https://api.apify.com/v2/users/me/limits', {headers: {Authorization: `Bearer ${token}`}, signal: AbortSignal.timeout(8000), cache: 'no-store'});
+    if (!response.ok) return null;
+    const {data} = await response.json();
+    const used = Number(data?.current?.monthlyUsageUsd), limit = Number(data?.limits?.maxMonthlyUsageUsd);
+    if (!Number.isFinite(used) || !Number.isFinite(limit)) return null;
+    return {usedUsd: used, limitUsd: limit, cycleStart: data.monthlyUsageCycle?.startAt ?? null, cycleEnd: data.monthlyUsageCycle?.endAt ?? null};
+  } catch { return null; }
+}
