@@ -6,10 +6,13 @@
 .notice { background: var(--ok-tint); color: var(--ok-ink); border-radius: var(--radius-sm); }
 .unitHead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 12px var(--pad-card); background: var(--surface-sunken); border-bottom: 1px solid var(--line); border-radius: var(--radius) var(--radius) 0 0; }
 .unit { font-size: var(--fs-title-sm); }
-.keywords { display: flex; gap: 6px; flex-wrap: wrap; margin-right: auto; }
+.keywords { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-right: auto; }
 .kw { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-eyebrow); padding: 2px 8px; border-radius: var(--radius-pill); background: var(--surface); border: 1px solid var(--line); }
 .kw button { border: 0; background: none; padding: 0 2px; min-height: 0; color: var(--muted); cursor: pointer; font-size: var(--fs-meta); line-height: 1; }
-.addKw input { width: 140px; min-height: 30px; padding: 4px 10px; font-size: var(--fs-meta); }
+/* Sized and shaped like a keyword chip so the add field reads as "the next chip". */
+.addKw input { width: 130px; min-height: 0; height: 26px; padding: 0 12px; font-size: var(--fs-eyebrow); border: 1px dashed var(--line); border-radius: var(--radius-pill); background: var(--surface); }
+.addKw input:hover { border-color: var(--accent-blue-ink); }
+.addKw input:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; border-radius: var(--radius-pill); border-style: solid; }
 .list { list-style: none; margin: 0; padding: 0; }
 .row { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 10px 14px; align-items: start; padding: 14px var(--pad-card); border-top: 1px solid var(--line); }
 .row:first-child { border-top: 0; }

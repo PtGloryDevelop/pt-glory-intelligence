@@ -91,7 +91,7 @@ export function RivalBoard(){
           <div className={styles.keywords}>{unit.keywords.map(k=><span key={k.id} className={styles.kw}>{k.keyword}{board.canEdit?<button type="button" aria-label={`ลบคำค้น ${k.keyword}`} disabled={busy===`kd:${k.id}`} onClick={()=>act(`kd:${k.id}`,{action:'keyword-remove',keyword_id:k.id},`ลบคำค้น “${k.keyword}” แล้ว`)}>×</button>:null}</span>)}</div>
           {board.canEdit?<form className={styles.addKw} onSubmit={event=>{event.preventDefault();addKeyword(unit);}}>
             <label className={styles.srOnly} htmlFor={`kw-${unit.id}`}>เพิ่มคำค้นให้ {unit.name}</label>
-            <input id={`kw-${unit.id}`} value={draft[unit.id]??''} maxLength={60} placeholder="+ คำค้น" onChange={event=>setDraft(value=>({...value,[unit.id]:event.target.value}))}/>
+            <input id={`kw-${unit.id}`} type="text" enterKeyHint="done" title="พิมพ์คำแล้วกด Enter" value={draft[unit.id]??''} maxLength={60} placeholder="+ คำค้น" onChange={event=>setDraft(value=>({...value,[unit.id]:event.target.value}))}/>
           </form>:null}
         </div>
         {unit.pages.length?<ul className={styles.list}>{unit.pages.map(page=>row(unit,page))}</ul>:<p className={styles.empty}>ยังไม่พบเพจที่ตรงคำค้นของยูนิตนี้ในข้อมูลที่เก็บไว้ · ลองเพิ่มคำค้นที่ลูกค้าใช้</p>}
