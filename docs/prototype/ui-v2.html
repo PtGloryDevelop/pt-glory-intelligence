@@ -284,6 +284,17 @@ tbody tr:last-child td{border-bottom:0}
 .adcol .unit{justify-self:start}
 .adcol-offer{color:var(--ink-2);line-height:1.45;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .adcol-m{font-size:12.5px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:4px 7px;font-variant-numeric:tabular-nums}
+.perfbox{display:grid;gap:4px;border:1px solid var(--line);border-radius:var(--r-sm);padding:8px 9px;background:var(--surface)}
+.perf-range{font-size:11.5px;font-weight:600;color:var(--ink-2)}
+.perf-grid{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;align-items:center;font-size:12.5px}
+.perf-grid span{color:var(--ink-3)}
+.perf-grid b{font-weight:600;font-variant-numeric:tabular-nums;display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+.perf-grid .delta{font-size:11px;padding:0 6px}
+.dspark{width:100%;height:34px;display:block;margin-top:2px}
+.dspark .win{fill:var(--accent-weak)}
+.dspark polyline{fill:none;stroke:var(--accent);stroke-width:1.6}
+.dspark circle{fill:var(--accent)}
+.rival-box{background:var(--sunken)}
 .addcol{width:100%;min-height:240px;border:1px dashed var(--line-strong);border-radius:var(--r);background:transparent;cursor:pointer;display:grid;place-content:center;gap:4px;color:var(--accent);font-weight:600;text-align:center}
 .addcol span:first-child{font-size:26px;line-height:1}
 .addcol:hover{background:var(--accent-weak)}
@@ -572,6 +583,7 @@ tbody tr:last-child td{border-bottom:0}
       <div class="stack" data-ctab="cmp">
         <section class="panel">
           <div class="panel-h"><h2>เทียบแอด</h2><span class="hint" id="setHint"></span>
+            <div class="seg" role="group" aria-label="ช่วงผลแอดเรา" id="perSeg"><button data-per="d7" aria-pressed="true">7 วัน</button><button data-per="d14" aria-pressed="false">14 วัน</button><button data-per="d30" aria-pressed="false">30 วัน</button><button data-per="all" aria-pressed="false">ตั้งแต่มีข้อมูล</button></div>
             <button class="btn primary" id="runAi">วิเคราะห์ด้วย AI</button></div>
           <p class="note run-note" id="runNote"></p>
           <div class="tbl-wrap"><table class="cmp5" id="cmpTable"></table></div>
@@ -924,33 +936,34 @@ document.getElementById("plansBody").addEventListener("click", e => {
 const DIMS = [["pain","ปัญหาลูกค้าที่พูดถึง"],["angle","มุมขาย"],["hook","คำเปิด (3 วินาทีแรก)"],["offer","ข้อเสนอ"],["proof","หลักฐานความน่าเชื่อ"],["format","รูปแบบครีเอทีฟ"],["claim","คำอ้างที่เสี่ยง"],["age","ยิงมานานแค่ไหน"]];
 const CADS = {
   re:   { side:"ours", name:"RE โปร 9.9", unit:"U15", fmt:"IMG", h:"h2", perUnit:"≈182 บาท/ชิ้น (1,090 ÷ 6)",
-          metrics:"ค่าแอด 22,345.95 · ROAS 5.64 · ค่าทัก 70.49 (3 ก.ย.–2 ต.ค.)", base:"ค่าทัก 70.49 · ROAS 5.64",
+          base:"ค่าทัก 144.62 · ROAS 2.61 (7 วัน 26 ก.ย.–2 ต.ค.)",
           pain:"ไขมัน LDL สูง · ความดัน", angle:"โปรช่วงเทศกาล + ผลต่อสุขภาพ", hook:"\"9.9 โปรลดอลังการ ความดันกระเจิง\"",
           offer:"6 ชิ้น 1,090.- (ผงผัก 5 + ชาแม่แย้ม 1) · แถมกระบอกน้ำ · ส่งฟรี เก็บปลายทาง", proof:"\"ผงผัก 46 ชนิด\" · อ้างแพทย์ (\"หมอเบายาแล้ว\")",
           format:"ภาพนิ่ง เซตสินค้า + ราคาตัวใหญ่", claim:["⚠ \"ฟื้นฟูหลอดเลือดถาวร\"","⚠ \"หมอเบายาแล้ว\""], age:"กำลังแสดง · ไม่มีวันเริ่มในข้อมูล" },
   u11:  { side:"ours", name:"U11 (D'Lellise)", unit:"U11", fmt:"▶ VDO", h:"h4", perUnit:null,
-          metrics:"ค่าแอด 52,213.49 · ROAS 4.62 · ค่าทัก 75.67 (3 ก.ย.–2 ต.ค.)", base:"ค่าทัก 75.67 · ROAS 4.62",
+          base:"ค่าทัก 72.88 · ROAS 4.73 (7 วัน 26 ก.ย.–2 ต.ค.)",
           pain:"ตกขาว · กลิ่น · เชื้อราในช่องคลอด", angle:"คนดัง/เพลง สร้างความจำแบรนด์", hook:"\"อยากจะถามดูว่าวันนี้เธอเริ่มคันหรือยัง\"",
           offer:"ไม่พบราคาในข้อความ (มีแค่ #โปรโมชันพิเศษ)", proof:"คนดังร้องเพลงให้แบรนด์ (#ซีเอมี่)", format:"วิดีโอคนพูด/ร้องเพลง",
           claim:["ไม่พบคำอ้างรักษาชัดเจน · มีแฮชแท็กชื่อโรค"], age:"หยุดชุดแอดแล้ว" },
   verna:{ side:"rival", name:"เวอร์น่าพลัสวิตามินผัก", unit:"U15", fmt:"▶ VDO", h:"h3", perUnit:"≈245 บาท/ชิ้น (490 ÷ 2)",
           pain:"แป้ง · ไขมัน · เซลลูไลท์ (ลดน้ำหนัก)", angle:"ราคา + ความเร่งด่วน", hook:"\"พิเศษ วันนี้เท่านั้น 1 แถม 1\"",
           offer:"1 แถม 1 เพียง 490.- · ส่งฟรี", proof:"\"เจ้าแรกในไทย นวัตกรรมแคปซูล 2 ชั้น\"", format:"วิดีโอ คนใส่ชุดรัดรูปโชว์หุ่น",
-          claim:["⚠ \"บล็อคแป้ง บล็อคไขมัน\"","⚠ \"1 กล่อง ลง 10 ล.\""], age:"ยิงมา 41 วัน" },
+          claim:["⚠ \"บล็อคแป้ง บล็อคไขมัน\"","⚠ \"1 กล่อง ลง 10 ล.\""], age:"ยิงมา 41 วัน", seen:"10 ก.ย. 2569" },
   vslim:{ side:"rival", name:"Veggy วิตามินผักลดพุง", unit:"U15", fmt:"▶ VDO", h:"h2", perUnit:"≈195 บาท/ชิ้น (390 ÷ 2)",
           pain:"พุง · น้ำหนัก", angle:"ราคา + ความเร่งด่วน", hook:"\"วันนี้เท่านั้น 1 แถม 1\"",
-          offer:"1 แถม 1 เพียง 390.- · ส่งฟรี", proof:"อ้างรางวัลสินค้า", format:"วิดีโอสั้น สินค้า + คน", claim:["⚠ \"ลดพุง\""], age:"ยิงมา 49 วัน" },
+          offer:"1 แถม 1 เพียง 390.- · ส่งฟรี", proof:"อ้างรางวัลสินค้า", format:"วิดีโอสั้น สินค้า + คน", claim:["⚠ \"ลดพุง\""], age:"ยิงมา 49 วัน", seen:"ก.ย. 2569" },
   vult: { side:"rival", name:"Veggy Ultimate สลายไขมัน", unit:"U13", fmt:"IMG", h:"h3", perUnit:null,
           pain:"น้ำหนัก · ไขมัน", angle:"ตัวเลขผลลัพธ์ (ก่อน-หลัง)", hook:"\"7 วัน ลด 10 โล\"",
-          offer:"ไม่พบราคาในข้อความและภาพ", proof:"ภาพคนคู่สินค้า", format:"ภาพนิ่ง ตัวเลขผลลัพธ์ตัวใหญ่", claim:["⚠ \"7 วัน ลด 10 โล\""], age:"ยิงมา 135 วัน · 28 แอดในเพจ" },
+          offer:"ไม่พบราคาในข้อความและภาพ", proof:"ภาพคนคู่สินค้า", format:"ภาพนิ่ง ตัวเลขผลลัพธ์ตัวใหญ่", claim:["⚠ \"7 วัน ลด 10 โล\""], age:"ยิงมา 135 วัน · 28 แอดในเพจ", seen:"10 ก.ย. 2569" },
   hylme:{ side:"rival", name:"Hylme ครบจบเรื่องไขมัน", unit:"U24", fmt:"IMG×", h:"h4", perUnit:"≈430 บาท/กระปุก (1,290 ÷ 3)",
           pain:"หัวใจ · ไขมัน · พลังงาน", angle:"ส่วนผสมพรีเมียม (Q10, น้ำมันสกัด 11 ชนิด)", hook:"\"พัฒนาสูตรใหม่ Daily Oils Blend\"",
           offer:"1 กระปุก 490 (ปกติ 980) · 2 กระปุก 890 ส่งฟรี · 3 กระปุก 1,290 ส่งฟรี", proof:"รายชื่อส่วนผสม + Coenzyme Q10", format:"หลายภาพ สินค้า + วัตถุดิบ",
-          claim:["⚠ อ้างผลต่อหัวใจ (\"Cardiovascular Optimization\")"], age:"ยิงมา 115 วัน" }
+          claim:["⚠ อ้างผลต่อหัวใจ (\"Cardiovascular Optimization\")"], age:"ยิงมา 115 วัน", seen:"10 ก.ย. 2569" }
 };
 const DEFAULT_SET = ["re","verna","vslim","vult"];
 const SUMMARY = {
   diff:[
+    ["ROAS ของแอดเรา 7 วันล่าสุด 2.61 ลดลง 40% จาก 7 วันก่อน (4.39) และค่าทักขึ้นจาก 87 เป็น 145 บาท ทั้งที่ภาพ 30 วันยังดู 5.64 แอดเริ่มล้า (ตัวเลขจริง ไม่ใช่ AI)",["re"]],
     ["คู่แข่งทั้ง 3 เปิดด้วยราคาและความเร่งด่วน (\"วันนี้เท่านั้น 1 แถม 1\") ส่วนแอดเราเปิดด้วยผลต่อสุขภาพ (\"ความดันกระเจิง\")",["re","verna","vslim"]],
     ["ราคาต่อชิ้นของเรา ≈182 บาท ถูกกว่าเวอร์น่าพลัส (≈245) และ Veggy (≈195) แต่แอดเราไม่ได้บอกจุดนี้",["re","verna","vslim"]],
     ["คู่แข่ง 2 ใน 3 ใช้วิดีโอ แอดเราเป็นภาพนิ่ง",["verna","vslim","re"]]],
@@ -959,7 +972,38 @@ const SUMMARY = {
     ["ทดลองคำเปิดแบบเร่งด่วนเทียบกับคำเปิดสุขภาพ โดยใช้ภาพเดิม",["re","verna"]],
     ["ตัดคำอ้าง \"ฟื้นฟูหลอดเลือดถาวร\" และ \"หมอเบายาแล้ว\" ลดความเสี่ยงแอดถูกปฏิเสธ",["re"]]]
 };
-const cmp = { set:[...DEFAULT_SET], picker:false, src:"rival", analyzed:new Set(), shown:false, ideas:new Set([0]) };
+// Real figures pulled from /api/owned-ads/performance on 5 Oct (data through 2 Oct; coverage starts 2 Sep).
+const PERF = {
+  re:  { status:"กำลังแสดง", daily:[901.79,930.94,520.76,840.26,787.81,807.67,803.66,669.6,691.61,364.94,1135.69,624.03,548.77,448.72],
+         d7:{s:4483.36,pv:11717,c:31,ps:5592.89,ppv:24532,pc:64,range:"26 ก.ย.–2 ต.ค."}, d14:{s:10076.25,pv:36249,c:95,ps:10939.1,ppv:82284,pc:195,range:"19 ก.ย.–2 ต.ค."},
+         d30:{s:22345.95,pv:125981,c:317,range:"3 ก.ย.–2 ต.ค."}, all:{s:23108.27,pv:131211,c:329,range:"2 ก.ย.–2 ต.ค."} },
+  u11: { status:"หยุดชุดแอด", daily:[1432.57,1650.47,2052.22,1783.73,1716.59,1801.13,1731.72,1850.66,1785.2,2292.68,1907.89,1734.1,1040.88,684.87],
+         d7:{s:11296.28,pv:53380,c:155,ps:12168.43,ppv:54709,pc:163,range:"26 ก.ย.–2 ต.ค."}, d14:{s:23464.71,pv:108089,c:318,ps:25285.37,ppv:111760,pc:324,range:"19 ก.ย.–2 ต.ค."},
+         d30:{s:52213.49,pv:241309,c:690,range:"3 ก.ย.–2 ต.ค."}, all:{s:54050.46,pv:254019,c:716,range:"2 ก.ย.–2 ต.ค."} }
+};
+const PERIODS = [["d7","7 วัน"],["d14","14 วัน"],["d30","30 วัน"],["all","ตั้งแต่มีข้อมูล"]];
+function perfOf(id, key){
+  const p = PERF[id]?.[key]; if (!p) return null;
+  const roas = p.pv/p.s, cpc = p.s/p.c;
+  const prev = p.ps ? { roas:p.ppv/p.ps, cpc:p.ps/p.pc, s:p.ps } : null;
+  return { ...p, roas, cpc, dS: prev ? (p.s/prev.s-1)*100 : null, dR: prev ? (roas/prev.roas-1)*100 : null, dC: prev ? (cpc/prev.cpc-1)*100 : null, prev };
+}
+const chip = (v, goodUp) => v==null ? "" : `<span class="delta ${Math.abs(v)<5||goodUp==null?"flat":(v>0)===goodUp?"good":"bad"}">${v>0?"▲":"▼"}${Math.abs(v).toFixed(0)}%</span>`;
+function sparkDaily(values){
+  const w=150,h=34,p=3,max=Math.max(...values),pts=values.map((v,i)=>[p+i*(w-2*p)/(values.length-1), h-p-(v/max)*(h-2*p)]);
+  const line=pts.map(q=>q.map(n=>n.toFixed(1)).join(",")).join(" "), half=pts[7][0];
+  return `<svg class="dspark" viewBox="0 0 ${w} ${h}" role="img" aria-label="ค่าแอดรายวัน 14 วัน"><rect x="${half}" y="0" width="${w-half}" height="${h}" class="win"/><polyline points="${line}"/><circle cx="${pts.at(-1)[0].toFixed(1)}" cy="${pts.at(-1)[1].toFixed(1)}" r="2.4"/></svg>`;
+}
+function perfBlock(id){
+  const p = perfOf(id, cmp.period); if (!p) return "";
+  return `<div class="perfbox">
+    <span class="perf-range">${PERIODS.find(x=>x[0]===cmp.period)[1]} · ${p.range}</span>
+    <div class="perf-grid"><span>ROAS</span><b>${p.roas.toFixed(2)} ${chip(p.dR,true)}</b><span>ค่าทัก</span><b>${p.cpc.toFixed(2)} ${chip(p.dC,false)}</b><span>ค่าแอด</span><b>${Math.round(p.s).toLocaleString("th-TH")} ${chip(p.dS,null)}</b></div>
+    ${p.prev ? `<span class="note">เทียบ ${PERIODS.find(x=>x[0]===cmp.period)[1]}ก่อนหน้า</span>` : `<span class="note">${cmp.period==="d30"?"ไม่มีช่วงเทียบครบ (ข้อมูลเริ่ม 2 ก.ย.)":"ข้อมูลในระบบเริ่ม 2 ก.ย."}</span>`}
+    ${sparkDaily(PERF[id].daily)}<span class="note">ค่าแอดรายวัน 14 วัน · แถบฟ้า = 7 วันล่าสุด · ${PERF[id].status}</span>
+  </div>`;
+}
+const cmp = { period:"d7", set:[...DEFAULT_SET], picker:false, src:"rival", analyzed:new Set(), shown:false, ideas:new Set([0]) };
 const sideChip = id => `<span class="kind ${CADS[id].side==="ours"?"ours":"rival"}">${CADS[id].side==="ours"?"แอดเรา":"คู่แข่ง"}</span>`;
 const ordered = () => [...cmp.set.filter(id=>CADS[id].side==="ours"), ...cmp.set.filter(id=>CADS[id].side!=="ours")];
 function colHead(id){
@@ -969,7 +1013,7 @@ function colHead(id){
     <div class="thumb lg ${a.h}"><span class="fmt">${a.fmt}</span></div>
     <b>${esc(a.name)}</b><span class="unit">${a.unit}</span>
     <span class="adcol-offer">${esc(a.offer)}</span>
-    ${a.metrics?`<span class="adcol-m">${esc(a.metrics)}</span>`:'<span class="note">ไม่มีค่าแอดของคู่แข่ง</span>'}
+    ${ours?perfBlock(id):`<div class="perfbox rival-box"><span class="perf-range">ข้อมูลคู่แข่ง</span><span class="note">ไม่มีค่าแอด ยอดขาย หรือ ROAS ใน Ads Library</span><span class="note">เก็บข้อมูลเมื่อ ${esc(a.seen)}</span></div>`}
   </div></th>`;
 }
 function cell(id,k){
@@ -1019,6 +1063,8 @@ document.getElementById("cmpTable").addEventListener("click", e => {
   const rm = e.target.closest("[data-rm]"); if (rm) { cmp.set = cmp.set.filter(id=>id!==rm.dataset.rm); renderCompare(); return; }
   if (e.target.closest("#addAd")) { cmp.picker = true; if (!cmp.set.some(id=>CADS[id].side==="ours")) cmp.src = "ours"; renderCompare(); document.getElementById("picker").scrollIntoView({behavior:"smooth",block:"nearest"}); }
 });
+document.getElementById("perSeg").addEventListener("click", e => { const b = e.target.closest("[data-per]"); if (!b) return; cmp.period = b.dataset.per;
+  document.querySelectorAll("#perSeg button").forEach(x=>x.setAttribute("aria-pressed", x===b)); renderCompare(); });
 document.getElementById("pickClose").onclick = () => { cmp.picker = false; renderCompare(); };
 document.getElementById("pickTabs").addEventListener("click", e => { const b = e.target.closest("[data-src]"); if (b) { cmp.src = b.dataset.src; renderPicker(); } });
 document.getElementById("pickGrid").addEventListener("click", e => { const c = e.target.closest("[data-pick]"); if (!c) return; const id = c.dataset.pick;
