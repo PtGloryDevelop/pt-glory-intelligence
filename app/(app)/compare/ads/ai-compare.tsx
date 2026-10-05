@@ -8,6 +8,7 @@ import { summarizeOwnedReport } from '@/lib/owned-ads/model';
 import { AI_DIMS, AI_DIM_LABEL, adRefId, type AdReading, type AdRef, type AiEstimate, type AiRun } from '@/lib/ai/compare-shared';
 import type { Rival } from './selection';
 import styles from './comparison.module.css';
+import { UsageBars } from '@/components/UsageBars';
 
 export type CompareAd = { kind: 'own'; ad: CompanyAd } | { kind: 'rival'; ad: Rival };
 export const MAX_COMPARE = 5;
@@ -129,6 +130,7 @@ export function AiCompare({ ads, images, ourThrough, onAdd, onRemove, onIdea }: 
         {result ? ` · ครั้งนี้ USD ${result.cost.toFixed(4)}` : ''}
       </p>
     </div>
+    <UsageBars show={['ai']} refresh={run ? run.data.spent.total : 0} />
     {error ? <p className={styles.aiWarn} role="alert">{error}</p> : null}
 
     {result ? <div className={styles.aiSummary} data-testid="compare-ai-summary">

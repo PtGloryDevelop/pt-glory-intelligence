@@ -3,6 +3,7 @@ import Link from 'next/link';
 import {useEffect,useState} from 'react';
 import type {Relation,RivalBoard as Board,RivalRow,RivalUnit} from '@/lib/rivals/board';
 import styles from './rival-board.module.css';
+import {UsageBars} from '@/components/UsageBars';
 
 const REL:Record<Relation,string>={direct:'คู่แข่งตรง',substitute:'สินค้าทดแทน',unrelated:'ไม่เกี่ยว'};
 const thaiDate=(value:string|null)=>value?new Date(value).toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'numeric',timeZone:'Asia/Bangkok'}):'—';
@@ -112,6 +113,7 @@ export function RivalBoard(){
       <section className={styles.panel} aria-labelledby="rival-collect-heading">
         <div className={styles.sideHead}><h2 id="rival-collect-heading">รายการติดตามของบริษัท</h2></div>
         <div className={styles.side}>
+          {board.canEdit?<UsageBars show={['collect']}/>:null}
           <p><b>{board.tracked} เพจ</b> ที่ทีมติดตามร่วมกัน{trackedPages.size<board.tracked?` (แสดงในยูนิตด้านซ้าย ${trackedPages.size} เพจ)`:''}</p>
           <div className={styles.est}><span>ค่าเก็บแอดใหม่ของเพจที่ติดตาม (ประมาณ)</span><b>{board.tracked?`USD ${run.toFixed(2)} ต่อรอบ`:'—'}</b><span>{board.tracked?`≈ USD ${(run*4.3).toFixed(2)} ต่อเดือน ถ้าเก็บสัปดาห์ละครั้ง`:'ยังไม่มีเพจที่ติดตาม'}</span></div>
           <p className={styles.note}>ยังไม่ได้เปิดเก็บอัตโนมัติ · ประมาณจากรอบทดสอบ 1 ต.ค. (USD 0.021 ได้ 28 แอด) สมมติเพจละราว 30 แอดต่อรอบ</p>

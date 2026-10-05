@@ -200,3 +200,8 @@ export async function runComparison(refs: AdRef[], dryRun: boolean): Promise<AiE
     summary: hit.get(setKey) as SetReading,
   };
 }
+
+/** What AI calls have cost (as recorded per call), for the usage bars. */
+export async function aiUsage() {
+  return {...await spent(await dbUser()), model: MODEL, creditUsd: Number(process.env.OPENAI_CREDIT_USD) || 5};
+}

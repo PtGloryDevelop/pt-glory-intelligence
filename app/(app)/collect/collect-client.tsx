@@ -9,6 +9,7 @@ import { ErrorState } from "@/components/states/ErrorState";
 import { thaiDateTime } from "@/lib/format/date";
 import { parseAdLibraryUrl } from "@/lib/collect/url";
 import styles from "./collect.module.css";
+import { UsageBars } from "@/components/UsageBars";
 
 /**
  * The collection form.
@@ -132,6 +133,7 @@ export function CollectClient(
   return (
     <div className={styles.layout}>
       <form className={styles.form} onSubmit={submit} data-testid="collect-form">
+        <UsageBars show={["collect"]} />
         <div className={styles.field}>
           <label htmlFor="keyword">คำค้น</label>
           <input
