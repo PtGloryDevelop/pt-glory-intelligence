@@ -262,6 +262,39 @@ tbody tr:last-child td{border-bottom:0}
 
 .note{font-size:12.5px;color:var(--ink-3)}
 
+
+/* AI compare */
+.tray{display:flex;gap:10px;flex-wrap:wrap;padding:4px 18px 14px}
+.tchip{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:var(--r);padding:8px 6px 8px 8px;min-width:200px;max-width:260px;background:var(--surface)}
+.tchip b{display:block;font-size:14px;line-height:1.35}
+.tchip .kind{font-size:11px;padding:0 6px}
+.tadd{border:1px dashed var(--line-strong);background:transparent;border-radius:var(--r);padding:8px 16px;min-width:160px;cursor:pointer;display:grid;gap:2px;justify-items:start;font-weight:600;color:var(--accent)}
+.picker{border-top:1px solid var(--line)}
+.card.picked{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-weak)}
+.run{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:12px 18px 16px;border-top:1px solid var(--line)}
+.ai-tag{font-size:12px;padding:2px 9px;border-radius:99px;background:var(--warn-weak);color:var(--warn)}
+.cmp5{min-width:860px}
+.cmp5 th,.cmp5 td{vertical-align:top}
+.cmp5 tbody tr{cursor:default}
+.cmp5 tbody tr:hover td{background:transparent}
+.cmp5 td:first-child{color:var(--ink-2);font-size:13.5px;white-space:nowrap;width:150px}
+.cmp5 tr.perf td,.cmp5 tr.perf:hover td{background:var(--sunken)}
+.colh{display:flex;gap:8px;align-items:center;white-space:normal}
+.colh b{display:block;font-size:13.5px;color:var(--ink);line-height:1.3}
+.colh .kind{font-size:11px;padding:0 6px}
+.aib{display:inline-block;margin-left:6px;font:600 10px var(--f-mono);padding:0 5px;border-radius:4px;background:var(--accent-weak);color:var(--accent);vertical-align:1px}
+.sum{display:grid;grid-template-columns:1fr 1fr;gap:22px;padding:4px 18px 16px}
+.sum h3{margin-bottom:8px}
+.sum ol,.sum ul{margin:0;padding-left:20px;display:grid;gap:12px;font-size:14px}
+.sum ul.ideas{list-style:none;padding-left:0}
+.ideas label{display:flex;gap:8px;align-items:flex-start;cursor:pointer}
+.ideas input{margin-top:5px;accent-color:var(--accent)}
+.ideas [contenteditable]{outline:none;border-bottom:1px dashed var(--line-strong)}
+.ideas [contenteditable]:focus{border-bottom-color:var(--accent)}
+.evs{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}
+.evc{font-size:11.5px;padding:1px 7px;border-radius:99px;border:1px solid var(--line);color:var(--ink-2)}
+@media (max-width:760px){.sum{grid-template-columns:1fr}}
+
 /* plans */
 .stages{display:flex;gap:4px;flex-wrap:wrap}
 .stages span{font-size:12px;padding:2px 10px;border-radius:99px;background:var(--sunken);color:var(--ink-3);white-space:nowrap}
@@ -516,7 +549,7 @@ tbody tr:last-child td{border-bottom:0}
       <div class="head">
         <div>
           <h1>เทียบและวางแผน</h1>
-          <p class="sub">ระบบดึงข้อเสนอจากข้อความแอดให้ก่อน ทีมแก้เฉพาะจุดที่ผิด แล้วบันทึกสิ่งที่จะทดลอง</p>
+          <p class="sub">เลือกแอดเราและคู่แข่งรวมได้ 5 แอด ให้ AI เทียบทีละหัวข้อ แล้วบันทึกไอเดียที่ใช้ได้เป็นแผนทดลอง</p>
         </div>
         <div class="seg" role="group" aria-label="เทียบหรือแผน" id="cTabs">
           <button data-ctab-btn="cmp" aria-pressed="true">เทียบแอด</button>
@@ -527,91 +560,36 @@ tbody tr:last-child td{border-bottom:0}
       <div class="stack" data-ctab="plans" id="plansBody" hidden></div>
 
       <div class="stack" data-ctab="cmp">
-      <div style="display:flex;justify-content:flex-end;margin-bottom:-8px"><button class="btn sm" data-toast="ต้นแบบ: เพิ่มคู่แข่งได้สูงสุด 4 ตัวในสินค้าเดียวกัน">+ เพิ่มคู่แข่งมาเทียบ</button></div>
-      <div class="pair">
-        <section class="panel side">
-          <div class="who"><span class="kind ours">แอดเรา</span><h2>RE โปร 9.9</h2><a class="btn sm" href="#ads">เปลี่ยน</a></div>
-          <div class="media">
-            <div class="thumb lg h2"><span class="ph">ภาพแทนครีเอทีฟ<br>"9.9 โปรลดอลัง 6 ชิ้น 1,090"</span><span class="fmt">IMG</span></div>
-            <div style="display:grid;gap:10px;min-width:0">
-              <p class="note" style="margin:0"><span class="unit">U15</span> [P4] Dwawa-Multi GreenVeggie ราชินีผักเขียว · กำลังแสดง</p>
-              <div class="facts">
-                <div><span>ค่าแอด</span><b>22,345.95</b></div>
-                <div><span>ROAS (Meta)</span><b>5.64</b></div>
-                <div><span>ทัก</span><b>317</b></div>
-                <div><span>ค่าทัก</span><b>70.49</b></div>
-              </div>
-              <span class="note">3 ก.ย. – 2 ต.ค. 2569 · Ad 120251002840220632</span>
+        <section class="panel">
+          <div class="panel-h"><h2>ชุดที่เทียบ</h2><span class="hint" id="setHint"></span></div>
+          <div class="tray" id="tray"></div>
+          <div class="picker" id="picker" hidden>
+            <div class="toolbar">
+              <div class="seg" role="group" aria-label="แหล่งแอด" id="pickTabs"><button data-src="rival" aria-pressed="true">คู่แข่งที่ชนกับ U15</button><button data-src="ours" aria-pressed="false">แอดของเรา</button></div>
+              <span class="note">เลือกได้รวมสูงสุด 5 แอด · ผสมแอดเรากับคู่แข่งได้</span>
             </div>
+            <div class="cards" id="pickGrid"></div>
           </div>
-          <p class="adtext">9.9 โปรลดอลังการ ความดันกระเจิง ไขมันหลอดเลือดกระจุย 1 เซต ไขมันLDLลดเหลือ 90 #ราชินีผงผัก 46 ชนิด … 7วันฟื้นฟูหลอดเลือดถาวร ค่าไขมันกลับมาดี หมอเบายาแล้ว
-🥬 ผงผักนาโนมัลติกรีนเวจจี้ 5 กระปุก · 🍵 ชาเขียวแม่แย้ม 1 ซอง
-** แถมฟรีกระบอกน้ำ Youth Has You ** · 🚚 ส่งฟรีทุกออเดอร์ มีเก็บปลายทาง</p>
+          <div class="run">
+            <button class="btn primary" id="runAi">วิเคราะห์ด้วย AI</button>
+            <span class="note" id="runNote"></span>
+          </div>
         </section>
 
-        <section class="panel side">
-          <div class="who"><span class="kind rival">คู่แข่ง</span><h2>เวอร์น่าพลัสวิตามินผัก</h2><button class="btn sm" data-goto="match">เปลี่ยน</button></div>
-          <div class="media">
-            <div class="thumb lg h3"><span class="ph">ภาพแทนวิดีโอ<br>"การันตี 10 กล่อง"</span><span class="fmt">▶ VDO</span></div>
-            <div style="display:grid;gap:10px;min-width:0">
-              <p class="note" style="margin:0">เพจบริษัท · พบว่ากำลังใช้งาน · <span class="chip pending">สินค้าคล้ายกัน · รอทีมยืนยัน</span></p>
-              <div class="facts">
-                <div><span>ค่าแอด</span><b>—</b></div>
-                <div><span>ROAS</span><b>—</b></div>
-              </div>
-              <span class="note">Ads Library ไม่มีค่าแอดหรือยอดขายของคู่แข่ง · เก็บ 10 ก.ย. 2569 · ID 1000412283040832</span>
-            </div>
-          </div>
-          <p class="adtext">พิเศษ วันนี้เท่านั้น 1 แถม 1 เพียง 490.- ส่งฟรี
-กล้าท้าลอง! 1กล่อง ลง10ล.+ #เจ้าแรกในไทย นวัตกรรมแคปซูล 2 ชั้น … ✅ บล็อคแป้ง ✅ บล็อคไขมัน ✅ สลายเซลลูไลท์ … หมดแล้วหมดเลย 👉 1 แถม 1 เพียง 490.- ส่งฟรีให้ถึงหน้าบ้าน</p>
+        <section class="panel" id="aiResult" hidden>
+          <div class="panel-h"><h2>เทียบทีละหัวข้อ</h2><span class="ai-tag">ตัวอย่างผล AI · ต้นแบบยังไม่ได้เรียก AI จริง</span></div>
+          <div class="tbl-wrap"><table class="cmp5" id="cmpTable"></table></div>
+          <div class="tbl-foot"><span>ช่องที่มีป้าย AI ให้ทีมแก้ได้ · ⚠ คือคำอ้างที่ควรตรวจ ไม่ใช่ความเห็นทางกฎหมาย · ราคาต่อชิ้นและอายุแอดคำนวณจากข้อมูลจริง ไม่ใช่ AI</span></div>
         </section>
-      </div>
 
-      <section class="panel">
-        <div class="panel-h"><h2>เทียบทีละหัวข้อ</h2>
-          <div class="legend"><span><i></i>สองฝั่งต่างกัน</span><span>ระบบดึงจากข้อความ · แก้ได้</span></div>
-        </div>
-        <div class="tbl-wrap">
-          <table class="cmp-tbl">
-            <thead><tr><th>หัวข้อ</th><th>แอดเรา · RE โปร 9.9</th><th>คู่แข่ง · เวอร์น่าพลัส</th></tr></thead>
-            <tbody>
-              <tr class="diff"><td>ข้อเสนอ</td><td><b>6 ชิ้น 1,090.-</b><span class="src">ผงผัก 5 กระปุก + ชาแม่แย้ม 1 ซอง</span></td><td><b>1 แถม 1 เพียง 490.-</b><span class="src">ได้ 2 กล่อง</span></td></tr>
-              <tr class="diff"><td>ราคาต่อชิ้นโดยประมาณ</td><td class="num">≈ 182 บาท<span class="src">1,090 ÷ 6 · คำนวณโดยระบบ</span></td><td class="num">≈ 245 บาท<span class="src">490 ÷ 2 · คำนวณโดยระบบ</span></td></tr>
-              <tr class="diff"><td>ของแถม</td><td>กระบอกน้ำ Youth Has You</td><td>แถมสินค้าอีก 1 กล่อง</td></tr>
-              <tr><td>ค่าส่ง</td><td>ส่งฟรี · มีเก็บปลายทาง</td><td>ส่งฟรี</td></tr>
-              <tr class="diff"><td>ความเร่งด่วน</td><td>โปร 9.9 <span class="src">ช่วงโปรผ่านไปแล้ว แต่แอดยังแสดง</span></td><td>"วันนี้เท่านั้น" · "หมดแล้วหมดเลย"</td></tr>
-              <tr class="diff"><td>คำเปิด</td><td>"9.9 โปรลดอลังการ ความดันกระเจิง"<span class="src">เปิดด้วยโปรและผลต่อร่างกาย</span></td><td>"พิเศษ วันนี้เท่านั้น 1 แถม 1"<span class="src">เปิดด้วยราคา</span></td></tr>
-              <tr class="diff"><td>รูปแบบ</td><td>ภาพนิ่ง</td><td>วิดีโอ</td></tr>
-              <tr class="diff"><td>CTA</td><td>ไม่มีข้อมูล</td><td>ส่งข้อความ</td></tr>
-              <tr><td>คำอ้างสุขภาพ</td><td><span class="flag">⚠ อ้างผลรักษา</span><span class="src">"ฟื้นฟูหลอดเลือดถาวร" "หมอเบายาแล้ว" · ให้ทีมตรวจ</span></td><td><span class="flag">⚠ อ้างผลเกินจริง</span><span class="src">"บล็อคแป้ง บล็อคไขมัน" · ให้ทีมตรวจ</span></td></tr>
-            </tbody>
-          </table>
-        </div>
-        <div class="tbl-foot"><span>ป้าย ⚠ เป็นการคัดกรองให้คนตรวจ ไม่ใช่ความเห็นทางกฎหมาย</span><button class="btn ghost sm" data-toast="ต้นแบบ: กดที่ช่องเพื่อแก้ค่าที่ระบบดึงมา">แก้ค่าที่ระบบดึงมา</button></div>
-      </section>
-
-      <section class="panel">
-        <div class="panel-h"><h2>เราจะทดลองอะไร</h2><span class="hint">สถานะ: ร่าง</span></div>
-        <div class="plan">
-          <div class="field"><label>แนวทาง</label>
-            <div class="choices" role="group" aria-label="แนวทาง" id="approach">
-              <button aria-pressed="false">คงเดิมและติดตาม</button>
-              <button aria-pressed="true">ทดลองครีเอทีฟ</button>
-              <button aria-pressed="false">ทดลองข้อเสนอ</button>
-              <button aria-pressed="false">ตรวจเพิ่มก่อนตัดสินใจ</button>
-            </div>
+        <section class="panel" id="aiSummary" hidden>
+          <div class="panel-h"><h2>AI สรุปให้</h2><span class="hint">ทุกข้ออ้างกลับไปที่แอดที่ใช้เป็นหลักฐาน</span></div>
+          <div class="sum" id="sumBody"></div>
+          <div class="plan-foot" style="padding:0 18px 18px">
+            <button class="btn primary" id="savePlan">บันทึกไอเดียที่เลือกเป็นแผนทดลอง</button>
+            <span class="note">ทีมแก้ข้อความได้ก่อนบันทึก · ไม่เปลี่ยนแอดหรืองบจริง</span>
           </div>
-          <div class="field"><label for="hyp">สิ่งที่จะเปลี่ยนและเหตุผล</label>
-            <textarea id="hyp" rows="3" placeholder="เช่น ทำวิดีโอสั้นเปิดด้วยราคาแบบคู่แข่ง โดยคงข้อเสนอ 6 ชิ้น 1,090 ซึ่งถูกกว่าต่อชิ้น"></textarea></div>
-          <div class="field"><label for="metric">วัดผลด้วย</label>
-            <input id="metric" type="text" value="ค่าทักและ ROAS (Meta) ของแอดใหม่ 7 วัน เทียบ RE โปร 9.9 (70.49 บาท · 5.64)">
-            <span class="prefill">ระบบเติมจากผลแอดเราให้ก่อน แก้ได้</span></div>
-          <div class="plan-foot">
-            <button class="btn primary" id="savePlan">บันทึกแผน</button>
-            <span class="note">ทีมเห็นแผนนี้ในแท็บแผนทดลอง · ไม่เปลี่ยนแอดหรืองบจริง</span>
-          </div>
-        </div>
-      </section>
+        </section>
       </div>
     </section>
     <!-- ===================== RIVALS ===================== -->
@@ -898,8 +876,6 @@ document.getElementById("feed").addEventListener("click", e => {
 });
 
 /* compare */
-document.getElementById("approach").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return;
-  [...e.currentTarget.children].forEach(x => x.setAttribute("aria-pressed", x === b)); });
 const STAGES = ["ร่าง","อนุมัติแล้ว","กำลังทดลอง","สรุปผล"];
 const NEXT = ["อนุมัติแผน","ผูกแอดที่ใช้ทดลอง","สรุปผลการทดลอง"];
 const PLANS = [];
@@ -919,10 +895,10 @@ function renderPlans(){
         <dt>แนวทาง</dt><dd>${esc(p.approach)}</dd>
         <dt>สิ่งที่จะเปลี่ยน</dt><dd>${p.hyp ? esc(p.hyp) : '<span class="note">ยังไม่ได้เขียน</span>'}</dd>
         <dt>วัดผลด้วย</dt><dd>${esc(p.metric)}</dd>
-        <dt>บันทึกเมื่อ</dt><dd>3 ต.ค. 2569 · จากคู่ RE โปร 9.9 กับเวอร์น่าพลัส</dd>
+        <dt>บันทึกเมื่อ</dt><dd>3 ต.ค. 2569 · จากชุดเทียบ ${esc(p.set)}</dd>
       </dl>
       <div class="ba">
-        <div class="box"><span>ก่อนทดลอง · RE โปร 9.9 (3 ก.ย. – 2 ต.ค.)</span><b>ค่าทัก 70.49 · ROAS 5.64</b></div>
+        <div class="box"><span>ก่อนทดลอง · ${esc(p.baseName)}</span><b>${esc(p.base)}</b></div>
         <span class="arrow" aria-hidden="true">→</span>
         <div class="box"><span>หลังทดลอง</span><b style="font-size:14px;font-weight:500;color:var(--ink-2)">${
           p.stage < 2 ? "เริ่มนับเมื่อผูกแอดที่ใช้ทดลอง" : p.stage === 2 ? "วันที่ 0 จาก 7 · รอข้อมูลรายวันของแอดใหม่" : "ระบบคำนวณจากแอดที่ผูกไว้ 7 วัน (ต้นแบบ: ยังไม่มีผลจริง)"}</b></div>
@@ -941,11 +917,113 @@ document.getElementById("plansBody").addEventListener("click", e => {
     p.stage++; renderPlans(); return; }
   const r = e.target.closest("[data-result]"); if (r) { PLANS[+r.dataset.result].result = r.dataset.r; renderPlans(); toast(`บันทึกผล: ${r.dataset.r}`); }
 });
+/* ===== AI compare (up to 5 ads, ours + rivals mixed) ===== */
+const DIMS = [["pain","ปัญหาลูกค้าที่พูดถึง"],["angle","มุมขาย"],["hook","คำเปิด (3 วินาทีแรก)"],["offer","ข้อเสนอ"],["proof","หลักฐานความน่าเชื่อ"],["format","รูปแบบครีเอทีฟ"],["claim","คำอ้างที่เสี่ยง"],["age","ยิงมานานแค่ไหน"]];
+const CADS = {
+  re:   { side:"ours", name:"RE โปร 9.9", unit:"U15", fmt:"IMG", h:"h2", perUnit:"≈182 บาท/ชิ้น (1,090 ÷ 6)",
+          metrics:"ค่าแอด 22,345.95 · ROAS 5.64 · ค่าทัก 70.49 (3 ก.ย.–2 ต.ค.)", base:"ค่าทัก 70.49 · ROAS 5.64",
+          pain:"ไขมัน LDL สูง · ความดัน", angle:"โปรช่วงเทศกาล + ผลต่อสุขภาพ", hook:"\"9.9 โปรลดอลังการ ความดันกระเจิง\"",
+          offer:"6 ชิ้น 1,090.- (ผงผัก 5 + ชาแม่แย้ม 1) · แถมกระบอกน้ำ · ส่งฟรี เก็บปลายทาง", proof:"\"ผงผัก 46 ชนิด\" · อ้างแพทย์ (\"หมอเบายาแล้ว\")",
+          format:"ภาพนิ่ง เซตสินค้า + ราคาตัวใหญ่", claim:["⚠ \"ฟื้นฟูหลอดเลือดถาวร\"","⚠ \"หมอเบายาแล้ว\""], age:"กำลังแสดง · ไม่มีวันเริ่มในข้อมูล" },
+  u11:  { side:"ours", name:"U11 (D'Lellise)", unit:"U11", fmt:"▶ VDO", h:"h4", perUnit:null,
+          metrics:"ค่าแอด 52,213.49 · ROAS 4.62 · ค่าทัก 75.67 (3 ก.ย.–2 ต.ค.)", base:"ค่าทัก 75.67 · ROAS 4.62",
+          pain:"ตกขาว · กลิ่น · เชื้อราในช่องคลอด", angle:"คนดัง/เพลง สร้างความจำแบรนด์", hook:"\"อยากจะถามดูว่าวันนี้เธอเริ่มคันหรือยัง\"",
+          offer:"ไม่พบราคาในข้อความ (มีแค่ #โปรโมชันพิเศษ)", proof:"คนดังร้องเพลงให้แบรนด์ (#ซีเอมี่)", format:"วิดีโอคนพูด/ร้องเพลง",
+          claim:["ไม่พบคำอ้างรักษาชัดเจน · มีแฮชแท็กชื่อโรค"], age:"หยุดชุดแอดแล้ว" },
+  verna:{ side:"rival", name:"เวอร์น่าพลัสวิตามินผัก", unit:"U15", fmt:"▶ VDO", h:"h3", perUnit:"≈245 บาท/ชิ้น (490 ÷ 2)",
+          pain:"แป้ง · ไขมัน · เซลลูไลท์ (ลดน้ำหนัก)", angle:"ราคา + ความเร่งด่วน", hook:"\"พิเศษ วันนี้เท่านั้น 1 แถม 1\"",
+          offer:"1 แถม 1 เพียง 490.- · ส่งฟรี", proof:"\"เจ้าแรกในไทย นวัตกรรมแคปซูล 2 ชั้น\"", format:"วิดีโอ คนใส่ชุดรัดรูปโชว์หุ่น",
+          claim:["⚠ \"บล็อคแป้ง บล็อคไขมัน\"","⚠ \"1 กล่อง ลง 10 ล.\""], age:"ยิงมา 41 วัน" },
+  vslim:{ side:"rival", name:"Veggy วิตามินผักลดพุง", unit:"U15", fmt:"▶ VDO", h:"h2", perUnit:"≈195 บาท/ชิ้น (390 ÷ 2)",
+          pain:"พุง · น้ำหนัก", angle:"ราคา + ความเร่งด่วน", hook:"\"วันนี้เท่านั้น 1 แถม 1\"",
+          offer:"1 แถม 1 เพียง 390.- · ส่งฟรี", proof:"อ้างรางวัลสินค้า", format:"วิดีโอสั้น สินค้า + คน", claim:["⚠ \"ลดพุง\""], age:"ยิงมา 49 วัน" },
+  vult: { side:"rival", name:"Veggy Ultimate สลายไขมัน", unit:"U13", fmt:"IMG", h:"h3", perUnit:null,
+          pain:"น้ำหนัก · ไขมัน", angle:"ตัวเลขผลลัพธ์ (ก่อน-หลัง)", hook:"\"7 วัน ลด 10 โล\"",
+          offer:"ไม่พบราคาในข้อความและภาพ", proof:"ภาพคนคู่สินค้า", format:"ภาพนิ่ง ตัวเลขผลลัพธ์ตัวใหญ่", claim:["⚠ \"7 วัน ลด 10 โล\""], age:"ยิงมา 135 วัน · 28 แอดในเพจ" },
+  hylme:{ side:"rival", name:"Hylme ครบจบเรื่องไขมัน", unit:"U24", fmt:"IMG×", h:"h4", perUnit:"≈430 บาท/กระปุก (1,290 ÷ 3)",
+          pain:"หัวใจ · ไขมัน · พลังงาน", angle:"ส่วนผสมพรีเมียม (Q10, น้ำมันสกัด 11 ชนิด)", hook:"\"พัฒนาสูตรใหม่ Daily Oils Blend\"",
+          offer:"1 กระปุก 490 (ปกติ 980) · 2 กระปุก 890 ส่งฟรี · 3 กระปุก 1,290 ส่งฟรี", proof:"รายชื่อส่วนผสม + Coenzyme Q10", format:"หลายภาพ สินค้า + วัตถุดิบ",
+          claim:["⚠ อ้างผลต่อหัวใจ (\"Cardiovascular Optimization\")"], age:"ยิงมา 115 วัน" }
+};
+const DEFAULT_SET = ["re","verna","vslim","vult"];
+const SUMMARY = {
+  diff:[
+    ["คู่แข่งทั้ง 3 เปิดด้วยราคาและความเร่งด่วน (\"วันนี้เท่านั้น 1 แถม 1\") ส่วนแอดเราเปิดด้วยผลต่อสุขภาพ (\"ความดันกระเจิง\")",["re","verna","vslim"]],
+    ["ราคาต่อชิ้นของเรา ≈182 บาท ถูกกว่าเวอร์น่าพลัส (≈245) และ Veggy (≈195) แต่แอดเราไม่ได้บอกจุดนี้",["re","verna","vslim"]],
+    ["คู่แข่ง 2 ใน 3 ใช้วิดีโอ แอดเราเป็นภาพนิ่ง",["verna","vslim","re"]]],
+  ideas:[
+    ["ทำวิดีโอสั้นเปิดด้วย \"ตกชิ้นละ 182 บาท\" คงข้อเสนอ 6 ชิ้น 1,090",["re","verna","vslim"]],
+    ["ทดลองคำเปิดแบบเร่งด่วนเทียบกับคำเปิดสุขภาพ โดยใช้ภาพเดิม",["re","verna"]],
+    ["ตัดคำอ้าง \"ฟื้นฟูหลอดเลือดถาวร\" และ \"หมอเบายาแล้ว\" ลดความเสี่ยงแอดถูกปฏิเสธ",["re"]]]
+};
+const cmp = { set:[...DEFAULT_SET], picker:false, src:"rival", analyzed:new Set(), shown:false, ideas:new Set([0]) };
+const sideChip = id => `<span class="kind ${CADS[id].side==="ours"?"ours":"rival"}">${CADS[id].side==="ours"?"แอดเรา":"คู่แข่ง"}</span>`;
+function renderTray(){
+  document.getElementById("tray").innerHTML = cmp.set.map(id => `<div class="tchip"><div class="thumb sm ${CADS[id].h}"><span class="fmt">${CADS[id].fmt}</span></div><div>${sideChip(id)}<b>${esc(CADS[id].name)}</b><span class="note"><span class="unit">${CADS[id].unit}</span>${cmp.analyzed.has(id)?" · วิเคราะห์แล้ว":""}</span></div><button class="x" data-rm="${id}" aria-label="เอาออก">×</button></div>`).join("")
+    + (cmp.set.length < 5 ? `<button class="tadd" id="addAd">+ เพิ่มแอด<span class="note">อีก ${5-cmp.set.length} ช่อง</span></button>` : "");
+  const ours = cmp.set.filter(id=>CADS[id].side==="ours").length;
+  document.getElementById("setHint").textContent = `${cmp.set.length}/5 แอด · แอดเรา ${ours} · คู่แข่ง ${cmp.set.length-ours}`;
+  const fresh = cmp.set.filter(id=>!cmp.analyzed.has(id)).length;
+  const run = document.getElementById("runAi"); run.disabled = cmp.set.length < 2;
+  document.getElementById("runNote").textContent = cmp.set.length < 2 ? "เลือกอย่างน้อย 2 แอด"
+    : fresh ? `วิเคราะห์ใหม่ ${fresh} แอด · แอดที่เคยวิเคราะห์ใช้ผลเดิม ไม่เสียซ้ำ · ค่าใช้จ่ายโดยประมาณแสดงตรงนี้ก่อนกด (ขึ้นกับ AI ที่เลือก: OpenAI หรือ Claude)`
+    : "ทุกแอดเคยวิเคราะห์แล้ว · เปิดผลเดิมได้ทันที ไม่มีค่าใช้จ่าย";
+  run.textContent = fresh ? "วิเคราะห์ด้วย AI" : "เปิดผลวิเคราะห์";
+  const pk = document.getElementById("picker"); pk.hidden = !cmp.picker; if (cmp.picker) renderPicker();
+}
+function renderPicker(){
+  const ids = Object.keys(CADS).filter(id => CADS[id].side===cmp.src);
+  document.querySelectorAll("#pickTabs button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.src===cmp.src));
+  document.getElementById("pickGrid").innerHTML = ids.map(id => { const a = CADS[id], on = cmp.set.includes(id);
+    return `<article class="card ${on?"picked":""}" data-pick="${id}"><div class="thumb ${a.h}"><span class="fmt">${a.fmt}</span></div><div class="body"><div class="top"><span class="pg">${esc(a.name)}</span><span class="unit">${a.unit}</span></div><span class="what">${esc(a.offer)}</span><span class="note">${on?"✓ อยู่ในชุดแล้ว":a.age}</span></div></article>`; }).join("");
+}
+function cell(id,k){
+  const a = CADS[id];
+  if (k==="claim") return a.claim.map(c=>`<span class="${c.startsWith("⚠")?"flag":"note"}" style="display:block">${esc(c)}</span>`).join("");
+  if (k==="age") return `${esc(a.age)}<span class="src">ข้อมูลจริง</span>`;
+  if (k==="offer") return `${esc(a.offer)}${a.perUnit?`<span class="src">${esc(a.perUnit)} · คำนวณโดยระบบ</span>`:""}<span class="aib">AI</span>`;
+  return `${esc(a[k])}<span class="aib">AI</span>`;
+}
+function renderCompare(){
+  document.getElementById("aiResult").hidden = !cmp.shown; document.getElementById("aiSummary").hidden = !cmp.shown;
+  if (!cmp.shown) return;
+  const ids = cmp.set;
+  document.getElementById("cmpTable").innerHTML = `<thead><tr><th>หัวข้อ</th>${ids.map(id=>`<th><div class="colh"><div class="thumb sm ${CADS[id].h}"><span class="fmt">${CADS[id].fmt}</span></div><div>${sideChip(id)}<b>${esc(CADS[id].name)}</b></div></div></th>`).join("")}</tr></thead><tbody>
+    <tr class="perf"><td>ผลแอด (ข้อมูลจริง)</td>${ids.map(id=>`<td>${CADS[id].metrics?esc(CADS[id].metrics):'<span class="note">Ads Library ไม่มีค่าแอดหรือยอดขายของคู่แข่ง</span>'}</td>`).join("")}</tr>
+    ${DIMS.map(([k,l])=>`<tr><td>${l}</td>${ids.map(id=>`<td>${cell(id,k)}</td>`).join("")}</tr>`).join("")}</tbody>`;
+  const isDefault = DEFAULT_SET.every(id=>ids.includes(id)) && ids.length===DEFAULT_SET.length;
+  const ev = list => list.filter(id=>CADS[id]).map(id=>`<span class="evc">${esc(CADS[id].name)}</span>`).join("");
+  document.getElementById("sumBody").innerHTML = isDefault ? `
+    <div><h3>จุดที่ต่างกันจริง</h3><ol>${SUMMARY.diff.map(([t,e])=>`<li>${esc(t)}<div class="evs">${ev(e)}</div></li>`).join("")}</ol></div>
+    <div><h3>ไอเดียทดลองสำหรับแอดเรา</h3><ul class="ideas">${SUMMARY.ideas.map(([t,e],i)=>`<li><label><input type="checkbox" data-idea="${i}" ${cmp.ideas.has(i)?"checked":""}> <span contenteditable="true" data-ideatext="${i}">${esc(t)}</span></label><div class="evs">${ev(e)}</div></li>`).join("")}</ul></div>`
+    : `<div class="empty" style="grid-column:1/-1"><h3>ต้นแบบมีสรุปตัวอย่างเฉพาะชุดเริ่มต้น</h3><p>ระบบจริงให้ AI สรุปจุดต่างและไอเดียทดลองของชุดที่เลือกทุกครั้ง · ตารางด้านบนแสดงผลรายแอดของชุดนี้ได้</p></div>`;
+  document.getElementById("savePlan").disabled = !isDefault;
+}
+document.getElementById("tray").addEventListener("click", e => {
+  const rm = e.target.closest("[data-rm]"); if (rm) { cmp.set = cmp.set.filter(id=>id!==rm.dataset.rm); renderTray(); renderCompare(); return; }
+  if (e.target.closest("#addAd")) { cmp.picker = !cmp.picker; renderTray(); }
+});
+document.getElementById("pickTabs").addEventListener("click", e => { const b = e.target.closest("[data-src]"); if (b) { cmp.src = b.dataset.src; renderPicker(); } });
+document.getElementById("pickGrid").addEventListener("click", e => { const c = e.target.closest("[data-pick]"); if (!c) return; const id = c.dataset.pick;
+  if (cmp.set.includes(id)) cmp.set = cmp.set.filter(x=>x!==id); else if (cmp.set.length < 5) cmp.set.push(id); else { toast("เลือกได้สูงสุด 5 แอด"); return; }
+  renderTray(); renderCompare(); });
+document.getElementById("runAi").onclick = () => {
+  const btn = document.getElementById("runAi"), fresh = cmp.set.filter(id=>!cmp.analyzed.has(id));
+  btn.disabled = true; btn.textContent = fresh.length ? `กำลังวิเคราะห์ ${fresh.length} แอด…` : "กำลังเปิด…";
+  setTimeout(() => { fresh.forEach(id=>cmp.analyzed.add(id)); cmp.shown = true; cmp.picker = false; renderTray(); renderCompare();
+    document.getElementById("aiResult").scrollIntoView({behavior:"smooth",block:"start"}); if (fresh.length) toast(`วิเคราะห์ ${fresh.length} แอดแล้ว (ต้นแบบ: ผลตัวอย่าง)`); }, fresh.length ? 900 : 200);
+};
+document.getElementById("sumBody").addEventListener("change", e => { const c = e.target.closest("[data-idea]"); if (c) { const i = +c.dataset.idea; c.checked ? cmp.ideas.add(i) : cmp.ideas.delete(i); } });
 document.getElementById("savePlan").onclick = () => {
-  const approach = document.querySelector('#approach [aria-pressed="true"]')?.textContent || "—";
-  PLANS.unshift({ title:"RE โปร 9.9 × เวอร์น่าพลัส", approach, hyp:document.getElementById("hyp").value.trim(), metric:document.getElementById("metric").value.trim(), stage:0, result:null });
+  const picked = [...cmp.ideas].sort().map(i => document.querySelector(`[data-ideatext="${i}"]`)?.textContent.trim()).filter(Boolean);
+  if (!picked.length) { toast("เลือกไอเดียอย่างน้อย 1 ข้อ"); return; }
+  const ours = cmp.set.find(id=>CADS[id].side==="ours");
+  PLANS.unshift({ title:`${CADS[ours].name} · ${picked[0].slice(0,40)}${picked[0].length>40?"…":""}`, approach:"ทดลองตามไอเดียจาก AI (ทีมแก้แล้ว)", hyp:picked.join(" / "),
+    metric:`ค่าทักและ ROAS (Meta) ของแอดใหม่ 7 วัน เทียบ ${CADS[ours].name} (${CADS[ours].base})`, set:cmp.set.map(id=>CADS[id].name).join(" · "),
+    baseName:CADS[ours].name, base:CADS[ours].base, stage:0, result:null });
   setCTab("plans"); window.scrollTo(0,0); toast("บันทึกแผนแล้ว · ทีมเห็นในแท็บแผนทดลอง (ต้นแบบ)");
 };
+renderTray(); renderCompare();
 
 /* update popover */
 const pop = document.getElementById("updPop"), updBtn = document.getElementById("updBtn");
