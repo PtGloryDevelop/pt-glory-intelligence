@@ -11,6 +11,8 @@ import { ownedPageChoices } from "@/lib/owned-ads/page-names";
 import { AdStatus, Creative } from "./owned-ads/owned-client";
 import { CompanyDetail } from "./owned-ads/company-library";
 import { UnitSummary } from "./owned-ads/unit-summary";
+import { AdImage } from "@/components/AdImage";
+import { MIN_CHATS } from "@/lib/dashboard/updates";
 import styles from "./owned-performance.module.css";
 
 const PERIODS: readonly [OwnedPeriodPreset, string][] = [["3d", "3 วัน"], ["7d", "7 วัน"], ["14d", "14 วัน"], ["this-month", "เดือนนี้"], ["last-month", "เดือนที่แล้ว"], ["all", "ทั้งหมดที่นำเข้า"], ["custom", "กำหนดเอง"], ["today", "วันนี้"], ["yesterday", "เมื่อวาน"]];
@@ -18,6 +20,13 @@ const SORTS: readonly [OwnedPerformanceSort, string][] = [["spend", "ค่า�
 const number = (value: number | null | undefined) => value == null ? "—" : value.toLocaleString("th-TH", { maximumFractionDigits: 2 });
 const date = (value: string | null | undefined) => value ? new Date(`${value.slice(0, 10)}T00:00:00`).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" }) : "—";
 const adKey = (ad: { account_id: string; ad_id: string }) => `${ad.account_id}:${ad.ad_id}`;
+const roasOf = (ad: OwnedPerformanceRow) => ad.spend != null && ad.spend > 0 && ad.purchase_value != null ? ad.purchase_value / ad.spend : null;
+const hookOf = (ad: OwnedPerformanceRow) => ad.hook_rate == null || !ad.video_id && ad.video_3s === 0 && ad.thruplays === 0 ? null : ad.hook_rate;
+/** Green/red only when ±10% away from the filtered total; cost per chat needs MIN_CHATS before it is judged. */
+const tone = (value: number | null, avg: number | null | undefined, goodUp: boolean) => {
+  if (value == null || !avg) return ""; const r = value / avg;
+  return goodUp ? (r > 1.1 ? styles.good : r < 0.9 ? styles.bad : "") : (r < 0.9 ? styles.good : r > 1.1 ? styles.bad : "");
+};
 
 // UI v2: one page for the library and the rankings (Command Center redirects here).
 export function OwnedPerformance() {
@@ -26,6 +35,7 @@ export function OwnedPerformance() {
   const query = params.toString();
   const period = PERIODS.find(([value]) => value === params.get("period"))?.[0] ?? "7d";
   const sort = SORTS.find(([value]) => value === params.get("sort"))?.[0] ?? "spend";
+  const view = params.get("view") === "grid" ? "grid" : "table";
   const [result, setResult] = useState<{ query: string; data: OwnedPerformanceData } | null>(null);
   const [problem, setProblem] = useState<{ query: string; message: string } | null>(null);
   const [refresh, setRefresh] = useState(0);
@@ -152,16 +162,35 @@ export function OwnedPerformance() {
       {coverage && (data.period.from < coverage.from || data.period.to > coverage.to) ? <p className={styles.note} data-testid="performance-coverage">ช่วงที่เลือกมีวันที่อยู่นอกข้อมูลที่นำเข้า วันที่ไม่มีข้อมูลไม่ถูกนับเป็นผลลัพธ์ศูนย์</p> : null}
 
       {<div className={styles.rankingTabs} role="group" aria-label="จัดอันดับแอด" data-testid="performance-rankings">{SORTS.map(([value, label]) => <button key={value} type="button" aria-pressed={sort === value} onClick={() => change({ sort: value })}>{label}</button>)}</div>}
-      <div className={styles.sectionHead}><div><h2>{SORTS.find(([value]) => value === sort)?.[1]}</h2><p data-testid="performance-count">{total ? `${number(page * pageSize + 1)}–${number(Math.min((page + 1) * pageSize, total))} จาก ${number(total)} แอด` : "ไม่พบแอดในช่วงและตัวกรองนี้"}</p></div><span>เรียงทั้งชุดข้อมูล ไม่ใช่เฉพาะหน้านี้ · เปิดรายละเอียดเพื่ออ่านทั้งหมด</span></div>
+      <div className={styles.sectionHead}><div><h2>{SORTS.find(([value]) => value === sort)?.[1]}</h2><p data-testid="performance-count">{total ? `${number(page * pageSize + 1)}–${number(Math.min((page + 1) * pageSize, total))} จาก ${number(total)} แอด` : "ไม่พบแอดในช่วงและตัวกรองนี้"}</p></div><div className={styles.viewTools}><span>เรียงทั้งชุดข้อมูล ไม่ใช่เฉพาะหน้านี้</span><div className={styles.viewSeg} role="group" aria-label="มุมมอง"><button type="button" aria-pressed={view === "table"} onClick={() => change({ view: "", page: String(page) })} data-testid="performance-view-table">ตาราง</button><button type="button" aria-pressed={view === "grid"} onClick={() => change({ view: "grid", page: String(page) })} data-testid="performance-view-grid">ครีเอทีฟ</button></div></div></div>
       {mediaProblem ? <p className={styles.note} role="status">ยังโหลดภาพชัดบางภาพไม่ได้ กำลังแสดงไฟล์ที่มีจากต้นทาง</p> : null}
-      <div className={styles.grid} data-testid="performance-grid">{data.rows.map((ad, index) => <article className={styles.card} key={adKey(ad)} data-testid={`performance-ad-${ad.ad_id}`}>
+      {view === "table" && data.rows.length ? <div className={styles.tableWrap}><table className={styles.table} data-testid="performance-table">
+        <thead><tr><th className={styles.num}>#</th><th>แอด</th><th>ยูนิต</th><th>สถานะล่าสุด</th><th className={styles.num}>ค่าแอด</th><th className={styles.num}>ROAS (Meta)</th><th className={styles.num}>ทัก</th><th className={styles.num}>ค่าทัก</th><th className={styles.num}>Hook rate</th><th className={styles.num}>วันที่มีค่าแอด</th><th><span className={styles.srOnly}>ทำต่อ</span></th></tr></thead>
+        <tbody>{data.rows.map((ad, index) => { const roas = roasOf(ad), hook = hookOf(ad), enough = (ad.conversations ?? 0) >= MIN_CHATS, url = media[adKey(ad)] ?? ad.creative_url;
+          return <tr key={adKey(ad)} data-testid={`performance-row-${ad.ad_id}`}>
+            <td className={styles.num}>{number(page * pageSize + index + 1)}</td>
+            <td><button type="button" className={styles.adCell} onClick={() => setSelected(ad)} aria-label={`เปิดรายละเอียด ${ad.ad_name}`}>
+              <span className={styles.thumb}>{url ? <AdImage src={url} alt="" sizes="56px" referrerPolicy="no-referrer" /> : <span className={styles.thumbEmpty} aria-hidden>{Object.hasOwn(media, adKey(ad)) ? "—" : "…"}</span>}{ad.video_id ? <span className={styles.play} aria-hidden>▶</span> : null}</span>
+              <span className={styles.adText}><b>{ad.ad_name}</b><small>{ad.page_name ?? ad.account_name}</small></span></button></td>
+            <td>{ad.unit_names.length ? <span className={styles.unitTag}>{ad.unit_names.join(", ")}</span> : <span className={`${styles.unitTag} ${styles.unitNone}`}>ยังไม่ผูกยูนิต</span>}</td>
+            <td><AdStatus status={ad.status} /></td>
+            <td className={styles.num}>{number(ad.spend)}</td>
+            <td className={`${styles.num} ${tone(roas, group?.roas, true)}`}>{number(roas)}</td>
+            <td className={styles.num}>{number(ad.conversations)}</td>
+            <td className={`${styles.num} ${enough ? tone(ad.cost_per_conversation, group?.cost_per_conversation, false) : ""}`} title={enough ? undefined : `ทักน้อยกว่า ${MIN_CHATS} ครั้ง ยังไม่เทียบกับภาพรวม`}>{number(ad.cost_per_conversation)}</td>
+            <td className={styles.num}>{hook == null ? "—" : `${number(hook * 100)}%`}</td>
+            <td className={styles.num}>{ad.delivery_days == null ? "—" : number(ad.delivery_days)}</td>
+            <td><div className={styles.rowActs}><button type="button" onClick={() => setSelected(ad)}>ตรวจ</button><Link href={compareHref(ad)} data-testid={`performance-compare-${ad.ad_id}`}>เทียบ</Link></div></td>
+          </tr>; })}</tbody>
+      </table><p className={styles.tableNote}>สีเขียว/แดงเทียบกับยอดรวมของตัวกรองนี้ (ROAS {number(group?.roas)} · ค่าทัก {number(group?.cost_per_conversation)}) · ค่าทักเทียบเฉพาะแอดที่ทักตั้งแต่ {MIN_CHATS} ครั้ง · คลิกแอดเพื่อดูสื่อและรายละเอียด</p></div> : null}
+      {view === "grid" ? <div className={styles.grid} data-testid="performance-grid">{data.rows.map((ad, index) => <article className={styles.card} key={adKey(ad)} data-testid={`performance-ad-${ad.ad_id}`}>
         <div className={styles.cardHead}><span className={styles.rank}>{number(page * pageSize + index + 1)}</span><div><strong>{ad.page_name ?? ad.account_name}</strong><span>{ad.unit_names.length ? ad.unit_names.join(" · ") : "ยังไม่ระบุยูนิต"}</span></div><AdStatus status={ad.status} /></div>
         <button type="button" className={styles.previewButton} onClick={() => setSelected(ad)} aria-label={`${ad.video_id ? 'ดูวิดีโอ' : 'เปิดสื่อ'} ${ad.ad_name}`}><Creative url={media[adKey(ad)] ?? ad.creative_url} name={ad.ad_name} isVideo={Boolean(ad.video_id)} mediaLoading={!Object.hasOwn(media, adKey(ad))} /></button>
         <div className={styles.cardBody}><h3>{ad.ad_name}</h3><p className={styles.caption} title={ad.body_text ?? ad.title ?? undefined}>{ad.body_text ?? ad.title ?? "ต้นทางไม่มีแคปชัน"}</p><div className={styles.metadata}><span title={ad.campaign_name}>แคมเปญ · {ad.campaign_name}</span><span>{ad.delivery_days == null ? "ยังไม่มีวันที่ส่งแอด" : `มีค่าแอด ${number(ad.delivery_days)} วันในช่วงนี้`} · {date(ad.delivery_first)}</span></div>
           <dl className={styles.cardMetrics}><Fact label={`ค่าแอด (${ad.currency})`} value={number(ad.spend)} /><Fact label="ค่าทัก" value={ad.cost_per_conversation == null ? "—" : `${number(ad.cost_per_conversation)} ${ad.currency}`} /><Fact label="ทัก" value={number(ad.conversations)} /><Fact label="ROAS (Meta)" value={number(ad.spend != null && ad.spend > 0 && ad.purchase_value != null ? ad.purchase_value / ad.spend : null)} /><Fact label="Hook rate" value={ad.hook_rate == null || !ad.video_id && ad.video_3s === 0 && ad.thruplays === 0 ? "—" : `${number(ad.hook_rate * 100)}%`} /><Fact label="% ปิด (ระบบขาย)" value="—" /></dl>
           <div className={styles.cardActions}><button type="button" onClick={() => setSelected(ad)}>ดูรายละเอียด</button><Link href={compareHref(ad)} data-cta data-testid={`performance-compare-${ad.ad_id}`}>เลือกเทียบ</Link></div>
         </div>
-      </article>)}</div>
+      </article>)}</div> : null}
       {data.ready && !total ? <div className={styles.empty}><h3>ยังไม่มีแอดพร้อมผลลัพธ์ในช่วงนี้</h3><p>ลองเลือกวันที่ที่อยู่ในช่วงข้อมูล หรือเปิดคลังทั้งหมดเพื่อดูสื่อที่ยังไม่มีค่าแอด</p><button type="button" onClick={() => change({ period: "all", unit: "", pageId: "", q: "", status: "", from: "", to: "" })}>ดูผลลัพธ์ทั้งหมดที่นำเข้า</button> <Link href="/owned-ads?spend=all">เปิดคลังแอดทั้งหมด</Link></div> : null}
       {total ? <div className={styles.pager}><span>หน้า {number(page + 1)} / {number(Math.ceil(total / pageSize))}</span><div><button type="button" data-testid="performance-prev" disabled={page === 0} onClick={() => change({ page: String(page - 1) })}>ก่อนหน้า</button><button type="button" data-testid="performance-next" disabled={(page + 1) * pageSize >= total} onClick={() => change({ page: String(page + 1) })}>ถัดไป</button></div></div> : null}
       <section className={styles.summary} aria-labelledby="performance-summary-title"><div><span className={styles.eyebrow}>สรุปจากข้อมูลจริง</span><h2 id="performance-summary-title">ข้อมูลพร้อมใช้วางแผน</h2></div><div className={styles.findings}><p><strong>{number(group?.ad_count)} แอด · {group?.currency ?? "—"}</strong><br />ตรงกับยูนิต เพจ คำค้น และช่วงวันที่ที่เลือก</p><p><strong>ค่าแอดต่อทัก {money(group?.cost_per_conversation)}</strong><br />ค่าแอดรวม ÷ จำนวนบทสนทนา · ใช้ดูอันดับค่าทักเพื่อเลือกสื่อตรวจต่อ</p><p><strong>Hook rate {group?.hook_rate == null ? "—" : `${number(group.hook_rate * 100)}%`}</strong><br />เปรียบเทียบการดึงความสนใจของวิดีโอในช่วงเดียวกัน</p></div><p className={styles.note}>ยังไม่มีข้อมูลยอดปิดจากระบบขาย จึงยังสรุป % ปิดหรือกำไรจริงไม่ได้ · การวิเคราะห์ AI ยังไม่เปิดใช้งาน</p><div className={styles.summaryLinks}><Link href={`/command-center?${new URLSearchParams({ ...Object.fromEntries(params), sort: "cost_per_conversation", page: "0" })}`}>ตรวจแอดค่าทักถูก →</Link><Link href="/competitors">ดูสื่อคู่แข่งเพื่อเทียบแนวทาง →</Link></div></section>
