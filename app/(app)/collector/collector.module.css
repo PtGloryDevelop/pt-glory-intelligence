@@ -92,5 +92,5 @@
 .advancedSettings { font-size:var(--fs-eyebrow); color:var(--muted); }
 .advancedSettings summary { cursor:pointer; padding:10px 0; }
 .card[data-testid="collector-settings"] { order:-1; padding:28px; gap:18px; }
-.action { background:#1c4e3c; color:white; font-size:var(--fs-eyebrow); font-weight:500; }
+.action { background:var(--brand-ink); color:var(--surface); font-size:var(--fs-eyebrow); font-weight:500; }
 @media(max-width:640px) { .connectionFields { grid-template-columns:1fr; } .card[data-testid="collector-settings"] { padding:20px; } }

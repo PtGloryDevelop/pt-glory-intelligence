@@ -20,8 +20,10 @@ export function buildAdLibraryUrl({ country, query, activeStatus }: AdLibrarySea
   const q = query.trim();
   if (q === "") throw new Error("query must not be blank");
 
+  // A query wrapped in double quotes is an exact-phrase search, the same URL the Ad Library builds for it.
+  const exact = /^"[^"]+"$/.test(q);
   return "https://www.facebook.com/ads/library/"
     + `?active_status=${activeStatus}&ad_type=all&country=${country}&is_targeted_country=false`
-    + `&media_type=all&q=${encodeURIComponent(q)}&search_type=keyword_unordered`
+    + `&media_type=all&q=${encodeURIComponent(q)}&search_type=${exact ? "keyword_exact_phrase" : "keyword_unordered"}`
     + "&sort_data[direction]=desc&sort_data[mode]=total_impressions";
 }

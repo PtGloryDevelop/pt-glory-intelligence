@@ -7,8 +7,8 @@
 .field input:focus-visible,.field select:focus-visible { outline:2px solid var(--focus); outline-offset:2px; }
 .hint { font-size:var(--fs-eyebrow); color:var(--muted); }
 .problem { color:var(--danger); font-size:var(--fs-meta); margin:0; }
-.submit { justify-self:start; border:0; padding:13px 22px; border-radius:8px; background:#1c4e3c; color:#fff; font-size:var(--fs-meta); font-weight:500; }
-.submit:hover:not(:disabled) { background:#123c2d; }
+.submit { justify-self:start; border:0; padding:13px 22px; border-radius:8px; background:var(--brand-ink); color:var(--surface); font-size:var(--fs-meta); font-weight:500; }
+.submit:hover:not(:disabled) { background:var(--accent-blue-ink); }
 .recent { padding:24px; border:1px solid var(--line); border-radius:14px; background:var(--surface); }
 .recentTitle { margin:0 0 20px; font-size:var(--fs-meta); }
 .recentList { list-style:none; padding:0; margin:0; }

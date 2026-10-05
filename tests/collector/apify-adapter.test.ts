@@ -433,3 +433,10 @@ test("the sample still carries the forbidden fields, so dropping them is really 
     for (const key of FORBIDDEN_IN_SAMPLE) assert.ok(key in item, `${String(item.ad_archive_id)} lacks ${key}`);
   }
 });
+
+test("a quoted query is an exact-phrase search, as the Ad Library builds it", () => {
+  const ran = new URL("https://www.facebook.com/ads/library/?active_status=all&ad_type=all&country=TH&is_targeted_country=false&media_type=all&q=%22natto%20prime%22&search_type=keyword_exact_phrase&sort_data[direction]=desc&sort_data[mode]=total_impressions");
+  const built = new URL(buildAdLibraryUrl({ country: "TH", query: '"natto prime"', activeStatus: "all" }));
+  assert.deepEqual([...built.searchParams].sort(), [...ran.searchParams].sort());
+  assert.equal(new URL(buildAdLibraryUrl({ country: "TH", query: "kivari", activeStatus: "all" })).searchParams.get("search_type"), "keyword_unordered");
+});
