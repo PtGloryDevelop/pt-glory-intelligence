@@ -440,3 +440,15 @@ test("a quoted query is an exact-phrase search, as the Ad Library builds it", ()
   assert.deepEqual([...built.searchParams].sort(), [...ran.searchParams].sort());
   assert.equal(new URL(buildAdLibraryUrl({ country: "TH", query: "kivari", activeStatus: "all" })).searchParams.get("search_type"), "keyword_unordered");
 });
+
+test("a pasted Ad Library link fills the form, and rebuilds to the same search", async () => {
+  const { parseAdLibraryUrl } = await import("../../lib/collect/url.ts");
+  const exact = "https://www.facebook.com/ads/library/?active_status=all&ad_type=all&country=TH&is_targeted_country=false&media_type=all&q=%22natto%20prime%22&search_type=keyword_exact_phrase&sort_data[direction]=desc&sort_data[mode]=total_impressions";
+  assert.deepEqual(parseAdLibraryUrl(exact), { query: '"natto prime"', country: "TH", activeStatus: "all" });
+  const back = new URL(buildAdLibraryUrl(parseAdLibraryUrl(exact)!));
+  assert.deepEqual([...back.searchParams].sort(), [...new URL(exact).searchParams].sort());
+  assert.deepEqual(parseAdLibraryUrl("https://www.facebook.com/ads/library/?active_status=active&country=TH&q=zenova%20oil&search_type=keyword_unordered"), { query: "zenova oil", country: "TH", activeStatus: "active" });
+  assert.equal(parseAdLibraryUrl("https://www.facebook.com/ads/library/?country=TH&view_all_page_id=123&search_type=page"), null, "page links cannot be represented");
+  assert.equal(parseAdLibraryUrl("https://evil.example/ads/library/?q=x&country=TH"), null);
+  assert.equal(parseAdLibraryUrl("kivari"), null);
+});

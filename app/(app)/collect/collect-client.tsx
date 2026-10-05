@@ -7,6 +7,7 @@ import { countryLabel, suggestedDatasetName, type CollectorFormSettings } from "
 import type { CollectionDto } from "@/lib/collect/dto";
 import { ErrorState } from "@/components/states/ErrorState";
 import { thaiDateTime } from "@/lib/format/date";
+import { parseAdLibraryUrl } from "@/lib/collect/url";
 import styles from "./collect.module.css";
 
 /**
@@ -44,6 +45,21 @@ export function CollectClient(
   const [touchedName, setTouchedName] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  const [linkNote, setLinkNote] = useState<string | null>(null);
+
+  /** A pasted Ad Library link fills keyword, country and status; anything else is typed as usual. */
+  function fromLink(text: string): boolean {
+    if (!/^\s*https?:\/\//i.test(text)) return false;
+    const search = parseAdLibraryUrl(text);
+    if (!search) { setLinkNote("ลิงก์นี้ใช้ไม่ได้ · รองรับเฉพาะลิงก์ค้นด้วยคำค้นจาก Ads Library (ไม่ใช่ลิงก์หน้าเพจ)"); return true; }
+    setKeyword(search.query);
+    setActiveStatus(search.activeStatus);
+    const known = settings.countries.includes(search.country);
+    if (known) setCountry(search.country);
+    setLinkNote(`ดึงจากลิงก์ Ads Library แล้ว · ${search.query.startsWith('"') ? "ค้นตรงวลี" : "ค้นคำสำคัญ"} · ${search.activeStatus === "all" ? "ทุกสถานะ" : "กำลังแสดง"}`
+      + (known ? "" : ` · ประเทศ ${search.country} ยังไม่เปิดให้เก็บ จึงใช้ ${countryLabel(country)}`));
+    return true;
+  }
 
   // The suggestion follows what has been typed until somebody edits it, and
   // then it is theirs.
@@ -120,9 +136,14 @@ export function CollectClient(
           <label htmlFor="keyword">คำค้น</label>
           <input
             id="keyword" data-testid="keyword" value={keyword} maxLength={100}
-            onChange={(event) => setKeyword(event.target.value)}
-            placeholder="เช่น วิตามินซี"
+            onChange={(event) => { if (!fromLink(event.target.value)) { setKeyword(event.target.value); setLinkNote(null); } }}
+            onPaste={(event) => { if (fromLink(event.clipboardData.getData("text"))) event.preventDefault(); }}
+            placeholder="เช่น วิตามินซี หรือวางลิงก์จาก Ads Library"
+            aria-describedby="keyword-hint"
           />
+          <span id="keyword-hint" className={styles.hint} role="status">
+            {linkNote ?? <>ใส่ในเครื่องหมายคำพูด เช่น <code>&quot;natto prime&quot;</code> เพื่อค้นตรงวลี · หรือวางลิงก์ค้นหาจาก Ads Library ระบบจะเติมคำค้น ประเทศ และสถานะให้</>}
+          </span>
         </div>
 
         <div className={styles.row}>
