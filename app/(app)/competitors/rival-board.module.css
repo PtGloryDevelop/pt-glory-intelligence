@@ -16,7 +16,7 @@
 .list { list-style: none; margin: 0; padding: 0; }
 .row { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 10px 14px; align-items: start; padding: 14px var(--pad-card); border-top: 1px solid var(--line); }
 .row:first-child { border-top: 0; }
-.avatar { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--ok-tint); color: var(--ok-ink); font-weight: 600; }
+.avatar { object-fit: cover; border: 1px solid var(--line); display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--ok-tint); color: var(--ok-ink); font-weight: 600; }
 .main { min-width: 0; }
 .name { font-weight: 600; color: var(--ink); text-decoration: none; }
 .name:hover { color: var(--brand-ink); text-decoration: underline; }

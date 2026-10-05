@@ -1,10 +1,11 @@
 import 'server-only';
 import {dbUser} from '../db/user.ts';
 import {satisfies,type Actor} from '../auth/role-model.ts';
+import {supabaseArchiveStore} from '../media/store-supabase.ts';
 
 export type Relation='direct'|'substitute'|'unrelated';
 export type RivalPage={page_id:string;page_name:string|null;matched_ads:number;new_matched_7d:number;ads_total:number;active_ads:number;longest_days:number|null;last_seen_at:string|null;sample:string|null};
-export type RivalRow=RivalPage&{relation:Relation|null;tracked:boolean};
+export type RivalRow=RivalPage&{relation:Relation|null;tracked:boolean;picture?:string|null};
 export type RivalUnit={id:string;name:string;keywords:{id:string;keyword:string}[];pages:RivalRow[];hidden:number};
 export type RivalBoard={units:RivalUnit[];unitsWithoutKeywords:{id:string;name:string}[];tracked:number;canEdit:boolean;lastCollectedAt:string|null;newThisWeek:number};
 
@@ -50,6 +51,15 @@ export async function getRivalBoard(actor:Actor):Promise<RivalBoard>{
     return {id,name:units.find(unit=>unit.id===id)?.name??entry.name,keywords:entry.keywords,pages:visible,hidden:rows.length-visible.length};
   }));
   groups.sort((a,b)=>a.name.localeCompare(b.name,'th',{numeric:true}));
+  // Archived page pictures, signed for an hour. A missing picture keeps the letter avatar.
+  const pageIds=[...new Set(groups.flatMap(unit=>unit.pages.map(page=>page.page_id)))];
+  if(pageIds.length){
+    const pictures=await db.from('page_pictures').select('page_id,storage_path').eq('status','archived').in('page_id',pageIds);
+    const paths=(pictures.data??[]).filter(row=>row.storage_path);
+    const signed=paths.length?await supabaseArchiveStore().getPresentationUrls(paths.map(row=>row.storage_path as string)).catch(()=>new Map<string,string>()):new Map<string,string>();
+    const byPage=new Map(paths.map(row=>[row.page_id as string,signed.get(row.storage_path as string)??null]));
+    for(const unit of groups)for(const page of unit.pages)page.picture=byPage.get(page.page_id)??null;
+  }
   // A page can collide with several units; count each page's new ads once.
   const newByPage=new Map(groups.flatMap(unit=>unit.pages.map(page=>[page.page_id,page.new_matched_7d] as const)));
   const lastCollectedAt=(collected.data as {collected_at:string}[]|null)?.[0]?.collected_at??null;

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { drainArchiveQueue } from "@/lib/media/archive";
 import { archiveHealth } from "@/lib/media/health";
+import { archivePagePictures } from "@/lib/media/page-pictures";
 import { authenticateMachine } from "@/lib/media/machine-auth";
 import { ensurePreviewBucket, supabaseArchiveStore } from "@/lib/media/store-supabase";
 
@@ -35,10 +36,11 @@ export async function POST(request: NextRequest) {
   try {
     await ensurePreviewBucket();
     const stats = await drainArchiveQueue(supabaseArchiveStore(), { limit });
+    const pictures = await archivePagePictures(supabaseArchiveStore(), 50);
     const health = await archiveHealth();
     // Logged so a scheduler run leaves a trace even though pg_net discards the
     // response body.
-    console.info("media archive drain", { ...stats, pending: health.pending });
+    console.info("media archive drain", { ...stats, pending: health.pending, pictures });
     return NextResponse.json({ stats, health });
   } catch (error) {
     console.error("scheduled archive drain failed", error);

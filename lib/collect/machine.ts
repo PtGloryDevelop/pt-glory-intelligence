@@ -8,6 +8,7 @@ import {
 import { analyzeImport } from "../import/analyze.ts";
 import { commitImport } from "../import/commit.ts";
 import { enqueueRun } from "../media/archive.ts";
+import { pagePicturesFromItems, recordPagePictures } from "../media/page-pictures.ts";
 import {
   canonicalInstant, scrubProviderMessage,
   type CollectionProvider, type ProviderRun,
@@ -922,6 +923,10 @@ async function importResult(
     }
     throw error;
   }
+
+  // Best effort: a page picture never decides whether a collection imported.
+  try { await withTransaction((client) => recordPagePictures(client, pagePicturesFromItems(fetched.items))); }
+  catch (error) { console.error("page pictures not recorded", error instanceof Error ? error.message : error); }
 
   return complete(requestId, request, {
     action: "imported", audit: "collection.imported",

@@ -52,7 +52,10 @@ export function RivalBoard(){
   function row(unit:RivalUnit,page:RivalRow){
     const key=`${unit.id}:${page.page_id}`;
     return <li key={page.page_id} className={styles.row}>
-      <span className={styles.avatar} aria-hidden>{(page.page_name??'?').slice(0,1)}</span>
+      {page.picture
+        // eslint-disable-next-line @next/next/no-img-element -- signed storage URL, no loader
+        ?<img className={styles.avatar} src={page.picture} alt="" width={40} height={40} loading="lazy"/>
+        :<span className={styles.avatar} aria-hidden>{(page.page_name??'?').slice(0,1)}</span>}
       <div className={styles.main}>
         <Link href={`/pages/${encodeURIComponent(page.page_id)}?scope=all`} className={styles.name}>{page.page_name??page.page_id}</Link>
         <div className={styles.chips}>
