@@ -44,9 +44,8 @@ test("a viewer sees none of the three", () => {
   for (const label of ["เก็บข้อมูลใหม่", "ค่าเก็บข้อมูล", "นำเข้าไฟล์ (กู้คืนระบบ)"]) {
     assert.ok(!visible.includes(label), `${label} must not reach a viewer`);
   }
-  // What a viewer does have is the research they came for.
-  assert.ok(visible.includes("รอบเก็บข้อมูล"));
-  assert.ok(visible.includes("หมวดหมู่"));
+  // UI v2: a viewer gets the shared work surfaces only; data upkeep is not theirs.
+  assert.deepEqual(visible, ["ภาพรวม", "คู่แข่ง"]);
 });
 
 test("an admin sees everything the other two do, and the admin entries as well", () => {
