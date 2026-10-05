@@ -23,6 +23,10 @@ export async function POST() {
         await promisify(execFile)(process.execPath,["--experimental-strip-types",resolve(process.cwd(),"scripts/sync-owned-library.mjs"),actor.userId],{
           cwd:process.cwd(),env:process.env,windowsHide:true,timeout:20*60_000,maxBuffer:1024*1024,
         });
+        // Pictures into our storage so a hosted copy of the site shows them too.
+        await promisify(execFile)(process.execPath,["--conditions=react-server","--experimental-strip-types",resolve(process.cwd(),"scripts/archive-owned-thumbs.mjs")],{
+          cwd:process.cwd(),env:process.env,windowsHide:true,timeout:30*60_000,maxBuffer:1024*1024,
+        }).catch(()=>console.error("Owned thumbnails not archived; run scripts/archive-owned-thumbs.mjs"));
       } catch {
         console.error("Owned library worker did not finish; check sync status");
       }

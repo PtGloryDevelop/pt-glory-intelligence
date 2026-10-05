@@ -30,6 +30,8 @@ const dateLabel = (value: string) => new Intl.DateTimeFormat("th-TH", {
 
 function webUrl(value: string | null): string | null {
   if (!value) return null;
+  // Our archived pictures are served by our own route (relative, same origin).
+  if (/^\/api\/owned-ads\/thumb\/(act_)?\d+\/\d+$/.test(value)) return value;
   try {
     const url = new URL(value);
     return ["http:", "https:"].includes(url.protocol) && !url.username && !url.password ? url.href : null;
