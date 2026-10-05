@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Image from "next/image";
 import { dbUser } from "@/lib/db/user";
 import { getActor } from "@/lib/auth/roles";
 import { ErrorState } from "@/components/states/ErrorState";
@@ -41,7 +42,7 @@ export default async function LoginPage({
     <main className={styles.wrap}>
       <div className={styles.card}>
         <div className={styles.head}>
-          <span className={styles.logo}>pg.</span>
+          <Image className={styles.logo} src="/logo/pt-mark.png" alt="" width={48} height={48} priority />
           <div className={styles.wordmark}>PT GLORY<span>AD INTELLIGENCE</span></div>
         </div>
 

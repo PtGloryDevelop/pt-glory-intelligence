@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { NavSection } from "./nav.ts";
@@ -77,7 +78,7 @@ export function AppShell(
       >
         <div className={styles.brand}>
           <Link href="/" className={styles.wordmark} aria-label="PT Glory หน้าแรก">
-            <span className={styles.logo}>pg.</span>
+            <Image className={styles.logo} src="/logo/pt-mark.png" alt="" width={36} height={36} priority />
             <span className={styles.lockup}>PT GLORY<small>AD INTELLIGENCE</small></span>
           </Link>
           <button type="button" className={styles.mobileClose} aria-label="ปิดเมนูหลัก" onClick={() => setOpen(false)}>×</button>

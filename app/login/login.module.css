@@ -1,7 +1,7 @@
-.wrap { min-height:100vh; display:grid; place-items:center; padding:40px 24px; background:#122b29; }
-.card { width:100%; max-width:460px; background:var(--surface); border-radius:18px; overflow:hidden; box-shadow:0 24px 80px #0003; }
+.wrap { min-height:100vh; display:grid; place-items:center; padding:40px 24px; background:var(--brand-tint-strong); }
+.card { width:100%; max-width:460px; background:var(--surface); border-radius:18px; overflow:hidden; box-shadow:var(--shadow); }
 .head { display:flex; align-items:center; gap:14px; padding:32px 36px; border-bottom:1px solid var(--line); }
-.logo { display:grid; place-items:center; width:48px; height:48px; background:#c8eee0; color:#122b29; font-size:var(--fs-page-title); letter-spacing:-2px; font-weight:700; border-radius:12px; }
+.logo { display:block; width:48px; height:48px; object-fit:contain; }
 .wordmark { font-size:var(--fs-title-sm); font-weight:700; letter-spacing:2px; }
 .wordmark span { display:block; font-size:var(--fs-eyebrow); letter-spacing:2.5px; color:var(--muted); margin-top:4px; }
 .body { padding:32px 36px; }
