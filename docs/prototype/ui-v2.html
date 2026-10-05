@@ -297,6 +297,19 @@ tbody tr:last-child td{border-bottom:0}
 .rival-box{background:var(--surface)}
 .rival-box .na{color:var(--ink-3);font-weight:400}
 .sig-caveat{font-style:italic}
+.gapbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:0 18px 12px;padding:10px 12px;border-radius:var(--r-sm);background:var(--warn-weak);color:var(--ink);font-size:13.5px}
+.gapbar span{flex:1 1 360px}
+.evcell{cursor:pointer;border-radius:4px;display:inline;outline-offset:2px}
+.evcell:hover{background:var(--accent-weak);box-shadow:0 0 0 3px var(--accent-weak)}
+.aib.fixed{background:var(--good-weak);color:var(--good)}
+.evpop{position:absolute;z-index:45;width:min(340px,calc(100vw - 32px));background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 12px 32px rgba(0,0,0,.16);padding:12px 14px;display:grid;gap:8px}
+.evp-h{display:flex;align-items:center;gap:8px}.evp-h b{margin-right:auto;font-size:14px}
+.evpop blockquote{margin:0;padding:8px 10px;border-left:3px solid var(--accent);background:var(--sunken);border-radius:0 6px 6px 0;font-size:13.5px}
+.evp-edit{display:grid;gap:4px}.evp-edit textarea{width:100%;border:1px solid var(--line-strong);border-radius:6px;padding:6px 8px;background:var(--surface);font-size:13.5px}
+.evp-f{display:flex;gap:6px;justify-content:flex-end}
+.card .why{font-size:12px;color:var(--rival);font-weight:600;line-height:1.4}
+.cmp5 th.dimh,.cmp5 td:first-child{position:sticky;left:0;z-index:2;background:var(--surface);box-shadow:1px 0 0 var(--line)}
+@media (max-width:760px){.cmp5{width:max-content;min-width:100%}.cmp5 .dimh{width:108px}.cmp5 thead th:not(.dimh){width:210px}.cmp5 td:first-child{font-size:12.5px}}
 .addcol{width:100%;min-height:240px;border:1px dashed var(--line-strong);border-radius:var(--r);background:transparent;cursor:pointer;display:grid;place-content:center;gap:4px;color:var(--accent);font-weight:600;text-align:center}
 .addcol span:first-child{font-size:26px;line-height:1}
 .addcol:hover{background:var(--accent-weak)}
@@ -586,12 +599,14 @@ tbody tr:last-child td{border-bottom:0}
         <section class="panel">
           <div class="panel-h"><h2>เทียบแอด</h2><span class="hint" id="setHint"></span>
             <div class="seg" role="group" aria-label="ช่วงผลแอดเรา" id="perSeg"><button data-per="d7" aria-pressed="true">7 วัน</button><button data-per="d14" aria-pressed="false">14 วัน</button><button data-per="d30" aria-pressed="false">30 วัน</button><button data-per="all" aria-pressed="false">ตั้งแต่มีข้อมูล</button></div>
+            <button class="btn sm" id="shareLink">คัดลอกลิงก์</button><button class="btn sm" id="exportPdf">ส่งออก PDF</button>
             <button class="btn primary" id="runAi">วิเคราะห์ด้วย AI</button></div>
           <p class="note run-note" id="runNote"></p>
+          <div class="gapbar" id="gapBar" hidden></div>
           <div class="tbl-wrap"><table class="cmp5" id="cmpTable"></table></div>
           <div class="picker" id="picker" hidden>
             <div class="toolbar">
-              <div class="seg" role="group" aria-label="แหล่งแอด" id="pickTabs"><button data-src="rival" aria-pressed="true">คู่แข่งที่ชนกับ U15</button><button data-src="ours" aria-pressed="false">แอดของเรา</button></div>
+              <div class="seg" role="group" aria-label="แหล่งแอด" id="pickTabs"><button data-src="rival" aria-pressed="true">คู่แข่งที่ระบบแนะนำ</button><button data-src="ours" aria-pressed="false">แอดของเรา</button></div>
               <button class="btn ghost sm" id="pickClose">ปิด</button>
             </div>
             <div class="cards" id="pickGrid"></div>
@@ -680,6 +695,7 @@ tbody tr:last-child td{border-bottom:0}
   <div class="drawer-b" id="dBody"></div>
   <div class="drawer-f" id="dFoot"></div>
 </aside>
+<div class="evpop" id="evPop" hidden role="dialog" aria-label="หลักฐานที่ AI ใช้"></div>
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script>
@@ -1016,6 +1032,50 @@ function perfBlock(id){
     ${sparkDaily(PERF[id].daily)}<span class="note">ค่าแอดรายวัน 14 วัน · แถบฟ้า = 7 วันล่าสุด · ${PERF[id].status}</span>
   </div>`;
 }
+// --- evidence behind each AI cell (source + the text/image line the model used) ---
+const EVID = {
+  re:{pain:["ข้อความ","ความดันกระเจิง ไขมันหลอดเลือดกระจุย … ไขมันLDLลดเหลือ 90"],angle:["ข้อความ","9.9 โปรลดอลังการ …"],hook:["ข้อความ บรรทัดแรก","9.9 โปรลดอลังการ ความดันกระเจิง"],
+      offer:["ภาพ + ข้อความ","ภาพ: \"6ชิ้น 1,090.-\" · ข้อความ: ผงผักนาโน 5 กระปุก + ชาเขียวแม่แย้ม 1 ซอง · แถมฟรีกระบอกน้ำ · ส่งฟรี"],proof:["ข้อความ","#ราชินีผงผัก 46 ชนิด … หมอเบายาแล้ว"],format:["ไฟล์สื่อ","ภาพนิ่ง 1 ภาพ"]},
+  u11:{pain:["ข้อความ","#ตกขาวมีกลิ่น #ตกขาวเรื้อรัง #เชื้อราในช่องคลอด"],angle:["ข้อความ","1 บทเพลงสำหรับดิเลลลิเซ่ 😍 #ซีเอมี่"],hook:["ข้อความ บรรทัดแรก","อยากจะถามดูว่าวันนี้เธอเริ่มคันหรือยังงงงง"],
+      offer:["ข้อความ","#โปรโมชันพิเศษ (ไม่มีราคา)"],proof:["ข้อความ","#ซีเอมี่"],format:["ไฟล์สื่อ","วิดีโอ"]},
+  verna:{pain:["ข้อความ","✅ บล็อคแป้ง ✅ บล็อคไขมัน ✅ สลายเซลลูไลท์"],angle:["ข้อความ","พิเศษ วันนี้เท่านั้น … หมดแล้วหมดเลย"],hook:["ข้อความ บรรทัดแรก","พิเศษ วันนี้เท่านั้น 1 แถม 1 เพียง 490.- ส่งฟรี"],
+      offer:["ข้อความ","1 แถม 1 เพียง 490.- ส่งฟรีให้ถึงหน้าบ้าน"],proof:["ข้อความ","#เจ้าแรกในไทย นวัตกรรมแคปซูล 2 ชั้น"],format:["ไฟล์สื่อ + ภาพปก","วิดีโอ · ปก \"การันตี 10 กล่อง\""]},
+  vslim:{pain:["ข้อความ","ลดพุง"],angle:["ข้อความ","วันนี้เท่านั้น"],hook:["ข้อความ บรรทัดแรก","วันนี้เท่านั้น 1 แถม 1 เพียง 390.- ส่งฟรี"],offer:["ข้อความ","1 แถม 1 เพียง 390.- ส่งฟรี"],proof:["ข้อความ","อ้างรางวัลสินค้า"],format:["ไฟล์สื่อ","วิดีโอ"]},
+  vult:{pain:["ภาพ","เวจจี้ อัลติเมท สลายไขมัน"],angle:["ภาพ","7วัน ลด 10 โล"],hook:["ภาพ","\"7วัน ลด 10 โล\" ตัวใหญ่บนภาพ"],offer:["ภาพ + ข้อความ","ไม่พบตัวเลขราคา"],proof:["ภาพ","คนถือสินค้า"],format:["ไฟล์สื่อ","ภาพนิ่ง"]},
+  hylme:{pain:["ข้อความ","หัวใจ (Cardiovascular Optimization) … Coenzyme Q10"],angle:["ภาพ","พัฒนาสูตรใหม่ \"Daily Oils Blend\" สารสกัดหลัก 11 ชนิด"],hook:["ภาพ","พัฒนาสูตรใหม่ สู่ \"Daily Oils Blend\""],
+      offer:["ข้อความ","1 กระปุก 490 (ปกติ 980) · 2 กระปุก 890 ส่งฟรี · 3 กระปุก 1,290 ส่งฟรี"],proof:["ข้อความ","Coenzyme Q10 · Macadamia Nut Oil · Pomegranate Seed Oil"],format:["ไฟล์สื่อ","หลายภาพ"]}
+};
+const WHY = { re:"งบสูงใน U15 · ROAS 7 วันลดลง 40%", u11:"งบสูงสุดใน U11", verna:"คำค้น \"ผงผัก\" ของ U15 · ข้อเสนอ 1 แถม 1",
+  vslim:"วิตามินผักแบบ U15 · ราคาต่ำกว่าเวอร์น่าพลัส 100 บาท", vult:"ลดน้ำหนักแบบ U13 · เพจลงแรงมาก (28 แอด)", hylme:"น้ำมันสกัดลดไขมัน กลุ่มเดียวกับ U24" };
+const SEEN_ISO = { verna:"2026-09-10", vslim:null, vult:"2026-09-10", hylme:"2026-09-10" };
+const OURS_THROUGH = "2026-10-02";
+const edits = {};
+function gapBar(ids){
+  const rivals = ids.filter(id=>CADS[id].side==="rival");
+  const stale = rivals.filter(id => !SEEN_ISO[id] || (Date.parse(OURS_THROUGH)-Date.parse(SEEN_ISO[id]))/864e5 > 14);
+  const bar = document.getElementById("gapBar"); bar.hidden = !stale.length; if (!stale.length) return;
+  const oldest = stale.map(id=>SEEN_ISO[id]).filter(Boolean).sort()[0];
+  const gap = oldest ? Math.round((Date.parse(OURS_THROUGH)-Date.parse(oldest))/864e5) : null;
+  const cost = (stale.length * 30 * 0.021 / 28).toFixed(2);
+  bar.innerHTML = `<span><b>ข้อมูลคู่แข่ง ${stale.length} เพจในชุดนี้เก่ากว่าข้อมูลแอดเรา${gap?` ${gap} วัน`:""}</b> · แอดเราถึง 2 ต.ค. แต่คู่แข่งเก็บล่าสุด${oldest?" 10 ก.ย.":" ไม่ทราบวันที่"}${stale.some(id=>!SEEN_ISO[id])?" (บางเพจไม่ทราบวันที่)":""} คู่แข่งอาจเปลี่ยนโปรไปแล้ว</span>
+    <button class="btn sm" id="refetch">เก็บ ${stale.length} เพจนี้ใหม่ · ประมาณ USD ${cost}</button>`;
+  document.getElementById("refetch").onclick = () => toast(`ต้นแบบ: จะเก็บเฉพาะ ${stale.length} เพจในชุดนี้ · ประมาณ USD ${cost} · ยืนยันก่อนเริ่ม`);
+}
+const pop2 = () => document.getElementById("evPop");
+function openEvidence(el){
+  const [id,k] = el.dataset.ev.split("|"), a = CADS[id], label = DIMS.find(d=>d[0]===k)[1];
+  const ev = k==="claim" ? ["ข้อความ", a.claim.join(" · ")] : (EVID[id]?.[k] ?? ["—","ไม่มีหลักฐานในต้นแบบ"]);
+  const p = pop2(); p.dataset.ev = el.dataset.ev;
+  p.innerHTML = `<div class="evp-h"><b>${esc(label)} · ${esc(a.name)}</b><button class="x" id="evClose" aria-label="ปิด">×</button></div>
+    <span class="note">AI อ่านจาก: <b>${esc(ev[0])}</b></span><blockquote>${esc(ev[1])}</blockquote>
+    <div class="evp-edit" id="evEdit" hidden><label class="note" for="evInput">ค่าที่ถูกต้อง</label><textarea id="evInput" rows="2">${esc(edits[el.dataset.ev] ?? (k==="claim"?a.claim.join(" · "):a[k]))}</textarea></div>
+    <div class="evp-f"><button class="btn sm" id="evEditBtn">แก้ค่า</button><button class="btn sm primary" id="evSave" hidden>บันทึก</button></div>`;
+  const r = el.getBoundingClientRect();
+  p.hidden = false; p.style.top = `${window.scrollY + r.bottom + 6}px`; p.style.left = `${Math.min(window.scrollX + r.left, window.scrollX + document.documentElement.clientWidth - p.offsetWidth - 16)}px`;
+  document.getElementById("evClose").onclick = () => p.hidden = true;
+  document.getElementById("evEditBtn").onclick = () => { document.getElementById("evEdit").hidden = false; document.getElementById("evSave").hidden = false; document.getElementById("evEditBtn").hidden = true; document.getElementById("evInput").focus(); };
+  document.getElementById("evSave").onclick = () => { edits[p.dataset.ev] = document.getElementById("evInput").value.trim(); p.hidden = true; renderCompare(); toast("บันทึกค่าที่แก้แล้ว · เก็บเป็นคำตอบถูกไว้วัดความแม่นของ AI"); };
+}
 const cmp = { period:"d7", set:[...DEFAULT_SET], picker:false, src:"rival", analyzed:new Set(), shown:false, ideas:new Set([0]) };
 const sideChip = id => `<span class="kind ${CADS[id].side==="ours"?"ours":"rival"}">${CADS[id].side==="ours"?"แอดเรา":"คู่แข่ง"}</span>`;
 const ordered = () => [...cmp.set.filter(id=>CADS[id].side==="ours"), ...cmp.set.filter(id=>CADS[id].side!=="ours")];
@@ -1031,11 +1091,15 @@ function colHead(id){
 }
 function cell(id,k){
   if (!cmp.shown || !cmp.analyzed.has(id)) return '<span class="pending-cell">—</span>';
-  const a = CADS[id];
-  if (k==="claim") return a.claim.map(c=>`<span class="${c.startsWith("⚠")?"flag":"note"}" style="display:block">${esc(c)}</span>`).join("");
+  const a = CADS[id], key = `${id}|${k}`, edited = edits[key];
   if (k==="age") return `${esc(a.age)}<span class="src">ข้อมูลจริง</span>`;
-  if (k==="offer") return `${esc(a.offer)}${a.perUnit?`<span class="src">${esc(a.perUnit)} · คำนวณโดยระบบ</span>`:""}<span class="aib">AI</span>`;
-  return `${esc(a[k])}<span class="aib">AI</span>`;
+  const tag = edited!=null ? '<span class="aib fixed">แก้แล้ว</span>' : '<span class="aib">AI</span>';
+  let body;
+  if (edited!=null) body = esc(edited);
+  else if (k==="claim") body = a.claim.map(c=>`<span class="${c.startsWith("⚠")?"flag":"note"}" style="display:block">${esc(c)}</span>`).join("");
+  else body = esc(a[k]);
+  const unit = k==="offer"&&a.perUnit ? `<span class="src">${esc(a.perUnit)} · คำนวณโดยระบบ</span>` : "";
+  return `<span class="evcell" data-ev="${key}" tabindex="0" role="button" title="ดูหลักฐานที่ AI ใช้">${body}${tag}</span>${unit}`;
 }
 function renderCompare(){
   const ids = ordered(), ours = ids.filter(id=>CADS[id].side==="ours").length;
@@ -1053,13 +1117,13 @@ function renderCompare(){
   note.classList.toggle("warn-note", !ours);
   document.getElementById("aiTag").hidden = !cmp.shown;
   document.getElementById("picker").hidden = !cmp.picker; if (cmp.picker) renderPicker();
-  renderSummary(ids);
+  renderSummary(ids); gapBar(ids);
 }
 function renderPicker(){
   const ids = Object.keys(CADS).filter(id => CADS[id].side===cmp.src);
   document.querySelectorAll("#pickTabs button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.src===cmp.src));
   document.getElementById("pickGrid").innerHTML = ids.map(id => { const a = CADS[id], on = cmp.set.includes(id);
-    return `<article class="card ${on?"picked":""}" data-pick="${id}"><div class="thumb ${a.h}"><span class="fmt">${a.fmt}</span></div><div class="body"><div class="top"><span class="pg">${esc(a.name)}</span><span class="unit">${a.unit}</span></div><span class="what">${esc(a.offer)}</span><span class="note">${on?"✓ อยู่ในชุดแล้ว":a.age}</span></div></article>`; }).join("");
+    return `<article class="card ${on?"picked":""}" data-pick="${id}"><div class="thumb ${a.h}"><span class="fmt">${a.fmt}</span></div><div class="body"><div class="top"><span class="pg">${esc(a.name)}</span><span class="unit">${a.unit}</span></div><span class="why">แนะนำเพราะ: ${esc(WHY[id]||"—")}</span><span class="what">${esc(a.offer)}</span><span class="note">${on?"✓ อยู่ในชุดแล้ว":a.age}</span></div></article>`; }).join("");
 }
 function renderSummary(ids){
   const box = document.getElementById("aiSummary"), done = cmp.shown && ids.every(id=>cmp.analyzed.has(id));
@@ -1078,6 +1142,12 @@ document.getElementById("cmpTable").addEventListener("click", e => {
 });
 document.getElementById("perSeg").addEventListener("click", e => { const b = e.target.closest("[data-per]"); if (!b) return; cmp.period = b.dataset.per;
   document.querySelectorAll("#perSeg button").forEach(x=>x.setAttribute("aria-pressed", x===b)); renderCompare(); });
+document.getElementById("cmpTable").addEventListener("click", e => { const c = e.target.closest("[data-ev]"); if (c) openEvidence(c); });
+document.getElementById("cmpTable").addEventListener("keydown", e => { const c = e.target.closest("[data-ev]"); if (c && (e.key==="Enter"||e.key===" ")) { e.preventDefault(); openEvidence(c); } });
+document.addEventListener("keydown", e => { if (e.key==="Escape") pop2().hidden = true; });
+document.getElementById("shareLink").onclick = () => { const url = `${location.origin}${location.pathname}#compare`;
+  (navigator.clipboard?.writeText(url) ?? Promise.reject()).then(() => toast("คัดลอกลิงก์ชุดเทียบแล้ว · คนในทีมเปิดเห็นชุดเดียวกันพร้อมผล AI ที่เก็บไว้ (ต้นแบบ)"), () => toast(url)); };
+document.getElementById("exportPdf").onclick = () => toast("ต้นแบบ: ส่งออกตาราง + สรุป AI เป็น PDF สำหรับประชุม");
 document.getElementById("pickClose").onclick = () => { cmp.picker = false; renderCompare(); };
 document.getElementById("pickTabs").addEventListener("click", e => { const b = e.target.closest("[data-src]"); if (b) { cmp.src = b.dataset.src; renderPicker(); } });
 document.getElementById("pickGrid").addEventListener("click", e => { const c = e.target.closest("[data-pick]"); if (!c) return; const id = c.dataset.pick;
