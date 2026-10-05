@@ -10,7 +10,7 @@ export type DashboardUpdate={
 };
 type Input={
   summary:OwnedPerformanceSummary|undefined;rows:OwnedPerformanceRow[];series:Record<string,ReviewSeries>|null;
-  rivals:{newAds:number;tracked:number}|null;
+  rivals:{units:number;pages:number;pending:number;newThisWeek:number;tracked:number}|null;
 };
 
 // ponytail: fixed thresholds; move to per-unit targets once the team sets them (Q12).
@@ -56,10 +56,15 @@ export function buildUpdates({summary,rows,series,rivals}:Input,limit=6):Dashboa
       body:`ค่าแอดรวม ${baht(spend)} บาท · ผูกเพจเข้ายูนิตใน Ads Management แล้วตัวเลขรายยูนิตจะครบ`,
       href:'/owned-ads/performance',hrefLabel:'ดูแอดของเรา',weight:spend});
   }
-  if(rivals&&!rivals.tracked)
-    out.push({id:'rival:untracked',kind:'rival',severity:'warn',label:'ข้อมูลยังไม่ตรง',
-      title:rivals.newAds?`เพิ่งพบ ${rivals.newAds} แอดคู่แข่ง แต่ยังไม่มีเพจที่ติดตาม`:'ยังไม่มีเพจคู่แข่งที่ติดตาม',
-      body:'แอดที่เพิ่งพบมาจากการค้นกว้าง อาจไม่ใช่คู่แข่งตรง · เลือกเพจที่ขายของคล้ายเราเพื่อให้สรุปแม่นขึ้น',
-      href:'/competitors',hrefLabel:'ดูคู่แข่ง',weight:0});
-  return out.sort((a,b)=>b.weight-a.weight).slice(0,limit);
+  // Competitor lines carry no spend, so they would always sort last; they get reserved slots instead.
+  const rivalLines:DashboardUpdate[]=[];
+  if(rivals){
+    const rival=(id:string,severity:UpdateSeverity,label:string,title:string,body:string,weight=0)=>rivalLines.push({id,kind:'rival',severity,label,title,body,href:'/competitors',hrefLabel:'ดูคู่แข่งที่ชนกับเรา',weight});
+    if(!rivals.units)rival('rival:no-keywords','warn','ข้อมูลยังไม่ตรง','ยังไม่ได้ใส่คำค้นให้ยูนิต ระบบจึงหาคู่แข่งที่ชนกับเราไม่ได้','ใส่คำที่ลูกค้าใช้หาสินค้า 3–5 คำต่อยูนิต แล้วระบบจะเสนอเพจคู่แข่งจากแอดที่เก็บไว้');
+    else if(rivals.newThisWeek)rival('rival:new','warn','ควรดู',`เพจที่ชนกับสินค้าเรามีแอดใหม่ ${rivals.newThisWeek} ตัวสัปดาห์นี้`,`จาก ${rivals.pages} เพจที่ตรงคำค้นของ ${rivals.units} ยูนิต · ระบบเห็นครั้งแรกใน 7 วัน`,1);
+    else rival('rival:quiet','good','ไม่มีความเปลี่ยนแปลง','สัปดาห์นี้ยังไม่พบแอดใหม่จากเพจที่ชนกับสินค้าเรา',`ดู ${rivals.pages} เพจใน ${rivals.units} ยูนิตที่ใส่คำค้นแล้ว${rivals.tracked?'':' · ยังไม่มีเพจที่ติดตาม จึงไม่มีการเก็บแอดใหม่ของเพจเหล่านี้'}`);
+    if(rivals.pending)rival('rival:pending','warn','รอทีมยืนยัน',`${rivals.pending} เพจคู่แข่งที่ระบบเสนอยังรอทีมยืนยัน`,'ยืนยันว่าเป็นคู่แข่งตรง สินค้าทดแทน หรือไม่เกี่ยว เพื่อให้สรุปคู่แข่งแม่นขึ้น');
+  }
+  const reserved=rivalLines.sort((a,b)=>b.weight-a.weight).slice(0,2);
+  return [...out.sort((a,b)=>b.weight-a.weight).slice(0,limit-reserved.length),...reserved];
 }

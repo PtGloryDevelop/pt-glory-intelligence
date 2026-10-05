@@ -3,10 +3,10 @@ import {dbUser} from '../db/user.ts';
 import {satisfies,type Actor} from '../auth/role-model.ts';
 
 export type Relation='direct'|'substitute'|'unrelated';
-export type RivalPage={page_id:string;page_name:string|null;matched_ads:number;ads_total:number;active_ads:number;longest_days:number|null;last_seen_at:string|null;sample:string|null};
+export type RivalPage={page_id:string;page_name:string|null;matched_ads:number;new_matched_7d:number;ads_total:number;active_ads:number;longest_days:number|null;last_seen_at:string|null;sample:string|null};
 export type RivalRow=RivalPage&{relation:Relation|null;tracked:boolean};
 export type RivalUnit={id:string;name:string;keywords:{id:string;keyword:string}[];pages:RivalRow[];hidden:number};
-export type RivalBoard={units:RivalUnit[];unitsWithoutKeywords:{id:string;name:string}[];tracked:number;canEdit:boolean};
+export type RivalBoard={units:RivalUnit[];unitsWithoutKeywords:{id:string;name:string}[];tracked:number;canEdit:boolean;lastCollectedAt:string|null;newThisWeek:number};
 
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
@@ -25,11 +25,12 @@ async function ownedUnits(db:Awaited<ReturnType<typeof dbUser>>):Promise<{id:str
 export async function getRivalBoard(actor:Actor):Promise<RivalBoard>{
   const db=await dbUser();
   const canEdit=satisfies(actor.role,'analyst');
-  const [keywords,relations,tracked,units]=await Promise.all([
+  const [keywords,relations,tracked,units,collected]=await Promise.all([
     db.from('unit_keywords').select('id,unit_id,unit_name,keyword').order('created_at'),
     db.from('rival_page_units').select('page_id,unit_id,relation'),
     db.from('rival_tracked_pages').select('page_id'),
     canEdit?ownedUnits(db):Promise.resolve([]),
+    db.rpc('dataset_list').select('collected_at').order('collected_at',{ascending:false}).limit(1),
   ]);
   if(keywords.error||relations.error||tracked.error)throw new Error('Rival board unavailable');
   const trackedSet=new Set((tracked.data??[]).map(row=>row.page_id as string));
@@ -49,7 +50,11 @@ export async function getRivalBoard(actor:Actor):Promise<RivalBoard>{
     return {id,name:units.find(unit=>unit.id===id)?.name??entry.name,keywords:entry.keywords,pages:visible,hidden:rows.length-visible.length};
   }));
   groups.sort((a,b)=>a.name.localeCompare(b.name,'th',{numeric:true}));
-  return {units:groups,unitsWithoutKeywords:units.filter(unit=>!byUnit.has(unit.id)),tracked:trackedSet.size,canEdit};
+  // A page can collide with several units; count each page's new ads once.
+  const newByPage=new Map(groups.flatMap(unit=>unit.pages.map(page=>[page.page_id,page.new_matched_7d] as const)));
+  const lastCollectedAt=(collected.data as {collected_at:string}[]|null)?.[0]?.collected_at??null;
+  return {units:groups,unitsWithoutKeywords:units.filter(unit=>!byUnit.has(unit.id)),tracked:trackedSet.size,canEdit,lastCollectedAt,
+    newThisWeek:[...newByPage.values()].reduce((sum,value)=>sum+value,0)};
 }
 
 export class RivalInputError extends Error{}

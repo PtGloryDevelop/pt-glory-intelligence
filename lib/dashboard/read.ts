@@ -12,6 +12,7 @@ import {getOwnedPerformance} from '../owned-ads/performance-read.ts';
 import type {OwnedPerformanceData} from '../owned-ads/performance.ts';
 import {latestReviewPeriod,type ReviewOptions} from './review-model.ts';
 import {getReviewSeries} from './series-read.ts';
+import {getRivalBoard} from '../rivals/board.ts';
 import type {ReviewSeries} from './series.ts';
 
 export type DashboardMetric=OwnedMetric & {reportedValue?:number|null};
@@ -29,11 +30,14 @@ export type DashboardRivals={
   lastCollectedAt:string|null;datasets:number;topPages:PageListRow[];
   recentAds:CatalogAdRow[]|null;week:{from:string;to:string;newAds:number}|null;
 };
+export type DashboardCollisions={units:number;unitsTotal:number|null;pages:number;confirmed:number;pending:number;newThisWeek:number;tracked:number;
+  top:{unit:string;page_id:string;page_name:string|null;matched_ads:number;new_matched_7d:number;confirmed:boolean}[]};
 export type DashboardData={
   generatedAt:string;owned:DashboardOwned|null;rivals:DashboardRivals|null;
   review:OwnedPerformanceData|null;reviewOptions:ReviewOptions;
   rowSeries:Record<string,ReviewSeries>|null;
   watchlist:{total:number;items:WatchListRow[]}|null;
+  collisions:DashboardCollisions|null;
   collections:{pending:number;latest:CollectionDto[]}|null;errors:string[];
 };
 
@@ -41,7 +45,7 @@ export type DashboardData={
  * or calls Meta/Apify. Partial outages keep the remaining sections usable. */
 export async function getDashboard(actor:Actor,options:ReviewOptions={window:7,sort:'spend',period:null}):Promise<DashboardData>{
   const db=await dbUser();
-  const output:DashboardData={generatedAt:new Date().toISOString(),owned:null,rivals:null,review:null,reviewOptions:options,rowSeries:null,watchlist:null,collections:null,errors:[]};
+  const output:DashboardData={generatedAt:new Date().toISOString(),owned:null,rivals:null,review:null,reviewOptions:options,rowSeries:null,watchlist:null,collisions:null,collections:null,errors:[]};
   const review=async()=>{
     const latest=await db.from('owned_library_syncs').select('id,daily_from,daily_to').eq('status','completed').order('finished_at',{ascending:false}).limit(1).maybeSingle();
     if(latest.error)throw latest.error;
@@ -81,7 +85,19 @@ export async function getDashboard(actor:Actor,options:ReviewOptions={window:7,s
     if(pending.error)throw pending.error;
     output.collections={pending:pending.count??0,latest};
   };
-  const tasks:[string,()=>Promise<void>][]=[['rivals',rivals],['watchlist',watchlist]];
+  const collisions=async()=>{
+    const board=await getRivalBoard(actor);
+    const pages=new Map<string,{unit:string;page_id:string;page_name:string|null;matched_ads:number;new_matched_7d:number;confirmed:boolean}>();
+    for(const unit of board.units)for(const page of unit.pages){
+      const prev=pages.get(page.page_id);const confirmed=page.relation==='direct'||page.relation==='substitute';
+      if(!prev||Number(confirmed)>Number(prev.confirmed)||page.matched_ads>prev.matched_ads)pages.set(page.page_id,{unit:unit.name,page_id:page.page_id,page_name:page.page_name,matched_ads:page.matched_ads,new_matched_7d:page.new_matched_7d,confirmed});
+    }
+    const list=[...pages.values()];
+    output.collisions={units:board.units.length,unitsTotal:board.canEdit?board.units.length+board.unitsWithoutKeywords.length:null,pages:list.length,
+      confirmed:list.filter(p=>p.confirmed).length,pending:list.filter(p=>!p.confirmed).length,newThisWeek:board.newThisWeek,tracked:board.tracked,
+      top:list.sort((a,b)=>b.new_matched_7d-a.new_matched_7d||Number(b.confirmed)-Number(a.confirmed)||b.matched_ads-a.matched_ads).slice(0,4)};
+  };
+  const tasks:[string,()=>Promise<void>][]=[['rivals',rivals],['watchlist',watchlist],['collisions',collisions]];
   if(satisfies(actor.role,'analyst'))tasks.push(['owned',own],['review',review],['collections',collections]);
   await Promise.all(tasks.map(async([name,run])=>{
     try{await run();}catch(error){

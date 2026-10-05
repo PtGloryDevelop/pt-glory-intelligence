@@ -56,3 +56,6 @@
   .acts { justify-items: start; }
   .rel { justify-content: flex-start; }
 }
+.newChip { background: var(--warn-tint); border-color: transparent; color: var(--warn-ink); font-weight: 600; }
+.week { display: grid; gap: 2px; padding: 12px var(--pad-card); border-radius: var(--radius); background: var(--surface); border: 1px solid var(--line); font-size: var(--fs-meta); }
+.week span { color: var(--muted); font-size: var(--fs-eyebrow); }

@@ -7,6 +7,14 @@ import {AdDrawer} from '@/components/AdDrawer';
 import type {CatalogAdRow} from '@/lib/read/catalog';
 import {activeFilter,filterValue,pageOffset} from '@/lib/read/request';
 import styles from './competitors.module.css';
+
+// ponytail: groups repeats within the 24 rows on screen (same page + same copy); a library-wide grouped query is the upgrade if repeats span pages.
+const copyKey=(ad:CatalogAdRow)=>`${ad.page_id}|${(ad.title||'').trim()}|${(ad.body_text||'').replace(/\s+/g,' ').trim().slice(0,240)}`;
+function groupRepeats(rows:CatalogAdRow[]){
+ const groups=new Map<string,CatalogAdRow[]>();
+ for(const ad of rows){const key=(ad.title||ad.body_text)?copyKey(ad):ad.ad_archive_id;groups.set(key,[...(groups.get(key)??[]),ad]);}
+ return [...groups.values()];
+}
 export function CatalogLibrary({canAnalyze}:{canAnalyze:boolean}){
  const navigation=useSearchParams(),status=activeFilter(navigation.get('active'));
  const query=filterValue(navigation.get('search'),160)??'',period=navigation.get('period')==='week'?'week':'';
@@ -49,7 +57,11 @@ export function CatalogLibrary({canAnalyze}:{canAnalyze:boolean}){
   {error?<p role="alert">{error} <button onClick={()=>setRefresh(value=>value+1)}>ลองอีกครั้ง</button></p>:null}
   <div className={styles.catalogHead}><h2>{period==='week'?'แอดที่เราเพิ่งพบใน 7 วัน':'คลังแอดคู่แข่งทั้งหมด'}</h2><span data-testid="catalog-count">{result&&!loading?`พบ ${result.total.toLocaleString('th-TH')} แอด${result.rows.length?` · แสดง ${(offset+1).toLocaleString('th-TH')}–${(offset+result.rows.length).toLocaleString('th-TH')}`:''} · หน้า ${Math.floor(offset/24)+1}`:'กำลังเปิดข้อมูล…'}</span></div>
   {loading&&!error?<p role="status">กำลังค้นแอดในคลัง…</p>:null}
-  <div className={styles.catalogGrid} data-testid="catalog-grid">{!loading&&result?.rows.map(ad=><AdCard key={ad.ad_archive_id} ad={ad} onOpen={()=>setSelected(ad)}/>)}</div>
+  <div className={styles.catalogGrid} data-testid="catalog-grid">{!loading&&result?groupRepeats(result.rows).map(group=><div key={group[0].ad_archive_id} className={styles.repeatWrap}>
+   <AdCard ad={group[0]} onOpen={()=>setSelected(group[0])}/>
+   {group.length>1?<span className={styles.repeatBadge} title={`แอดข้อความเดียวกันจากเพจเดียวกัน ${group.length} ตัว: ${group.map(ad=>ad.ad_archive_id).join(', ')}`} data-testid="catalog-repeat">{group.length} เวอร์ชัน</span>:null}
+  </div>):null}</div>
+  {!loading&&result&&groupRepeats(result.rows).length<result.rows.length?<p className={styles.freeSearch}>รวมแอดที่ข้อความเหมือนกันจากเพจเดียวกันเป็นการ์ดเดียว · หน้านี้ {result.rows.length} แอด เหลือ {groupRepeats(result.rows).length} การ์ด</p>:null}
   {!loading&&result?.total===0?<p>ยังไม่มีแอดที่ตรงกับตัวกรอง <button onClick={()=>browse({search:'',active:'',period:'',offset:''})}>ดูทั้งคลัง</button>{canAnalyze?<Link href="/collect"> ค้นและเก็บแอดเพิ่ม →</Link>:null}</p>:null}
   {!loading&&result&&result.total>0&&result.rows.length===0?<p>หน้านี้ไม่มีแอด <button onClick={()=>browse({offset:''})}>กลับหน้าแรก</button></p>:null}
   <div className={styles.pager}><button disabled={loading||offset===0} onClick={()=>browse({offset:String(Math.max(0,offset-24))})}>ก่อนหน้า</button><button disabled={loading||!result||offset+24>=result.total} onClick={()=>browse({offset:String(offset+24)})}>ถัดไป</button></div>

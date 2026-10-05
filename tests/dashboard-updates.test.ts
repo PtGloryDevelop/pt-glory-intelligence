@@ -14,7 +14,7 @@ test('dashboard updates come from real thresholds, one per ad, strongest first',
     row({ad_id:'up',ad_name:'VDO 105',cost_per_conversation:52.99,spend:5987,purchase_value:22811,status:'ADSET_PAUSED'}),
   ];
   const series={'act_1:up':{points:[],previousSpend:1118,change:435.4},'act_1:hi':{points:[],previousSpend:3166,change:92}};
-  const out=buildUpdates({summary,rows,series,rivals:{newAds:10,tracked:0}});
+  const out=buildUpdates({summary,rows,series,rivals:{units:1,pages:19,pending:19,newThisWeek:0,tracked:0}});
   const titles=out.map(item=>item.title);
   assert.ok(titles.some(t=>t.startsWith('VDO277 ค่าทัก 92.08')),'high cost per chat is flagged');
   assert.ok(!titles.some(t=>t.startsWith('TINY')),'five chats is not evidence');
@@ -23,8 +23,16 @@ test('dashboard updates come from real thresholds, one per ad, strongest first',
   assert.equal(up?.severity,'good');assert.match(up!.body,/ตั้งใจหยุด/);
   assert.equal(out.filter(item=>item.ad?.ad_id==='hi').length,1,'one line per ad even when two rules match');
   assert.ok(titles.includes('1 ใน 4 แอดงบสูงสุดยังไม่ผูกยูนิต'));
-  assert.ok(out.some(item=>item.id==='rival:untracked'));
-  assert.deepEqual(out.map(i=>i.weight),[...out.map(i=>i.weight)].sort((a,b)=>b-a));
+  assert.ok(out.some(item=>item.id==='rival:quiet'),'quiet week is said plainly');
+  assert.ok(out.some(item=>item.id==='rival:pending'));
+  const none=buildUpdates({summary,rows:[],series:null,rivals:{units:0,pages:0,pending:0,newThisWeek:0,tracked:0}});
+  assert.deepEqual(none.map(item=>item.id),['rival:no-keywords']);
+  const fresh=buildUpdates({summary,rows:[],series:null,rivals:{units:2,pages:5,pending:0,newThisWeek:3,tracked:1}});
+  assert.match(fresh[0].title,/แอดใหม่ 3 ตัว/);
+  const owned=out.filter(i=>i.kind!=='rival');
+  assert.deepEqual(owned.map(i=>i.weight),[...owned.map(i=>i.weight)].sort((a,b)=>b-a));
+  const crowded=buildUpdates({summary,rows:Array.from({length:12},(_,i)=>row({ad_id:`c${i}`,ad_name:`C${i}`,cost_per_conversation:99,conversations:50,spend:9000+i})),series:null,rivals:{units:1,pages:3,pending:3,newThisWeek:0,tracked:0}});
+  assert.equal(crowded.length,6);assert.equal(crowded.filter(i=>i.kind==='rival').length,2,'competitor lines keep their slots when ad lines crowd in');
 });
 
 test('no summary means no ratio judgments, only data lines', () => {

@@ -57,3 +57,6 @@
 .steps span { color:var(--muted); font-size:var(--fs-eyebrow); }
 @media(max-width:640px) { .hero { align-items:flex-start; flex-direction:column; gap:12px; } .hero h1 { font-size:var(--fs-title); } .tabs { gap:2px; } .tabs a { padding:8px 9px; font-size:var(--fs-eyebrow); } .collection form { flex-basis:100%; } .collection select { flex-basis:60%; } .empty { padding:40px 20px 24px; } .empty h2 { font-size:var(--fs-title); } .steps { grid-template-columns:1fr; gap:24px; } .steps div { padding:0; } }
 
+
+.repeatWrap { position: relative; min-width: 0; display: grid; }
+.repeatBadge { position: absolute; top: 10px; right: 10px; z-index: 2; padding: 2px 9px; border-radius: var(--radius-pill); background: var(--ink); color: var(--surface); font-size: var(--fs-eyebrow); font-weight: 600; pointer-events: none; }

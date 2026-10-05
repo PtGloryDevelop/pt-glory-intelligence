@@ -81,6 +81,11 @@
 .rowActs a { color: var(--accent-blue-ink); text-decoration: none; font-weight: 500; }
 .rowActs a:hover { text-decoration: underline; }
 
+.collide { list-style: none; margin: 0; padding: 0 var(--pad-card) 12px; display: grid; gap: 8px; border-bottom: 1px solid var(--line); }
+.collide li { display: grid; font-size: var(--fs-meta); }
+.collide a { font-weight: 600; color: var(--ink); text-decoration: none; }
+.collide a:hover { color: var(--accent-blue-ink); text-decoration: underline; }
+.collide span { font-size: var(--fs-eyebrow); color: var(--muted); }
 .rivalList { list-style: none; margin: 0; padding: 0 var(--pad-card) 12px; display: grid; gap: 12px; }
 .rivalList > li { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
 .rivalList > li:first-child { border-top: 0; padding-top: 0; }

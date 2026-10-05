@@ -95,7 +95,7 @@ export function Dashboard({canAnalyze}:{canAnalyze:boolean}){
   },[topKey]);
 
   const updates=useMemo(()=>data?buildUpdates({summary,rows,series:data.rowSeries,
-    rivals:data.rivals?{newAds:data.rivals.week?.newAds??data.rivals.recentlyFound,tracked:data.watchlist?.total??0}:null}):[],[data,summary,rows]);
+    rivals:data.collisions?{units:data.collisions.units,pages:data.collisions.pages,pending:data.collisions.pending,newThisWeek:data.collisions.newThisWeek,tracked:data.collisions.tracked}:null}):[],[data,summary,rows]);
   const open=updates.filter(item=>!seen.includes(item.id)),done=updates.filter(item=>seen.includes(item.id));
   const periodQuery=review?`period=custom&from=${review.period.from}&to=${review.period.to}`:'';
   const adHref=(ad:{ad_id:string})=>`/owned-ads/performance?q=${encodeURIComponent(ad.ad_id)}${periodQuery?`&${periodQuery}`:''}`;
@@ -192,6 +192,9 @@ export function Dashboard({canAnalyze}:{canAnalyze:boolean}){
       <div className={styles.stack}>
         <section className={styles.panel} aria-labelledby="rivals-heading">
           <div className={styles.panelHead}><h2 id="rivals-heading">คู่แข่งสัปดาห์นี้</h2><Link className={styles.btnGhost} href="/competitors">ดูทั้งหมด →</Link></div>
+          {data.collisions?.pages?<ul className={styles.collide}>{data.collisions.top.map(page=><li key={page.page_id}>
+            <Link href={`/pages/${encodeURIComponent(page.page_id)}?scope=all`}>{page.page_name??page.page_id}</Link>
+            <span>{page.unit} · ตรงคำค้น {page.matched_ads} แอด{page.new_matched_7d?` · ใหม่ ${page.new_matched_7d}`:''} · {page.confirmed?'ทีมยืนยันแล้ว':'รอยืนยัน'}</span></li>)}</ul>:null}
           {rivals?<>
             <p className={styles.panelLead}>เพิ่งพบ {(rivals.week?.newAds??rivals.recentlyFound).toLocaleString('th-TH')} แอดใน 7 วัน · เก็บล่าสุด {thaiDate(rivals.lastCollectedAt)} · “เพิ่งพบ” คือระบบเห็นครั้งแรก แอดอาจยิงมาก่อนแล้ว</p>
             <ul className={styles.rivalList}>{recent.map(ad=><li key={`${ad.dataset_id}:${ad.ad_archive_id}`}>
@@ -206,7 +209,9 @@ export function Dashboard({canAnalyze}:{canAnalyze:boolean}){
           <div className={styles.panelHead}><h2 id="ready-heading">ข้อมูลพร้อมแค่ไหน</h2></div>
           <ul className={styles.ready}>
             {canAnalyze&&rows.length?<li><div><span>แอดงบสูงสุดที่ผูกยูนิตแล้ว</span><span>{assigned} / {rows.length} แอด</span></div><span className={styles.bar}><i style={{width:`${Math.round(assigned/rows.length*100)}%`}}/></span></li>:null}
-            <li><div><span>เพจคู่แข่งที่ติดตาม</span><span>{data.watchlist?`${data.watchlist.total} รายการ`:'—'}</span></div></li>
+            {data.collisions?.unitsTotal?<li><div><span>ยูนิตที่ใส่คำค้นคู่แข่งแล้ว</span><span>{data.collisions.units} / {data.collisions.unitsTotal}</span></div><span className={styles.bar}><i style={{width:`${Math.round(data.collisions.units/data.collisions.unitsTotal*100)}%`}}/></span></li>:null}
+            {data.collisions?<li><div><span>เพจคู่แข่งที่ทีมยืนยันแล้ว</span><span>{data.collisions.confirmed} / {data.collisions.pages} เพจ</span></div></li>:null}
+            <li><div><span>เพจในรายการติดตามของบริษัท</span><span>{data.collisions?`${data.collisions.tracked} เพจ`:'—'}</span></div></li>
             <li><div><span>เก็บแอดคู่แข่งล่าสุด</span><span>{thaiDate(rivals?.lastCollectedAt)}</span></div></li>
             {data.collections?<li><div><span>คำขอเก็บข้อมูลที่ยังไม่เสร็จ</span><span>{data.collections.pending}</span></div></li>:null}
           </ul>

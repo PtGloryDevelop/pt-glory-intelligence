@@ -42,6 +42,7 @@ export function RivalBoard(){
     void act(`kw:${unit.id}`,{action:'keyword-add',unit_id:unit.id,unit_name:unit.name,keyword},`เพิ่มคำค้น “${keyword}” ให้ ${unit.name} แล้ว`);
   };
 
+  const unitNew=(unit:RivalUnit)=>unit.pages.reduce((sum,page)=>sum+page.new_matched_7d,0);
   if(problem)return <section className={styles.panel}><p className={styles.problem} role="alert">{problem} <button type="button" onClick={()=>setReload(v=>v+1)}>ลองใหม่</button></p></section>;
   if(!board)return <section className={styles.panel}><p className={styles.loading} role="status">กำลังหาคู่แข่งที่ชนกับสินค้าเรา…</p></section>;
 
@@ -57,6 +58,7 @@ export function RivalBoard(){
         <div className={styles.chips}>
           {page.relation?<span className={`${styles.chip} ${styles.confirmed}`}>{REL[page.relation]} · ทีมยืนยันแล้ว</span>:<span className={`${styles.chip} ${styles.suggested}`}>ระบบเสนอจากคำค้น · รอยืนยัน</span>}
           {page.tracked?<span className={`${styles.chip} ${styles.trackedChip}`}>ติดตามอยู่</span>:null}
+          {page.new_matched_7d?<span className={`${styles.chip} ${styles.newChip}`}>แอดใหม่ {page.new_matched_7d} ตัวใน 7 วัน</span>:null}
         </div>
         {page.sample?<p className={styles.sample}>{page.sample}</p>:null}
       </div>
@@ -78,10 +80,14 @@ export function RivalBoard(){
 
   return <div className={styles.layout} data-testid="rival-board">
     <div className={styles.stack}>
+      {board.units.length?<section className={styles.week} aria-label="สัปดาห์นี้">
+        <b>{board.newThisWeek?`สัปดาห์นี้พบแอดใหม่ ${board.newThisWeek} ตัวจากเพจที่ชนกับสินค้าเรา`:'สัปดาห์นี้ยังไม่พบแอดใหม่จากเพจที่ชนกับสินค้าเรา'}</b>
+        <span>นับแอดที่ระบบเห็นครั้งแรกใน 7 วัน · เก็บข้อมูลคู่แข่งล่าสุด {thaiDate(board.lastCollectedAt)}{board.newThisWeek?'':' · ถ้าเพจที่ติดตามไม่ได้ถูกเก็บใหม่ จะไม่เห็นแอดใหม่'}</span>
+      </section>:null}
       {notice?<p className={styles.notice} role="status">{notice}</p>:null}
       {board.units.map(unit=><section key={unit.id} className={styles.panel} aria-label={`คู่แข่งของ ${unit.name}`}>
         <div className={styles.unitHead}>
-          <b className={styles.unit}>{unit.name}</b>
+          <b className={styles.unit}>{unit.name}</b>{unitNew(unit)?<span className={`${styles.chip} ${styles.newChip}`}>ใหม่ 7 วัน {unitNew(unit)} แอด</span>:null}
           <div className={styles.keywords}>{unit.keywords.map(k=><span key={k.id} className={styles.kw}>{k.keyword}{board.canEdit?<button type="button" aria-label={`ลบคำค้น ${k.keyword}`} disabled={busy===`kd:${k.id}`} onClick={()=>act(`kd:${k.id}`,{action:'keyword-remove',keyword_id:k.id},`ลบคำค้น “${k.keyword}” แล้ว`)}>×</button>:null}</span>)}</div>
           {board.canEdit?<form className={styles.addKw} onSubmit={event=>{event.preventDefault();addKeyword(unit);}}>
             <label className={styles.srOnly} htmlFor={`kw-${unit.id}`}>เพิ่มคำค้นให้ {unit.name}</label>
