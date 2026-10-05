@@ -17,7 +17,7 @@ import type { ArchiveStore } from "../media/store.ts";
 export const thumbPath = (account: string, ad: string) => `owned/${account}/${ad}`;
 export const thumbUrl = (account: string, ad: string) => `/api/owned-ads/thumb/${account}/${ad}`;
 
-type Row = { account_id: string; ad_id: string; url: string };
+type Row = { account_id: string; ad_id: string; url: string | null };
 
 /** Sharp images for the biggest spenders, via the same local bridge the media API uses. */
 async function sharpUrls(rows: Row[]): Promise<Map<string, string>> {
@@ -35,34 +35,50 @@ async function sharpUrls(rows: Row[]): Promise<Map<string, string>> {
 }
 
 export async function archiveOwnedThumbs(store: ArchiveStore, { sharp = 200, concurrency = 8 } = {}) {
-  const { rows } = await withTransaction((client) => client.query<Row>(
+  // Everything not yet archived, including ads whose source row has no thumbnail at all.
+  const { rows } = await withTransaction((client) => client.query<Row & { url: string | null }>(
     `select a.account_id, a.ad_id, a.data->>'creative_url' url
        from public.owned_library_ads a
       where a.sync_id = (select id from public.owned_library_syncs where status = 'completed' order by finished_at desc limit 1)
-        and a.data->>'creative_url' like 'https://%'
+        and coalesce(a.data->>'creative_url', '') not like '/api/%'
       order by a.spend desc nulls last`,
   ));
-  const better = await sharpUrls(rows.slice(0, sharp));
-  const stats = { archived: 0, failed: 0, sharp: better.size };
-  let next = 0;
-  async function worker() {
-    while (next < rows.length) {
-      const row = rows[next++];
-      const source = better.get(`${row.account_id}:${row.ad_id}`) ?? row.url;
-      let fetched = await fetchPreview(source);
-      if (!fetched.ok && source !== row.url) fetched = await fetchPreview(row.url);
-      if (!fetched.ok) { stats.failed++; continue; }
-      try {
-        await store.putPreview(thumbPath(row.account_id, row.ad_id), fetched.bytes, fetched.mimeType);
-        await withTransaction((client) => client.query(
-          `update public.owned_library_ads set data = jsonb_set(data, '{creative_url}', to_jsonb($3::text))
-            where account_id = $1 and ad_id = $2 and data->>'creative_url' like 'https://%'`,
-          [row.account_id, row.ad_id, thumbUrl(row.account_id, row.ad_id)],
-        ));
-        stats.archived++;
-      } catch { stats.failed++; }
-    }
+  const stats = { archived: 0, failed: 0, sharp: 0, total: rows.length };
+
+  async function store1(row: Row, source: string | null): Promise<boolean> {
+    if (!source) return false;
+    const fetched = await fetchPreview(source);
+    if (!fetched.ok) return false;
+    try {
+      await store.putPreview(thumbPath(row.account_id, row.ad_id), fetched.bytes, fetched.mimeType);
+      await withTransaction((client) => client.query(
+        `update public.owned_library_ads set data = jsonb_set(data, '{creative_url}', to_jsonb($3::text))
+          where account_id = $1 and ad_id = $2 and coalesce(data->>'creative_url', '') not like '/api/%'`,
+        [row.account_id, row.ad_id, thumbUrl(row.account_id, row.ad_id)],
+      ));
+      return true;
+    } catch { return false; }
   }
-  await Promise.all(Array.from({ length: concurrency }, worker));
-  return { ...stats, total: rows.length };
+  async function pool<T>(items: T[], run: (item: T) => Promise<void>) {
+    let next = 0;
+    await Promise.all(Array.from({ length: concurrency }, async () => { while (next < items.length) await run(items[next++]); }));
+  }
+
+  // Pass 1: sharp images for the biggest spenders, the stored thumbnail for everyone else.
+  const better = await sharpUrls(rows.slice(0, sharp));
+  stats.sharp += better.size;
+  const retry: Row[] = [];
+  await pool(rows, async (row) => {
+    const sharpUrl = better.get(`${row.account_id}:${row.ad_id}`);
+    if (await store1(row, sharpUrl ?? row.url) || (sharpUrl && await store1(row, row.url))) stats.archived++;
+    else retry.push(row);
+  });
+  // Pass 2: no thumbnail in the source, or its link expired: ask Meta for the picture by ad id.
+  const fresh = await sharpUrls(retry);
+  stats.sharp += fresh.size;
+  await pool(retry, async (row) => {
+    if (await store1(row, fresh.get(`${row.account_id}:${row.ad_id}`) ?? null)) stats.archived++;
+    else stats.failed++;
+  });
+  return stats;
 }
