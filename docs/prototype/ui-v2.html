@@ -294,7 +294,9 @@ tbody tr:last-child td{border-bottom:0}
 .dspark .win{fill:var(--accent-weak)}
 .dspark polyline{fill:none;stroke:var(--accent);stroke-width:1.6}
 .dspark circle{fill:var(--accent)}
-.rival-box{background:var(--sunken)}
+.rival-box{background:var(--surface)}
+.rival-box .na{color:var(--ink-3);font-weight:400}
+.sig-caveat{font-style:italic}
 .addcol{width:100%;min-height:240px;border:1px dashed var(--line-strong);border-radius:var(--r);background:transparent;cursor:pointer;display:grid;place-content:center;gap:4px;color:var(--accent);font-weight:600;text-align:center}
 .addcol span:first-child{font-size:26px;line-height:1}
 .addcol:hover{background:var(--accent-weak)}
@@ -948,17 +950,17 @@ const CADS = {
   verna:{ side:"rival", name:"เวอร์น่าพลัสวิตามินผัก", unit:"U15", fmt:"▶ VDO", h:"h3", perUnit:"≈245 บาท/ชิ้น (490 ÷ 2)",
           pain:"แป้ง · ไขมัน · เซลลูไลท์ (ลดน้ำหนัก)", angle:"ราคา + ความเร่งด่วน", hook:"\"พิเศษ วันนี้เท่านั้น 1 แถม 1\"",
           offer:"1 แถม 1 เพียง 490.- · ส่งฟรี", proof:"\"เจ้าแรกในไทย นวัตกรรมแคปซูล 2 ชั้น\"", format:"วิดีโอ คนใส่ชุดรัดรูปโชว์หุ่น",
-          claim:["⚠ \"บล็อคแป้ง บล็อคไขมัน\"","⚠ \"1 กล่อง ลง 10 ล.\""], age:"ยิงมา 41 วัน", seen:"10 ก.ย. 2569" },
+          claim:["⚠ \"บล็อคแป้ง บล็อคไขมัน\"","⚠ \"1 กล่อง ลง 10 ล.\""], age:"ยิงมา 41 วัน", seen:"10 ก.ย. 2569", sig:{active:true,days:41,start:"23 ส.ค. 2569",pageAds:2,evergreen:null,reused:null,platforms:"Facebook · Instagram · Audience Network · Messenger"} },
   vslim:{ side:"rival", name:"Veggy วิตามินผักลดพุง", unit:"U15", fmt:"▶ VDO", h:"h2", perUnit:"≈195 บาท/ชิ้น (390 ÷ 2)",
           pain:"พุง · น้ำหนัก", angle:"ราคา + ความเร่งด่วน", hook:"\"วันนี้เท่านั้น 1 แถม 1\"",
-          offer:"1 แถม 1 เพียง 390.- · ส่งฟรี", proof:"อ้างรางวัลสินค้า", format:"วิดีโอสั้น สินค้า + คน", claim:["⚠ \"ลดพุง\""], age:"ยิงมา 49 วัน", seen:"ก.ย. 2569" },
+          offer:"1 แถม 1 เพียง 390.- · ส่งฟรี", proof:"อ้างรางวัลสินค้า", format:"วิดีโอสั้น สินค้า + คน", claim:["⚠ \"ลดพุง\""], age:"ยิงมา 49 วัน", seen:"ก.ย. 2569", sig:{active:true,days:49,start:"15 ส.ค. 2569",pageAds:1,evergreen:null,reused:null,platforms:"Facebook · Instagram · Audience Network"} },
   vult: { side:"rival", name:"Veggy Ultimate สลายไขมัน", unit:"U13", fmt:"IMG", h:"h3", perUnit:null,
           pain:"น้ำหนัก · ไขมัน", angle:"ตัวเลขผลลัพธ์ (ก่อน-หลัง)", hook:"\"7 วัน ลด 10 โล\"",
-          offer:"ไม่พบราคาในข้อความและภาพ", proof:"ภาพคนคู่สินค้า", format:"ภาพนิ่ง ตัวเลขผลลัพธ์ตัวใหญ่", claim:["⚠ \"7 วัน ลด 10 โล\""], age:"ยิงมา 135 วัน · 28 แอดในเพจ", seen:"10 ก.ย. 2569" },
+          offer:"ไม่พบราคาในข้อความและภาพ", proof:"ภาพคนคู่สินค้า", format:"ภาพนิ่ง ตัวเลขผลลัพธ์ตัวใหญ่", claim:["⚠ \"7 วัน ลด 10 โล\""], age:"ยิงมา 135 วัน · 28 แอดในเพจ", seen:"10 ก.ย. 2569", sig:{active:true,days:135,start:null,pageAds:28,evergreen:16,reused:24,platforms:"Facebook · Instagram · Audience Network · Threads"} },
   hylme:{ side:"rival", name:"Hylme ครบจบเรื่องไขมัน", unit:"U24", fmt:"IMG×", h:"h4", perUnit:"≈430 บาท/กระปุก (1,290 ÷ 3)",
           pain:"หัวใจ · ไขมัน · พลังงาน", angle:"ส่วนผสมพรีเมียม (Q10, น้ำมันสกัด 11 ชนิด)", hook:"\"พัฒนาสูตรใหม่ Daily Oils Blend\"",
           offer:"1 กระปุก 490 (ปกติ 980) · 2 กระปุก 890 ส่งฟรี · 3 กระปุก 1,290 ส่งฟรี", proof:"รายชื่อส่วนผสม + Coenzyme Q10", format:"หลายภาพ สินค้า + วัตถุดิบ",
-          claim:["⚠ อ้างผลต่อหัวใจ (\"Cardiovascular Optimization\")"], age:"ยิงมา 115 วัน", seen:"10 ก.ย. 2569" }
+          claim:["⚠ อ้างผลต่อหัวใจ (\"Cardiovascular Optimization\")"], age:"ยิงมา 115 วัน", seen:"10 ก.ย. 2569", sig:{active:true,days:115,start:null,pageAds:null,evergreen:null,reused:null,platforms:"Facebook · Instagram · Audience Network · Messenger"} }
 };
 const DEFAULT_SET = ["re","verna","vslim","vult"];
 const SUMMARY = {
@@ -994,6 +996,17 @@ function sparkDaily(values){
   const line=pts.map(q=>q.map(n=>n.toFixed(1)).join(",")).join(" "), half=pts[7][0];
   return `<svg class="dspark" viewBox="0 0 ${w} ${h}" role="img" aria-label="ค่าแอดรายวัน 14 วัน"><rect x="${half}" y="0" width="${w-half}" height="${h}" class="win"/><polyline points="${line}"/><circle cx="${pts.at(-1)[0].toFixed(1)}" cy="${pts.at(-1)[1].toFixed(1)}" r="2.4"/></svg>`;
 }
+function signalBlock(a){
+  const g = a.sig || {}, v = (x, unit="") => x==null ? '<span class="na">ไม่มีข้อมูล</span>' : `${x.toLocaleString("th-TH")}${unit}`;
+  const level = g.days==null ? "" : g.days>=90 ? '<span class="delta good">ยิงนาน</span>' : g.days>=30 ? '<span class="delta flat">ยิงต่อเนื่อง</span>' : '<span class="delta flat">เพิ่งเริ่ม</span>';
+  return `<div class="perfbox rival-box">
+    <span class="perf-range">สัญญาณจาก Ads Library · เก็บ ${esc(a.seen)}</span>
+    <div class="perf-grid"><span>ยิงมาแล้ว</span><b>${v(g.days," วัน")} ${level}</b><span>สถานะ</span><b>${g.active==null?'<span class="na">ไม่มีข้อมูล</span>':g.active?"กำลังแสดง":"ไม่พบว่าแสดง"}</b>
+      <span>แอดในเพจ</span><b>${v(g.pageAds," ตัว")}</b><span>ยิงนาน / ใช้ซ้ำ</span><b>${g.evergreen==null&&g.reused==null?'<span class="na">ไม่มีข้อมูล</span>':`${v(g.evergreen)} / ${v(g.reused)}`}</b></div>
+    <span class="note">${esc(g.platforms||"")}${g.start?` · เริ่ม ${esc(g.start)}`:""}</span>
+    <span class="note sig-caveat">สัญญาณการลงแรง ไม่ใช่ยอดขายหรือผลกำไร</span>
+  </div>`;
+}
 function perfBlock(id){
   const p = perfOf(id, cmp.period); if (!p) return "";
   return `<div class="perfbox">
@@ -1013,7 +1026,7 @@ function colHead(id){
     <div class="thumb lg ${a.h}"><span class="fmt">${a.fmt}</span></div>
     <b>${esc(a.name)}</b><span class="unit">${a.unit}</span>
     <span class="adcol-offer">${esc(a.offer)}</span>
-    ${ours?perfBlock(id):`<div class="perfbox rival-box"><span class="perf-range">ข้อมูลคู่แข่ง</span><span class="note">ไม่มีค่าแอด ยอดขาย หรือ ROAS ใน Ads Library</span><span class="note">เก็บข้อมูลเมื่อ ${esc(a.seen)}</span></div>`}
+    ${ours?perfBlock(id):signalBlock(a)}
   </div></th>`;
 }
 function cell(id,k){
