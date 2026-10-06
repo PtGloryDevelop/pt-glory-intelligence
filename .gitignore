@@ -28,3 +28,6 @@ next-env.d.ts
 
 # local recovery dumps of the pilot editorial layer
 /backups
+
+# brainstorm mockups (local only)
+.superpowers/
