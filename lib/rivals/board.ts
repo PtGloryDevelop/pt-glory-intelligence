@@ -23,14 +23,15 @@ async function ownedUnits(db:Awaited<ReturnType<typeof dbUser>>):Promise<{id:str
 }
 
 /** Suggestions come from keyword matches on collected ad copy; relations and tracking are team decisions. */
-export async function getRivalBoard(actor:Actor):Promise<RivalBoard>{
+export async function getRivalBoard(actor:Actor,{withUnits=true}:{withUnits?:boolean}={}):Promise<RivalBoard>{
   const db=await dbUser();
   const canEdit=satisfies(actor.role,'analyst');
   const [keywords,relations,tracked,units,collected]=await Promise.all([
     db.from('unit_keywords').select('id,unit_id,unit_name,keyword').order('created_at'),
     db.from('rival_page_units').select('page_id,unit_id,relation'),
     db.from('rival_tracked_pages').select('page_id'),
-    canEdit?ownedUnits(db):Promise.resolve([]),
+    // Units without keywords and current unit names: the competitors page needs them, the overview does not.
+    canEdit&&withUnits?ownedUnits(db):Promise.resolve([]),
     db.rpc('dataset_list').select('collected_at').order('collected_at',{ascending:false}).limit(1),
   ]);
   if(keywords.error||relations.error||tracked.error)throw new Error('Rival board unavailable');

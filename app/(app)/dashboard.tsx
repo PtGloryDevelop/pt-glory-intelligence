@@ -50,7 +50,6 @@ export function Dashboard({canAnalyze}:{canAnalyze:boolean}){
   const [result,setResult]=useState<{query:string;data:DashboardData}|null>(null);
   const [problem,setProblem]=useState<{query:string;message:string}|null>(null);
   const [retry,setRetry]=useState(0);
-  const [images,setImages]=useState<Record<string,string|null>>({});
   const [local,setLocal]=useState<{key:string;ids:string[]}|null>(null);
   const [showSeen,setShowSeen]=useState(false);
   const data=result?.query===query?result.data:null,error=problem?.query===query?problem.message:null;
@@ -68,7 +67,6 @@ export function Dashboard({canAnalyze}:{canAnalyze:boolean}){
   const summary:OwnedPerformanceSummary|undefined=review?.summary.find(item=>item.currency==='THB')??review?.summary[0];
   const rows=useMemo(()=>(review?.rows??[]).filter(row=>row.currency===summary?.currency),[review,summary]);
   const top=rows.slice(0,8);
-  const topKey=top.map(reviewAdKey).join('|');
   const seenKey=review?`pg-overview-seen:${review.period.from}:${review.period.to}`:null;
 
   // Per-viewer convenience only: what this person already looked at in this period.
@@ -85,23 +83,6 @@ export function Dashboard({canAnalyze}:{canAnalyze:boolean}){
     try{localStorage.setItem(seenKey,JSON.stringify(next));}catch{}
   }
 
-  useEffect(()=>{
-    if(!top.length)return;const controller=new AbortController();
-    (async()=>{
-      for(let offset=0;offset<top.length&&!controller.signal.aborted;offset+=4){
-        const items=top.slice(offset,offset+4).filter(ad=>!Object.hasOwn(images,reviewAdKey(ad))).map(({account_id,ad_id})=>({account_id,ad_id}));
-        if(!items.length)continue;
-        try{
-          const response=await fetch('/api/owned-ads/media',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items}),signal:controller.signal});
-          if(!response.ok)throw new Error();const body=await response.json();
-          if(!controller.signal.aborted)setImages(previous=>({...previous,...Object.fromEntries(body.items.map((item:{account_id:string;ad_id:string;url:string|null})=>[reviewAdKey(item),item.url]))}));
-        }catch{if(!controller.signal.aborted)setImages(previous=>({...previous,...Object.fromEntries(items.map(item=>[reviewAdKey(item),previous[reviewAdKey(item)]??null]))}));}
-      }
-    })();
-    return ()=>controller.abort();
-    // Cached entries must not restart the same rows.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[topKey]);
 
   const updates=useMemo(()=>data?buildUpdates({summary,rows,series:data.rowSeries,
     rivals:data.collisions?{units:data.collisions.units,pages:data.collisions.pages,pending:data.collisions.pending,newThisWeek:data.collisions.newThisWeek,tracked:data.collisions.tracked}:null}):[],[data,summary,rows]);
@@ -120,7 +101,7 @@ export function Dashboard({canAnalyze}:{canAnalyze:boolean}){
   function updateRow(item:DashboardUpdate){
     const row=item.ad?rowByKey.get(reviewAdKey(item.ad)):undefined;
     return <li key={item.id} className={seen.includes(item.id)?styles.isSeen:undefined}>
-      {row?<OwnedThumb url={images[reviewAdKey(row)]===null?row.creative_url??null:images[reviewAdKey(row)]} video={Boolean(row.video_id)} name={row.ad_name}/>:<span className={`${styles.thumb} ${styles.thumbKind}`} aria-hidden>{item.kind==='rival'?'คู่แข่ง':'ข้อมูล'}</span>}
+      {row?<OwnedThumb url={row.creative_url??null} video={Boolean(row.video_id)} name={row.ad_name}/>:<span className={`${styles.thumb} ${styles.thumbKind}`} aria-hidden>{item.kind==='rival'?'คู่แข่ง':'ข้อมูล'}</span>}
       <div className={styles.feedBody}>
         <div className={styles.meta}><span className={`${styles.kind} ${styles[item.kind]}`}>{KIND[item.kind]}</span><span className={`${styles.sev} ${styles[item.severity]}`}>{item.label}</span></div>
         <h3>{item.title}</h3><p>{item.body}</p>
@@ -183,7 +164,7 @@ export function Dashboard({canAnalyze}:{canAnalyze:boolean}){
             <tbody>{top.map((row:OwnedPerformanceRow)=>{
               const series=data.rowSeries?.[reviewAdKey(row)];const enough=(row.conversations??0)>=MIN_CHATS;
               return <tr key={reviewAdKey(row)}>
-                <td><div className={styles.adCell}><OwnedThumb url={images[reviewAdKey(row)]===null?row.creative_url??null:images[reviewAdKey(row)]} video={Boolean(row.video_id)} name={row.ad_name}/><div><b>{row.ad_name}</b><small>{row.page_name??row.account_name}</small></div></div></td>
+                <td><div className={styles.adCell}><OwnedThumb url={row.creative_url??null} video={Boolean(row.video_id)} name={row.ad_name}/><div><b>{row.ad_name}</b><small>{row.page_name??row.account_name}</small></div></div></td>
                 <td>{row.unit_names.length?<span className={styles.unit}>{row.unit_names.join(', ')}</span>:<span className={`${styles.unit} ${styles.unitNone}`}>ยังไม่ผูกยูนิต</span>}</td>
                 <td className={styles.r}>{num(row.spend)}{series?.change!=null?(()=>{const tone=spendTone(series.change,rowRoas(row),summary?.roas);
                   return <span className={`${styles.sub} ${tone==='bad'?styles.bad:tone==='good'?styles.good:tone==='cut'?styles.warn:''}`} title={tone==='bad'?'ค่าแอดพุ่งแต่ ROAS ต่ำกว่าภาพรวม':tone==='good'?'เพิ่มค่าแอดแล้ว ROAS ยังสูงกว่าภาพรวม':tone==='cut'?'แอด ROAS ดีกว่าภาพรวมแต่ค่าแอดลดลงมาก ตรวจว่าตั้งใจลดหรือไม่':undefined}>{series.change>0?'▲':'▼'} {Math.abs(series.change).toFixed(Math.abs(series.change)>=100?0:1)}%</span>;})():null}</td>

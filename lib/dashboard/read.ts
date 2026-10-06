@@ -1,6 +1,6 @@
 import {dbUser} from '../db/user.ts';
 import {satisfies,type Actor} from '../auth/role-model.ts';
-import {getPageList,type PageListRow} from '../read/pages.ts';
+import type {PageListRow} from '../read/pages.ts';
 import {listWatchItems,type WatchListRow} from '../read/watchlist.ts';
 import {listCollections} from '../collect/read.ts';
 import type {CollectionDto} from '../collect/dto.ts';
@@ -43,7 +43,7 @@ export type DashboardData={
 
 /** Every read uses the caller's JWT. Opening the dashboard never starts a sync
  * or calls Meta/Apify. Partial outages keep the remaining sections usable. */
-export async function getDashboard(actor:Actor,options:ReviewOptions={window:7,sort:'spend',period:null}):Promise<DashboardData>{
+export async function getDashboard(actor:Actor,options:ReviewOptions={window:7,sort:'spend',period:null},sections:('owned'|'watchlist'|'collections')[]=[]):Promise<DashboardData>{
   const db=await dbUser();
   const output:DashboardData={generatedAt:new Date().toISOString(),owned:null,rivals:null,review:null,reviewOptions:options,rowSeries:null,watchlist:null,collisions:null,collections:null,errors:[]};
   const review=async()=>{
@@ -64,16 +64,15 @@ export async function getDashboard(actor:Actor,options:ReviewOptions={window:7,s
   };
   const rivals=async()=>{
     const to=output.generatedAt;const from=new Date(Date.parse(to)-7*86_400_000).toISOString();
-    const [summary,pages,recent]=await Promise.all([
+    const [summary,recent]=await Promise.all([
       db.rpc('dashboard_rival_summary'),
-      getPageList({kind:'all'},{sort:'recently_found',recentDays:7,limit:6}),
       getCatalogAds({firstSeenSince:from,limit:6}).catch(error=>{
         console.error('Dashboard recent ads unavailable',{code:(error as {code?:string}).code??'unknown'});
         output.errors.push('rivalAds');return null;
       }),
     ]);
     if(summary.error)throw summary.error;
-    output.rivals={...summary.data,topPages:pages.rows,recentAds:recent?.rows??null,week:recent?{from,to,newAds:recent.total}:null} as DashboardRivals;
+    output.rivals={...summary.data,topPages:[],recentAds:recent?.rows??null,week:recent?{from,to,newAds:recent.total}:null} as DashboardRivals;
   };
   const watchlist=async()=>{
     const items=await listWatchItems();output.watchlist={total:items.length,items:items.slice(0,6)};
@@ -86,7 +85,7 @@ export async function getDashboard(actor:Actor,options:ReviewOptions={window:7,s
     output.collections={pending:pending.count??0,latest};
   };
   const collisions=async()=>{
-    const board=await getRivalBoard(actor);
+    const board=await getRivalBoard(actor,{withUnits:false});
     const pages=new Map<string,{unit:string;page_id:string;page_name:string|null;matched_ads:number;new_matched_7d:number;confirmed:boolean}>();
     for(const unit of board.units)for(const page of unit.pages){
       const prev=pages.get(page.page_id);const confirmed=page.relation==='direct'||page.relation==='substitute';
@@ -97,8 +96,15 @@ export async function getDashboard(actor:Actor,options:ReviewOptions={window:7,s
       confirmed:list.filter(p=>p.confirmed).length,pending:list.filter(p=>!p.confirmed).length,newThisWeek:board.newThisWeek,tracked:board.tracked,
       top:list.sort((a,b)=>b.new_matched_7d-a.new_matched_7d||Number(b.confirmed)-Number(a.confirmed)||b.matched_ads-a.matched_ads).slice(0,4)};
   };
-  const tasks:[string,()=>Promise<void>][]=[['rivals',rivals],['watchlist',watchlist],['collisions',collisions]];
-  if(satisfies(actor.role,'analyst'))tasks.push(['owned',own],['review',review],['collections',collections]);
+  // ponytail: owned summary, watchlist and collections stay available for callers that ask; the overview
+  // page renders none of them, so it does not pay for them.
+  const tasks:[string,()=>Promise<void>][]=[['rivals',rivals],['collisions',collisions]];
+  if(sections.includes('watchlist'))tasks.push(['watchlist',watchlist]);
+  if(satisfies(actor.role,'analyst')){
+    tasks.push(['review',review]);
+    if(sections.includes('owned'))tasks.push(['owned',own]);
+    if(sections.includes('collections'))tasks.push(['collections',collections]);
+  }
   await Promise.all(tasks.map(async([name,run])=>{
     try{await run();}catch(error){
       console.error('Dashboard section unavailable',{section:name,code:(error as {code?:string}).code??'unknown'});
