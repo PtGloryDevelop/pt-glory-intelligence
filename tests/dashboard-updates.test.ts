@@ -39,3 +39,13 @@ test('no summary means no ratio judgments, only data lines', () => {
   const out=buildUpdates({summary:undefined,rows:[row({unit_names:[]})],series:null,rivals:null});
   assert.deepEqual(out.map(item=>item.kind),['data']);
 });
+
+test('a good ad whose budget was halved is flagged', () => {
+  const summary = {currency: 'THB', spend: 10000, roas: 2, cost_per_conversation: 80, conversations: 125, purchase_value: 20000, ad_count: 2} as never;
+  const good = {account_id: 'act_1', ad_id: '1', ad_name: 'GOOD', spend: 2000, purchase_value: 6000, conversations: 40, cost_per_conversation: 50, unit_names: ['U1'], status: 'ACTIVE'} as never;
+  const weak = {account_id: 'act_1', ad_id: '2', ad_name: 'WEAK', spend: 2000, purchase_value: 2000, conversations: 25, cost_per_conversation: 80, unit_names: ['U1'], status: 'ACTIVE'} as never;
+  const series = {'act_1:1': {change: -60}, 'act_1:2': {change: -60}} as never;
+  const out = buildUpdates({summary, rows: [good, weak], series, rivals: null});
+  assert.ok(out.some(item => /GOOD ROAS 3.00 ดีกว่าภาพรวม แต่ค่าแอดลดลง/.test(item.title)));
+  assert.ok(!out.some(item => /WEAK/.test(item.title)), 'a weak ad being cut is not a warning');
+});

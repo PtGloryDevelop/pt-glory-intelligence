@@ -44,6 +44,10 @@ export function buildUpdates({summary,rows,series,rivals}:Input,limit=6):Dashboa
       add(row,{severity:cheap?'good':'warn',label:cheap?'โอกาส':'ควรตรวจ',title:`${row.ad_name} ใช้ค่าแอดเพิ่ม ${pct(change)}${cheap&&avgCpc?` และค่าทักถูกกว่าภาพรวม ${pct((1-cpc!/avgCpc)*100)}`:''}`,
         body:`${where(row)} · ค่าแอด ${baht(spend)} บาท · ROAS ${roas?.toFixed(2)??'—'}${row.status&&row.status.toUpperCase()!=='ACTIVE'?' · สถานะล่าสุดไม่ได้กำลังแสดง ตรวจว่าตั้งใจหยุดหรือไม่':''}`});
     }
+    // A good ad whose budget was halved: worth checking the cut was intended.
+    if(change!=null&&change<=-SURGE&&avgRoas&&roas!=null&&roas>=avgRoas)
+      add(row,{severity:'warn',label:'ควรตรวจ',title:`${row.ad_name} ROAS ${roas.toFixed(2)} ดีกว่าภาพรวม แต่ค่าแอดลดลง ${pct(-change)}`,
+        body:`${where(row)} · ค่าแอด ${baht(spend)} บาท · ตรวจว่าตั้งใจลดงบหรือแอดถูกจำกัดการแสดง`});
     if(avgCpc&&avgRoas&&cpc!=null&&roas!=null&&chats>=MIN_CHATS&&cpc<avgCpc*CHEAP_CPC&&roas<avgRoas*LOW_ROAS)
       add(row,{severity:'warn',label:'ควรตรวจ',title:`${row.ad_name} ทักถูก (${cpc.toFixed(2)} บาท) แต่ ROAS ${roas.toFixed(2)}`,
         body:`${where(row)} · ทัก ${chats.toLocaleString('th-TH')} ครั้ง แต่ Meta รายงานยอดซื้อต่ำ · ดูข้อเสนอและการปิดการขาย`});
