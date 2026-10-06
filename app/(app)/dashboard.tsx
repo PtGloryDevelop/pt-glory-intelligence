@@ -15,6 +15,12 @@ import styles from './dashboard.module.css';
 const WINDOWS=[7,14,30] as const;
 const KIND={ours:'แอดเรา',rival:'คู่แข่ง',data:'ข้อมูล'} as const;
 const num=(value:number|null|undefined,digits=2)=>value==null?'—':value.toLocaleString('th-TH',{minimumFractionDigits:digits,maximumFractionDigits:digits});
+// A spend jump is only good or bad next to its results: same threshold as the overview feed's surge rule.
+const SPEND_JUMP=50;
+function spendTone(change:number,roas:number|null|undefined,overall:number|null|undefined):'good'|'bad'|null{
+  if(change<SPEND_JUMP||roas==null||overall==null)return null;
+  return roas<overall?'bad':'good';
+}
 const thaiDate=(value:string|null|undefined)=>value?new Date(value.length===10?`${value}T12:00:00+07:00`:value).toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'numeric',timeZone:'Asia/Bangkok'}):'—';
 const vs=(value:number|null,avg:number|null|undefined,goodUp:boolean)=>{
   if(value==null||!avg)return '';const ratio=value/avg;
@@ -176,7 +182,8 @@ export function Dashboard({canAnalyze}:{canAnalyze:boolean}){
               return <tr key={reviewAdKey(row)}>
                 <td><div className={styles.adCell}><OwnedThumb url={images[reviewAdKey(row)]===null?row.creative_url??null:images[reviewAdKey(row)]} video={Boolean(row.video_id)} name={row.ad_name}/><div><b>{row.ad_name}</b><small>{row.page_name??row.account_name}</small></div></div></td>
                 <td>{row.unit_names.length?<span className={styles.unit}>{row.unit_names.join(', ')}</span>:<span className={`${styles.unit} ${styles.unitNone}`}>ยังไม่ผูกยูนิต</span>}</td>
-                <td className={styles.r}>{num(row.spend)}{series?.change!=null?<span className={styles.sub}>{series.change>0?'▲':'▼'} {Math.abs(series.change).toFixed(Math.abs(series.change)>=100?0:1)}%</span>:null}</td>
+                <td className={styles.r}>{num(row.spend)}{series?.change!=null?(()=>{const tone=spendTone(series.change,rowRoas(row),summary?.roas);
+                  return <span className={`${styles.sub} ${tone==='bad'?styles.bad:tone==='good'?styles.good:''}`} title={tone==='bad'?'ค่าแอดพุ่งแต่ ROAS ต่ำกว่าภาพรวม':tone==='good'?'เพิ่มค่าแอดแล้ว ROAS ยังสูงกว่าภาพรวม':undefined}>{series.change>0?'▲':'▼'} {Math.abs(series.change).toFixed(Math.abs(series.change)>=100?0:1)}%</span>;})():null}</td>
                 <td className={`${styles.r} ${vs(rowRoas(row),summary?.roas,true)}`}>{num(rowRoas(row))}</td>
                 <td className={styles.r}>{num(row.conversations,0)}</td>
                 <td className={`${styles.r} ${enough?vs(row.cost_per_conversation,summary?.cost_per_conversation,false):''}`} title={enough?undefined:`ทักน้อยกว่า ${MIN_CHATS} ครั้ง ยังไม่เทียบกับภาพรวม`}>{num(row.cost_per_conversation)}</td>
@@ -184,7 +191,7 @@ export function Dashboard({canAnalyze}:{canAnalyze:boolean}){
                 <td><div className={styles.rowActs}><Link href={adHref(row)}>ตรวจ</Link><Link href={compareHref(row)}>เทียบ</Link></div></td>
               </tr>;})}</tbody>
           </table></div>
-          <p className={styles.note}>สีเขียว/แดงเทียบกับภาพรวม (ROAS {num(summary?.roas)} · ค่าทัก {num(summary?.cost_per_conversation)}) · ค่าทักเทียบเฉพาะแอดที่ทักตั้งแต่ {MIN_CHATS} ครั้ง · ROAS และมูลค่าซื้อเป็นตัวเลขที่ Meta รายงาน</p>
+          <p className={styles.note}>สีเขียว/แดงเทียบกับภาพรวม (ROAS {num(summary?.roas)} · ค่าทัก {num(summary?.cost_per_conversation)}) · ค่าแอดที่เพิ่มตั้งแต่ {SPEND_JUMP}% เป็นสีแดงเมื่อ ROAS ต่ำกว่าภาพรวม และเขียวเมื่อยังสูงกว่า · ค่าทักเทียบเฉพาะแอดที่ทักตั้งแต่ {MIN_CHATS} ครั้ง · ROAS และมูลค่าซื้อเป็นตัวเลขที่ Meta รายงาน</p>
         </section>:null}
       </div>
 
