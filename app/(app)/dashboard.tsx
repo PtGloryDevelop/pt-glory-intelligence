@@ -130,7 +130,6 @@ export function Dashboard({canAnalyze}:{canAnalyze:boolean}){
   ];
   const previous=review?.previous?.summary.find(item=>item.currency===summary?.currency);
   const rivals=data?.rivals,recent=rivals?.recentAds?.slice(0,4)??[];
-  const assigned=rows.filter(row=>row.unit_names.length).length;
 
   return <div className={styles.page} data-testid="overview">
     <header className={styles.head}>
@@ -203,18 +202,6 @@ export function Dashboard({canAnalyze}:{canAnalyze:boolean}){
                 <span className={styles.note}>ยิงมา {ad.ad_age_days.toLocaleString('th-TH')} วัน · <Link href={`/pages/${encodeURIComponent(ad.page_id)}?scope=dataset:${ad.dataset_id}`}>เปิดหลักฐาน</Link></span></div>
             </li>)}{!recent.length?<li className={styles.note}>สัปดาห์นี้ยังไม่พบแอดใหม่</li>:null}</ul>
           </>:<p className={styles.panelLead}>ข้อมูลคู่แข่งเปิดไม่ได้ในขณะนี้</p>}
-        </section>
-
-        <section className={styles.panel} aria-labelledby="ready-heading">
-          <div className={styles.panelHead}><h2 id="ready-heading">ข้อมูลพร้อมแค่ไหน</h2></div>
-          <ul className={styles.ready}>
-            {canAnalyze&&rows.length?<li><div><span>แอดงบสูงสุดที่ผูกยูนิตแล้ว</span><span>{assigned} / {rows.length} แอด</span></div><span className={styles.bar}><i style={{width:`${Math.round(assigned/rows.length*100)}%`}}/></span></li>:null}
-            {data.collisions?.unitsTotal?<li><div><span>ยูนิตที่ใส่คำค้นคู่แข่งแล้ว</span><span>{data.collisions.units} / {data.collisions.unitsTotal}</span></div><span className={styles.bar}><i style={{width:`${Math.round(data.collisions.units/data.collisions.unitsTotal*100)}%`}}/></span></li>:null}
-            {data.collisions?<li><div><span>เพจคู่แข่งที่ทีมยืนยันแล้ว</span><span>{data.collisions.confirmed} / {data.collisions.pages} เพจ</span></div></li>:null}
-            <li><div><span>เพจในรายการติดตามของบริษัท</span><span>{data.collisions?`${data.collisions.tracked} เพจ`:'—'}</span></div></li>
-            <li><div><span>เก็บแอดคู่แข่งล่าสุด</span><span>{thaiDate(rivals?.lastCollectedAt)}</span></div></li>
-            {data.collections?<li><div><span>คำขอเก็บข้อมูลที่ยังไม่เสร็จ</span><span>{data.collections.pending}</span></div></li>:null}
-          </ul>
         </section>
       </div>
     </div>:null}
