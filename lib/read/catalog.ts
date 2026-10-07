@@ -4,7 +4,9 @@ import { signArchivedPreviews } from '../media/presentation.ts';
 import { catalogObservationMatches, catalogSearchFilter, catalogSource, type CatalogAdRow, type CatalogMembership, type CatalogObservation } from './catalog-model.ts';
 
 export type { CatalogAdRow } from './catalog-model.ts';
-export type CatalogOptions = { search?: string | null; active?: string | null; format?: string | null; adArchiveId?: string | null; firstSeenSince?:string; limit?: number; offset?: number };
+export type CatalogOptions = { search?: string | null; active?: string | null; format?: string | null; adArchiveId?: string | null; firstSeenSince?:string; limit?: number; offset?: number;
+  /** Only these competitor pages (one unit's board). */ pageIds?: string[] | null;
+  /** new = first seen, newest first; age = running longest first; default = last seen. */ sort?: 'new' | 'age' | null };
 export type CatalogPage = { rows: CatalogAdRow[]; total: number; limit: number; offset: number; lastCollectedAt: string | null };
 type ScopeRow = { ad_ref: string; observation_id: number; collection_run_id: string; collected_at: string };
 
@@ -70,8 +72,12 @@ export async function getCatalogAds(options: CatalogOptions = {}): Promise<Catal
   const offset = Math.min(Math.max(Math.trunc(options.offset ?? 0), 0), 100_000);
   let query = db.rpc('trend_evidence', {
     p_scope: 'all', p_scope_id: null, p_limit: 2_147_483_647, p_offset: 0,
-  }, { count: 'exact' }).select('*')
-    .order('last_seen_at', { ascending: false }).order('ad_archive_id');
+  }, { count: 'exact' }).select('*');
+  if (options.sort === 'new') query = query.order('first_seen_at', { ascending: false });
+  else if (options.sort === 'age') query = query.order('ad_age_days', { ascending: false });
+  else query = query.order('last_seen_at', { ascending: false });
+  query = query.order('ad_archive_id');
+  if (options.pageIds?.length) query = query.in('page_id', options.pageIds);
   const search = catalogSearchFilter(options.search);
   if (search) query = query.or(search);
   if (options.adArchiveId) query = query.eq('ad_archive_id', options.adArchiveId);

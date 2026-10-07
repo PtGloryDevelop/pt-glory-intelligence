@@ -18,8 +18,11 @@ export default async function AdLibrary({searchParams}:{searchParams:Promise<{da
  const quality=selected?await getDatasetQuality(selected.dataset_id):[];
  const canAnalyze=satisfies(actor.role,'analyst');
  return <>
-  <header className={styles.hero}><div><h1>ส่องคู่แข่ง</h1><p>ค้นภาพ ข้อความ และข้อเสนอที่เกี่ยวข้อง แล้วเลือกเทียบกับแอดของเรา</p></div>{canAnalyze?<Link href="/collect" className={styles.newSearch}><Icon name="search"/>ค้นและเก็บแอดเพิ่ม</Link>:null}</header>
+  <section className={styles.heroBox}>
+  <header className={styles.hero}><div><h1>ส่องคู่แข่ง</h1><p>ดูแอดใหม่และแอดที่ยิงนานของคู่แข่งแต่ละยูนิต แล้วเลือกเทียบกับแอดของเรา</p></div>{canAnalyze?<Link href="/collect" className={styles.manage}>⚙ จัดการการเก็บข้อมูล</Link>:null}</header>
+  {board?<form className={styles.heroSearch} action="/competitors" method="get"><input type="hidden" name="view" value="all"/><input name="search" type="search" maxLength={160} aria-label="ค้นแอดคู่แข่ง" placeholder="ค้นแอดคู่แข่ง: ชื่อสินค้า ชื่อเพจ หรือข้อความในแอด…" data-testid="competitor-search"/><button type="submit">ค้นหา</button></form>:null}
   <nav className={styles.tabs} aria-label="สำรวจแอดคู่แข่ง"><Link href="/competitors" aria-current={board?'page':undefined} data-testid="competitor-board-tab">คู่แข่งของยูนิต</Link><Link href="/competitors?view=all" aria-current={!board&&!selected&&period!=='week'?'page':undefined}><Icon name="grid"/>คลังแอดทั้งหมด</Link><Link href="/competitors?view=all&period=week" aria-current={!board&&period==='week'?'page':undefined}>เพิ่งพบใน 7 วัน</Link><Link href="/pages?scope=all" data-testid="competitor-all-pages"><Icon name="building"/>สำรวจเพจ</Link></nav>
+  </section>
   {dataset&&!selected?<p role="alert">ไม่พบรอบที่เลือก กำลังแสดงคลังทั้งหมด</p>:null}
   {board?<RivalBoard/>:<>
   <details className={styles.sourceOptions} data-testid="competitor-source-options"><summary>เลือกดูข้อมูลเฉพาะรอบ</summary><div className={styles.collection}><form method="get" action="/competitors"><label htmlFor="competitor-dataset">รอบที่เก็บ</label><select id="competitor-dataset" name="dataset" defaultValue={selected?.dataset_id??''}><option value="">ทั้งหมด</option>{datasets.map(row=><option key={row.dataset_id} value={row.dataset_id}>{row.dataset_name} · {thaiDateTime(row.collected_at)}</option>)}</select><button type="submit">เปิดข้อมูล</button></form></div></details>

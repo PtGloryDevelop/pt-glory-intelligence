@@ -62,6 +62,14 @@ export function searchValue(raw: string | null): string | null {
   return filterValue(raw, MAX_SEARCH_LENGTH);
 }
 
+/** Competitor page ids for one unit's board: 1–60 numeric ids, comma-separated, deduplicated. */
+export function pageList(raw: string | null): { ok: true; value: string[] | null } | { ok: false } {
+  if (raw === null) return { ok: true, value: null };
+  const ids = [...new Set(raw.split(",").map(id => id.trim()))];
+  if (!ids.length || ids.length > 60 || ids.some(id => !/^\d{1,32}$/.test(id))) return { ok: false };
+  return { ok: true, value: ids };
+}
+
 const ACTIVE_VALUES = ["active", "inactive", "unknown"] as const;
 
 /** `?active=` accepts three words. Anything else is a bad request, not "any". */

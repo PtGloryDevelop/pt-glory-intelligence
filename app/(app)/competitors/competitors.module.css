@@ -25,8 +25,13 @@
 @media(min-width:1600px) { .catalogGrid { grid-template-columns:repeat(4,minmax(0,1fr)); } }
 @media(max-width:1000px) { .searchBar { flex-wrap:wrap; }.searchBar label:first-child { flex-basis:70%; }.catalogGrid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media(max-width:600px) { .searchBar label:first-child { flex-basis:100%; }.searchBar label { flex:1; }.searchBar select { width:100%; min-width:0; }.catalogGrid { grid-template-columns:1fr; }.catalogHead { flex-wrap:wrap; } }
-.newSearch { display:inline-flex; align-items:center; justify-content:center; gap:8px; flex:none; border:1px solid var(--brand-ink); background:var(--brand-ink); color:#fff; border-radius:6px; padding:10px 14px; font-size:var(--fs-eyebrow); text-decoration:none; font-weight:600; }
-.newSearch:hover { filter:brightness(.94); color:#fff; }
+.heroBox { display:grid; gap:14px; padding:20px 22px; margin-bottom:20px; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); }
+.heroBox .hero,.heroBox .tabs { margin:0; }
+.manage { flex:none; padding:8px 12px; border:1px solid var(--line); border-radius:var(--radius-sm); background:var(--surface); color:var(--accent-blue-ink); font-size:var(--fs-meta); text-decoration:none; white-space:nowrap; }
+.manage:hover { background:var(--brand-tint); }
+.heroSearch { display:flex; gap:8px; }
+.heroSearch input { flex:1; min-width:0; min-height:52px; font-size:var(--fs-subhead); }
+.heroSearch button { min-height:52px; padding-inline:22px; background:var(--accent-blue); border-color:var(--accent-blue); color:var(--surface); font-weight:600; }
 .tabs { display:flex; width:fit-content; max-width:100%; gap:4px; padding:4px; border:1px solid var(--line); border-radius:8px; background:var(--surface); margin-bottom:16px; overflow-x:auto; }
 .tabs a { display:flex; align-items:center; gap:8px; padding:8px 12px; border-radius:5px; color:var(--muted); font-size:var(--fs-eyebrow); white-space:nowrap; text-decoration:none; }
 .tabs a[aria-current] { background:var(--brand-ink); color:#fff; font-weight:600; }
