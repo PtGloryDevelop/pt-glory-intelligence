@@ -6,11 +6,16 @@ export const OWNED_PERIOD_PRESETS = ["3d", "7d", "14d", "this-month", "last-mont
 export type OwnedPeriodPreset = typeof OWNED_PERIOD_PRESETS[number];
 export const OWNED_PERFORMANCE_SORTS = ["spend", "cost_per_conversation", "roas", "conversations", "hook_rate", "newest", "longest"] as const;
 export type OwnedPerformanceSort = typeof OWNED_PERFORMANCE_SORTS[number];
+export type OwnedSortDir = "asc" | "desc";
+/** The direction a sort opens with: cheapest cost per chat first, largest first for everything else. */
+export const defaultSortDir = (sort: OwnedPerformanceSort): OwnedSortDir => sort === "cost_per_conversation" ? "asc" : "desc";
+/** RPC sort argument. The default direction is sent bare so it works before and after migration 0060. */
+export const ownedSortArg = (query: Pick<OwnedPerformanceQuery, "sort" | "dir">) => query.dir === defaultSortDir(query.sort) ? query.sort : `${query.sort}:${query.dir}`;
 export const OWNED_PERFORMANCE_STATUSES = [...OWNED_LIBRARY_STATUSES, ["WITH_ISSUES", "มีปัญหา"]] as const;
 export type OwnedPerformancePeriod = { from: string; to: string };
 export type OwnedPerformanceQuery = {
   period: OwnedPeriodPreset; from: string; to: string; unit: string; pageId: string;
-  q: string; status: string; sort: OwnedPerformanceSort; page: number; compare: boolean;
+  q: string; status: string; sort: OwnedPerformanceSort; dir: OwnedSortDir; page: number; compare: boolean;
 };
 export type OwnedPerformanceRow = CompanyAd & {
   unit_ids: string[]; unit_names: string[]; hook_rate: number | null; cost_per_conversation: number | null;
@@ -49,11 +54,12 @@ const shift = (date: string, days: number): string => {
 
 /** Presets use the Bangkok calendar, including today. Source coverage never moves a preset. */
 export function parseOwnedPerformanceQuery(params: URLSearchParams): OwnedPerformanceQuery {
-  for (const key of ["period", "from", "to", "unit", "pageId", "q", "status", "sort", "page", "compare"]) {
+  for (const key of ["period", "from", "to", "unit", "pageId", "q", "status", "sort", "dir", "page", "compare"]) {
     if (params.getAll(key).length > 1) throw new OwnedPerformanceQueryError("ตัวกรองซ้ำกัน");
   }
   const period = params.get("period") ?? "7d";
   const sort = params.get("sort") ?? "spend";
+  const dir = params.get("dir") ?? "";
   const pageText = params.get("page") ?? "0";
   const page = Number(pageText);
   const unit = params.get("unit") ?? "";
@@ -67,11 +73,11 @@ export function parseOwnedPerformanceQuery(params: URLSearchParams): OwnedPerfor
     || !/^\d+$/.test(pageText) || !Number.isSafeInteger(page) || page > 100000 || q.length > 160
     || (unit !== "" && !UUID.test(unit)) || (pageId !== "" && !/^\d{1,32}$/.test(pageId))
     || (status !== "" && !OWNED_PERFORMANCE_STATUSES.some(([value]) => value === status))
-    || !["0", "1"].includes(compare) || (from !== "" && !isOwnedPerformanceDate(from)) || (to !== "" && !isOwnedPerformanceDate(to))
+    || !["", "asc", "desc"].includes(dir) || !["0", "1"].includes(compare) || (from !== "" && !isOwnedPerformanceDate(from)) || (to !== "" && !isOwnedPerformanceDate(to))
     || (period === "custom" && (!from || !to || from > to))) {
     throw new OwnedPerformanceQueryError("ตัวกรองหรือช่วงวันที่ไม่ถูกต้อง");
   }
-  return { period: period as OwnedPeriodPreset, from, to, unit: unit.toLowerCase(), pageId, q, status, sort: sort as OwnedPerformanceSort, page, compare: compare === "1" };
+  return { period: period as OwnedPeriodPreset, from, to, unit: unit.toLowerCase(), pageId, q, status, sort: sort as OwnedPerformanceSort, dir: (dir || defaultSortDir(sort as OwnedPerformanceSort)) as OwnedSortDir, page, compare: compare === "1" };
 }
 
 export function ownedPerformancePeriod(query: OwnedPerformanceQuery, coverage: OwnedPerformancePeriod | null, now = new Date()): OwnedPerformancePeriod {
@@ -98,4 +104,18 @@ export function ownedPerformancePeriod(query: OwnedPerformanceQuery, coverage: O
 export function previousOwnedPerformancePeriod(period: OwnedPerformancePeriod): OwnedPerformancePeriod {
   const days = Math.round((Date.parse(period.to) - Date.parse(period.from)) / 86400000) + 1;
   return { from: shift(period.from, -days), to: shift(period.from, -1) };
+}
+
+/** Every unit plus unassigned. No ad count: an ad that moved units mid-period sits in two unit counts. */
+export type AllUnitsTotals = Pick<OwnedPerformanceSummary, "spend" | "conversations" | "purchase_value" | "roas" | "cost_per_conversation">;
+type UnitSums = Record<"spend" | "conversations" | "purchase_value", number | string | null>;
+const sumOf = (rows: UnitSums[], key: keyof UnitSums) =>
+  rows.every(row => row[key] != null) ? rows.reduce((total, row) => total + Number(row[key]), 0) : null;
+/** Sums every unit group; a sum is unknown when any group's is. Ratios come from the sums, never from averaging ratios. */
+export function combineUnits(rows: UnitSums[]): AllUnitsTotals | null {
+  if (!rows.length) return null;
+  const spend = sumOf(rows, "spend"), conversations = sumOf(rows, "conversations"), purchase_value = sumOf(rows, "purchase_value");
+  return { spend, conversations, purchase_value,
+    roas: spend && purchase_value != null ? purchase_value / spend : null,
+    cost_per_conversation: spend != null && conversations ? spend / conversations : null };
 }

@@ -147,7 +147,7 @@ try {
       await page.waitForURL(url => url.pathname === '/' && Object.entries(filters).every(([key, value]) => url.searchParams.get(key) === value));
       await expect(page.getByTestId('performance-period')).toHaveValue(filters.period);
       await expect(page.getByTestId('performance-search')).toHaveValue(filters.q);
-      await expect(page.getByTestId('performance-sort')).toHaveValue(filters.sort);
+      await expect(page.getByTestId('performance-rankings').locator('button[aria-pressed="true"]')).toHaveCount(1);
       if (unit) await expect(page.getByTestId('performance-unit')).toHaveValue(unit);
       if (pageId) await expect(page.getByTestId('performance-page')).toHaveValue(pageId);
       if (status) await expect(page.getByTestId('performance-status')).toHaveValue(status);
@@ -259,8 +259,8 @@ try {
     await page.goto(origin + '/command-center?period=all', { waitUntil: 'domcontentloaded' });
     await expect(page.getByTestId('command-center')).toBeVisible();
     await expect(page.getByTestId('performance-grid').locator('article').first()).toBeVisible({ timeout: 60000 });
-    await page.getByTestId('performance-rankings').getByRole('button', { name: 'ค่าทักถูกสุด', exact: true }).click();
-    await expect(page.getByTestId('performance-sort')).toHaveValue('cost_per_conversation');
+    await page.getByTestId('performance-rankings').getByRole('button', { name: /^ค่าทัก/ }).click();
+    await page.waitForURL(url => url.searchParams.get('sort') === 'cost_per_conversation');
     const ranked = await api({ period: 'all', sort: 'cost_per_conversation' });
     for (const currency of new Set(ranked.rows.map(ad => ad.currency))) {
       const costs = ranked.rows.filter(ad => ad.currency === currency).map(ad => ad.cost_per_conversation).filter(value => value !== null);

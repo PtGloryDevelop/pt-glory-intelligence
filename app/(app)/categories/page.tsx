@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { requireActorOrRedirect } from "@/lib/auth/roles";
+import { requireActorOrRedirect, satisfies } from "@/lib/auth/roles";
 import { listResearchCategories } from "@/lib/read/categories";
 import { thaiDate } from "@/lib/format/date";
 import { PageHeader } from "@/components/shell/PageHeader";
 import { EmptyState } from "@/components/states/EmptyState";
 import { Panel, PanelHead, TableWrap } from "@/components/Surface";
+import { CategoryCreate, CategoryRowActions } from "./controls";
 import styles from "./categories.module.css";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +22,8 @@ export const dynamic = "force-dynamic";
  * hide exactly that.
  */
 export default async function CategoriesPage() {
-  await requireActorOrRedirect();
+  const actor = await requireActorOrRedirect();
+  const canEdit = satisfies(actor.role, "analyst");
   const categories = await listResearchCategories();
 
   return (
@@ -32,11 +34,13 @@ export default async function CategoriesPage() {
         description="หมวดหมู่วิจัยของ PT Glory — คนละอย่างกับหมวดเพจที่ Meta ให้มา"
       />
 
+      {canEdit ? <CategoryCreate /> : null}
+
       {categories.length === 0 ? (
         <EmptyState
           testId="categories-empty"
           title="ยังไม่มีหมวดหมู่"
-          body="หมวดหมู่ถูกสร้างตอนนำเข้าข้อมูล เริ่มจากนำเข้าไฟล์แรกก่อน"
+          body={canEdit ? "เพิ่มหมวดหมู่ด้านบน แล้วเลือกหมวดนี้ตอนนำเข้าข้อมูล" : "ยังไม่มีหมวดหมู่ ให้ Analyst หรือ Admin เพิ่มก่อน"}
           action={<Link href="/import">ไปที่นำเข้าข้อมูล</Link>}
         />
       ) : (
@@ -52,6 +56,7 @@ export default async function CategoriesPage() {
                   <th>เพจที่พบ</th>
                   <th>เก็บครั้งแรก</th>
                   <th>เก็บล่าสุด</th>
+                  {canEdit ? <th><span className={styles.srOnly}>จัดการ</span></th> : null}
                 </tr>
               </thead>
               <tbody>
@@ -67,6 +72,12 @@ export default async function CategoriesPage() {
                     <td data-numeral>{row.observed_pages}</td>
                     <td>{thaiDate(row.first_collected_at)}</td>
                     <td>{thaiDate(row.last_collected_at)}</td>
+                    {canEdit ? (
+                      <td>
+                        <CategoryRowActions id={row.category_id} name={row.category_name}
+                          datasets={row.dataset_count} canDelete={actor.role === "admin"} />
+                      </td>
+                    ) : null}
                   </tr>
                 ))}
               </tbody>

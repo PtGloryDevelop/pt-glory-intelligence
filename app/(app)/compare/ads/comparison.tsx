@@ -39,6 +39,7 @@ export function AdComparison({ datasets, seed, initialOwned, initialPeriod, init
   // The catalog filter and the selected observation have different lifetimes.
   const [dataset, setDataset] = useState('');
   const [owned, setOwned] = useState<OwnedResult | null>(null);
+  const [shared, setShared] = useState<string | null>(null);
   const [rivals, setRivals] = useState<{ rows: Rival[]; total: number } | null>(null);
   const [ownSearch, setOwnSearch] = useState('');
   const [rivalSearch, setRivalSearch] = useState('');
@@ -220,6 +221,12 @@ export function AdComparison({ datasets, seed, initialOwned, initialPeriod, init
   const selectedDataset = datasets.find(item => item.id === b?.dataset_id);
   const selectedCollected = b?.collected_at ?? selectedDataset?.collected;
   const metrics = a ? summarizeOwnedReport([a]) : null;
+  // The pair lives in the URL already; the team member's own login decides what they can open.
+  async function copyLink() {
+    if (!a || !b) return;
+    const link = `${window.location.origin}/compare/ads?${new URLSearchParams({ account: a.account_id, owned: a.ad_id, dataset: b.dataset_id ?? '', rival: b.ad_archive_id })}`;
+    try { await navigator.clipboard.writeText(link); setShared('copied'); } catch { setShared(link); }
+  }
   function download() {
     if (!a || !b) return;
     const text = [
@@ -333,7 +340,7 @@ export function AdComparison({ datasets, seed, initialOwned, initialPeriod, init
         <label>สิ่งที่จะทำกับแอดเรา<select data-testid="compare-decision" value={decision} onChange={event => updateDraft('decision', event.target.value)}><option value="">เลือกแนวทางที่ทีมต้องการทดลอง</option>{COMPARISON_DECISIONS.map(value => <option key={value}>{value}</option>)}</select></label>
         <label>เหตุผลหรือสมมติฐานที่จะทดสอบ<textarea data-testid="compare-hypothesis" maxLength={4000} value={hypothesis} onChange={event => updateDraft('hypothesis', event.target.value)} placeholder="เช่น คู่แข่งเล่าปัญหาลูกค้าชัดกว่า จึงทดลองข้อความเปิดใหม่ โดยคงข้อเสนอและกลุ่มเป้าหมายเดิม" /></label>
         <label>วัดผลด้วยอะไรและเมื่อไร<textarea data-testid="compare-success" maxLength={1000} value={success} onChange={event => updateDraft('success', event.target.value)} placeholder="เช่น เปรียบเทียบต้นทุนต่อบทสนทนาและ ROAS ของเรา หลังทดลอง 7 วัน" /></label>
-        <div className={styles.saveRow}><button type="button" data-variant="primary" data-testid="compare-download" onClick={download}>ดาวน์โหลดแผนทดลอง</button><p className={styles.muted}>ส่งให้ทีมพิจารณาต่อได้ · บันทึกนี้ไม่เปลี่ยนแอดหรืองบจริง</p></div>
+        <div className={styles.saveRow}><button type="button" data-variant="primary" data-testid="compare-download" onClick={download}>ดาวน์โหลดแผนทดลอง</button><button type="button" data-testid="compare-copy-link" onClick={() => void copyLink()}>คัดลอกลิงก์ส่งทีม</button><p className={styles.muted}>{shared === 'copied' ? 'คัดลอกลิงก์แล้ว · ทีมเปิดแล้วเห็นคู่แอดเดียวกัน แต่ร่างแผนไม่ติดไปด้วย ให้แนบไฟล์แผนที่ดาวน์โหลด' : shared ? <>คัดลอกอัตโนมัติไม่ได้ · คัดลอกลิงก์นี้เอง: <span className={styles.shareLink}>{shared}</span></> : 'ส่งให้ทีมพิจารณาต่อได้ · บันทึกนี้ไม่เปลี่ยนแอดหรืองบจริง'}</p></div>
       </section>
     </> : null}
   </div>;

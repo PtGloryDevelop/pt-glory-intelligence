@@ -26,3 +26,14 @@ test("performance filters validate boundaries and calendar periods preserve real
   }
   assert.throws(() => previousOwnedPerformancePeriod({ from: "0001-01-01", to: "0001-01-01" }), OwnedPerformanceQueryError);
 });
+
+test("sort direction defaults per metric and only a flipped direction reaches the RPC suffixed", async () => {
+  const { ownedSortArg } = await import("../lib/owned-ads/performance.ts");
+  const parse = (input: string) => parseOwnedPerformanceQuery(new URLSearchParams(input));
+  assert.equal(parse("").dir, "desc");
+  assert.equal(parse("sort=cost_per_conversation").dir, "asc");
+  assert.equal(ownedSortArg(parse("sort=spend")), "spend");
+  assert.equal(ownedSortArg(parse("sort=spend&dir=asc")), "spend:asc");
+  assert.equal(ownedSortArg(parse("sort=cost_per_conversation&dir=desc")), "cost_per_conversation:desc");
+  for (const bad of ["dir=up", "dir=asc&dir=desc"]) assert.throws(() => parse(bad), OwnedPerformanceQueryError);
+});

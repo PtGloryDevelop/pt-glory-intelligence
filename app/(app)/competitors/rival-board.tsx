@@ -45,7 +45,7 @@ export function RivalBoard(){
 
   const unitNew=(unit:RivalUnit)=>unit.pages.reduce((sum,page)=>sum+page.new_matched_7d,0);
   if(problem)return <section className={styles.panel}><p className={styles.problem} role="alert">{problem} <button type="button" onClick={()=>setReload(v=>v+1)}>ลองใหม่</button></p></section>;
-  if(!board)return <section className={styles.panel}><p className={styles.loading} role="status">กำลังหาคู่แข่งที่ชนกับสินค้าเรา…</p></section>;
+  if(!board)return <section className={styles.panel}><p className={styles.loading} role="status">กำลังหาเพจคู่แข่งของแต่ละยูนิต…</p></section>;
 
   const trackedPages=new Set(board.units.flatMap(unit=>unit.pages.filter(page=>page.tracked).map(page=>page.page_id)));
   const run=board.tracked*PER_PAGE_RUN;
@@ -60,8 +60,8 @@ export function RivalBoard(){
       <div className={styles.main}>
         <Link href={`/pages/${encodeURIComponent(page.page_id)}?scope=all`} className={styles.name}>{page.page_name??page.page_id}</Link>
         <div className={styles.chips}>
-          {page.relation?<span className={`${styles.chip} ${styles.confirmed}`}>{REL[page.relation]} · ทีมยืนยันแล้ว</span>:<span className={`${styles.chip} ${styles.suggested}`}>ระบบเสนอจากคำค้น · รอยืนยัน</span>}
-          {page.tracked?<span className={`${styles.chip} ${styles.trackedChip}`}>ติดตามอยู่</span>:null}
+          {page.relation?<span className={`${styles.chip} ${styles.confirmed}`}>{REL[page.relation]} · ทีมตรวจแล้ว</span>:<span className={`${styles.chip} ${styles.suggested}`}>ระบบเจอจากคำค้น · ยังไม่ได้ตรวจ</span>}
+          {page.tracked?<span className={`${styles.chip} ${styles.trackedChip}`}>เก็บแอดใหม่อยู่</span>:null}
           {page.new_matched_7d?<span className={`${styles.chip} ${styles.newChip}`}>แอดใหม่ {page.new_matched_7d} ตัวใน 7 วัน</span>:null}
         </div>
         {page.sample?<p className={styles.sample}>{page.sample}</p>:null}
@@ -73,11 +73,11 @@ export function RivalBoard(){
         <div><dt>เห็นล่าสุด</dt><dd>{thaiDate(page.last_seen_at)}</dd></div>
       </dl>
       {board!.canEdit?<div className={styles.acts}>
-        {page.relation?<button type="button" className={styles.ghost} disabled={busy===key} onClick={()=>act(key,{action:'relation',unit_id:unit.id,unit_name:unit.name,page_id:page.page_id,relation:null},'ย้อนการยืนยันแล้ว')}>แก้ความสัมพันธ์</button>
-          :<div className={styles.rel} role="group" aria-label={`ยืนยันความสัมพันธ์ของ ${page.page_name??page.page_id} กับ ${unit.name}`}>
-            <span>ยืนยัน:</span>{(['direct','substitute','unrelated'] as Relation[]).map(value=><button type="button" key={value} disabled={busy===key}
-              onClick={()=>act(key,{action:'relation',unit_id:unit.id,unit_name:unit.name,page_id:page.page_id,relation:value},value==='unrelated'?`ซ่อน ${page.page_name??'เพจ'} จาก ${unit.name} แล้ว`:`ยืนยันว่าเป็น${REL[value]}ของ ${unit.name} แล้ว`)}>{REL[value]}</button>)}</div>}
-        <button type="button" className={page.tracked?styles.on:styles.btn} disabled={busy===`t:${page.page_id}`} onClick={()=>act(`t:${page.page_id}`,{action:'track',page_id:page.page_id,tracked:!page.tracked},page.tracked?'เลิกติดตามแล้ว':'เพิ่มในรายการติดตามของบริษัทแล้ว')}>{page.tracked?'✓ ติดตามแล้ว':'ติดตาม'}</button>
+        {page.relation?<button type="button" className={styles.ghost} disabled={busy===key} onClick={()=>act(key,{action:'relation',unit_id:unit.id,unit_name:unit.name,page_id:page.page_id,relation:null},'ล้างผลตรวจแล้ว')}>เปลี่ยนประเภท</button>
+          :<div className={styles.rel} role="group" aria-label={`ตรวจว่า ${page.page_name??page.page_id} เป็นอะไรกับ ${unit.name}`}>
+            <span>เพจนี้คือ:</span>{(['direct','substitute','unrelated'] as Relation[]).map(value=><button type="button" key={value} disabled={busy===key}
+              onClick={()=>act(key,{action:'relation',unit_id:unit.id,unit_name:unit.name,page_id:page.page_id,relation:value},value==='unrelated'?`ซ่อน ${page.page_name??'เพจ'} จาก ${unit.name} แล้ว`:`ตั้งเป็น${REL[value]}ของ ${unit.name} แล้ว`)}>{REL[value]}</button>)}</div>}
+        <button type="button" className={page.tracked?styles.on:styles.btn} disabled={busy===`t:${page.page_id}`} onClick={()=>act(`t:${page.page_id}`,{action:'track',page_id:page.page_id,tracked:!page.tracked},page.tracked?'หยุดเก็บแอดใหม่ของเพจนี้แล้ว':'เพิ่มเพจนี้ในรายการเก็บแอดใหม่แล้ว')} title={page.tracked?'กดเพื่อหยุดเก็บ':'ให้ระบบเก็บแอดใหม่ของเพจนี้ทุกรอบ'}>{page.tracked?'✓ เก็บแอดใหม่อยู่':'เก็บแอดใหม่'}</button>
       </div>:null}
     </li>;
   }
@@ -85,9 +85,10 @@ export function RivalBoard(){
   return <div className={styles.layout} data-testid="rival-board">
     <div className={styles.stack}>
       {board.units.length?<section className={styles.week} aria-label="สัปดาห์นี้">
-        <b>{board.newThisWeek?`สัปดาห์นี้พบแอดใหม่ ${board.newThisWeek} ตัวจากเพจที่ชนกับสินค้าเรา`:'สัปดาห์นี้ยังไม่พบแอดใหม่จากเพจที่ชนกับสินค้าเรา'}</b>
-        <span>นับแอดที่ระบบเห็นครั้งแรกใน 7 วัน · เก็บข้อมูลคู่แข่งล่าสุด {thaiDate(board.lastCollectedAt)}{board.newThisWeek?'':' · ถ้าเพจที่ติดตามไม่ได้ถูกเก็บใหม่ จะไม่เห็นแอดใหม่'}</span>
+        <b>{board.newThisWeek?`สัปดาห์นี้พบแอดใหม่ ${board.newThisWeek} ตัวจากเพจคู่แข่ง`:'สัปดาห์นี้ยังไม่พบแอดใหม่จากเพจคู่แข่ง'}</b>
+        <span>นับแอดที่ระบบเห็นครั้งแรกใน 7 วัน · เก็บข้อมูลคู่แข่งล่าสุด {thaiDate(board.lastCollectedAt)}{board.newThisWeek?'':' · ถ้าเพจในรายการเก็บแอดยังไม่ถูกเก็บรอบใหม่ จะไม่เห็นแอดใหม่'}</span>
       </section>:null}
+      {board.units.length?<p className={styles.howTo}>วิธีใช้: ① ใส่คำค้นให้ยูนิต → ② ตรวจว่าเพจที่ระบบเจอคือคู่แข่งตรง สินค้าทดแทน หรือไม่เกี่ยว → ③ กด “เก็บแอดใหม่” กับเพจที่อยากดูต่อ</p>:null}
       {notice?<p className={styles.notice} role="status">{notice}</p>:null}
       {board.units.map(unit=><section key={unit.id} className={styles.panel} aria-label={`คู่แข่งของ ${unit.name}`}>
         <div className={styles.unitHead}>
@@ -101,7 +102,7 @@ export function RivalBoard(){
         {unit.pages.length?<ul className={styles.list}>{unit.pages.map(page=>row(unit,page))}</ul>:<p className={styles.empty}>ยังไม่พบเพจที่ตรงคำค้นของยูนิตนี้ในข้อมูลที่เก็บไว้ · ลองเพิ่มคำค้นที่ลูกค้าใช้</p>}
         {unit.hidden?<p className={styles.hidden}>ซ่อนไว้ {unit.hidden} เพจที่ทีมตั้งว่าไม่เกี่ยวกับ {unit.name} · เปิดดูได้จากหน้าเพจคู่แข่ง</p>:null}
       </section>)}
-      {!board.units.length?<section className={styles.panel}><div className={styles.start}><h2>เริ่มจากใส่คำค้นให้ยูนิต</h2><p>ใส่คำที่ลูกค้าใช้หาสินค้าของยูนิตนั้น 3–5 คำ เช่น U15: ผงผัก, ดีท็อกซ์, ไขมันในเลือด · ระบบจะหาเพจคู่แข่งจากแอดที่เก็บไว้แล้วให้ทีมยืนยัน</p></div></section>:null}
+      {!board.units.length?<section className={styles.panel}><div className={styles.start}><h2>เริ่มจากใส่คำค้นให้ยูนิต</h2><p>ใส่คำที่ลูกค้าใช้หาสินค้าของยูนิตนั้น 3–5 คำ เช่น U15: ผงผัก, ดีท็อกซ์, ไขมันในเลือด · ระบบจะหาเพจคู่แข่งจากแอดที่เก็บไว้ แล้วให้ทีมตรวจว่าเป็นคู่แข่งจริงไหม</p></div></section>:null}
       {board.canEdit&&board.unitsWithoutKeywords.length?<section className={styles.panel}><form className={styles.newUnit} onSubmit={event=>{event.preventDefault();const unit=board.unitsWithoutKeywords.find(item=>item.id===newUnit);if(unit)addKeyword(unit);}}>
         <label htmlFor="rival-new-unit">เพิ่มคำค้นให้ยูนิตอื่น</label>
         <select id="rival-new-unit" value={newUnit} onChange={event=>setNewUnit(event.target.value)}><option value="">เลือกยูนิต</option>{board.unitsWithoutKeywords.map(unit=><option key={unit.id} value={unit.id}>{unit.name}</option>)}</select>
@@ -111,11 +112,11 @@ export function RivalBoard(){
     </div>
     <aside className={styles.stack}>
       <section className={styles.panel} aria-labelledby="rival-collect-heading">
-        <div className={styles.sideHead}><h2 id="rival-collect-heading">รายการติดตามของบริษัท</h2></div>
+        <div className={styles.sideHead}><h2 id="rival-collect-heading">รายการเพจที่เก็บแอดใหม่</h2></div>
         <div className={styles.side}>
           {board.canEdit?<UsageBars show={['collect']}/>:null}
-          <p><b>{board.tracked} เพจ</b> ที่ทีมติดตามร่วมกัน{trackedPages.size<board.tracked?` (แสดงในยูนิตด้านซ้าย ${trackedPages.size} เพจ)`:''}</p>
-          <div className={styles.est}><span>ค่าเก็บแอดใหม่ของเพจที่ติดตาม (ประมาณ)</span><b>{board.tracked?`USD ${run.toFixed(2)} ต่อรอบ`:'—'}</b><span>{board.tracked?`≈ USD ${(run*4.3).toFixed(2)} ต่อเดือน ถ้าเก็บสัปดาห์ละครั้ง`:'ยังไม่มีเพจที่ติดตาม'}</span></div>
+          <p><b>{board.tracked} เพจ</b> ที่ทีมให้ระบบเก็บแอดใหม่ (ใช้ร่วมกันทั้งบริษัท){trackedPages.size<board.tracked?` (แสดงในยูนิตด้านซ้าย ${trackedPages.size} เพจ)`:''}</p>
+          <div className={styles.est}><span>ค่าเก็บแอดใหม่ของเพจในรายการ (ประมาณ)</span><b>{board.tracked?`USD ${run.toFixed(2)} ต่อรอบ`:'—'}</b><span>{board.tracked?`≈ USD ${(run*4.3).toFixed(2)} ต่อเดือน ถ้าเก็บสัปดาห์ละครั้ง`:'ยังไม่มีเพจในรายการ'}</span></div>
           <p className={styles.note}>ยังไม่ได้เปิดเก็บอัตโนมัติ · ประมาณจากรอบทดสอบ 1 ต.ค. (USD 0.021 ได้ 28 แอด) สมมติเพจละราว 30 แอดต่อรอบ</p>
         </div>
       </section>

@@ -10,7 +10,7 @@ export async function GET(){
   try{return NextResponse.json(await getRivalBoard(await requireRole('viewer')),{headers});}
   catch(error){
     if(error instanceof AuthorizationError)return NextResponse.json({error:error.message},{status:error.status,headers});
-    console.error('Rival board unavailable');return NextResponse.json({error:'เปิดข้อมูลคู่แข่งที่ชนกับสินค้าเราไม่สำเร็จ'},{status:503,headers});
+    console.error('Rival board unavailable');return NextResponse.json({error:'เปิดข้อมูลคู่แข่งของยูนิตไม่สำเร็จ'},{status:503,headers});
   }
 }
 

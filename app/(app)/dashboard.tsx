@@ -184,7 +184,7 @@ export function Dashboard({canAnalyze}:{canAnalyze:boolean}){
           <div className={styles.panelHead}><h2 id="rivals-heading">คู่แข่งสัปดาห์นี้</h2><Link className={styles.btnGhost} href="/competitors">ดูทั้งหมด →</Link></div>
           {data.collisions?.pages?<ul className={styles.collide}>{data.collisions.top.map(page=><li key={page.page_id}>
             <Link href={`/pages/${encodeURIComponent(page.page_id)}?scope=all`}>{page.page_name??page.page_id}</Link>
-            <span>{page.unit} · ตรงคำค้น {page.matched_ads} แอด{page.new_matched_7d?` · ใหม่ ${page.new_matched_7d}`:''} · {page.confirmed?'ทีมยืนยันแล้ว':'รอยืนยัน'}</span></li>)}</ul>:null}
+            <span>{page.unit} · ตรงคำค้น {page.matched_ads} แอด{page.new_matched_7d?` · ใหม่ ${page.new_matched_7d}`:''} · {page.confirmed?'ทีมตรวจแล้ว':'ยังไม่ได้ตรวจ'}</span></li>)}</ul>:null}
           {rivals?<>
             <p className={styles.panelLead}>เพิ่งพบ {(rivals.week?.newAds??rivals.recentlyFound).toLocaleString('th-TH')} แอดใน 7 วัน · เก็บล่าสุด {thaiDate(rivals.lastCollectedAt)} · “เพิ่งพบ” คือระบบเห็นครั้งแรก แอดอาจยิงมาก่อนแล้ว</p>
             <ul className={styles.rivalList}>{recent.map(ad=><li key={`${ad.dataset_id}:${ad.ad_archive_id}`}>

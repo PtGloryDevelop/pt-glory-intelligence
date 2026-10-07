@@ -2,7 +2,7 @@ import "server-only";
 import { dbUser } from "../db/user.ts";
 import { cachedOwnedImage } from "./media-cache.ts";
 import {
-  parseOwnedPerformanceQuery, ownedPerformancePeriod, previousOwnedPerformancePeriod, OwnedPerformanceQueryError,
+  ownedSortArg, parseOwnedPerformanceQuery, ownedPerformancePeriod, previousOwnedPerformancePeriod, OwnedPerformanceQueryError,
   type OwnedPerformanceData, type OwnedPerformancePeriod,
 } from "./performance.ts";
 
@@ -33,7 +33,7 @@ export async function getOwnedPerformance(params: URLSearchParams, snapshotId?: 
   const previous = query.compare ? previousOwnedPerformancePeriod(period) : undefined;
   const read = (dates: OwnedPerformancePeriod, page: number) => db.rpc("owned_performance_page", {
     p_sync: stored!.id, p_from: dates.from, p_to: dates.to, p_unit: query.unit, p_page_id: query.pageId,
-    p_search: query.q, p_sort: query.sort, p_status: query.status, p_page: page,
+    p_search: query.q, p_sort: ownedSortArg(query), p_status: query.status, p_page: page,
   });
   const [current, prior] = await Promise.all([read(period, query.page), previous ? read(previous, 0) : Promise.resolve(null)]);
   if (current.error || prior?.error) throw new Error("Owned daily performance unavailable");

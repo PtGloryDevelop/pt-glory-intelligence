@@ -1,6 +1,5 @@
 .workspace { display: grid; gap: 24px; min-width: 0; font-size:var(--fs-meta); }
 .workspace h2[tabindex], .workspace h3[tabindex], .workspace section[id] { scroll-margin-top: 80px; }
-.context + .panel h2[tabindex] { scroll-margin-top: 320px; }
 .steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-bottom: 1px solid var(--line); }
 .steps button { display: flex; justify-content: flex-start; align-items: center; gap: 10px; border: 0; border-radius: 0; border-bottom: 3px solid transparent; padding: 14px 10px; background: transparent; color: var(--muted); text-align: left; font-size:var(--fs-meta); }
 .steps button[aria-current='step'] { border-color: var(--brand-ink); color: var(--brand-ink); font-weight: 600; }
@@ -57,11 +56,12 @@
 .pager button { font-size:var(--fs-meta); }
 .loading, .empty { padding: 40px 12px; text-align: center; color: var(--muted); font-size:var(--fs-meta); }
 .notice { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border: 1px solid var(--line); background: var(--surface); border-radius: var(--radius-sm); }
-.context { position: sticky; top: calc(var(--topbar-h) + 8px); padding: 16px 18px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); z-index: 2; }
+/* Not sticky: pilot feedback 2026-10-06 — the tray followed the scroll and covered the ads being chosen. */
+.context { padding: 16px 18px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); }
 .contextPair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
 .contextAd { display: flex; gap: 14px; min-width: 0; }
 .contextAd > div:last-child { min-width: 0; }
-.contextAd strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size:var(--fs-body); }
+.contextAd strong { display: block; overflow-wrap: anywhere; font-size:var(--fs-body); }
 .contextAd p { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin: 3px 0 5px; color: var(--muted); font-size:var(--fs-meta); line-height: 1.6; }
 .contextAd button { padding: 3px 0; min-height: 30px; border: 0; background: transparent; color: var(--brand-ink); font-size:var(--fs-meta); }
 .contextImage { display: grid; place-items: center; overflow: hidden; flex: 0 0 90px; height: 90px; border: 1px solid var(--line); border-radius: var(--radius-sm); color: var(--muted); background: var(--surface-sunken); }
@@ -71,8 +71,6 @@
 .contextActions span { font-size:var(--fs-meta); color: var(--muted); }
 .contextActions button { font-size:var(--fs-meta); }
 @media (max-width: 1100px) {
-  .context { position: static; }
-  .context + .panel h2[tabindex] { scroll-margin-top: 80px; }
   .columns { gap: 18px; }
   .evidenceMedia { --ad-preview-height:300px; }
 }
@@ -132,3 +130,4 @@
 .aiUse { display: block; margin-top: 4px; min-height: 28px; padding: 2px 10px; font-size: var(--fs-eyebrow); }
 .srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 @media (max-width: 700px) { .aiSummary { grid-template-columns: 1fr; } }
+.shareLink { overflow-wrap: anywhere; user-select: all; color: var(--ink); }

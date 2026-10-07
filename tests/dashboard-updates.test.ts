@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {buildUpdates} from '../lib/dashboard/updates.ts';
+import {adFlags,buildUpdates} from '../lib/dashboard/updates.ts';
 import type {OwnedPerformanceRow,OwnedPerformanceSummary} from '../lib/owned-ads/performance.ts';
 
 const summary={currency:'THB',cost_per_conversation:72.72,roas:2.23} as OwnedPerformanceSummary;
@@ -48,4 +48,12 @@ test('a good ad whose budget was halved is flagged', () => {
   const out = buildUpdates({summary, rows: [good, weak], series, rivals: null});
   assert.ok(out.some(item => /GOOD ROAS 3.00 ดีกว่าภาพรวม แต่ค่าแอดลดลง/.test(item.title)));
   assert.ok(!out.some(item => /WEAK/.test(item.title)), 'a weak ad being cut is not a warning');
+});
+
+test('ads table flags use the feed rules; without a spend change the spend rules stay silent', () => {
+  const avg={cpc:72.72,roas:2.23};
+  assert.equal(adFlags(row({cost_per_conversation:92.08,conversations:66,purchase_value:10635}),avg)[0]?.reason,'ค่าทัก 92.08 บาท สูงกว่าภาพรวม 27%');
+  assert.deepEqual(adFlags(row({cost_per_conversation:200,conversations:5}),avg),[],'too few chats');
+  assert.deepEqual(adFlags(row({spend:5987,purchase_value:22811}),avg),[],'a spend surge needs the previous window');
+  assert.deepEqual(adFlags(row({}),{cpc:null,roas:null}),[],'no totals, no judgement');
 });

@@ -4,6 +4,7 @@
 .loading, .problem, .notice { margin: 0; padding: 14px var(--pad-card); font-size: var(--fs-meta); color: var(--muted); }
 .problem { color: var(--danger); }
 .notice { background: var(--ok-tint); color: var(--ok-ink); border-radius: var(--radius-sm); }
+.howTo { margin: 0; font-size: var(--fs-meta); color: var(--muted); line-height: 1.7; }
 .unitHead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 12px var(--pad-card); background: var(--surface-sunken); border-bottom: 1px solid var(--line); border-radius: var(--radius) var(--radius) 0 0; }
 .unit { font-size: var(--fs-title-sm); }
 .keywords { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-right: auto; }
