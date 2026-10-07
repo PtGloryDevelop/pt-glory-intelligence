@@ -17,8 +17,9 @@ const labels = (role: Role) => visibleNav(role).flatMap((section) => section.ite
 const itemFor = (role: Role, label: string) =>
   visibleNav(role).flatMap((section) => section.items).find((item) => item.label === label);
 
-test('overview is the shared entry; owned daily performance remains analyst-only', () => {
-  for(const role of ['viewer','analyst','admin'] as const)assert.equal(itemFor(role,'ภาพรวม')?.href,'/');
+test('overview is the shared entry at its own URL; owned daily performance remains analyst-only', () => {
+  // `/` follows each person's home choice, so the menu points at the page that is always the overview.
+  for(const role of ['viewer','analyst','admin'] as const)assert.equal(itemFor(role,'ภาพรวม')?.href,'/market-overview');
   assert.equal(itemFor('viewer','แอดของเรา'),undefined);
   for(const role of ['analyst','admin'] as const)assert.equal(itemFor(role,'แอดของเรา')?.href,'/owned-ads/performance');
 });

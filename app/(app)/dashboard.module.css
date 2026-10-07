@@ -6,6 +6,7 @@
 .seg { display: inline-flex; gap: 2px; padding: 3px; border-radius: var(--radius-sm); background: var(--surface-sunken); }
 .seg button { border: 0; background: transparent; color: var(--muted); padding: 6px 14px; border-radius: 6px; font-size: var(--fs-meta); min-height: 34px; cursor: pointer; }
 .seg button[aria-pressed='true'] { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: var(--shadow); }
+.headActs { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .problem { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 12px 16px; border-radius: var(--radius-sm); background: var(--danger-tint); color: var(--danger); font-size: var(--fs-meta); }
 .loading { color: var(--muted); font-size: var(--fs-meta); }
 

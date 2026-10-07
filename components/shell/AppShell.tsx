@@ -66,10 +66,12 @@ export function AppShell(
 
   // A dataset page carries the research grid, which genuinely wants the canvas.
   // Every other page reads better at a fixed measure.
-  const isWide = pathname === "/" || /^\/datasets\/[^/]+/.test(pathname)
-    || pathname === "/competitors" || pathname === "/owned-ads" || pathname === "/owned-ads/performance" || pathname === "/compare/ads" || pathname === "/command-center";
+  // `/` may render the overview (or redirect to a person's chosen home); either way the menu item is ภาพรวม.
+  const path = pathname === "/" ? "/market-overview" : pathname;
+  const isWide = path === "/market-overview" || /^\/datasets\/[^/]+/.test(path)
+    || path === "/competitors" || path === "/owned-ads" || path === "/owned-ads/performance" || path === "/compare/ads" || path === "/command-center";
 
-  const activeItem=sections.flatMap(section=>section.items).filter(item=>item.href&&(item.href==='/'?pathname==='/':pathname===item.href||pathname.startsWith(`${item.href}/`))).sort((a,b)=>(b.href?.length??0)-(a.href?.length??0))[0];
+  const activeItem=sections.flatMap(section=>section.items).filter(item=>item.href&&(path===item.href||path.startsWith(`${item.href}/`))).sort((a,b)=>(b.href?.length??0)-(a.href?.length??0))[0];
   const isActive = (href: string) => activeItem?.href===href;
 
   return (

@@ -11,6 +11,8 @@ import {reviewAdKey} from '@/lib/dashboard/series';
 import {buildUpdates,MIN_CHATS,rowRoas,type DashboardUpdate} from '@/lib/dashboard/updates';
 import {DashboardSparkline} from './dashboard-sparkline';
 import styles from './dashboard.module.css';
+import {HomeChoiceButton} from '@/components/HomeChoice';
+import type {HomeChoice} from '@/lib/home-choice';
 
 const WINDOWS=[7,14,30] as const;
 const KIND={ours:'แอดเรา',rival:'คู่แข่ง',data:'ข้อมูล'} as const;
@@ -43,7 +45,7 @@ function OwnedThumb({url,video,name}:{url:string|null|undefined;video:boolean;na
   </span>;
 }
 
-export function Dashboard({canAnalyze}:{canAnalyze:boolean}){
+export function Dashboard({canAnalyze,home='overview'}:{canAnalyze:boolean;home?:HomeChoice}){
   const params=useSearchParams(),router=useRouter(),pathname=usePathname();
   const days=WINDOWS.find(value=>String(value)===params.get('window'))??7;
   const query=`window=${days}`;
@@ -127,7 +129,7 @@ export function Dashboard({canAnalyze}:{canAnalyze:boolean}){
         <h1>สัปดาห์นี้มีอะไรเปลี่ยน</h1>
         <p>{review?`${thaiDate(review.period.from)} – ${thaiDate(review.period.to)}${review.previous?` เทียบกับ ${thaiDate(review.previous.period.from)} – ${thaiDate(review.previous.period.to)}`:''} · แอดเราสกุล ${summary?.currency??'THB'}`:canAnalyze?'กำลังเปิดข้อมูล…':'ภาพรวมคู่แข่งและรายการติดตาม'}</p>
       </div>
-      {canAnalyze?<div className={styles.seg} role="group" aria-label="ช่วงเวลา">{WINDOWS.map(value=><button key={value} type="button" aria-pressed={value===days} onClick={()=>setWindow(value)}>{value} วัน</button>)}</div>:null}
+      {canAnalyze?<div className={styles.headActs}><HomeChoiceButton target="overview" current={home}/><div className={styles.seg} role="group" aria-label="ช่วงเวลา">{WINDOWS.map(value=><button key={value} type="button" aria-pressed={value===days} onClick={()=>setWindow(value)}>{value} วัน</button>)}</div></div>:null}
     </header>
 
     {error?<div className={styles.problem} role="alert">{error} <button type="button" className={styles.btn} onClick={()=>setRetry(value=>value+1)}>ลองใหม่</button></div>:null}

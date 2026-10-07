@@ -7,10 +7,10 @@ export type NavSection = { heading: string; items: NavItem[] };
 // UI v2: four jobs for everyone; data upkeep for analysts/admins only.
 export const NAV: NavSection[] = [
   { heading: "พื้นที่ทำงาน", items: [
-    { label: "ภาพรวม", icon: "home", href: "/" },
+    { label: "ภาพรวม", icon: "home", href: "/market-overview" },
     { label: "แอดของเรา", icon: "grid", href: "/owned-ads/performance", minRole: "analyst" },
     { label: "คู่แข่ง", icon: "search", href: "/competitors" },
-    { label: "เทียบและวางแผน", icon: "compare", href: "/compare/ads", minRole: "analyst" },
+    { label: "เทียบกับคู่แข่ง", icon: "compare", href: "/compare/ads", minRole: "analyst" },
   ] },
   // Data upkeep. Hidden pages (watchlist, page compare, trends, page list) still answer at their URLs.
   { heading: "ตั้งค่าข้อมูล", items: [
