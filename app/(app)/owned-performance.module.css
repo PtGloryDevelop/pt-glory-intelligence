@@ -47,6 +47,7 @@ th[aria-sort] .sortHead { color:var(--ink); }
 .cardBody { padding:18px; display:flex; flex-direction:column; flex:1; min-width:0; }
 .cardBody h3 { font-size:var(--fs-title-sm); line-height:1.55; overflow-wrap:anywhere; margin-bottom:8px; }
 .caption { color:var(--muted); font-size:var(--fs-meta); line-height:1.8; display:-webkit-box; -webkit-line-clamp:3; line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:anywhere; min-height:70px; margin:0 0 12px; }
+.headline { font-size:var(--fs-meta); font-weight:600; line-height:1.6; overflow-wrap:anywhere; margin:0 0 6px; }
 .metadata { display:grid; gap:4px; color:var(--muted); font-size:var(--fs-meta); }
 .metadata span { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .cardMetrics { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin:18px 0 0; padding:16px 0; border-top:1px solid var(--line); }
@@ -69,6 +70,9 @@ th[aria-sort] .sortHead { color:var(--ink); }
 .basis p { margin:10px 0 0; }
 @media(min-width:1600px) { .grid { grid-template-columns:repeat(4,minmax(0,1fr)); } }
 @media(max-width:1120px) { .controls { grid-template-columns:repeat(2,minmax(0,1fr)); } .grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .findings { grid-template-columns:1fr; gap:16px; } }
+.inlinePlayer { display:grid; gap:8px; justify-items:center; padding:12px; background:var(--surface-sunken); }
+.inlinePlayer iframe { height:420px; min-height:0; }
+.stopVideo { min-height:36px; font-size:var(--fs-meta); }
 @media(max-width:640px) { .page { gap:20px; } .filters,.summary { padding:16px; } .kpis > div { grid-template-columns:repeat(2,minmax(0,1fr)); } .figure { font-size:var(--fs-subhead); } .controls { gap:12px; } .grid { grid-template-columns:minmax(0,1fr); } .previewButton { --ad-preview-height:340px; } .sectionHead > span { display:none; } .customDates { display:grid; grid-template-columns:minmax(0,1fr); } .searchRow { gap:8px; } .searchRow button { padding-inline:12px; } .cardHead { gap:8px; } .cardBody { padding:16px; } .caption { min-height:0; } .periodLine label { width:100%; } }
 
 /* UI v2 table view (default) */

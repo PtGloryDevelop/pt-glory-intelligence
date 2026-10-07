@@ -4,7 +4,7 @@ import { OWNED_LIBRARY_STATUSES } from "./library-query.ts";
 
 export const OWNED_PERIOD_PRESETS = ["3d", "7d", "14d", "this-month", "last-month", "all", "custom", "today", "yesterday"] as const;
 export type OwnedPeriodPreset = typeof OWNED_PERIOD_PRESETS[number];
-export const OWNED_PERFORMANCE_SORTS = ["spend", "cost_per_conversation", "roas", "conversations", "hook_rate", "newest", "longest"] as const;
+export const OWNED_PERFORMANCE_SORTS = ["spend", "cost_per_conversation", "roas", "conversations", "hook_rate", "newest", "longest", "close_rate"] as const;
 export type OwnedPerformanceSort = typeof OWNED_PERFORMANCE_SORTS[number];
 export type OwnedSortDir = "asc" | "desc";
 /** The direction a sort opens with: cheapest cost per chat first, largest first for everything else. */
@@ -104,6 +104,19 @@ export function ownedPerformancePeriod(query: OwnedPerformanceQuery, coverage: O
 export function previousOwnedPerformancePeriod(period: OwnedPerformancePeriod): OwnedPerformancePeriod {
   const days = Math.round((Date.parse(period.to) - Date.parse(period.from)) / 86400000) + 1;
   return { from: shift(period.from, -days), to: shift(period.from, -1) };
+}
+
+/** %ปิด (Meta): Meta-reported orders ÷ conversations. Null below `minChats`, so two chats and two orders never read as 100%. */
+export function closeRate(row: { purchases: number | null; conversations: number | null }, minChats: number): number | null {
+  return row.purchases != null && row.conversations != null && row.conversations >= minChats ? row.purchases / row.conversations : null;
+}
+
+/** Whole Bangkok calendar days from Meta's ad creation time to `now`; null when unknown. Creation, not first delivery. */
+export function daysSinceCreated(created: string | null, now = new Date()): number | null {
+  const time = created ? Date.parse(created) : NaN;
+  if (!Number.isFinite(time)) return null;
+  const day = (ms: number) => Math.floor((ms + 7 * 3600000) / 86400000);
+  return Math.max(0, day(now.getTime()) - day(time));
 }
 
 /** Every unit plus unassigned. No ad count: an ad that moved units mid-period sits in two unit counts. */

@@ -59,7 +59,7 @@ try {
   await page.goto(origin + '/?period=all', { waitUntil: 'domcontentloaded' });
   await expect(page.getByTestId('performance-kpis')).toBeVisible({ timeout: 60000 });
   assert.ok(await page.getByTestId('performance-period-line').evaluate(element => Boolean(element.compareDocumentPosition(document.querySelector('[data-testid="performance-kpis"]')) & Node.DOCUMENT_POSITION_FOLLOWING)), 'The selected performance period appears before its KPI cards');
-  await expect(page.getByTestId('performance-close')).toContainText('ยังไม่ได้เชื่อมระบบขาย');
+  await expect(page.getByTestId('performance-close')).toContainText('%ปิด (Meta)');
   for (const label of ['แอดของเรา', 'Command Center', 'ส่องคู่แข่ง', 'เปรียบเทียบแอด', 'รายการติดตาม']) await expect(page.getByRole('navigation', { name: 'เมนูหลัก' }).getByRole('link', { name: label, exact: true })).toBeVisible();
   if (!all.ready) {
     await expect(page.getByTestId('owned-performance')).toContainText('ชุดข้อมูลนี้ยังไม่มีผลลัพธ์รายวัน');
