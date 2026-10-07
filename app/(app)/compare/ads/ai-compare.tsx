@@ -29,9 +29,9 @@ async function post<T>(ads: AdRef[], dryRun: boolean): Promise<T> {
 }
 
 /** Up to five ads (ours first) read by AI on eight dimensions; "age" is our own data, never AI. */
-export function AiCompare({ ads, images, ourThrough, onAdd, onRemove, onIdea }: {
+export function AiCompare({ ads, images, ourThrough, onAdd, onRemove }: {
   ads: CompareAd[]; images: Record<string, string>; ourThrough: string | null;
-  onAdd: (kind: 'own' | 'rival') => void; onRemove: (item: CompareAd) => void; onIdea: (text: string) => void;
+  onAdd: (kind: 'own' | 'rival') => void; onRemove: (item: CompareAd) => void;
 }) {
   const refs = ads.map(refOf);
   const key = refs.map(adRefId).join('|');
@@ -40,6 +40,8 @@ export function AiCompare({ ads, images, ourThrough, onAdd, onRemove, onIdea }: 
   const [run, setRun] = useState<{ key: string; data: AiRun } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  // Survey: users glance for ~5 minutes, so the short summary leads and the 8-dimension grid is opt-in.
+  const [detail, setDetail] = useState(false);
 
   useEffect(() => {
     if (!ready) return;
@@ -65,13 +67,16 @@ export function AiCompare({ ads, images, ourThrough, onAdd, onRemove, onIdea }: 
   const result = run?.key === key ? run.data : null;
   const est = estimate.key === key ? estimate.data : null;
   const readingOf = (item: CompareAd): AdReading | undefined => result?.ads[adRefId(refOf(item))];
+  const risky = ads.flatMap(item => item.kind === 'own'
+    ? (readingOf(item)?.claims.items ?? []).filter(claim => claim.risky).map(claim => ({ text: claim.text, name: nameOf(item) }))
+    : []);
   const staleRivals = ads.filter((item): item is { kind: 'rival'; ad: Rival } => item.kind === 'rival')
     .filter(item => !item.ad.collected_at && !item.ad.last_seen_at || ourThrough && days((item.ad.collected_at ?? item.ad.last_seen_at).slice(0, 10), ourThrough) > 14);
 
   return <section className={styles.panel} aria-labelledby="compare-ai-heading" data-testid="compare-ai">
     <div className={styles.sectionHead}>
-      <div><span className={styles.sideLabel}>เทียบด้วย AI</span><h2 id="compare-ai-heading">อ่านแอด {ads.length}/{MAX_COMPARE} ตัว ใน 8 มิติ</h2>
-        <p>AI อ่านจากข้อความและภาพของแต่ละแอด · กด “หลักฐาน” เพื่อดูคำที่ AI ใช้ · ช่อง “ยิงมานานแค่ไหน” มาจากข้อมูลจริง</p></div>
+      <div><span className={styles.sideLabel}>เทียบด้วย AI</span><h2 id="compare-ai-heading">สรุปความต่าง {ads.length}/{MAX_COMPARE} แอด</h2>
+        <p>AI อ่านจากข้อความและภาพ แล้วสรุปสั้น ๆ ว่าต่างกันตรงไหน แอดเราควรลองอะไร และมีคำเสี่ยง อย. หรือไม่ · รายละเอียด 8 มิติพร้อมหลักฐานกดเปิดได้</p></div>
       <div className={styles.aiAdd}>
         <button type="button" disabled={ads.length >= MAX_COMPARE} onClick={() => onAdd('own')}>+ แอดของเรา</button>
         <button type="button" disabled={ads.length >= MAX_COMPARE} onClick={() => onAdd('rival')}>+ แอดคู่แข่ง</button>
@@ -80,17 +85,48 @@ export function AiCompare({ ads, images, ourThrough, onAdd, onRemove, onIdea }: 
 
     {staleRivals.length ? <p className={styles.aiWarn}>ข้อมูลคู่แข่ง {staleRivals.length} แอดเก่ากว่าข้อมูลแอดเราเกิน 14 วัน คู่แข่งอาจเปลี่ยนข้อเสนอไปแล้ว · เก็บข้อมูลใหม่ได้ที่หน้า “เก็บข้อมูลใหม่”</p> : null}
 
-    <div className={styles.aiScroll}>
+    {/* Evidence cards below already show each ad's media, so the AI panel lists the ads compactly. */}
+    <ul className={styles.aiChips} aria-label="แอดที่ส่งให้ AI">{ads.map(item => {
+      const own = item.kind === 'own';
+      return <li key={adRefId(refOf(item))} className={own ? styles.aiChipOurs : undefined}>
+        <span className={own ? styles.kindOurs : styles.kindRival}>{own ? 'แอดของเรา' : 'คู่แข่ง'}</span>
+        <span className={styles.aiChipName}>{nameOf(item)}</span>
+        <button type="button" className={styles.aiRemove} aria-label={'เอา ' + nameOf(item) + ' ออก'} disabled={ads.length <= 2 || ads.filter(other => other.kind === item.kind).length <= 1} onClick={() => onRemove(item)}>×</button>
+      </li>;
+    })}</ul>
+
+    <div className={styles.aiRunRow}>
+      <button type="button" data-variant="primary" data-testid="compare-ai-run" disabled={!ready || busy || !est && !estimate.error} onClick={analyze}>
+        {busy ? 'กำลังวิเคราะห์…' : result ? 'วิเคราะห์ครบแล้ว' : est && !est.missing && est.setCached ? 'เปิดผลวิเคราะห์เดิม (ไม่มีค่าใช้จ่าย)' : `วิเคราะห์ด้วย AI${est ? ` (${est.missing} แอดใหม่) · ประมาณ USD ${usd(est.estimate)}` : ''}`}
+      </button>
+      <p className={styles.muted}>
+        {!ready ? 'ต้องมีแอดของเราอย่างน้อย 1 ตัว และคู่แข่งอย่างน้อย 1 ตัว'
+          : estimate.key === key && estimate.error ? estimate.error
+          : !est ? 'กำลังคำนวณค่าใช้จ่าย…' : null}
+      </p>
+    </div>
+    {error ? <p className={styles.aiWarn} role="alert">{error}</p> : null}
+
+    {result ? <div className={styles.aiSummary} data-testid="compare-ai-summary">
+      <div className={`${styles.aiRiskBox} ${risky.length ? styles.aiRiskFound : ''}`} data-testid="compare-ai-risk">
+        <h3>{risky.length ? `⚠ คำในแอดเราที่อาจผิดเกณฑ์ อย. (${risky.length})` : 'ไม่พบคำเสี่ยงผิดเกณฑ์ อย. ในแอดเรา'}</h3>
+        {risky.length ? <ul>{risky.map((claim, index) => <li key={index}>{claim.text}<span className={styles.aiRefs}><span>{claim.name}</span></span></li>)}</ul> : null}
+      </div>
+      <div><h3>จุดที่ต่างกันจริง</h3><ol>{result.summary.diffs.map((item, index) => <li key={index}>{item.text}<Refs ids={item.ads} ads={ads} /></li>)}</ol></div>
+      <div><h3>ไอเดียทดลองสำหรับแอดเรา</h3><ul>{result.summary.ideas.map((item, index) => <li key={index}>{item.text}<Refs ids={item.ads} ads={ads} /></li>)}</ul></div>
+      <p className={styles.muted}>AI สรุปจากข้อความและภาพเท่านั้น ไม่รู้ยอดขายหรืองบของคู่แข่ง · ตรวจหลักฐานก่อนนำไปใช้</p>
+    </div> : null}
+
+    {result ? <button type="button" className={styles.aiDetailToggle} aria-expanded={detail} onClick={() => setDetail(value => !value)} data-testid="compare-ai-detail">
+      {detail ? 'ซ่อนรายละเอียด 8 มิติ ▴' : 'ดูรายละเอียด 8 มิติและหลักฐาน ▾'}</button> : null}
+    {result && detail ? <div className={styles.aiScroll}>
       <table className={styles.aiTable}>
         <thead><tr><th scope="col" className={styles.aiDim}><span className={styles.srOnly}>มิติ</span></th>{ads.map(item => {
           const own = item.kind === 'own';
           const image = own ? images[item.ad.account_id + ':' + item.ad.ad_id] ?? item.ad.creative_url : (() => { const media = resolveMedia(item.ad.display_format, item.ad.media, { archivePath: item.ad.archive_path, archiveStatus: item.ad.archive_status, presentationUrl: item.ad.archive_url }); return 'src' in media ? media.src : null; })();
           const roas = own ? summarizeOwnedReport([item.ad]).roas.value : null;
           return <th scope="col" key={adRefId(refOf(item))} className={own ? styles.aiOurs : undefined}>
-            <div className={styles.aiHead}>
-              <span className={own ? styles.kindOurs : styles.kindRival}>{own ? 'แอดของเรา' : 'คู่แข่ง'}</span>
-              <button type="button" className={styles.aiRemove} aria-label={'เอา ' + nameOf(item) + ' ออก'} disabled={ads.length <= 2 || ads.filter(other => other.kind === item.kind).length <= 1} onClick={() => onRemove(item)}>×</button>
-            </div>
+            <div className={styles.aiHead}><span className={own ? styles.kindOurs : styles.kindRival}>{own ? 'แอดของเรา' : 'คู่แข่ง'}</span></div>
             <div className={styles.aiThumb}><Creative url={image} name={nameOf(item)} sizes="160px" /></div>
             <strong className={styles.aiName}>{nameOf(item)}</strong>
             <span className={styles.aiMeta}>{own
@@ -116,29 +152,14 @@ export function AiCompare({ ads, images, ourThrough, onAdd, onRemove, onIdea }: 
           </td>)}</tr>
         </tbody>
       </table>
-    </div>
-
-    <div className={styles.saveRow}>
-      <button type="button" data-variant="primary" data-testid="compare-ai-run" disabled={!ready || busy || !est && !estimate.error} onClick={analyze}>
-        {busy ? 'กำลังวิเคราะห์…' : result ? 'วิเคราะห์ครบแล้ว' : est && !est.missing && est.setCached ? 'เปิดผลวิเคราะห์เดิม (ไม่มีค่าใช้จ่าย)' : `วิเคราะห์ด้วย AI${est ? ` (${est.missing} แอดใหม่) · ประมาณ USD ${usd(est.estimate)}` : ''}`}
-      </button>
-      <p className={styles.muted}>
-        {!ready ? 'ต้องมีแอดของเราอย่างน้อย 1 ตัว และคู่แข่งอย่างน้อย 1 ตัว'
-          : estimate.key === key && estimate.error ? estimate.error
-          : est ? `แอดที่เคยวิเคราะห์ใช้ผลเดิม ${est.cached} ตัว · ใช้ไปวันนี้ USD ${est.spent.today.toFixed(3)} / ${est.spent.dailyCap} · รวม ${est.spent.total.toFixed(3)} / ${est.spent.totalCap} · ${est.model}`
-          : 'กำลังคำนวณค่าใช้จ่าย…'}
-        {result ? ` · ครั้งนี้ USD ${result.cost.toFixed(4)}` : ''}
-      </p>
-    </div>
-    <UsageBars show={['ai']} refresh={run ? run.data.spent.total : 0} />
-    {error ? <p className={styles.aiWarn} role="alert">{error}</p> : null}
-
-    {result ? <div className={styles.aiSummary} data-testid="compare-ai-summary">
-      <div><h3>จุดที่ต่างกันจริง</h3><ol>{result.summary.diffs.map((item, index) => <li key={index}>{item.text}<Refs ids={item.ads} ads={ads} /></li>)}</ol></div>
-      <div><h3>ไอเดียทดลองสำหรับแอดเรา</h3><ul>{result.summary.ideas.map((item, index) => <li key={index}>{item.text}<Refs ids={item.ads} ads={ads} />
-        <button type="button" className={styles.aiUse} onClick={() => onIdea(item.text)}>ใช้ในแผนทดลอง ↓</button></li>)}</ul></div>
-      <p className={styles.muted}>AI สรุปจากข้อความและภาพเท่านั้น ไม่รู้ยอดขายหรืองบของคู่แข่ง · ตรวจหลักฐานก่อนนำไปใช้</p>
     </div> : null}
+
+    {/* Cost is the analyst's concern, not the ad team's: kept, but folded away. */}
+    <details className={styles.aiUsage}>
+      <summary>ค่าใช้ AI</summary>
+      {est ? <p className={styles.muted}>แอดที่เคยวิเคราะห์ใช้ผลเดิม {est.cached} ตัว · ใช้ไปวันนี้ USD {est.spent.today.toFixed(3)} / {est.spent.dailyCap} · รวม {est.spent.total.toFixed(3)} / {est.spent.totalCap} · {est.model}{result ? ` · ครั้งนี้ USD ${result.cost.toFixed(4)}` : ''}</p> : null}
+      <UsageBars show={['ai']} refresh={run ? run.data.spent.total : 0} />
+    </details>
   </section>;
 }
 

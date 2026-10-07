@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { PageHeader } from '@/components/shell/PageHeader';
 import { Creative } from '../../owned-ads/owned-client';
 import { OwnedVideoPlayer } from '../../owned-ads/owned-video-player';
@@ -10,7 +10,7 @@ import type { CompanyAd } from '@/lib/owned-ads/source-rows';
 import type { OwnedPerformanceData } from '@/lib/owned-ads/performance';
 import { resolveMedia } from '@/lib/media/resolve';
 import { summarizeOwnedReport } from '@/lib/owned-ads/model';
-import { COMPARISON_DECISIONS, comparisonDraftKey, comparisonSelectionKey, mergeComparisonSelection, parseComparisonDraft, parseComparisonSelection, rivalFromDetail, type ComparisonDraft, type ComparisonSelection, type Rival } from './selection';
+import { comparisonSelectionKey, mergeComparisonSelection, parseComparisonSelection, rivalFromDetail, type ComparisonSelection, type Rival } from './selection';
 import { AiCompare, MAX_COMPARE, compareId, type CompareAd } from './ai-compare';
 import styles from './comparison.module.css';
 
@@ -18,12 +18,6 @@ type Dataset = { id: string; name: string; source: string; collected: string; co
 type OwnedResult = { rows: CompanyAd[]; total: number; snapshot: { id: string; date_start: string; date_end: string; finished_at: string; accounts: { id: string; name: string }[] } | null };
 type Step = 'owned' | 'rival' | 'review';
 type Period = { date_start: string; date_end: string };
-const DRAFT_CHANGED = 'pt-glory-comparison-draft-changed';
-function subscribeDraft(listener: () => void) {
-  window.addEventListener(DRAFT_CHANGED, listener);
-  window.addEventListener('storage', listener);
-  return () => { window.removeEventListener(DRAFT_CHANGED, listener); window.removeEventListener('storage', listener); };
-}
 const number = (value: number | null | undefined) => value == null ? '—' : value.toLocaleString('th-TH', { maximumFractionDigits: 2 });
 const ownId = (ad: CompanyAd) => ad.account_id + ':' + ad.ad_id;
 const ownName = (ad: CompanyAd) => ad.ad_name.length <= 5 ? ad.title ?? ad.campaign_name ?? ad.ad_name : ad.ad_name;
@@ -67,21 +61,6 @@ export function AdComparison({ datasets, seed, initialOwned, initialPeriod, init
   const [adding, setAdding] = useState<'own' | 'rival' | null>(null);
   const [images, setImages] = useState<Record<string, string>>({});
   const [videoIds, setVideoIds] = useState<Record<string, string | null>>({});
-  const selection = { account: a?.account_id ?? '', owned: a?.ad_id ?? '', dataset: b?.dataset_id ?? '', rival: b?.ad_archive_id ?? '' };
-  const draftKey = comparisonDraftKey(userNamespace, selection);
-  const [draft, setDraft] = useState<{ key: string | null; values: ComparisonDraft; unsaved: boolean }>({ key: null, values: parseComparisonDraft(null), unsaved: false });
-  const serializedDraft = useSyncExternalStore(subscribeDraft, useCallback(() => {
-    try { return draftKey ? sessionStorage.getItem(draftKey) ?? '' : ''; }
-    catch { return null; }
-  }, [draftKey]), () => '');
-  let draftValues = draft.key === draftKey ? draft.values : parseComparisonDraft(null);
-  const memoryDraft = draft.key === draftKey && draft.unsaved;
-  let draftUnavailable = serializedDraft === null || memoryDraft;
-  if (serializedDraft !== null && !memoryDraft) {
-    try { draftValues = parseComparisonDraft(JSON.parse(serializedDraft || '{}')); }
-    catch { draftUnavailable = true; }
-  }
-  const { product, ourOffer, theirOffer, decision, hypothesis, success } = draftValues;
   const focusStep = useRef<Step | null>(null);
   const ownHeading = useRef<HTMLHeadingElement>(null);
   const rivalHeading = useRef<HTMLHeadingElement>(null);
@@ -119,16 +98,6 @@ export function AdComparison({ datasets, seed, initialOwned, initialPeriod, init
     heading?.focus({ preventScroll: true });
     heading?.scrollIntoView({ block: 'start', behavior: 'instant' });
   }, [step]);
-
-  function updateDraft(field: keyof ComparisonDraft, value: string) {
-    if (!draftKey) return;
-    const values = parseComparisonDraft({ ...draftValues, [field]: value });
-    let unsaved = false;
-    try { sessionStorage.setItem(draftKey, JSON.stringify(values)); }
-    catch { unsaved = true; }
-    setDraft({ key: draftKey, values, unsaved });
-    window.dispatchEvent(new Event(DRAFT_CHANGED));
-  }
 
   useEffect(() => {
     const controller = new AbortController();
@@ -227,29 +196,13 @@ export function AdComparison({ datasets, seed, initialOwned, initialPeriod, init
     const link = `${window.location.origin}/compare/ads?${new URLSearchParams({ account: a.account_id, owned: a.ad_id, dataset: b.dataset_id ?? '', rival: b.ad_archive_id })}`;
     try { await navigator.clipboard.writeText(link); setShared('copied'); } catch { setShared(link); }
   }
-  function download() {
-    if (!a || !b) return;
-    const text = [
-      '# เปรียบเทียบแอด: ' + a.ad_name + ' / ' + (b.page_name ?? b.page_id), 'บันทึกเมื่อ ' + new Date().toISOString(),
-      'แอดเรา: ' + a.account_id + ' / ' + a.ad_id, 'ผลลัพธ์: ' + (period?.date_start ?? '—') + ' — ' + (period?.date_end ?? '—'),
-      'ค่าแอด: ' + number(a.spend) + ' ' + a.currency + '; ROAS (Meta): ' + number(metrics?.roas.value),
-      'คู่แข่ง: ' + b.ad_archive_id + '; dataset: ' + b.dataset_id + '; เก็บเมื่อ: ' + (selectedCollected ?? '—'),
-      'ข้อความเรา: ' + (a.body_text ?? 'ไม่มีข้อมูล'), 'ข้อความคู่แข่ง: ' + (b.body_text ?? 'ไม่มีข้อมูล'),
-      'สินค้าหรือความต้องการ (ทีมระบุ): ' + product, 'ข้อเสนอเรา (ทีมระบุ): ' + ourOffer, 'ข้อเสนอคู่แข่ง (ทีมระบุ): ' + theirOffer,
-      'แนวทางที่เลือก: ' + decision, 'สมมติฐานและเหตุผล: ' + hypothesis, 'เกณฑ์ประเมิน: ' + success,
-      'ยังไม่มีข้อมูลค่าแอด ยอดขาย หรือ ROAS ของคู่แข่ง; บันทึกนี้ไม่เปลี่ยนแอดจริง',
-    ].join('\n\n');
-    const url = URL.createObjectURL(new Blob([text], { type: 'text/markdown;charset=utf-8' }));
-    const link = document.createElement('a'); link.href = url; link.download = 'ad-comparison.md'; link.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  }
 
   return <div className={styles.workspace}>
-    <PageHeader title="พื้นที่เปรียบเทียบแอด" description="ดูภาพ ข้อความ และข้อเสนอของสองฝั่ง แล้วเขียนสิ่งที่จะทดลองกับแอดเรา" actions={<Link data-testid="comparison-return" href={returnHref}>{['/','/market-overview'].includes(new URL(returnHref,'https://pt-glory.invalid').pathname)?'กลับภาพรวม':'กลับคลังที่เลือกแอด'}</Link>} />
+    <PageHeader title="พื้นที่เปรียบเทียบแอด" description="ดูภาพและข้อความของสองฝั่ง แล้วให้ AI สรุปว่าต่างกันตรงไหนและแอดเราควรลองอะไร" actions={<Link data-testid="comparison-return" href={returnHref}>{['/','/market-overview'].includes(new URL(returnHref,'https://pt-glory.invalid').pathname)?'กลับภาพรวม':'กลับคลังที่เลือกแอด'}</Link>} />
     <nav className={styles.steps} aria-label="ขั้นตอนเปรียบเทียบ">
       {(['owned', 'rival', 'review'] as const).map((value, index) => <button type="button" key={value} data-testid={'compare-step-' + value} aria-current={step === value ? 'step' : undefined} disabled={restoring || value === 'review' && (!a || !b)} onClick={() => openStep(value)}>
         <span className={styles.stepNumber}>{index < 2 && (index === 0 ? a : b) ? '✓' : index + 1}</span>
-        <span>{['เลือกแอดเรา', 'เลือกแอดคู่แข่ง', 'สรุปและวางแผน'][index]}</span>
+        <span>{['เลือกแอดเรา', 'เลือกแอดคู่แข่ง', 'เทียบและสรุป'][index]}</span>
       </button>)}
     </nav>
     {restoreError ? <p className={styles.notice} role="alert">{restoreError} <button type="button" onClick={() => setRestoreError('')}>ปิด</button></p> : null}
@@ -267,7 +220,7 @@ export function AdComparison({ datasets, seed, initialOwned, initialPeriod, init
           <div><span className={styles.sideLabel}>แอดคู่แข่ง</span><strong>{b?.page_name ?? 'เลือกแอดที่อยากนำมาเทียบ'}</strong><p>{b?.body_text ?? 'ค้นจากคลังคู่แข่งทั้งหมดได้เลย'}</p><button type="button" disabled={restoring} onClick={() => openStep('rival')}>{b ? 'เปลี่ยนแอดคู่แข่ง' : 'เลือกแอดคู่แข่ง'}</button></div>
         </div>
       </div>
-      {a && b ? <div className={styles.contextActions}><span>คู่แอดที่เลือกและร่างการทดลองยังอยู่</span><button type="button" data-variant="primary" disabled={restoring} onClick={() => openStep('review')}>ดูคู่แอดและเขียนแผนทดลอง →</button></div> : null}
+      {a && b ? <div className={styles.contextActions}><span>คู่แอดที่เลือกยังอยู่</span><button type="button" data-variant="primary" disabled={restoring} onClick={() => openStep('review')}>ดูคู่แอดและสรุป →</button></div> : null}
     </aside> : null}
 
     {step === 'owned' ? <section className={styles.panel} aria-labelledby="compare-own-heading">
@@ -308,15 +261,18 @@ export function AdComparison({ datasets, seed, initialOwned, initialPeriod, init
 
     {step === 'review' && a && b ? <>
       <section className={styles.panel} aria-labelledby="compare-review-heading">
-        <div className={styles.reviewHead}><div><h2 id="compare-review-heading" ref={reviewHeading} tabIndex={-1}>ภาพและข้อความของคู่แอดที่เลือก</h2><p>ดูหลักฐานของสองฝั่ง แล้วระบุสิ่งที่ต้องการนำมาเทียบและทดลอง</p></div><button type="button" onClick={() => { const heading = document.getElementById('compare-plan-heading'); heading?.focus({ preventScroll: true }); heading?.scrollIntoView({ block: 'start' }); }}>ไปเขียนแผนทดลอง ↓</button></div>
-        <label>สิ่งที่ต้องการนำมาเทียบ <span className={styles.manual}>ทีมระบุ</span><input data-testid="compare-product" maxLength={200} value={product} onChange={event => updateDraft('product', event.target.value)} placeholder="เช่น ความต้องการลูกค้า ข้อเสนอ หรือวิธีเล่าเรื่อง แม้เป็นคนละกลุ่มสินค้า" /></label>
+        <div className={styles.reviewHead}><div><h2 id="compare-review-heading" ref={reviewHeading} tabIndex={-1}>เทียบคู่แอดที่เลือก</h2><p>สรุปจาก AI อยู่ก่อน · ภาพและข้อความเต็มของสองฝั่งอยู่ด้านล่าง</p></div>
+          <div className={styles.shareRow}><button type="button" data-testid="compare-copy-link" onClick={() => void copyLink()}>คัดลอกลิงก์ส่งทีม</button>
+            {shared === 'copied' ? <span className={styles.muted} role="status">คัดลอกแล้ว · ทีมเปิดแล้วเห็นคู่แอดเดียวกัน</span> : shared ? <span className={styles.muted}>คัดลอกอัตโนมัติไม่ได้ · คัดลอกเอง: <span className={styles.shareLink}>{shared}</span></span> : null}</div></div>
       </section>
+      {/* Survey: the team glances for ~5 minutes, so the AI verdict comes before the full evidence. */}
+      <AiCompare ads={compareAds} images={images} ourThrough={period?.date_end ?? null}
+        onAdd={kind => { setAdding(kind); openStep(kind === 'own' ? 'owned' : 'rival'); }} onRemove={removeCompare} />
       <div className={styles.columns}>
         <section className={styles.panel} data-testid="compare-owned-evidence">
           <div className={styles.sectionHead}><div><span className={styles.sideLabel}>01 · แอดของเรา</span><h3 className={styles.evidenceTitle}>{ownName(a)}</h3><p>{a.page_name ?? a.account_name}</p></div><button type="button" onClick={() => openStep('owned')}>เปลี่ยนแอด</button></div>
           <div className={styles.evidenceMedia}><OwnedVideoPlayer key={ownId(a)} ad={{...a,video_id:videoIds[ownId(a)]??a.video_id}} url={images[ownId(a)] ?? a.creative_url} /></div>
           <div className={styles.message}><h3>ข้อความในแอด</h3>{a.title ? <p className={styles.copyTitle}>{a.title}</p> : null}<p className={styles.copy} tabIndex={0} aria-label="ข้อความแอดของเราฉบับเต็ม เลื่อนอ่านได้" data-testid="compare-owned-copy">{a.body_text ?? 'ไม่มีข้อความในต้นทาง'}</p></div>
-          <label>ข้อเสนอของเรา <span className={styles.manual}>ทีมระบุ</span><textarea data-testid="compare-our-offer" maxLength={2000} value={ourOffer} onChange={event => updateDraft('ourOffer', event.target.value)} placeholder="เช่น ราคา จำนวนสินค้า ของแถม หรือเงื่อนไขที่เห็นในแอด" /></label>
           <div className={styles.metricsLabel}>ผลลัพธ์แอดของเรา · {period?.date_start ?? '—'} — {period?.date_end ?? '—'}</div>
           <dl className={styles.facts}><div><dt>ค่าแอด ({a.currency})</dt><dd>{number(a.spend)}</dd></div><div><dt>ROAS (Meta)</dt><dd>{number(metrics?.roas.value)}</dd></div><div><dt>บทสนทนา</dt><dd>{number(a.conversations)}</dd></div><div><dt>ต้นทุนต่อบทสนทนา ({a.currency})</dt><dd>{a.spend != null && a.conversations ? number(a.spend / a.conversations) : '—'}</dd></div></dl>
           <p className={styles.source}>{a.account_name} · Ad {a.ad_id} · {a.status ?? 'ไม่ทราบสถานะ'}</p>
@@ -325,23 +281,12 @@ export function AdComparison({ datasets, seed, initialOwned, initialPeriod, init
           <div className={styles.sectionHead}><div><span className={styles.sideLabel}>02 · แอดคู่แข่ง</span><h3 className={styles.evidenceTitle}>{b.page_name ?? b.page_id}</h3><p>{b.is_active === null ? 'ไม่ทราบสถานะ' : b.is_active ? 'พบว่ากำลังใช้งาน' : 'พบว่าไม่ใช้งาน'} · {b.display_format ?? 'ไม่ระบุรูปแบบ'}</p></div><button type="button" onClick={() => openStep('rival')}>เปลี่ยนแอด</button></div>
           <div className={styles.evidenceMedia} data-testid="compare-rival-media"><AdCreative detail={b} /></div>
           <div className={styles.message}><h3>ข้อความในแอด</h3>{b.title ? <p className={styles.copyTitle}>{b.title}</p> : null}<p className={styles.copy} tabIndex={0} aria-label="ข้อความแอดคู่แข่งฉบับเต็ม เลื่อนอ่านได้" data-testid="compare-rival-copy">{b.body_text ?? 'ไม่มีข้อความที่บันทึกไว้'}</p></div>
-          <label>ข้อเสนอคู่แข่ง <span className={styles.manual}>ทีมระบุ</span><textarea data-testid="compare-their-offer" maxLength={2000} value={theirOffer} onChange={event => updateDraft('theirOffer', event.target.value)} placeholder="ระบุเฉพาะข้อเสนอหรือเงื่อนไขที่พบในแอดนี้" /></label>
           <dl className={styles.facts}><div><dt>คำชวนให้ทำต่อ (CTA)</dt><dd>{b.cta_text ?? b.cta_type ?? '—'}</dd></div><div><dt>ช่องทางที่พบ</dt><dd>{b.publisher_platform.join(' · ') || '—'}</dd></div></dl>
           <p className={styles.muted}>ค่าแอด ยอดขาย และ ROAS คู่แข่งยังไม่มีข้อมูล</p>
           <p className={styles.source}>เก็บเมื่อ {selectedCollected ? new Date(selectedCollected).toLocaleString('th-TH') : '—'} · Library ID {b.ad_archive_id}<br />{b.dataset_name ?? selectedDataset?.name ?? 'ไม่ทราบชื่อแหล่งข้อมูล'}</p>
           <Link href={'/pages/' + b.page_id + '?scope=dataset:' + b.dataset_id}>ดูเพจและติดตามคู่แข่ง ↗</Link>
         </section>
       </div>
-      <AiCompare ads={compareAds} images={images} ourThrough={period?.date_end ?? null}
-        onAdd={kind => { setAdding(kind); openStep(kind === 'own' ? 'owned' : 'rival'); }} onRemove={removeCompare}
-        onIdea={text => { updateDraft('hypothesis', hypothesis ? hypothesis + '\n' + text : text); const heading = document.getElementById('compare-plan-heading'); heading?.focus({ preventScroll: true }); heading?.scrollIntoView({ block: 'start' }); }} />
-      <section id="compare-plan" className={styles.panel} data-testid="compare-business">
-        <div className={styles.sectionHead}><div><span className={styles.sideLabel}>03 · แผนทดลองของทีม</span><h2 id="compare-plan-heading" tabIndex={-1}>เราจะทดลองอะไรต่อ?</h2><p>ระบุเหตุผลจากคู่แอดนี้ แล้วกำหนดสิ่งที่จะวัดด้วยข้อมูลของเรา</p></div><span className={styles.draftState} data-testid="compare-draft-status">{draftUnavailable ? 'บันทึกร่างในเบราว์เซอร์ไม่ได้ · ดาวน์โหลดแผนเก็บไว้ได้' : 'เก็บร่างอัตโนมัติในเบราว์เซอร์นี้ · แยกตามคู่แอด'}</span></div>
-        <label>สิ่งที่จะทำกับแอดเรา<select data-testid="compare-decision" value={decision} onChange={event => updateDraft('decision', event.target.value)}><option value="">เลือกแนวทางที่ทีมต้องการทดลอง</option>{COMPARISON_DECISIONS.map(value => <option key={value}>{value}</option>)}</select></label>
-        <label>เหตุผลหรือสมมติฐานที่จะทดสอบ<textarea data-testid="compare-hypothesis" maxLength={4000} value={hypothesis} onChange={event => updateDraft('hypothesis', event.target.value)} placeholder="เช่น คู่แข่งเล่าปัญหาลูกค้าชัดกว่า จึงทดลองข้อความเปิดใหม่ โดยคงข้อเสนอและกลุ่มเป้าหมายเดิม" /></label>
-        <label>วัดผลด้วยอะไรและเมื่อไร<textarea data-testid="compare-success" maxLength={1000} value={success} onChange={event => updateDraft('success', event.target.value)} placeholder="เช่น เปรียบเทียบต้นทุนต่อบทสนทนาและ ROAS ของเรา หลังทดลอง 7 วัน" /></label>
-        <div className={styles.saveRow}><button type="button" data-variant="primary" data-testid="compare-download" onClick={download}>ดาวน์โหลดแผนทดลอง</button><button type="button" data-testid="compare-copy-link" onClick={() => void copyLink()}>คัดลอกลิงก์ส่งทีม</button><p className={styles.muted}>{shared === 'copied' ? 'คัดลอกลิงก์แล้ว · ทีมเปิดแล้วเห็นคู่แอดเดียวกัน แต่ร่างแผนไม่ติดไปด้วย ให้แนบไฟล์แผนที่ดาวน์โหลด' : shared ? <>คัดลอกอัตโนมัติไม่ได้ · คัดลอกลิงก์นี้เอง: <span className={styles.shareLink}>{shared}</span></> : 'ส่งให้ทีมพิจารณาต่อได้ · บันทึกนี้ไม่เปลี่ยนแอดหรืองบจริง'}</p></div>
-      </section>
     </> : null}
   </div>;
 }
