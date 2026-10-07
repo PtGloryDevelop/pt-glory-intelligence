@@ -148,7 +148,7 @@ try {
       await expect(page.getByTestId('performance-period')).toHaveValue(filters.period);
       await expect(page.getByTestId('performance-search')).toHaveValue(filters.q);
       await expect(page.getByTestId('performance-rankings').locator('button[aria-pressed="true"]')).toHaveCount(1);
-      if (unit) await expect(page.getByTestId('performance-unit')).toHaveValue(unit);
+      if (unit) await expect(page.getByTestId(`unit-rail-${unit}`)).toHaveAttribute('aria-pressed', 'true');
       if (pageId) await expect(page.getByTestId('performance-page')).toHaveValue(pageId);
       if (status) await expect(page.getByTestId('performance-status')).toHaveValue(status);
       await expect(page.getByTestId(`performance-ad-${seed.ad_id}`)).toBeVisible({ timeout: 60000 });

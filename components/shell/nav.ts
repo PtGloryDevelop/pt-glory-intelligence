@@ -9,6 +9,7 @@ export const NAV: NavSection[] = [
   { heading: "พื้นที่ทำงาน", items: [
     { label: "ภาพรวม", icon: "home", href: "/market-overview" },
     { label: "แอดของเรา", icon: "grid", href: "/owned-ads/performance", minRole: "analyst" },
+    { label: "Command Center", icon: "target", href: "/command-center", minRole: "analyst" },
     { label: "คู่แข่ง", icon: "search", href: "/competitors" },
     { label: "เทียบกับคู่แข่ง", icon: "compare", href: "/compare/ads", minRole: "analyst" },
   ] },

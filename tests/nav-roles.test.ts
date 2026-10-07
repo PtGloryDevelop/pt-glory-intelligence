@@ -141,3 +141,10 @@ test("no normal surface offers a choice of collector", () => {
   // The label a person reads says recovery, not collection.
   assert.match(nav, /นำเข้าไฟล์ \(กู้คืนระบบ\)/);
 });
+
+test('Command Center is an analyst page next to the ad library', () => {
+  assert.equal(itemFor('viewer','Command Center'),undefined);
+  for(const role of ['analyst','admin'] as const)assert.equal(itemFor(role,'Command Center')?.href,'/command-center');
+  const work=visibleNav('analyst')[0].items.map(item=>item.label);
+  assert.equal(work.indexOf('Command Center'),work.indexOf('แอดของเรา')+1);
+});

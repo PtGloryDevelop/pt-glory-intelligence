@@ -64,7 +64,7 @@ const DENIALS =
 
 // Owned reports have an independent, authorized performance source. Keep this
 // exception bounded to those routes; the Ad Library contract is unchanged.
-const OWNED_SURFACES = [join("app", "(app)", "owned-ads") + "/", join("app", "api", "owned-ads") + "/",join('app','(app)','owned-performance.tsx'),join('app','(app)','compare','ads')+'/',join('app','(app)','dashboard.tsx'),join('app','api','dashboard')+'/']
+const OWNED_SURFACES = [join("app", "(app)", "owned-ads") + "/", join("app", "api", "owned-ads") + "/",join('app','(app)','owned-performance.tsx'),join('app','(app)','compare','ads')+'/',join('app','(app)','dashboard.tsx'),join('app','api','dashboard')+'/',join('app','(app)','command-center')+'/']
   .map((path) => path.replaceAll("\\", "/"));
 
 test("public competitor surfaces never claim unavailable performance metrics", () => {

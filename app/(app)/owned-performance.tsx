@@ -13,7 +13,11 @@ import { ownedPageChoices } from "@/lib/owned-ads/page-names";
 import { AdStatus, Creative } from "./owned-ads/owned-client";
 import { OwnedVideoPlayer } from "./owned-ads/owned-video-player";
 import { CompanyDetail } from "./owned-ads/company-library";
-import { UnitSummary } from "./owned-ads/unit-summary";
+import { UnitRail } from "./owned-ads/unit-rail";
+import { useJson } from "./owned-ads/use-json";
+import { railOrder, type CommandCenterData } from "@/lib/owned-ads/command-center";
+import type { UnitSummary as UnitSummaryData } from "@/lib/owned-ads/unit-summary";
+import type { CompanyAd } from "@/lib/owned-ads/source-rows";
 import { AdImage } from "@/components/AdImage";
 import { MIN_CHATS, adFlags } from "@/lib/dashboard/updates";
 import styles from "./owned-performance.module.css";
@@ -47,7 +51,7 @@ export function OwnedPerformance({ home = "overview" }: { home?: HomeChoice }) {
   const [problem, setProblem] = useState<{ query: string; message: string } | null>(null);
   const [refresh, setRefresh] = useState(0);
   const [currency, setCurrency] = useState("THB");
-  const [selected, setSelected] = useState<OwnedPerformanceRow | null>(null);
+  const [selected, setSelected] = useState<CompanyAd | null>(null);
   // One card plays at a time; Meta gives our videos only as its preview iframe, so autoplay is not possible.
   const [playing, setPlaying] = useState<string | null>(null);
   const [media, setMedia] = useState<Record<string, string | null>>({});
@@ -150,14 +154,13 @@ export function OwnedPerformance({ home = "overview" }: { home?: HomeChoice }) {
   const coverage = data?.coverage;
 
   const unitQuery = new URLSearchParams(["period", "from", "to"].flatMap(key => params.get(key) ? [[key, params.get(key)!]] : [])).toString();
+  const centerQuery = new URLSearchParams(["period", "from", "to", "pageId", "unit"].flatMap(key => params.get(key) ? [[key, params.get(key)!]] : [])).toString();
+  const unitData = useJson<UnitSummaryData>(`/api/owned-ads/units?${unitQuery}`);
+  const center = useJson<CommandCenterData>(`/api/owned-ads/command-center?${centerQuery}`);
+  const rail = railOrder(unitData.data?.units.map(row => ({ id: row.id, name: row.name, ads: row.current?.ad_count ?? null })) ?? [], center.data?.falling_counts ?? []);
+  const fallingTotal = center.data ? center.data.falling_counts.reduce((sum, row) => sum + row.count, 0) : null;
   return <div className={styles.page} data-testid="owned-performance" data-stale={stale || undefined} aria-busy={stale || undefined}>
-    <PageHeader title="แอดของเรา" description="สรุปรายยูนิต แล้วจัดอันดับแอดในช่วงเดียวกัน เพื่อเลือกแอดที่ต้องตรวจหรือเทียบกับคู่แข่ง" actions={<div className={styles.actions}><HomeChoiceButton target="library" current={home} /><button type="button" onClick={() => { setResult(null); setProblem(null); setRefresh(value => value + 1); }} disabled={loading} data-testid="performance-refresh">รีเฟรชข้อมูล</button></div>} />
-    <div className={styles.source}><span>Ads Management{coverage ? ` · มีข้อมูล ${date(coverage.from)} — ${date(coverage.to)}` : " · กำลังตรวจช่วงข้อมูล"}</span><Link href="/owned-ads">อัปเดตข้อมูลจากเว็บเดิม</Link></div>
-
-    {data ? <div className={styles.periodLine} data-testid="performance-period-line"><span>ผลลัพธ์ {date(data.period.from)} — {date(data.period.to)} · ตัวเลขสรุปจากแอดทั้งหมดที่ตรงตัวกรอง</span>{data.summary.length > 1 ? <label>สกุลเงินสรุป<select aria-label="สกุลเงินสรุป" value={group?.currency ?? ""} onChange={event => setCurrency(event.target.value)}>{data.summary.map(item => <option key={item.currency} value={item.currency}>{item.currency}</option>)}</select></label> : null}</div> : null}
-    {data ? <div className={styles.kpis}><KPIRow testId="performance-kpis"><KPIStat label="ยอดขาย (Meta)" value={<><span className={styles.figure}>{number(group?.purchase_value)}</span>{group?.purchase_value != null ? <small className={styles.currency}>{group.currency}</small> : null}</>} helper="มูลค่าซื้อที่ Meta รายงาน" testId="performance-sales" /><KPIStat label="ทัก" value={<span className={styles.figure}>{number(group?.conversations)}</span>} helper="บทสนทนาที่เริ่มต้นจากแอด" testId="performance-conversations" /><KPIStat label="ROAS (Meta)" value={<span className={styles.figure}>{number(group?.roas)}</span>} helper={`ค่าแอด ${money(group?.spend)}`} testId="performance-roas" /><KPIStat label="%ปิด (Meta)" value={<span className={styles.figure}>{percent(group ? closeRate(group, MIN_CHATS) : null)}</span>} helper="ออเดอร์ที่ Meta รายงาน ÷ ทัก" testId="performance-close" /></KPIRow></div> : null}
-    <UnitSummary query={unitQuery} activeUnit={params.get("unit") ?? ""} onPick={unit => change({ unit, pageId: "" })} />
-
+    <section className={styles.hero}><PageHeader title="คลังโฆษณาของเรา" description={data ? `${number(data.total)} แอดที่มีค่าแอด · ${date(data.period.from)} — ${date(data.period.to)}` : "กำลังเปิดคลังโฆษณา…"} actions={<div className={styles.actions}><HomeChoiceButton target="library" current={home} /><button type="button" onClick={() => { setResult(null); setProblem(null); setRefresh(value => value + 1); }} disabled={loading} data-testid="performance-refresh">รีเฟรชข้อมูล</button></div>} />
     <form className={styles.filters} onSubmit={submit} data-testid="performance-filters">
       <div className={styles.searchRow}><label htmlFor="performance-search">ค้นหาสื่อโฆษณา<input key={params.get("q") ?? ""} id="performance-search" name="q" type="search" maxLength={160} defaultValue={params.get("q") ?? ""} placeholder="ชื่อแอด ชื่อ VDO แคปชัน หรือคำค้น" data-testid="performance-search" /></label><button type="submit" data-variant="primary">ค้นหา</button></div>
       <div className={styles.controls}>
@@ -165,7 +168,6 @@ export function OwnedPerformance({ home = "overview" }: { home?: HomeChoice }) {
           const custom = data?.period ?? ownedPerformancePeriod(parseOwnedPerformanceQuery(new URLSearchParams()), null);
           change({ period: event.target.value, from: event.target.value === "custom" ? custom.from : "", to: event.target.value === "custom" ? custom.to : "" });
         }}>{PERIODS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-        <label>ยูนิต<select data-testid="performance-unit" value={params.get("unit") ?? ""} onChange={event => change({ unit: event.target.value, pageId: "" })}><option value="">ทุกยูนิต</option>{choices?.units.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
         <label>เพจ<select data-testid="performance-page" value={params.get("pageId") ?? ""} onChange={event => change({ pageId: event.target.value })}><option value="">ทุกเพจ</option>{pageChoices.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
         <label>สถานะล่าสุด<select data-testid="performance-status" value={params.get("status") ?? ""} onChange={event => change({ status: event.target.value })}><option value="">ทุกสถานะ</option>{OWNED_PERFORMANCE_STATUSES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
       </div>
@@ -174,7 +176,20 @@ export function OwnedPerformance({ home = "overview" }: { home?: HomeChoice }) {
       {unnamedPages ? <div className={styles.pageNames}><p className={styles.note} data-testid="performance-page-names">{number(unnamedPages)} เพจยังไม่มีชื่อจากต้นทาง · หลังจัดสิทธิ์เพจแล้ว กดอัปเดตชื่อได้ที่นี่{params.get("pageId") ? <> · <a href={`https://www.facebook.com/${params.get("pageId")}`} target="_blank" rel="noopener noreferrer">เปิดเพจที่เลือก ↗</a></> : null}</p><button type="button" onClick={refreshPageNames} disabled={namesLoading} data-testid="performance-refresh-names">{namesLoading ? "กำลังอ่านชื่อเพจ…" : "อัปเดตชื่อเพจ"}</button></div> : null}
       {namesMessage ? <p className={styles.note} role="status">{namesMessage}</p> : null}
     </form>
+    </section>
+    <div className={styles.source}><span>Ads Management{coverage ? ` · มีข้อมูล ${date(coverage.from)} — ${date(coverage.to)}` : " · กำลังตรวจช่วงข้อมูล"}</span><Link href="/owned-ads">อัปเดตข้อมูลจากเว็บเดิม</Link></div>
 
+    {data ? <div className={styles.periodLine} data-testid="performance-period-line"><span>ผลลัพธ์ {date(data.period.from)} — {date(data.period.to)} · ตัวเลขสรุปจากแอดทั้งหมดที่ตรงตัวกรอง</span>{data.summary.length > 1 ? <label>สกุลเงินสรุป<select aria-label="สกุลเงินสรุป" value={group?.currency ?? ""} onChange={event => setCurrency(event.target.value)}>{data.summary.map(item => <option key={item.currency} value={item.currency}>{item.currency}</option>)}</select></label> : null}</div> : null}
+    {data ? <div className={styles.kpis}><KPIRow testId="performance-kpis"><KPIStat label="ยอดขาย (Meta)" value={<><span className={styles.figure}>{number(group?.purchase_value)}</span>{group?.purchase_value != null ? <small className={styles.currency}>{group.currency}</small> : null}</>} helper="มูลค่าซื้อที่ Meta รายงาน" testId="performance-sales" /><KPIStat label="ทัก" value={<span className={styles.figure}>{number(group?.conversations)}</span>} helper="บทสนทนาที่เริ่มต้นจากแอด" testId="performance-conversations" /><KPIStat label="ROAS (Meta)" value={<span className={styles.figure}>{number(group?.roas)}</span>} helper={`ค่าแอด ${money(group?.spend)}`} testId="performance-roas" /><KPIStat label="%ปิด (Meta)" value={<span className={styles.figure}>{percent(group ? closeRate(group, MIN_CHATS) : null)}</span>} helper="ออเดอร์ที่ Meta รายงาน ÷ ทัก" testId="performance-close" /></KPIRow></div> : null}
+    {center.data?.falling.length ? <section className={styles.falling} aria-labelledby="falling-heading" data-testid="falling-strip">
+      <div className={styles.fallingHead}><h2 id="falling-heading">⚠ สื่อที่เริ่มตก · {number(center.data.falling_total)} แอด</h2><Link href={`/command-center${params.get("unit") ? `?unit=${params.get("unit")}` : ""}`}>ดูใน Command Center →</Link></div>
+      <div className={styles.fallingRow}>{center.data.falling.slice(0, 4).map(ad => <button type="button" key={adKey(ad)} className={styles.fallingAd} onClick={() => setSelected(ad)}>
+        <span className={styles.fallingThumb}>{ad.creative_url ? <AdImage src={ad.creative_url} alt="" sizes="52px" referrerPolicy="no-referrer" /> : null}</span>
+        <span><b>{ad.ad_name}</b><small>{ad.unit_names[0] ?? "ยังไม่ผูกยูนิต"} · งบ {number(ad.recent_spend)}</small><span className={styles.drop}>ROAS {number(ad.previous_roas)} → {number(ad.recent_roas)}</span></span>
+      </button>)}</div>
+    </section> : null}
+
+    <div className={styles.body}><UnitRail units={rail} unassigned={unitData.data?.unassigned.totals?.ad_count ?? null} fallingTotal={fallingTotal} active={params.get("unit") ?? ""} onPick={unit => change({ unit, pageId: "" })} /><div className={styles.results}>
     {error ? <div className={styles.notice} role="alert">{error} <button type="button" onClick={() => { setProblem(null); setRefresh(value => value + 1); }}>ลองอีกครั้ง</button></div> : null}
     {loading && !data ? <p className={styles.notice} role="status">กำลังเปิดสื่อและสรุปผลลัพธ์…</p> : null}
     {data ? <>
@@ -221,6 +236,7 @@ export function OwnedPerformance({ home = "overview" }: { home?: HomeChoice }) {
       <section className={styles.summary} aria-labelledby="performance-summary-title"><div><span className={styles.eyebrow}>สรุปจากข้อมูลจริง</span><h2 id="performance-summary-title">ข้อมูลพร้อมใช้วางแผน</h2></div><div className={styles.findings}><p><strong>{number(group?.ad_count)} แอด · {group?.currency ?? "—"}</strong><br />ตรงกับยูนิต เพจ คำค้น และช่วงวันที่ที่เลือก</p><p><strong>ค่าแอดต่อทัก {money(group?.cost_per_conversation)}</strong><br />ค่าแอดรวม ÷ จำนวนบทสนทนา · ใช้ดูอันดับค่าทักเพื่อเลือกสื่อตรวจต่อ</p><p><strong>Hook rate {group?.hook_rate == null ? "—" : `${number(group.hook_rate * 100)}%`}</strong><br />เปรียบเทียบการดึงความสนใจของวิดีโอในช่วงเดียวกัน</p></div><p className={styles.note}>%ปิด (Meta) ใช้ออเดอร์ที่ Meta รายงาน ไม่ใช่ยอดปิดจริงจากระบบขาย · ยังสรุปกำไรจริงไม่ได้ · การวิเคราะห์ AI ยังไม่เปิดใช้งาน</p><div className={styles.summaryLinks}><Link href={`/command-center?${new URLSearchParams({ ...Object.fromEntries(params), sort: "cost_per_conversation", dir: "", page: "0" })}`}>ตรวจแอดค่าทักถูก →</Link><Link href="/competitors">ดูสื่อคู่แข่งเพื่อเทียบแนวทาง →</Link></div></section>
       <details className={styles.basis}><summary>แหล่งข้อมูลและวิธีอ่านตัวเลข</summary><p>ยอดขายและ ROAS เป็นการระบุที่มาจาก Meta · ไม่ใช่ยอดขายยืนยันจากระบบขายของทีม</p><p>%ปิด (Meta) = ออเดอร์ที่ Meta รายงาน ÷ จำนวนทัก · แสดงเมื่อทักตั้งแต่ {MIN_CHATS} ครั้ง · อาจไม่ตรงยอดปิดจริงของทีมแชท</p><p>Hook rate = ยอดดูวิดีโอที่ต้นทางรายงาน ÷ Impressions · ข้อมูลไม่ครบแสดง “—”</p><p>“วันที่มีค่าแอด” นับวันที่มีค่าแอดจริงภายในช่วงที่เลือก · “วันที่เผยแพร่” คือวันแรกที่มีค่าแอดในข้อมูลที่ระบบนำเข้ามา จึงอาจเริ่มยิงก่อนหน้านั้น · สถานะเป็นสถานะล่าสุดจากเว็บเดิม</p><p>ตัวเลขที่ข้อมูลไม่ครบหรือหารไม่ได้แสดง “—” · ไม่รวมยอดต่างสกุลเงินเป็นตัวเลขเดียว</p></details>
     </> : null}
+    </div></div>
     {selected ? <CompanyDetail ad={selected} creativeUrl={media[adKey(selected)] ?? selected.creative_url} mediaLoading={!Object.hasOwn(media, adKey(selected))} period={data ? { date_start: data.period.from, date_end: data.period.to } : null} returnTo={returnTo} onClose={() => setSelected(null)} /> : null}
   </div>;
 }
