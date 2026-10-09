@@ -8,6 +8,7 @@ import type { CollectionDto } from "@/lib/collect/dto";
 import { ErrorState } from "@/components/states/ErrorState";
 import { thaiDateTime } from "@/lib/format/date";
 import { parseAdLibraryUrl } from "@/lib/collect/url";
+import { MAX_CATEGORY_NAME } from "@/lib/categories/name";
 import styles from "./collect.module.css";
 import { UsageBars } from "@/components/UsageBars";
 
@@ -26,6 +27,9 @@ import { UsageBars } from "@/components/UsageBars";
 type Category = { id: string; name: string };
 
 const FALLBACK_ERROR = "ไม่สามารถเริ่มเก็บข้อมูลได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง";
+// A select value no category id can take (ids are UUIDs).
+const NEW_CATEGORY = "__new__";
+const sameName = (a: string, b: string) => a.trim().replace(/\s+/g, " ").toLowerCase() === b.trim().replace(/\s+/g, " ").toLowerCase();
 
 export function CollectClient(
   { requestKey, categories, settings, recent }:
@@ -42,6 +46,12 @@ export function CollectClient(
   const [activeStatus, setActiveStatus] = useState<"active" | "all">("active");
   const [maxRecords, setMaxRecords] = useState(String(Math.min(300, settings.maxRecordsPerRun ?? 300)));
   const [categoryId, setCategoryId] = useState("");
+  const [categoryList, setCategoryList] = useState(categories);
+  // With no categories yet there is nothing to pick, so the name box is already open.
+  const [creatingCategory, setCreatingCategory] = useState(categories.length === 0);
+  const [newCategory, setNewCategory] = useState("");
+  const [categoryBusy, setCategoryBusy] = useState(false);
+  const [categoryNote, setCategoryNote] = useState<string | null>(null);
   const [datasetName, setDatasetName] = useState("");
   const [touchedName, setTouchedName] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -60,6 +70,53 @@ export function CollectClient(
     setLinkNote(`ดึงจากลิงก์ Ads Library แล้ว · ${search.query.startsWith('"') ? "ค้นตรงวลี" : "ค้นคำสำคัญ"} · ${search.activeStatus === "all" ? "ทุกสถานะ" : "กำลังแสดง"}`
       + (known ? "" : ` · ประเทศ ${search.country} ยังไม่เปิดให้เก็บ จึงใช้ ${countryLabel(country)}`));
     return true;
+  }
+
+  /**
+   * Creating a category used to mean leaving this form for the categories page
+   * and coming back. Now it happens in place: the existing endpoint creates it
+   * (same analyst rule as this page), it joins the list and is selected.
+   */
+  function openNewCategory() {
+    setCreatingCategory(true);
+    setCategoryNote(null);
+    if (newCategory.trim() === "") setNewCategory(keyword.replace(/["“”]/g, "").trim());
+  }
+
+  async function createCategory() {
+    const name = newCategory.trim();
+    if (name === "" || categoryBusy) return;
+    // Typing a name that already exists picks it rather than failing on the duplicate.
+    const existing = categoryList.find((category) => sameName(category.name, name));
+    if (existing) {
+      setCategoryId(existing.id);
+      setCreatingCategory(false);
+      setCategoryNote(`มีหมวดหมู่ “${existing.name}” อยู่แล้ว · เลือกให้แล้ว`);
+      return;
+    }
+    setCategoryBusy(true);
+    setCategoryNote(null);
+    try {
+      const response = await fetch("/api/categories", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      const payload = await response.json().catch(() => null);
+      if (response.ok && typeof payload?.id === "string") {
+        setCategoryList((list) => [...list, { id: payload.id, name }].sort((a, b) => a.name.localeCompare(b.name, "th")));
+        setCategoryId(payload.id);
+        setCreatingCategory(false);
+        setNewCategory("");
+        setCategoryNote(`สร้างหมวดหมู่ “${name}” แล้ว · เลือกให้แล้ว`);
+        return;
+      }
+      setCategoryNote(typeof payload?.error === "string" ? payload.error : "สร้างหมวดหมู่ไม่สำเร็จ กรุณาลองใหม่");
+    } catch {
+      setCategoryNote("สร้างหมวดหมู่ไม่สำเร็จ กรุณาลองใหม่");
+    } finally {
+      setCategoryBusy(false);
+    }
   }
 
   // The suggestion follows what has been typed until somebody edits it, and
@@ -186,16 +243,43 @@ export function CollectClient(
         <div className={styles.field}>
           <label htmlFor="category">หมวดหมู่</label>
           <select
-            id="category" data-testid="category-select" value={categoryId}
-            onChange={(event) => setCategoryId(event.target.value)}
+            id="category" data-testid="category-select" value={creatingCategory ? NEW_CATEGORY : categoryId}
+            onChange={(event) => {
+              if (event.target.value === NEW_CATEGORY) { setCategoryId(""); openNewCategory(); return; }
+              setCreatingCategory(false);
+              setCategoryNote(null);
+              setCategoryId(event.target.value);
+            }}
           >
             {/* No default: which research this belongs to is a decision, and a
                 pre-selected category would make it for somebody. */}
             <option value="">— เลือกหมวดหมู่ —</option>
-            {categories.map((category) => (
+            {categoryList.map((category) => (
               <option key={category.id} value={category.id}>{category.name}</option>
             ))}
+            <option value={NEW_CATEGORY}>+ สร้างหมวดหมู่ใหม่</option>
           </select>
+          {creatingCategory && (
+            // Not a nested <form>: Enter here creates the category instead of submitting the collection.
+            <div className={styles.inlineCreate}>
+              <input
+                aria-label="ชื่อหมวดหมู่ใหม่" data-testid="category-new-name" value={newCategory}
+                maxLength={MAX_CATEGORY_NAME} placeholder="ชื่อหมวดหมู่ใหม่ เช่น วิตามินผิว" autoFocus={categoryList.length > 0}
+                onChange={(event) => setNewCategory(event.target.value)}
+                onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); void createCategory(); } }}
+              />
+              <button
+                type="button" className={styles.inlineCreateButton} data-testid="category-new-submit"
+                disabled={categoryBusy || newCategory.trim() === ""} onClick={() => void createCategory()}
+              >
+                {categoryBusy ? "กำลังสร้าง…" : "สร้างและเลือก"}
+              </button>
+              {categoryList.length > 0 && (
+                <button type="button" onClick={() => { setCreatingCategory(false); setCategoryNote(null); }}>ยกเลิก</button>
+              )}
+            </div>
+          )}
+          {categoryNote && <span className={styles.hint} role="status" data-testid="category-note">{categoryNote}</span>}
         </div>
 
         <div className={styles.field}>
