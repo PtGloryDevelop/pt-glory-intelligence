@@ -9,6 +9,7 @@ import { ErrorState } from "@/components/states/ErrorState";
 import { thaiDateTime } from "@/lib/format/date";
 import { parseAdLibraryUrl } from "@/lib/collect/url";
 import { MAX_CATEGORY_NAME } from "@/lib/categories/name";
+import { CollectProgress } from "./[id]/progress-client";
 import styles from "./collect.module.css";
 import { UsageBars } from "@/components/UsageBars";
 
@@ -34,25 +35,37 @@ type Category = { id: string; name: string };
 const FALLBACK_ERROR = "ไม่สามารถเริ่มเก็บข้อมูลได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง";
 const normalName = (value: string) => value.trim().replace(/\s+/g, " ").toLowerCase();
 
+/**
+ * `page` is the collect screen itself. `panel` is the same form opened beside
+ * another screen (the competitor board), prefilled from where it was opened;
+ * both show the progress and the first ads in place of the form once it starts.
+ */
 export function CollectClient(
-  { requestKey, categories, settings, recent }:
+  { requestKey, categories, settings, recent, mode = "page", initialKeyword = "", initialCategory, keywordChoices = [], onFinished }:
   {
     requestKey: string;
     categories: Category[];
     settings: CollectorFormSettings;
     recent: CollectionDto[];
+    mode?: "page" | "panel";
+    initialKeyword?: string;
+    initialCategory?: string;
+    keywordChoices?: string[];
+    onFinished?: (collection: CollectionDto) => void;
   },
 ) {
   const router = useRouter();
   // The category of this person's latest run, shown as such: most runs extend
   // the research done last time, and it stays a visible, editable choice.
   const lastUsed = categories.find((category) => category.id === recent[0]?.categoryId) ?? null;
-  const [keyword, setKeyword] = useState("");
+  const [started, setStarted] = useState<{ key: string; collection: CollectionDto } | null>(null);
+  const [restarting, setRestarting] = useState(false);
+  const [keyword, setKeyword] = useState(initialKeyword);
   const [country, setCountry] = useState(settings.countries[0] ?? "");
   const [activeStatus, setActiveStatus] = useState<"active" | "all">("active");
   const [maxRecords, setMaxRecords] = useState(String(Math.min(300, settings.maxRecordsPerRun ?? 300)));
   const [categoryList, setCategoryList] = useState(categories);
-  const [categoryName, setCategoryName] = useState(lastUsed?.name ?? "");
+  const [categoryName, setCategoryName] = useState(initialCategory ?? lastUsed?.name ?? "");
   const [datasetName, setDatasetName] = useState("");
   const [touchedName, setTouchedName] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
@@ -150,8 +163,11 @@ export function CollectClient(
 
       if (response.ok && payload?.id) {
         // 201 for a new request, 200 for the one this key already made. Both
-        // land on the same progress view.
-        router.push(`/collect/${payload.id}`);
+        // show the same progress, here, in place of the form.
+        setStarted({ key: requestKey, collection: payload as CollectionDto });
+        setRestarting(false);
+        // The collection's own address, so a refresh still shows it; nothing is reloaded.
+        if (mode === "page") window.history.replaceState(null, "", `/collect/${payload.id}`);
         return;
       }
       setProblem(typeof payload?.message === "string" ? payload.message : FALLBACK_ERROR);
@@ -172,10 +188,47 @@ export function CollectClient(
     );
   }
 
-  return (
-    <div className={styles.layout}>
+  // The next round needs a fresh key from the server: the page reloads its own
+  // address; the panel asks its host page to render again, keeping what was typed.
+  function restart() {
+    setRestarting(true);
+    if (mode === "page") router.push("/collect");
+    else router.refresh();
+  }
+
+  const aside = mode === "page" ? (
+    <aside className={styles.recent} data-testid="recent-collections">
+      <h2 className={styles.recentTitle}>รอบเก็บข้อมูลล่าสุดของคุณ</h2>
+      {recent.length === 0 ? (
+        <p className={styles.hint}>ยังไม่เคยเก็บข้อมูล</p>
+      ) : (
+        <ul className={styles.recentList}>
+          {recent.map((item) => (
+            <li key={item.id}>
+              <Link href={`/collect/${item.id}`} data-testid={`recent-${item.id}`}>
+                <span className={styles.recentName}>{item.datasetName ?? item.keyword}</span>
+                <span className={styles.recentMeta}>
+                  {item.statusLabel} · {thaiDateTime(item.createdAt)}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </aside>
+  ) : null;
+
+  // Until the server hands over a new key, the finished round stays on screen.
+  if (started && started.key === requestKey) {
+    const body = restarting
+      ? <p className={styles.hint} role="status">กำลังเตรียมรอบใหม่…</p>
+      : <CollectProgress initial={started.collection} onRestart={restart} onSettled={onFinished} />;
+    return mode === "page" ? <div className={styles.layout}><div>{body}</div>{aside}</div> : body;
+  }
+
+  const form = (
       <form className={styles.form} onSubmit={submit} data-testid="collect-form">
-        <UsageBars show={["collect"]} />
+        {mode === "page" && <UsageBars show={["collect"]} />}
         <div className={styles.field}>
           <label htmlFor="keyword">คำค้น</label>
           <input
@@ -185,6 +238,18 @@ export function CollectClient(
             placeholder="เช่น วิตามินซี หรือวางลิงก์จาก Ads Library"
             aria-describedby="keyword-hint"
           />
+          {keywordChoices.length > 0 && (
+            <div className={styles.choices} role="group" aria-label="คำค้นของยูนิตนี้">
+              {keywordChoices.map((choice) => (
+                <button
+                  type="button" key={choice} aria-pressed={keyword === choice}
+                  onClick={() => { setKeyword(choice); setLinkNote(null); }}
+                >
+                  {choice}
+                </button>
+              ))}
+            </div>
+          )}
           <span id="keyword-hint" className={styles.hint} role="status">
             {linkNote ?? <>ใส่ในเครื่องหมายคำพูด เช่น <code>&quot;natto prime&quot;</code> เพื่อค้นตรงวลี · หรือวางลิงก์ค้นหาจาก Ads Library ระบบจะเติมคำค้น ประเทศ และสถานะให้</>}
           </span>
@@ -279,26 +344,7 @@ export function CollectClient(
           {submitting ? "กำลังส่งคำขอ…" : "ค้นและเก็บแอด →"}
         </button>
       </form>
-
-      <aside className={styles.recent} data-testid="recent-collections">
-        <h2 className={styles.recentTitle}>รอบเก็บข้อมูลล่าสุดของคุณ</h2>
-        {recent.length === 0 ? (
-          <p className={styles.hint}>ยังไม่เคยเก็บข้อมูล</p>
-        ) : (
-          <ul className={styles.recentList}>
-            {recent.map((item) => (
-              <li key={item.id}>
-                <Link href={`/collect/${item.id}`} data-testid={`recent-${item.id}`}>
-                  <span className={styles.recentName}>{item.datasetName ?? item.keyword}</span>
-                  <span className={styles.recentMeta}>
-                    {item.statusLabel} · {thaiDateTime(item.createdAt)}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </aside>
-    </div>
   );
+
+  return mode === "page" ? <div className={styles.layout}>{form}{aside}</div> : form;
 }

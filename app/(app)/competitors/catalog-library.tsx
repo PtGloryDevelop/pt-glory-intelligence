@@ -6,6 +6,7 @@ import {AdCard} from '@/components/AdCard';
 import {AdDrawer} from '@/components/AdDrawer';
 import type {CatalogAdRow} from '@/lib/read/catalog';
 import {activeFilter,filterValue,pageOffset} from '@/lib/read/request';
+import {useCollectLauncher} from '../collect/collect-launcher';
 import styles from './competitors.module.css';
 
 // ponytail: groups repeats within the 24 rows on screen (same page + same copy); a library-wide grouped query is the upgrade if repeats span pages.
@@ -21,6 +22,8 @@ export function CatalogLibrary({canAnalyze}:{canAnalyze:boolean}){
  const active=status.ok?status.value??'':'',offset=pageOffset(navigation.get('offset'));
  const [result,setResult]=useState<{key:string;rows:CatalogAdRow[];total:number;lastCollectedAt:string|null}|null>(null);
  const [error,setError]=useState(''),[refresh,setRefresh]=useState(0),[selected,setSelected]=useState<CatalogAdRow|null>(null);
+ // Ads collected from the side panel show up here without a reload.
+ const collected=useCollectLauncher()?.version??0;
  const params=new URLSearchParams({search:query,limit:'24',offset:String(offset)});
  if(period)params.set('period',period);if(active)params.set('active',active);
  const request=params.toString(),loading=result?.key!==request;
@@ -46,7 +49,7 @@ export function CatalogLibrary({canAnalyze}:{canAnalyze:boolean}){
    if(!controller.signal.aborted){setResult({key:request,...body});setError('');}
   }).catch(problem=>{if(!controller.signal.aborted)setError(problem.message);});
   return ()=>controller.abort();
- },[request,refresh,query,period,active,offset]);
+ },[request,refresh,collected,query,period,active,offset]);
  return <section className={styles.catalog}>
   <form className={styles.searchBar} onSubmit={event=>{event.preventDefault();browse({search:String(new FormData(event.currentTarget).get('search')??'').trim(),offset:''});}}>
    <label>ค้นหาในคลังคู่แข่ง<input key={query} name="search" type="search" data-testid="catalog-search" maxLength={160} placeholder="ชื่อสินค้า ข้อเสนอ ข้อความ หรือเพจ…" defaultValue={query}/></label><button type="submit">ค้นหาแอด</button>

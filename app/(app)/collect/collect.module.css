@@ -23,3 +23,6 @@
 @media(max-width:1000px) { .layout { grid-template-columns:1fr; } }
 @media(max-width:640px) { .row { grid-template-columns:1fr; } .form { padding:22px; gap:20px; } }
 
+.choices { display:flex; flex-wrap:wrap; gap:6px; }
+.choices button { min-height:32px; padding:4px 12px; border:1px solid var(--line); border-radius:var(--radius-pill); background:var(--surface); color:inherit; font:inherit; font-size:var(--fs-meta); cursor:pointer; }
+.choices button[aria-pressed="true"] { border-color:var(--brand-ink); background:var(--brand-tint); color:var(--brand-ink); }

@@ -9,6 +9,7 @@ import {AdCard} from '@/components/AdCard';
 import {AdDrawer} from '@/components/AdDrawer';
 import {UnitRail} from '../owned-ads/unit-rail';
 import {useJson} from '../owned-ads/use-json';
+import {useCollectLauncher} from '../collect/collect-launcher';
 import styles from './rival-board.module.css';
 
 const REL:Record<Relation,string>={direct:'คู่แข่งตรง',substitute:'สินค้าทดแทน',unrelated:'ไม่เกี่ยว'};
@@ -28,6 +29,9 @@ export function RivalBoard(){
   const [draft,setDraft]=useState<Record<string,string>>({});
   const [more,setMore]=useState<Record<Strip,boolean>>({new:false,age:false});
   const [selected,setSelected]=useState<CatalogAdRow|null>(null);
+  // Collecting opens beside the board; `version` moves when new ads have landed, and the board reloads.
+  const launcher=useCollectLauncher();
+  const collected=launcher?.version??0;
 
   useEffect(()=>{
     const controller=new AbortController();
@@ -36,14 +40,14 @@ export function RivalBoard(){
       if(!controller.signal.aborted){setBoard(body);setProblem(null);setBusy(null);}
     }).catch(failure=>{if(!controller.signal.aborted&&failure.name!=='AbortError')setProblem(failure.message);});
     return ()=>controller.abort();
-  },[reload]);
+  },[reload,collected]);
 
   // Scope: one unit, or every unit that has keywords. Units without keywords show the "add keywords" start instead.
   const bare=board?.unitsWithoutKeywords.find(unit=>unit.id===unitId)??null;
   const scope=(board?.units??[]).filter(unit=>!unitId||unit.id===unitId);
   const pageIds=[...new Set(scope.flatMap(unit=>unit.pages.map(page=>page.page_id)))].slice(0,60).join(',');
-  const fresh=useJson<CatalogPage>(board&&pageIds&&!bare?`/api/catalog/ads?pages=${pageIds}&period=week&sort=new&limit=${more.new?24:4}`:null);
-  const long=useJson<CatalogPage>(board&&pageIds&&!bare?`/api/catalog/ads?pages=${pageIds}&active=active&sort=age&limit=${more.age?24:4}`:null);
+  const fresh=useJson<CatalogPage>(board&&pageIds&&!bare?`/api/catalog/ads?pages=${pageIds}&period=week&sort=new&limit=${more.new?24:4}`:null,collected);
+  const long=useJson<CatalogPage>(board&&pageIds&&!bare?`/api/catalog/ads?pages=${pageIds}&active=active&sort=age&limit=${more.age?24:4}`:null,collected);
 
   function pick(id:string){
     const next=new URLSearchParams(params);if(id)next.set('unit',id);else next.delete('unit');
@@ -116,7 +120,9 @@ export function RivalBoard(){
       {board.canEdit?<form className={styles.addKw} onSubmit={event=>{event.preventDefault();addKeyword(unit);}}>
         <label className={styles.srOnly} htmlFor={`kw-${unit.id}`}>เพิ่มคำค้นให้ {unit.name}</label>
         <input id={`kw-${unit.id}`} type="text" enterKeyHint="done" title="พิมพ์คำแล้วกด Enter" value={draft[unit.id]??''} maxLength={60} placeholder="+ คำค้น" onChange={event=>setDraft(value=>({...value,[unit.id]:event.target.value}))}/>
-      </form>:null}</div>
+      </form>:null}
+      {launcher&&unit.keywords.length?<button type="button" className={styles.collect} data-testid={`rival-collect-${unit.id}`}
+        onClick={()=>launcher.open({keywords:unit.keywords.map(k=>k.keyword),category:unit.name,title:`เก็บแอดคู่แข่งใหม่ให้ ${unit.name}`})}>เก็บแอดใหม่จากคำค้นเหล่านี้</button>:null}</div>
     {unit.pages.length?<div className={styles.tableWrap}><table className={styles.table}>
       <thead><tr><th>เพจ</th><th className={styles.r}>แอดใหม่ 7 วัน</th><th className={styles.r}>กำลังแสดง</th><th className={styles.r}>ยิงนานสุด</th>{board.canEdit?<><th>เพจนี้คือ</th><th><span className={styles.srOnly}>เก็บแอดใหม่</span></th></>:<th>สถานะ</th>}</tr></thead>
       <tbody>{unit.pages.map(page=>row(unit,page))}</tbody>

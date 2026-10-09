@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { CollectionDto } from "@/lib/collect/dto";
 import { thaiDateTime } from "@/lib/format/date";
+import { CollectedPreview } from "./collected-preview";
 import styles from "./progress.module.css";
 
 /**
@@ -33,10 +34,26 @@ const GUIDANCE: Record<string, string> = {
   failed: "ไม่สามารถเก็บข้อมูลรอบนี้ได้ · ลองใหม่อีกครั้ง",
 };
 
-export function CollectProgress({ initial }: { initial: CollectionDto }) {
+/**
+ * Shown on its own page, or inline where the collection was asked for. Inline,
+ * `onRestart` starts the next round on the same screen and `onSettled` lets the
+ * host refresh what it shows once the result is in.
+ */
+export function CollectProgress({ initial, onRestart, onSettled }: {
+  initial: CollectionDto;
+  onRestart?: () => void;
+  onSettled?: (collection: CollectionDto) => void;
+}) {
   const [collection, setCollection] = useState(initial);
   const [elapsed, setElapsed] = useState("");
   const settled = SETTLED.has(collection.status);
+  const reported = useRef(false);
+
+  useEffect(() => {
+    if (!settled || reported.current) return;
+    reported.current = true;
+    onSettled?.(collection);
+  }, [settled, collection, onSettled]);
 
   useEffect(() => {
     if (settled) return;
@@ -119,9 +136,10 @@ export function CollectProgress({ initial }: { initial: CollectionDto }) {
                     : "บางรายการถูกกักไว้ตรวจสอบ"}
                 </p>
               )}
+              {collection.datasetId && <CollectedPreview datasetId={collection.datasetId} />}
               {collection.datasetId && (
                 <Link className={styles.open} href={`/competitors?dataset=${collection.datasetId}`} data-testid="open-dataset">
-                  ดูแอดที่เก็บได้ →
+                  ดูทั้งหมดในคลังคู่แข่ง →
                 </Link>
               )}
             </>
@@ -132,8 +150,14 @@ export function CollectProgress({ initial }: { initial: CollectionDto }) {
       {collection.status === "failed" && (
         <section className={styles.result} data-testid="collect-failed">
           <p>{GUIDANCE.failed}</p>
-          <Link className={styles.open} href="/collect" data-testid="retry-collect">ลองใหม่</Link>
+          {onRestart
+            ? <button type="button" className={styles.open} onClick={onRestart} data-testid="retry-collect">ลองใหม่</button>
+            : <Link className={styles.open} href="/collect" data-testid="retry-collect">ลองใหม่</Link>}
         </section>
+      )}
+
+      {onRestart && settled && collection.status !== "failed" && (
+        <button type="button" className={styles.again} onClick={onRestart} data-testid="collect-again">+ เก็บรอบใหม่</button>
       )}
 
       {collection.requiresAdmin && (

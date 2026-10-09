@@ -65,3 +65,4 @@
 
 .repeatWrap { position: relative; min-width: 0; display: grid; }
 .repeatBadge { position: absolute; top: 10px; right: 10px; z-index: 2; padding: 2px 9px; border-radius: var(--radius-pill); background: var(--ink); color: var(--surface); font-size: var(--fs-eyebrow); font-weight: 600; pointer-events: none; }
+button.manage { cursor:pointer; font-family:inherit; }
