@@ -4,7 +4,8 @@ import {dbUser} from '../db/user.ts';
 import {getAdDetail} from '../read/queries.ts';
 import {signArchivedPreviews} from '../media/presentation.ts';
 import {resolveMedia} from '../media/resolve.ts';
-import {cachedOwnedImage} from '../owned-ads/media-cache.ts';
+import {cachedOwnedImage, ownedMediaCache, ownedMediaKey} from '../owned-ads/media-cache.ts';
+import {metaReadConfigured, resolveWithToken} from '../owned-ads/meta-media.ts';
 import {summarizeOwnedReport} from '../owned-ads/model.ts';
 import type {CompanyAd} from '../owned-ads/source-rows.ts';
 import type {Media} from '../media.ts';
@@ -28,7 +29,7 @@ const SET_VERSION = 'v7'; // bump when SET_PROMPT changes (v7: scores, 30-day ru
 
 export class AiError extends Error { status: number; constructor(message: string, status: number) { super(message); this.status = status; } }
 
-type Loaded = {ref: AdRef; side: string; label: string; format: string; text: string; image: string | null; facts: string};
+type Loaded = {ref: AdRef; side: string; label: string; format: string; text: string; image: string | null; facts: string; owned?: CompanyAd};
 
 async function loadAds(refs: AdRef[]): Promise<Loaded[]> {
   const db = await dbUser();
@@ -48,7 +49,7 @@ async function loadAds(refs: AdRef[]): Promise<Loaded[]> {
       const roas = summarizeOwnedReport([ad]).roas.value;
       return {
         ref, side: 'แอดของเรา', label: ad.ad_name, format: ad.video_id ? 'วิดีโอ' : 'ภาพ',
-        text: [ad.title, ad.body_text].filter(Boolean).join('\n'), image: cachedOwnedImage(ad) ?? null,
+        text: [ad.title, ad.body_text].filter(Boolean).join('\n'), image: cachedOwnedImage(ad) ?? null, owned: ad,
         facts: `ค่าแอด ${ad.spend ?? '—'} ${ad.currency} · ROAS ${roas == null ? '—' : roas.toFixed(2)} · บทสนทนา ${ad.conversations ?? '—'}`,
       };
     }
@@ -63,6 +64,26 @@ async function loadAds(refs: AdRef[]): Promise<Loaded[]> {
       facts: `${detail.is_active ? 'กำลังแสดง' : detail.is_active === false ? 'ไม่แสดงแล้ว' : 'ไม่ทราบสถานะ'} · ยิงมา ${detail.ad_age_days} วัน · ไม่มีข้อมูลงบหรือยอดขายของคู่แข่ง`,
     };
   }));
+}
+
+/**
+ * Our ad's picture for AI. The snapshot's link expires within days, and the page's own refresh may
+ * have run in another server instance (its cache is per process), so ask Meta for a fresh link when
+ * a read token is set. Called only for ads not read before, so cached readings cost no Meta call.
+ */
+async function ownedImage(row: CompanyAd): Promise<string | null> {
+  const cached = ownedMediaCache.get(ownedMediaKey(row));
+  if (cached && cached.until > Date.now() && cached.media.url) return cached.media.url;
+  if (metaReadConfigured()) {
+    const creative = (row as CompanyAd & {creative_id?: string | null}).creative_id ?? null;
+    const [media] = await resolveWithToken([{account_id: row.account_id, ad_id: row.ad_id, creative_id: creative, video_id: row.video_id ?? null}], false).catch(() => []);
+    if (media?.url) {
+      if (ownedMediaCache.size > 1000) ownedMediaCache.clear();
+      ownedMediaCache.set(ownedMediaKey(media), {until: Date.now() + 30 * 60000, media});
+      return media.url;
+    }
+  }
+  return row.creative_url ?? null;
 }
 
 const supabaseHost = (() => { try { return new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').hostname; } catch { return ''; } })();
@@ -204,7 +225,7 @@ export async function runComparison(refs: AdRef[], dryRun: boolean): Promise<AiE
   };
   await Promise.all(ads.map(async (ad, index) => {
     if (hit.has(keys[index])) return;
-    const image = await imageData(ad.image);
+    const image = await imageData(ad.owned ? await ownedImage(ad.owned) : ad.image);
     const content: Exclude<Message['content'], string> = [{type: 'text', text: `ฝั่ง: ${ad.side}\nชื่อ: ${ad.label}\nรูปแบบ: ${ad.format}\n${image ? '' : 'ไม่มีภาพประกอบ อ่านจากข้อความเท่านั้น\n'}ข้อความในแอด:\n${ad.text.slice(0, 4000) || '(ไม่มีข้อความ)'}`}];
     if (image) content.push({type: 'image_url', image_url: {url: image, detail: 'low'}});
     const call = await callOpenAI<AdReading>([{role: 'system', content: AD_PROMPT}, {role: 'user', content}], 'ad_reading', AD_SCHEMA, 1600);
