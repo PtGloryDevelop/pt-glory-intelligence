@@ -14,7 +14,8 @@ import type { CatalogPage } from '@/lib/read/catalog';
 import { summarizeOwnedReport } from '@/lib/owned-ads/model';
 import { comparisonSelectionKey, mergeComparisonSelection, ownedName, parseComparisonSelection, rivalCopy, rivalFromDetail, type ComparisonSelection, type Rival } from './selection';
 import { AiCompare } from './ai-compare';
-import { OwnedPicker, RivalPicker, creativeKey, formatLabel, ownKey, rivalImage, type OwnedChoice } from './pickers';
+import { OwnedPicker, RivalPicker, creativeKey, ownKey, rivalImage, type OwnedChoice } from './pickers';
+import { ctaLabel, formatLabel, ownedStatus, platformLabel } from './labels';
 import styles from './comparison.module.css';
 
 type Dataset = { id: string; name: string; source: string; collected: string; count: number };
@@ -269,7 +270,7 @@ export function AdComparison({ datasets, seed, initialOwned, initialPeriod, init
             {signal(`ค่าแอด (${a.currency})`, number(a.spend), { text: period ? `${thaiDay(period.date_start)} – ${thaiDay(period.date_end)}` : '', tone: '' })}
             {signal(`ค่าทัก (${a.currency})`, number(cpc), versus(cpc, unitAvg?.cpc, false, unitAvg?.name ?? ''))}
           </div>
-          <p className={styles.metaLine}>ทัก {number(a.conversations)}{a.delivery_days != null ? ` · ยิงมา ${number(a.delivery_days)} วัน` : ''} · {drop ? <span className={styles.badgeWarn}>ROAS ลดลง {number(drop.previous_roas)} → {number(drop.recent_roas)}</span> : a.status ?? 'ไม่ทราบสถานะ'}</p>
+          <p className={styles.metaLine}>ทัก {number(a.conversations)}{a.delivery_days != null ? ` · ยิงมา ${number(a.delivery_days)} วัน` : ''} · {drop ? <span className={styles.badgeWarn}>ROAS ลดลง {number(drop.previous_roas)} → {number(drop.recent_roas)}</span> : ownedStatus(a.status)}</p>
           <details className={styles.copyBox}><summary>อ่านข้อความในแอด</summary>{a.title ? <p className={styles.copyTitle}>{a.title}</p> : null}<p className={styles.copy} data-testid="compare-owned-copy">{a.body_text ?? 'ไม่มีข้อความในต้นทาง'}</p></details>
         </> : <div className={styles.emptySlot}>
           <strong>{b ? 'ขั้นต่อไป: เลือกแอดเรามาเทียบ' : 'ยังไม่ได้เลือกแอดเรา'}</strong>
@@ -291,7 +292,7 @@ export function AdComparison({ datasets, seed, initialOwned, initialPeriod, init
           <div className={styles.signals}>
             {signal('ยิงมา', `${number(b.ad_age_days)} วัน`, b.ad_age_days >= 45 ? { text: 'ยิงนาน มักเป็นแอดที่ได้ผล', tone: 'good' } : { text: b.ad_age_days <= 10 ? 'เพิ่งเริ่ม อาจยังทดสอบอยู่' : '', tone: '' })}
             {signal('สถานะ', b.is_active === null ? 'ไม่ทราบ' : b.is_active ? 'กำลังแสดง' : 'หยุดแล้ว', { text: `เจอล่าสุด ${thaiDay(b.last_seen_at ?? b.collected_at ?? selectedDataset?.collected)}`, tone: '' })}
-            {signal('ช่องทาง', (b.publisher_platform ?? []).join(' · ') || '—', { text: b.cta_text ?? b.cta_type ?? '', tone: '' })}
+            {signal('ช่องทาง', platformLabel(b.publisher_platform), { text: `ปุ่ม: ${ctaLabel(b.cta_text, b.cta_type)}`, tone: '' })}
           </div>
           <p className={styles.metaLine}>ไม่มีข้อมูลงบหรือยอดขายของคู่แข่ง · จำนวนวันที่ยิงคือสัญญาณที่ดีที่สุดที่มี · Library ID {b.ad_archive_id}</p>
           <details className={styles.copyBox}><summary>อ่านข้อความในแอด</summary>{b.title ? <p className={styles.copyTitle}>{b.title}</p> : null}<p className={copy.template ? `${styles.copy} ${styles.muted}` : styles.copy} data-testid="compare-rival-copy">{copy.text}</p>
@@ -311,7 +312,7 @@ export function AdComparison({ datasets, seed, initialOwned, initialPeriod, init
 
     {a && b ? <>
       {outsideUnit ? <p className={styles.aiWarn}>เพจนี้ยังไม่อยู่ในรายชื่อคู่แข่งของ {unitPages?.unitName} · ใช้ผลนี้ดูวิธีเล่าได้ แต่ข้อเสนอและราคาอาจเทียบกันไม่ได้</p> : null}
-      <AiCompare ads={[{ kind: 'own', ad: a }, { kind: 'rival', ad: b }]} images={images} ourThrough={period?.date_end ?? null}
+      <AiCompare ads={[{ kind: 'own', ad: a }, { kind: 'rival', ad: b }]} ourThrough={period?.date_end ?? null}
         onCopyLink={() => void copyLink()} linkLabel={shared === 'copied' ? 'คัดลอกลิงก์แล้ว' : 'คัดลอกลิงก์ส่งทีม'} />
       {shared && shared !== 'copied' ? <p className={styles.muted}>คัดลอกอัตโนมัติไม่ได้ · คัดลอกเอง: <span className={styles.shareLink}>{shared}</span></p> : null}
     </> : null}

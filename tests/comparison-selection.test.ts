@@ -35,3 +35,15 @@ test('our ad has one name everywhere, and a catalog template is never printed as
   assert.equal(rivalCopy('ลด 40% {{product.name}} วันนี้วันเดียว ส่งฟรีทั่วไทย').template, false);
   assert.equal(rivalCopy(null).text, 'ไม่มีข้อความที่บันทึกไว้');
 });
+
+test('codes on the compare screen read in Thai, and unknown codes are kept', async () => {
+  const { ctaLabel, formatLabel, ownedStatus, platformLabel } = await import('../app/(app)/compare/ads/labels.ts');
+  assert.equal(ctaLabel('SEND MESSAGE', null), 'ส่งข้อความ');
+  assert.equal(ctaLabel(null, 'LEARN_MORE'), 'ดูเพิ่มเติม');
+  assert.equal(ctaLabel('ทักเลย', 'SEND_MESSAGE'), 'ทักเลย');
+  assert.equal(ctaLabel(null, null), 'ไม่มีปุ่ม');
+  assert.equal(ownedStatus('ADSET_PAUSED'), 'หยุดชุดแอด');
+  assert.equal(formatLabel('MULTI_IMAGES'), 'ภาพหลายรูป');
+  assert.equal(formatLabel('SOMETHING_NEW'), 'SOMETHING_NEW');
+  assert.equal(platformLabel(['FACEBOOK', 'AUDIENCE_NETWORK']), 'Facebook · Audience Network');
+});

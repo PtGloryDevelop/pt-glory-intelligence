@@ -7,11 +7,10 @@ import type { CommandAd } from '@/lib/owned-ads/command-center';
 import { summarizeOwnedReport } from '@/lib/owned-ads/model';
 import { resolveMedia } from '@/lib/media/resolve';
 import { ownedName, rivalCopy, type Rival } from './selection';
+import { formatLabel } from './labels';
 import styles from './comparison.module.css';
 
 const number = (value: number | null | undefined) => value == null ? '—' : value.toLocaleString('th-TH', { maximumFractionDigits: 2 });
-const FORMAT: Record<string, string> = { VIDEO: 'วิดีโอ', IMAGE: 'ภาพ', MULTI_IMAGES: 'ภาพหลายรูป', CAROUSEL: 'ภาพเลื่อน (carousel)', DCO: 'แอดหลายแบบ (DCO)', DPA: 'แอดแคตตาล็อก', PAGE_LIKE: 'แอดกดถูกใจเพจ', TEXT: 'ข้อความล้วน' };
-export const formatLabel = (value: string | null) => value ? FORMAT[value.toUpperCase()] ?? value : 'ไม่ระบุรูปแบบ';
 export const rivalImage = (ad: Rival) => {
   const resolved = resolveMedia(ad.display_format, ad.media, { archivePath: ad.archive_path, archiveStatus: ad.archive_status, presentationUrl: ad.archive_url });
   return 'src' in resolved ? resolved.src : null;

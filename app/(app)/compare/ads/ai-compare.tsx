@@ -1,16 +1,14 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Creative } from '../../owned-ads/owned-client';
 import type { CompanyAd } from '@/lib/owned-ads/source-rows';
-import { resolveMedia } from '@/lib/media/resolve';
-import { summarizeOwnedReport } from '@/lib/owned-ads/model';
 import { AI_DIMS, AI_DIM_LABEL, adRefId, type AdReading, type AdRef, type AiEstimate, type AiRun } from '@/lib/ai/compare-shared';
 import { ownedName, type Rival } from './selection';
+import { ownedStatus } from './labels';
 import styles from './comparison.module.css';
 import { UsageBars } from '@/components/UsageBars';
 
-export type CompareAd = { kind: 'own'; ad: CompanyAd } | { kind: 'rival'; ad: Rival };
+export type CompareAd = { kind: 'own'; ad: CompanyAd & { delivery_days?: number | null } } | { kind: 'rival'; ad: Rival };
 
 const refOf = (item: CompareAd): AdRef => item.kind === 'own'
   ? { kind: 'own', account: item.ad.account_id, ad: item.ad.ad_id }
@@ -34,10 +32,12 @@ async function post<T>(ads: AdRef[], dryRun: boolean): Promise<T> {
  * any wording in our ad that may break FDA rules, and keeps the 8-dimension
  * evidence one click away. "Age" is our own data, never AI.
  */
-export function AiCompare({ ads, images, ourThrough, onCopyLink, linkLabel }: {
-  ads: CompareAd[]; images: Record<string, string>; ourThrough: string | null;
+export function AiCompare({ ads, ourThrough, onCopyLink, linkLabel }: {
+  ads: CompareAd[]; ourThrough: string | null;
   onCopyLink: () => void; linkLabel: string;
 }) {
+  // The table's evidence quotes: one switch for all of them instead of a toggle in every cell.
+  const [quotes, setQuotes] = useState(false);
   const refs = ads.map(refOf);
   const key = refs.map(adRefId).join('|');
   const ready = ads.some(item => item.kind === 'own') && ads.some(item => item.kind === 'rival');
@@ -127,39 +127,37 @@ export function AiCompare({ ads, images, ourThrough, onCopyLink, linkLabel }: {
       {result ? <button type="button" className={styles.linkish} aria-expanded={detail} onClick={() => setDetail(value => !value)} data-testid="compare-ai-detail">{detail ? 'ซ่อนเทียบทีละหัวข้อ' : 'เทียบทีละหัวข้อ'}</button> : null}
     </div>
 
-    {result && detail ? <div className={styles.aiScroll}>
+    {/* Pictures and numbers are already in the cards above; the table holds only what AI read, side by side. */}
+    {result && detail ? <div className={styles.aiDetail}>
+      <label className={styles.aiQuoteSwitch}><input type="checkbox" checked={quotes} onChange={event => setQuotes(event.target.checked)} />แสดงข้อความที่ AI ใช้เป็นหลักฐาน</label>
+      <div className={styles.aiScroll}>
       <table className={styles.aiTable}>
-        <thead><tr><th scope="col" className={styles.aiDim}><span className={styles.srOnly}>หัวข้อ</span></th>{ads.map(item => {
-          const own = item.kind === 'own';
-          const image = own ? images[item.ad.account_id + ':' + item.ad.ad_id] ?? item.ad.creative_url : (() => { const media = resolveMedia(item.ad.display_format, item.ad.media, { archivePath: item.ad.archive_path, archiveStatus: item.ad.archive_status, presentationUrl: item.ad.archive_url }); return 'src' in media ? media.src : null; })();
-          const roas = own ? summarizeOwnedReport([item.ad]).roas.value : null;
-          return <th scope="col" key={adRefId(refOf(item))} className={own ? styles.aiOurs : undefined}>
-            <div className={styles.aiHead}><span className={own ? styles.kindOurs : styles.kindRival}>{own ? 'แอดของเรา' : 'คู่แข่ง'}</span></div>
-            <div className={styles.aiThumb}><Creative url={image} name={nameOf(item)} sizes="160px" /></div>
-            <strong className={styles.aiName}>{nameOf(item)}</strong>
-            <span className={styles.aiMeta}>{own
-              ? `ค่าแอด ${item.ad.spend?.toLocaleString('th-TH', { maximumFractionDigits: 0 }) ?? '—'} · ROAS ${roas == null ? '—' : roas.toFixed(2)} · ทัก ${item.ad.conversations ?? '—'}`
-              : `${item.ad.cta_text ?? item.ad.cta_type ?? 'ไม่มีปุ่ม'} · ${(item.ad.publisher_platform ?? []).length} ช่องทาง · ไม่มีข้อมูลงบคู่แข่ง`}</span>
-          </th>;
-        })}</tr></thead>
+        <thead><tr><th scope="col" className={styles.aiDim}><span className={styles.srOnly}>หัวข้อ</span></th>{ads.map(item => <th scope="col" key={adRefId(refOf(item))}>
+          <span className={item.kind === 'own' ? styles.kindOurs : styles.kindRival}>{item.kind === 'own' ? 'แอดของเรา' : 'คู่แข่ง'}</span>
+          <strong className={styles.aiName}>{nameOf(item)}</strong>
+        </th>)}</tr></thead>
         <tbody>
           {AI_DIMS.map(dim => <tr key={dim}><th scope="row" className={styles.aiDim}>{AI_DIM_LABEL[dim]}</th>{ads.map(item => {
             const cell = readingOf(item)?.[dim];
-            return <td key={adRefId(refOf(item))} className={item.kind === 'own' ? styles.aiOurs : undefined}>{cell ? <>
+            return <td key={adRefId(refOf(item))}>{cell ? <>
               <span className={cell.source === 'ไม่พบ' ? styles.muted : undefined}>{cell.value}</span>
-              {cell.quote ? <details className={styles.aiEvidence}><summary>หลักฐาน · {cell.source}</summary><q>{cell.quote}</q></details> : null}
+              {quotes && cell.quote ? <q className={styles.aiQuote}>{cell.quote}<small> · จาก{cell.source}</small></q> : null}
             </> : <span className={styles.muted}>—</span>}</td>;
           })}</tr>)}
           <tr><th scope="row" className={styles.aiDim}>{AI_DIM_LABEL.claims}</th>{ads.map(item => {
             const claims = readingOf(item)?.claims;
-            return <td key={adRefId(refOf(item))} className={item.kind === 'own' ? styles.aiOurs : undefined}>{claims ? claims.items.length ? <ul className={styles.aiClaims}>{claims.items.map((claim, index) => <li key={index} className={claim.risky ? styles.aiRisk : undefined}>{claim.risky ? '⚠ ' : ''}{claim.text}</li>)}</ul> : <span className={styles.muted}>ไม่พบคำอ้าง</span> : <span className={styles.muted}>—</span>}</td>;
+            return <td key={adRefId(refOf(item))}>{claims ? claims.items.length ? <ul className={styles.aiClaims}>{claims.items.map((claim, index) => <li key={index} className={claim.risky ? styles.aiRisk : undefined}>{claim.risky ? '⚠ ' : ''}{claim.text}</li>)}</ul> : <span className={styles.muted}>ไม่พบคำอ้าง</span> : <span className={styles.muted}>—</span>}</td>;
           })}</tr>
-          <tr><th scope="row" className={styles.aiDim}>{AI_DIM_LABEL.age}</th>{ads.map(item => <td key={adRefId(refOf(item))} className={item.kind === 'own' ? styles.aiOurs : undefined}>
-            {item.kind === 'own' ? `${item.ad.status ?? 'ไม่ทราบสถานะ'}` : `${item.ad.is_active === null ? 'ไม่ทราบสถานะ' : item.ad.is_active ? 'กำลังแสดง' : 'ไม่แสดงแล้ว'} · ยิงมา ${item.ad.ad_age_days} วัน`}
-            <span className={styles.aiSrc}>ข้อมูลจริง</span>
+          {/* Our own data, never AI: days running for both sides, in the same words. */}
+          <tr><th scope="row" className={styles.aiDim}>{AI_DIM_LABEL.age}</th>{ads.map(item => <td key={adRefId(refOf(item))}>
+            {item.kind === 'own'
+              ? `${item.ad.delivery_days != null ? `ยิงมา ${item.ad.delivery_days.toLocaleString('th-TH')} วัน · ` : ''}${ownedStatus(item.ad.status)}`
+              : `ยิงมา ${item.ad.ad_age_days.toLocaleString('th-TH')} วัน · ${item.ad.is_active === null ? 'ไม่ทราบสถานะ' : item.ad.is_active ? 'กำลังแสดง' : 'หยุดแล้ว'}`}
+            <span className={styles.aiSrc}>ข้อมูลจริง ไม่ใช่ AI</span>
           </td>)}</tr>
         </tbody>
       </table>
+      </div>
     </div> : null}
 
     {/* Cost is the analyst's concern, not the ad team's: kept, but folded away. */}
