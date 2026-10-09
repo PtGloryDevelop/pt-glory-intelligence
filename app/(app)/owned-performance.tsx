@@ -52,6 +52,7 @@ export function OwnedPerformance({ home = "overview", canSync = false }: { home?
   const [result, setResult] = useState<{ query: string; data: OwnedPerformanceData } | null>(null);
   const [problem, setProblem] = useState<{ query: string; message: string } | null>(null);
   const [refresh, setRefresh] = useState(0);
+  const [centerRetry, setCenterRetry] = useState(0);
   const [currency, setCurrency] = useState("THB");
   const [selected, setSelected] = useState<CompanyAd | null>(null);
   // One card plays at a time; Meta gives our videos only as its preview iframe, so autoplay is not possible.
@@ -160,7 +161,7 @@ export function OwnedPerformance({ home = "overview", canSync = false }: { home?
   const centerQuery = new URLSearchParams(["period", "from", "to", "pageId", "unit"].flatMap(key => params.get(key) ? [[key, params.get(key)!]] : [])).toString();
   // `refresh` also reloads these after an in-page data update.
   const unitData = useJson<UnitSummaryData>(`/api/owned-ads/units?${unitQuery}`, refresh);
-  const center = useJson<CommandCenterData>(`/api/owned-ads/command-center?${centerQuery}`, refresh);
+  const center = useJson<CommandCenterData>(`/api/owned-ads/command-center?${centerQuery}`, refresh + centerRetry);
   const rail = railOrder(unitData.data?.units.map(row => ({ id: row.id, name: row.name, ads: row.current?.ad_count ?? null })) ?? [], center.data?.falling_counts ?? []);
   const fallingTotal = center.data ? center.data.falling_counts.reduce((sum, row) => sum + row.count, 0) : null;
   return <div className={styles.page} data-testid="owned-performance" data-stale={stale || undefined} aria-busy={stale || undefined}>
@@ -185,7 +186,10 @@ export function OwnedPerformance({ home = "overview", canSync = false }: { home?
 
     {data ? <div className={styles.periodLine} data-testid="performance-period-line"><span>ผลลัพธ์ {date(data.period.from)} — {date(data.period.to)} · ตัวเลขสรุปจากแอดทั้งหมดที่ตรงตัวกรอง</span>{data.summary.length > 1 ? <label>สกุลเงินสรุป<select aria-label="สกุลเงินสรุป" value={group?.currency ?? ""} onChange={event => setCurrency(event.target.value)}>{data.summary.map(item => <option key={item.currency} value={item.currency}>{item.currency}</option>)}</select></label> : null}</div> : null}
     {data ? <div className={styles.kpis}><KPIRow testId="performance-kpis"><KPIStat label="ยอดขาย (Meta)" value={<><span className={styles.figure}>{number(group?.purchase_value)}</span>{group?.purchase_value != null ? <small className={styles.currency}>{group.currency}</small> : null}</>} helper="มูลค่าซื้อที่ Meta รายงาน" testId="performance-sales" /><KPIStat label="ทัก" value={<span className={styles.figure}>{number(group?.conversations)}</span>} helper="บทสนทนาที่เริ่มต้นจากแอด" testId="performance-conversations" /><KPIStat label="ROAS (Meta)" value={<span className={styles.figure}>{number(group?.roas)}</span>} helper={`ค่าแอด ${money(group?.spend)}`} testId="performance-roas" /><KPIStat label="%ปิด (Meta)" value={<span className={styles.figure}>{percent(group ? closeRate(group, MIN_CHATS) : null)}</span>} helper="ออเดอร์ที่ Meta รายงาน ÷ ทัก" testId="performance-close" /></KPIRow></div> : null}
-    {center.data?.falling.length ? <section className={styles.falling} aria-labelledby="falling-heading" data-testid="falling-strip">
+    {/* Said, not swallowed: a missing strip would read as "nothing is falling". */}
+    {center.error ? <p className={styles.fallingError} role="status" data-testid="falling-error">
+      เปิดรายการสื่อที่เริ่มตกไม่สำเร็จ <button type="button" onClick={() => setCenterRetry(value => value + 1)}>ลองใหม่</button>
+    </p> : center.data?.falling.length ? <section className={styles.falling} aria-labelledby="falling-heading" data-testid="falling-strip">
       <div className={styles.fallingHead}><h2 id="falling-heading">⚠ สื่อที่เริ่มตก · {number(center.data.falling_total)} แอด</h2>{center.data.falling.length > 4 ? <button type="button" aria-expanded={allFalling} data-testid="falling-all" onClick={() => setAllFalling(value => !value)}>{allFalling ? "ย่อ" : `ดูทั้งหมด ${number(center.data.falling.length)} แอด`}</button> : null}</div>
       <div className={styles.fallingRow}>{center.data.falling.slice(0, allFalling ? undefined : 4).map(ad => <button type="button" key={adKey(ad)} className={styles.fallingAd} onClick={() => setSelected(ad)}>
         <span className={styles.fallingThumb}>{ad.creative_url ? <AdImage src={ad.creative_url} alt="" sizes="52px" referrerPolicy="no-referrer" /> : null}</span>

@@ -127,3 +127,5 @@ th[aria-sort] .sortHead { color:var(--ink); }
 .page[data-stale] .tableWrap, .page[data-stale] .grid, .page[data-stale] .kpis { opacity:.5; transition:opacity .15s; pointer-events:none; }
 .flag { justify-self:start; margin-top:3px; padding:1px 8px; border-radius:var(--radius-pill); background:var(--warn-tint); color:var(--warn-ink); font-size:var(--fs-eyebrow); font-weight:600; overflow-wrap:anywhere; }
 .flagGood { background:var(--ok-tint); color:var(--ok-ink); }
+.fallingError { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:0; padding:10px 16px; border:1px solid var(--line); border-top:3px solid var(--warn-ink); border-radius:var(--radius); background:var(--warn-tint); color:var(--warn-ink); font-size:var(--fs-meta); }
+.fallingError button { min-height:36px; font-size:var(--fs-meta); }
