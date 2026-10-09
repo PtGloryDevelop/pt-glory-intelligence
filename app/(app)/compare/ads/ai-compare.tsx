@@ -232,7 +232,7 @@ function Watch({ text }: { text: string }) {
 function ScoreRow({ dim, cells, gap }: { dim: ScoreDim; gap: boolean; cells: { id: string; own: boolean; cell: ScoreCell | undefined }[] }) {
   return <>
     <span className={gap ? styles.scoreLabelGap : styles.scoreLabel}>
-      <strong>{SCORE_LABEL[dim]}</strong>
+      <strong>{SCORE_LABEL[dim]}{gap ? <em className={styles.scoreGapTag}>ห่างมากสุด</em> : null}</strong>
       <small>{SCORE_HINT[dim]}</small>
     </span>
     {cells.map(({ id, own, cell }) => {
