@@ -12,6 +12,8 @@ import {buildUpdates,MIN_CHATS,rowRoas,type DashboardUpdate} from '@/lib/dashboa
 import {DashboardSparkline} from './dashboard-sparkline';
 import styles from './dashboard.module.css';
 import {HomeChoiceButton} from '@/components/HomeChoice';
+import {AdDrawer} from '@/components/AdDrawer';
+import {CompanyDetail} from './owned-ads/company-library';
 import type {HomeChoice} from '@/lib/home-choice';
 
 const WINDOWS=[7,14,30] as const;
@@ -54,6 +56,9 @@ export function Dashboard({canAnalyze,home='overview'}:{canAnalyze:boolean;home?
   const [retry,setRetry]=useState(0);
   const [local,setLocal]=useState<{key:string;ids:string[]}|null>(null);
   const [showSeen,setShowSeen]=useState(false);
+  // Ads open beside the overview instead of sending the reader to another page.
+  const [selected,setSelected]=useState<OwnedPerformanceRow|null>(null);
+  const [rivalAd,setRivalAd]=useState<{ad_archive_id:string;dataset_id:string}|null>(null);
   const data=result?.query===query?result.data:null,error=problem?.query===query?problem.message:null;
 
   useEffect(()=>{
@@ -108,7 +113,7 @@ export function Dashboard({canAnalyze,home='overview'}:{canAnalyze:boolean;home?
         <div className={styles.meta}><span className={`${styles.kind} ${styles[item.kind]}`}>{KIND[item.kind]}</span><span className={`${styles.sev} ${styles[item.severity]}`}>{item.label}</span></div>
         <h3>{item.title}</h3><p>{item.body}</p>
         <div className={styles.acts}>
-          {item.ad?<><Link className={styles.btnPrimary} href={adHref(item.ad)}>ดูแอด</Link><Link className={styles.btn} href={compareHref(item.ad)}>เทียบกับคู่แข่ง</Link></>
+          {item.ad?<>{row?<button type="button" className={styles.btnPrimary} onClick={()=>setSelected(row)}>ดูแอด</button>:<Link className={styles.btnPrimary} href={adHref(item.ad)}>ดูแอด</Link>}<Link className={styles.btn} href={compareHref(item.ad)}>เทียบกับคู่แข่ง</Link></>
             :item.href?<Link className={styles.btnPrimary} href={item.href}>{item.hrefLabel}</Link>:null}
           <button type="button" className={styles.btnGhost} onClick={()=>toggleSeen(item.id)}>{seen.includes(item.id)?'ย้อนกลับ':'ดูแล้ว'}</button>
         </div>
@@ -174,7 +179,7 @@ export function Dashboard({canAnalyze,home='overview'}:{canAnalyze:boolean;home?
                 <td className={styles.r}>{num(row.conversations,0)}</td>
                 <td className={`${styles.r} ${enough?vs(row.cost_per_conversation,summary?.cost_per_conversation,false):''}`} title={enough?undefined:`ทักน้อยกว่า ${MIN_CHATS} ครั้ง ยังไม่เทียบกับภาพรวม`}>{num(row.cost_per_conversation)}</td>
                 <td className={styles.spark}><DashboardSparkline series={series} label={`ค่าแอดรายวัน ${row.ad_name}`}/></td>
-                <td><div className={styles.rowActs}><Link href={adHref(row)}>ตรวจ</Link><Link href={compareHref(row)}>เทียบ</Link></div></td>
+                <td><div className={styles.rowActs}><button type="button" onClick={()=>setSelected(row)}>ตรวจ</button><Link href={compareHref(row)}>เทียบ</Link></div></td>
               </tr>;})}</tbody>
           </table></div>
           <p className={styles.note}>สีเขียว/แดงเทียบกับภาพรวม (ROAS {num(summary?.roas)} · ค่าทัก {num(summary?.cost_per_conversation)}) · ค่าแอดที่เพิ่มตั้งแต่ {SPEND_JUMP}% เป็นสีแดงเมื่อ ROAS ต่ำกว่าภาพรวม และเขียวเมื่อยังสูงกว่า · สีส้มคือแอดที่ ROAS ดีแต่ค่าแอดลดลงตั้งแต่ {SPEND_JUMP}% · ค่าทักเทียบเฉพาะแอดที่ทักตั้งแต่ {MIN_CHATS} ครั้ง · ROAS และมูลค่าซื้อเป็นตัวเลขที่ Meta รายงาน</p>
@@ -192,11 +197,16 @@ export function Dashboard({canAnalyze,home='overview'}:{canAnalyze:boolean;home?
             <ul className={styles.rivalList}>{recent.map(ad=><li key={`${ad.dataset_id}:${ad.ad_archive_id}`}>
               <AdThumb ad={ad}/>
               <div><b>{ad.page_name??ad.page_id}</b><p>{(ad.title||ad.body_text||'ไม่มีข้อความที่บันทึกไว้').slice(0,90)}</p>
-                <span className={styles.note}>ยิงมา {ad.ad_age_days.toLocaleString('th-TH')} วัน · <Link href={`/pages/${encodeURIComponent(ad.page_id)}?scope=dataset:${ad.dataset_id}`}>เปิดหลักฐาน</Link></span></div>
+                <span className={styles.note}>ยิงมา {ad.ad_age_days.toLocaleString('th-TH')} วัน · <button type="button" className={styles.linkButton} onClick={()=>setRivalAd({ad_archive_id:ad.ad_archive_id,dataset_id:ad.dataset_id})}>ดูแอด</button></span></div>
             </li>)}{!recent.length?<li className={styles.note}>สัปดาห์นี้ยังไม่พบแอดใหม่</li>:null}</ul>
           </>:<p className={styles.panelLead}>ข้อมูลคู่แข่งเปิดไม่ได้ในขณะนี้</p>}
         </section>
       </div>
     </div>:null}
+    {selected?<CompanyDetail ad={selected} creativeUrl={selected.creative_url??null} mediaLoading={false}
+      period={review?{date_start:review.period.from,date_end:review.period.to}:null} onClose={()=>setSelected(null)}
+      returnTo={`${pathname}${params.size?`?${params}`:''}`}/>:null}
+    {rivalAd?<AdDrawer adArchiveId={rivalAd.ad_archive_id} datasetId={rivalAd.dataset_id} onClose={()=>setRivalAd(null)} canAnalyze={canAnalyze}
+      compareHref={canAnalyze?`/compare/ads?${new URLSearchParams({dataset:rivalAd.dataset_id,rival:rivalAd.ad_archive_id,returnTo:pathname})}`:undefined}/>:null}
   </div>;
 }

@@ -177,3 +177,4 @@
 @media (prefers-reduced-motion: reduce) { .card { transition: none; } }
 .spendFilter { display:flex; align-items:center; gap:10px; font-size:var(--fs-body); line-height:1.7; }
 .spendFilter input { width:18px; height:18px; min-height:0; flex:none; }
+.sync { display:inline-flex; align-items:center; gap:10px; flex-wrap:wrap; }

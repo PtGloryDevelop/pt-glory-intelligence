@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/shell/PageHeader";
 import { HomeChoiceButton } from "@/components/HomeChoice";
@@ -13,6 +13,7 @@ import { ownedPageChoices } from "@/lib/owned-ads/page-names";
 import { AdStatus, Creative } from "./owned-ads/owned-client";
 import { OwnedVideoPlayer } from "./owned-ads/owned-video-player";
 import { CompanyDetail } from "./owned-ads/company-library";
+import { OwnedSyncButton } from "./owned-ads/sync-button";
 import { UnitRail } from "./owned-ads/unit-rail";
 import { useJson } from "./owned-ads/use-json";
 import { railOrder, type CommandCenterData } from "@/lib/owned-ads/command-center";
@@ -39,7 +40,8 @@ const tone = (value: number | null, avg: number | null | undefined, goodUp: bool
 };
 
 // UI v2: one page for the library and the rankings (Command Center redirects here).
-export function OwnedPerformance({ home = "overview" }: { home?: HomeChoice }) {
+export function OwnedPerformance({ home = "overview", canSync = false }: { home?: HomeChoice; canSync?: boolean }) {
+  const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
   const query = params.toString();
@@ -58,6 +60,7 @@ export function OwnedPerformance({ home = "overview" }: { home?: HomeChoice }) {
   const [mediaProblem, setMediaProblem] = useState(false);
   const [namesLoading, setNamesLoading] = useState(false);
   const [namesMessage, setNamesMessage] = useState("");
+  const [allFalling, setAllFalling] = useState(false);
   const error = problem?.query === query ? problem.message : null;
   // Keep the last result on screen while a new sort/filter loads; blanking it read as a full-page reload.
   const data = error ? null : result?.data ?? null;
@@ -155,8 +158,9 @@ export function OwnedPerformance({ home = "overview" }: { home?: HomeChoice }) {
 
   const unitQuery = new URLSearchParams(["period", "from", "to"].flatMap(key => params.get(key) ? [[key, params.get(key)!]] : [])).toString();
   const centerQuery = new URLSearchParams(["period", "from", "to", "pageId", "unit"].flatMap(key => params.get(key) ? [[key, params.get(key)!]] : [])).toString();
-  const unitData = useJson<UnitSummaryData>(`/api/owned-ads/units?${unitQuery}`);
-  const center = useJson<CommandCenterData>(`/api/owned-ads/command-center?${centerQuery}`);
+  // `refresh` also reloads these after an in-page data update.
+  const unitData = useJson<UnitSummaryData>(`/api/owned-ads/units?${unitQuery}`, refresh);
+  const center = useJson<CommandCenterData>(`/api/owned-ads/command-center?${centerQuery}`, refresh);
   const rail = railOrder(unitData.data?.units.map(row => ({ id: row.id, name: row.name, ads: row.current?.ad_count ?? null })) ?? [], center.data?.falling_counts ?? []);
   const fallingTotal = center.data ? center.data.falling_counts.reduce((sum, row) => sum + row.count, 0) : null;
   return <div className={styles.page} data-testid="owned-performance" data-stale={stale || undefined} aria-busy={stale || undefined}>
@@ -177,13 +181,13 @@ export function OwnedPerformance({ home = "overview" }: { home?: HomeChoice }) {
       {namesMessage ? <p className={styles.note} role="status">{namesMessage}</p> : null}
     </form>
     </section>
-    <div className={styles.source}><span>Ads Management{coverage ? ` · มีข้อมูล ${date(coverage.from)} — ${date(coverage.to)}` : " · กำลังตรวจช่วงข้อมูล"}</span><Link href="/owned-ads">อัปเดตข้อมูลจากเว็บเดิม</Link></div>
+    <div className={styles.source}><span>Ads Management{coverage ? ` · มีข้อมูล ${date(coverage.from)} — ${date(coverage.to)}` : " · กำลังตรวจช่วงข้อมูล"}</span><OwnedSyncButton enabled={canSync} onDone={() => { setRefresh(value => value + 1); router.refresh(); }} /></div>
 
     {data ? <div className={styles.periodLine} data-testid="performance-period-line"><span>ผลลัพธ์ {date(data.period.from)} — {date(data.period.to)} · ตัวเลขสรุปจากแอดทั้งหมดที่ตรงตัวกรอง</span>{data.summary.length > 1 ? <label>สกุลเงินสรุป<select aria-label="สกุลเงินสรุป" value={group?.currency ?? ""} onChange={event => setCurrency(event.target.value)}>{data.summary.map(item => <option key={item.currency} value={item.currency}>{item.currency}</option>)}</select></label> : null}</div> : null}
     {data ? <div className={styles.kpis}><KPIRow testId="performance-kpis"><KPIStat label="ยอดขาย (Meta)" value={<><span className={styles.figure}>{number(group?.purchase_value)}</span>{group?.purchase_value != null ? <small className={styles.currency}>{group.currency}</small> : null}</>} helper="มูลค่าซื้อที่ Meta รายงาน" testId="performance-sales" /><KPIStat label="ทัก" value={<span className={styles.figure}>{number(group?.conversations)}</span>} helper="บทสนทนาที่เริ่มต้นจากแอด" testId="performance-conversations" /><KPIStat label="ROAS (Meta)" value={<span className={styles.figure}>{number(group?.roas)}</span>} helper={`ค่าแอด ${money(group?.spend)}`} testId="performance-roas" /><KPIStat label="%ปิด (Meta)" value={<span className={styles.figure}>{percent(group ? closeRate(group, MIN_CHATS) : null)}</span>} helper="ออเดอร์ที่ Meta รายงาน ÷ ทัก" testId="performance-close" /></KPIRow></div> : null}
     {center.data?.falling.length ? <section className={styles.falling} aria-labelledby="falling-heading" data-testid="falling-strip">
-      <div className={styles.fallingHead}><h2 id="falling-heading">⚠ สื่อที่เริ่มตก · {number(center.data.falling_total)} แอด</h2><Link href={`/command-center${params.get("unit") ? `?unit=${params.get("unit")}` : ""}`}>ดูใน Command Center →</Link></div>
-      <div className={styles.fallingRow}>{center.data.falling.slice(0, 4).map(ad => <button type="button" key={adKey(ad)} className={styles.fallingAd} onClick={() => setSelected(ad)}>
+      <div className={styles.fallingHead}><h2 id="falling-heading">⚠ สื่อที่เริ่มตก · {number(center.data.falling_total)} แอด</h2>{center.data.falling.length > 4 ? <button type="button" aria-expanded={allFalling} data-testid="falling-all" onClick={() => setAllFalling(value => !value)}>{allFalling ? "ย่อ" : `ดูทั้งหมด ${number(center.data.falling.length)} แอด`}</button> : null}</div>
+      <div className={styles.fallingRow}>{center.data.falling.slice(0, allFalling ? undefined : 4).map(ad => <button type="button" key={adKey(ad)} className={styles.fallingAd} onClick={() => setSelected(ad)}>
         <span className={styles.fallingThumb}>{ad.creative_url ? <AdImage src={ad.creative_url} alt="" sizes="52px" referrerPolicy="no-referrer" /> : null}</span>
         <span><b>{ad.ad_name}</b><small>{ad.unit_names[0] ?? "ยังไม่ผูกยูนิต"} · งบ {number(ad.recent_spend)}</small><span className={styles.drop}>ROAS {number(ad.previous_roas)} → {number(ad.recent_roas)}</span></span>
       </button>)}</div>
@@ -193,7 +197,7 @@ export function OwnedPerformance({ home = "overview" }: { home?: HomeChoice }) {
     {error ? <div className={styles.notice} role="alert">{error} <button type="button" onClick={() => { setProblem(null); setRefresh(value => value + 1); }}>ลองอีกครั้ง</button></div> : null}
     {loading && !data ? <p className={styles.notice} role="status">กำลังเปิดสื่อและสรุปผลลัพธ์…</p> : null}
     {data ? <>
-      {!data.ready ? <div className={styles.notice} role="status">ชุดข้อมูลนี้ยังไม่มีผลลัพธ์รายวันสำหรับ Flow ใหม่ <Link href="/owned-ads">อัปเดตข้อมูลจากเว็บเดิม</Link> เพื่อเลือกช่วงวันที่ได้</div> : null}
+      {!data.ready ? <div className={styles.notice} role="status">ชุดข้อมูลนี้ยังไม่มีผลลัพธ์รายวันสำหรับ Flow ใหม่ · กด “อัปเดตข้อมูล” ด้านบนเพื่อเลือกช่วงวันที่ได้</div> : null}
       {coverage && (data.period.from < coverage.from || data.period.to > coverage.to) ? <p className={styles.note} data-testid="performance-coverage">ช่วงที่เลือกมีวันที่อยู่นอกข้อมูลที่นำเข้า วันที่ไม่มีข้อมูลไม่ถูกนับเป็นผลลัพธ์ศูนย์</p> : null}
 
       {<div className={styles.rankingTabs} role="group" aria-label="จัดอันดับแอด" data-testid="performance-rankings"><span className={styles.rankingLabel}>เรียงตาม</span>{SORTS.map(([value, label]) => <button key={value} type="button" aria-pressed={sort === value} onClick={() => pick(value)} title={sort === value ? "กดอีกครั้งเพื่อสลับมาก/น้อย" : undefined}>{label}{arrow(value)}</button>)}</div>}
