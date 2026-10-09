@@ -147,6 +147,10 @@ try {
     await lock.query("delete from owned_library_syncs where status<>'running' and id<>$1",[jobId]);
     await lock.query("COMMIT");
     console.log(JSON.stringify({jobId,status:"completed",...verified}));
+    // Otherwise the first readers of a fresh snapshot pay for it (hint bits on every new row, stale
+    // statistics): measured 9.6 s for the command center against the 8 s statement timeout, 1-2 s after.
+    // Best effort: the snapshot is already published.
+    await lock.query("vacuum (analyze) public.owned_library_daily, public.owned_library_ads").catch(()=>console.error("Owned sync vacuum skipped"));
   }
 } catch(error) {
   await lock.query("ROLLBACK").catch(()=>{});
