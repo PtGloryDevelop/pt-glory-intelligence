@@ -20,16 +20,19 @@ import { UsageBars } from "@/components/UsageBars";
  * slow answer or a retry after an error all carry the same key, so admission
  * hands back the request it already created instead of buying a second one.
  *
- * Nothing about a provider appears in this file, and the only endpoint it knows
- * is the product's own.
+ * Two things are asked up front — what to search and which category it belongs
+ * to — and one button starts it. Country, status, cap and the dataset name have
+ * working defaults and wait under "ตั้งค่าเพิ่มเติม", which opens by itself when
+ * one of them is what stops the form.
+ *
+ * Nothing about a provider appears in this file, and the only endpoints it knows
+ * are the product's own.
  */
 
 type Category = { id: string; name: string };
 
 const FALLBACK_ERROR = "ไม่สามารถเริ่มเก็บข้อมูลได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง";
-// A select value no category id can take (ids are UUIDs).
-const NEW_CATEGORY = "__new__";
-const sameName = (a: string, b: string) => a.trim().replace(/\s+/g, " ").toLowerCase() === b.trim().replace(/\s+/g, " ").toLowerCase();
+const normalName = (value: string) => value.trim().replace(/\s+/g, " ").toLowerCase();
 
 export function CollectClient(
   { requestKey, categories, settings, recent }:
@@ -41,19 +44,18 @@ export function CollectClient(
   },
 ) {
   const router = useRouter();
+  // The category of this person's latest run, shown as such: most runs extend
+  // the research done last time, and it stays a visible, editable choice.
+  const lastUsed = categories.find((category) => category.id === recent[0]?.categoryId) ?? null;
   const [keyword, setKeyword] = useState("");
   const [country, setCountry] = useState(settings.countries[0] ?? "");
   const [activeStatus, setActiveStatus] = useState<"active" | "all">("active");
   const [maxRecords, setMaxRecords] = useState(String(Math.min(300, settings.maxRecordsPerRun ?? 300)));
-  const [categoryId, setCategoryId] = useState("");
   const [categoryList, setCategoryList] = useState(categories);
-  // With no categories yet there is nothing to pick, so the name box is already open.
-  const [creatingCategory, setCreatingCategory] = useState(categories.length === 0);
-  const [newCategory, setNewCategory] = useState("");
-  const [categoryBusy, setCategoryBusy] = useState(false);
-  const [categoryNote, setCategoryNote] = useState<string | null>(null);
+  const [categoryName, setCategoryName] = useState(lastUsed?.name ?? "");
   const [datasetName, setDatasetName] = useState("");
   const [touchedName, setTouchedName] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const [linkNote, setLinkNote] = useState<string | null>(null);
@@ -72,53 +74,6 @@ export function CollectClient(
     return true;
   }
 
-  /**
-   * Creating a category used to mean leaving this form for the categories page
-   * and coming back. Now it happens in place: the existing endpoint creates it
-   * (same analyst rule as this page), it joins the list and is selected.
-   */
-  function openNewCategory() {
-    setCreatingCategory(true);
-    setCategoryNote(null);
-    if (newCategory.trim() === "") setNewCategory(keyword.replace(/["“”]/g, "").trim());
-  }
-
-  async function createCategory() {
-    const name = newCategory.trim();
-    if (name === "" || categoryBusy) return;
-    // Typing a name that already exists picks it rather than failing on the duplicate.
-    const existing = categoryList.find((category) => sameName(category.name, name));
-    if (existing) {
-      setCategoryId(existing.id);
-      setCreatingCategory(false);
-      setCategoryNote(`มีหมวดหมู่ “${existing.name}” อยู่แล้ว · เลือกให้แล้ว`);
-      return;
-    }
-    setCategoryBusy(true);
-    setCategoryNote(null);
-    try {
-      const response = await fetch("/api/categories", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name }),
-      });
-      const payload = await response.json().catch(() => null);
-      if (response.ok && typeof payload?.id === "string") {
-        setCategoryList((list) => [...list, { id: payload.id, name }].sort((a, b) => a.name.localeCompare(b.name, "th")));
-        setCategoryId(payload.id);
-        setCreatingCategory(false);
-        setNewCategory("");
-        setCategoryNote(`สร้างหมวดหมู่ “${name}” แล้ว · เลือกให้แล้ว`);
-        return;
-      }
-      setCategoryNote(typeof payload?.error === "string" ? payload.error : "สร้างหมวดหมู่ไม่สำเร็จ กรุณาลองใหม่");
-    } catch {
-      setCategoryNote("สร้างหมวดหมู่ไม่สำเร็จ กรุณาลองใหม่");
-    } finally {
-      setCategoryBusy(false);
-    }
-  }
-
   // The suggestion follows what has been typed until somebody edits it, and
   // then it is theirs.
   const suggestion = keyword.trim() === "" || country === ""
@@ -126,17 +81,45 @@ export function CollectClient(
     : suggestedDatasetName(keyword, country);
   const nameValue = touchedName ? datasetName : suggestion;
 
+  // A typed name either is an existing category or becomes a new one on submit.
+  const matched = categoryList.find((category) => normalName(category.name) === normalName(categoryName)) ?? null;
+  const categoryHint = categoryName.trim() === "" ? null
+    : matched ? (matched.id === lastUsed?.id ? "หมวดที่ใช้ล่าสุด · พิมพ์ชื่ออื่นเพื่อเปลี่ยน" : null)
+      : `จะสร้างหมวดหมู่ใหม่ “${categoryName.trim().replace(/\s+/g, " ")}” ให้ตอนกดค้น`;
+
   const cap = settings.maxRecordsPerRun;
   const records = Number(maxRecords);
+  const advancedInvalid =
+    country === "" ? "กรุณาเลือกประเทศ"
+      : !Number.isInteger(records) || records < 1 ? "จำนวนสูงสุดต้องเป็นจำนวนเต็มตั้งแต่ 1"
+        : cap !== null && records > cap ? `จำนวนสูงสุดต้องไม่เกิน ${cap}`
+          : nameValue.trim() === "" && keyword.trim() !== "" ? "กรุณาตั้งชื่อรอบข้อมูล"
+            : null;
   const invalid =
     keyword.trim() === "" ? "กรุณาระบุคำค้น"
       : keyword.trim().length > 100 ? "คำค้นยาวเกินไป"
-        : country === "" ? "กรุณาเลือกประเทศ"
-          : categoryId === "" ? "กรุณาเลือกหมวดหมู่"
-            : !Number.isInteger(records) || records < 1 ? "จำนวนสูงสุดต้องเป็นจำนวนเต็มตั้งแต่ 1"
-              : cap !== null && records > cap ? `จำนวนสูงสุดต้องไม่เกิน ${cap}`
-                : nameValue.trim() === "" ? "กรุณาตั้งชื่อ Dataset"
-                  : null;
+        : categoryName.trim() === "" ? "กรุณาระบุหมวดหมู่"
+          : categoryName.trim().length > MAX_CATEGORY_NAME ? `ชื่อหมวดหมู่ยาวเกิน ${MAX_CATEGORY_NAME} ตัวอักษร`
+            : advancedInvalid;
+
+  /** The id to file this run under, creating the category first when the name is new. */
+  async function resolveCategory(): Promise<string | null> {
+    if (matched) return matched.id;
+    const name = categoryName.trim().replace(/\s+/g, " ");
+    const response = await fetch("/api/categories", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok || typeof payload?.id !== "string") {
+      setProblem(typeof payload?.error === "string" ? payload.error : "สร้างหมวดหมู่ไม่สำเร็จ กรุณาลองใหม่");
+      return null;
+    }
+    // Kept in the list, so a retry after a failed collection reuses it instead of creating it twice.
+    setCategoryList((list) => [...list, { id: payload.id, name }]);
+    return payload.id;
+  }
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -147,6 +130,8 @@ export function CollectClient(
     setProblem(null);
 
     try {
+      const categoryId = await resolveCategory();
+      if (!categoryId) return;
       const response = await fetch("/api/collections", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -205,91 +190,80 @@ export function CollectClient(
           </span>
         </div>
 
-        <div className={styles.row}>
-          <div className={styles.field}>
-            <label htmlFor="country">ประเทศ</label>
-            <select
-              id="country" data-testid="country" value={country}
-              onChange={(event) => setCountry(event.target.value)}
-            >
-              {settings.countries.map((code) => (
-                <option key={code} value={code}>{countryLabel(code)}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className={styles.field}>
-            <label htmlFor="active-status">สถานะโฆษณา</label>
-            <select
-              id="active-status" data-testid="active-status" value={activeStatus}
-              onChange={(event) => setActiveStatus(event.target.value === "all" ? "all" : "active")}
-            >
-              <option value="active">กำลังแสดง</option>
-              <option value="all">ทั้งหมด</option>
-            </select>
-          </div>
-
-          <div className={styles.field}>
-            <label htmlFor="max-records">จำนวนสูงสุด</label>
-            <input
-              id="max-records" data-testid="max-records" type="number" inputMode="numeric"
-              min={1} max={cap ?? undefined} value={maxRecords}
-              onChange={(event) => setMaxRecords(event.target.value)}
-            />
-            {cap !== null && <span className={styles.hint}>สูงสุด {cap.toLocaleString("th-TH")} โฆษณา</span>}
-          </div>
-        </div>
-
         <div className={styles.field}>
           <label htmlFor="category">หมวดหมู่</label>
-          <select
-            id="category" data-testid="category-select" value={creatingCategory ? NEW_CATEGORY : categoryId}
-            onChange={(event) => {
-              if (event.target.value === NEW_CATEGORY) { setCategoryId(""); openNewCategory(); return; }
-              setCreatingCategory(false);
-              setCategoryNote(null);
-              setCategoryId(event.target.value);
-            }}
-          >
-            {/* No default: which research this belongs to is a decision, and a
-                pre-selected category would make it for somebody. */}
-            <option value="">— เลือกหมวดหมู่ —</option>
-            {categoryList.map((category) => (
-              <option key={category.id} value={category.id}>{category.name}</option>
-            ))}
-            <option value={NEW_CATEGORY}>+ สร้างหมวดหมู่ใหม่</option>
-          </select>
-          {creatingCategory && (
-            // Not a nested <form>: Enter here creates the category instead of submitting the collection.
-            <div className={styles.inlineCreate}>
-              <input
-                aria-label="ชื่อหมวดหมู่ใหม่" data-testid="category-new-name" value={newCategory}
-                maxLength={MAX_CATEGORY_NAME} placeholder="ชื่อหมวดหมู่ใหม่ เช่น วิตามินผิว" autoFocus={categoryList.length > 0}
-                onChange={(event) => setNewCategory(event.target.value)}
-                onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); void createCategory(); } }}
-              />
-              <button
-                type="button" className={styles.inlineCreateButton} data-testid="category-new-submit"
-                disabled={categoryBusy || newCategory.trim() === ""} onClick={() => void createCategory()}
-              >
-                {categoryBusy ? "กำลังสร้าง…" : "สร้างและเลือก"}
-              </button>
-              {categoryList.length > 0 && (
-                <button type="button" onClick={() => { setCreatingCategory(false); setCategoryNote(null); }}>ยกเลิก</button>
-              )}
-            </div>
-          )}
-          {categoryNote && <span className={styles.hint} role="status" data-testid="category-note">{categoryNote}</span>}
+          <input
+            id="category" data-testid="category-input" list="category-options" value={categoryName}
+            maxLength={MAX_CATEGORY_NAME} autoComplete="off"
+            placeholder="เลือกหมวดที่มี หรือพิมพ์ชื่อใหม่ เช่น วิตามินผิว"
+            onChange={(event) => setCategoryName(event.target.value)}
+            aria-describedby="category-hint"
+          />
+          <datalist id="category-options">
+            {categoryList.map((category) => <option key={category.id} value={category.name} />)}
+          </datalist>
+          <span id="category-hint" className={styles.hint} role="status" data-testid="category-hint">
+            {categoryHint ?? "เลือกจากหมวดที่มี หรือพิมพ์ชื่อใหม่ได้เลย ระบบสร้างให้ตอนกดค้น"}
+          </span>
         </div>
 
-        <div className={styles.field}>
-          <label htmlFor="dataset-name">ชื่อรอบข้อมูล</label>
-          <input
-            id="dataset-name" data-testid="dataset-name" value={nameValue} maxLength={200}
-            onChange={(event) => { setTouchedName(true); setDatasetName(event.target.value); }}
-          />
-          <span className={styles.hint}>แก้ไขได้ · ตั้งให้อัตโนมัติจากคำค้นและประเทศ</span>
-        </div>
+        <details
+          className={styles.advanced} data-testid="collect-advanced"
+          open={advancedOpen || advancedInvalid !== null}
+          onToggle={(event) => setAdvancedOpen(event.currentTarget.open)}
+        >
+          <summary>
+            ตั้งค่าเพิ่มเติม
+            <span className={styles.hint}>
+              {" "}· {countryLabel(country)} · {activeStatus === "all" ? "ทุกสถานะ" : "กำลังแสดง"} · สูงสุด {maxRecords || "—"} แอด
+            </span>
+          </summary>
+          <div className={styles.advancedBody}>
+            <div className={styles.row}>
+              <div className={styles.field}>
+                <label htmlFor="country">ประเทศ</label>
+                <select
+                  id="country" data-testid="country" value={country}
+                  onChange={(event) => setCountry(event.target.value)}
+                >
+                  {settings.countries.map((code) => (
+                    <option key={code} value={code}>{countryLabel(code)}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className={styles.field}>
+                <label htmlFor="active-status">สถานะโฆษณา</label>
+                <select
+                  id="active-status" data-testid="active-status" value={activeStatus}
+                  onChange={(event) => setActiveStatus(event.target.value === "all" ? "all" : "active")}
+                >
+                  <option value="active">กำลังแสดง</option>
+                  <option value="all">ทั้งหมด</option>
+                </select>
+              </div>
+
+              <div className={styles.field}>
+                <label htmlFor="max-records">จำนวนสูงสุด</label>
+                <input
+                  id="max-records" data-testid="max-records" type="number" inputMode="numeric"
+                  min={1} max={cap ?? undefined} value={maxRecords}
+                  onChange={(event) => setMaxRecords(event.target.value)}
+                />
+                {cap !== null && <span className={styles.hint}>สูงสุด {cap.toLocaleString("th-TH")} โฆษณา</span>}
+              </div>
+            </div>
+
+            <div className={styles.field}>
+              <label htmlFor="dataset-name">ชื่อรอบข้อมูล</label>
+              <input
+                id="dataset-name" data-testid="dataset-name" value={nameValue} maxLength={200}
+                onChange={(event) => { setTouchedName(true); setDatasetName(event.target.value); }}
+              />
+              <span className={styles.hint}>แก้ไขได้ · ตั้งให้อัตโนมัติจากคำค้นและประเทศ</span>
+            </div>
+          </div>
+        </details>
 
         {problem && (
           <p className={styles.problem} role="alert" data-testid="collect-problem">{problem}</p>
