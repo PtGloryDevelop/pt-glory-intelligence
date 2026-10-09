@@ -18,6 +18,15 @@ export type ScoreDim = (typeof SCORE_DIMS)[number];
 export const SCORE_LABEL: Record<ScoreDim, string> = {
   hook: 'Hook คำเปิด', clarity: 'ข้อความชัด', cta: 'CTA ชวนทำต่อ', emotion: 'โดนใจ', offer: 'ข้อเสนอ', fit: 'ภาพกับข้อความเข้ากัน',
 };
+/** What each part asks, in the words of the rubric the model is given. */
+export const SCORE_HINT: Record<ScoreDim, string> = {
+  hook: 'หยุดคนที่เลื่อนฟีดได้ไหมในวินาทีแรก', clarity: 'อ่านแล้วรู้ทันทีไหมว่าขายอะไร ให้ใคร',
+  cta: 'บอกชัดไหมว่าให้ทำอะไรต่อ เช่น ทักแชท', emotion: 'แตะปัญหาหรือความรู้สึกของลูกค้าแค่ไหน',
+  offer: 'ราคา ของแถม โปร ชัดและคุ้มแค่ไหน', fit: 'ภาพกับข้อความเล่าเรื่องเดียวกันไหม',
+};
+/** The rubric's anchors (3 weak, 5 ordinary, 7 good enough to keep running, 9–10 rare) as words. */
+export const SCORE_LEVELS = [[0, 3, 'อ่อน'], [4, 6, 'ธรรมดา'], [7, 8, 'ดี'], [9, 10, 'โดดเด่น']] as const;
+export const scoreLevel = (score: number | null) => score === null ? 'ไม่มีภาพให้ดู' : SCORE_LEVELS.find(([from, to]) => score >= from && score <= to)?.[2] ?? '';
 export const HOOK_REWRITE_BELOW = 7;
 export type ScoreCell = {score: number | null; why: string};
 export type Scores = Record<ScoreDim, ScoreCell>;
@@ -56,6 +65,17 @@ export function biggestGap(ours: Scores, theirs: Scores): {dim: ScoreDim; ours: 
     if (!best || b - a > best.theirs - best.ours) best = {dim, ours: a, theirs: b};
   }
   return best;
+}
+
+/** One sentence on top of the scorecard: who leads, by how much, and where the gap is widest. */
+export function scoreLead(ours: Scores, theirs: Scores): string {
+  const a = scoreTotal(ours), b = scoreTotal(theirs);
+  const head = a.max !== b.max
+    ? `แอดเราได้ ${a.got}/${a.max} คู่แข่งได้ ${b.got}/${b.max} (AI ไม่เห็นภาพบางแอด จึงเทียบคะแนนรวมตรงๆ ไม่ได้)`
+    : b.got > a.got ? `แอดเราตามหลังคู่แข่ง ${b.got - a.got} คะแนน`
+      : a.got > b.got ? `แอดเรานำคู่แข่ง ${a.got - b.got} คะแนน` : 'แอดเราได้คะแนนรวมเท่ากับคู่แข่ง';
+  const gap = biggestGap(ours, theirs);
+  return gap ? `${head} · ห่างมากสุดที่${SCORE_LABEL[gap.dim]} (เรา ${gap.ours} · คู่แข่ง ${gap.theirs})` : `${head} · ไม่มีหัวข้อไหนที่คู่แข่งได้มากกว่า`;
 }
 
 /**

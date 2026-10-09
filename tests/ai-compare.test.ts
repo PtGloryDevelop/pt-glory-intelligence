@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {adRefId, biggestGap, cleanScores, fdaWatch, parseAdRefs, scoreTotal} from '../lib/ai/compare-shared.ts';
+import {adRefId, biggestGap, cleanScores, fdaWatch, parseAdRefs, scoreLead, scoreLevel, scoreTotal} from '../lib/ai/compare-shared.ts';
 
 const own = {kind: 'own', account: 'act_123', ad: '120244621593930490'};
 const rival = {kind: 'rival', dataset: '5755eb87-b46a-41f9-bb0c-90cf4b558440', ad: '1873272776786708'};
@@ -45,4 +45,15 @@ test('FDA watch flags health claims in suggestions, not plain offers', () => {
   assert.deepEqual(fdaWatch('ฟื้นฟูร่างกายใน 7 วัน'), ['ใน 7 วัน']);
   assert.deepEqual(fdaWatch('โปร 9.9 ลดจัดเต็ม 6 ชิ้น พร้อมแถมฟรีกระบอกน้ำ'), []);
   assert.deepEqual(fdaWatch('สะดวกสั่งง่าย ส่งฟรี มีปลายทาง'), []);
+});
+
+test('score words follow the rubric anchors', () => {
+  assert.deepEqual([0, 3, 4, 6, 7, 8, 9, 10].map(scoreLevel), ['อ่อน', 'อ่อน', 'ธรรมดา', 'ธรรมดา', 'ดี', 'ดี', 'โดดเด่น', 'โดดเด่น']);
+  assert.equal(scoreLevel(null), 'ไม่มีภาพให้ดู');
+});
+
+test('scorecard lead says who leads, by how much, and the widest gap', () => {
+  assert.equal(scoreLead(scores([7, 7, 5, 6, 0, 7]), scores([7, 8, 7, 7, 8, 9])), 'แอดเราตามหลังคู่แข่ง 14 คะแนน · ห่างมากสุดที่ข้อเสนอ (เรา 0 · คู่แข่ง 8)');
+  assert.equal(scoreLead(scores([9, 9, 9, 9, 9, 9]), scores([5, 5, 5, 5, 5, 5])), 'แอดเรานำคู่แข่ง 24 คะแนน · ไม่มีหัวข้อไหนที่คู่แข่งได้มากกว่า');
+  assert.match(scoreLead(scores([7, 7, 5, 6, 4, null]), scores([7, 8, 7, 7, 8, 9])), /^แอดเราได้ 29\/50 คู่แข่งได้ 46\/60 \(AI ไม่เห็นภาพบางแอด/);
 });

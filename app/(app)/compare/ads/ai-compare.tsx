@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import type { CompanyAd } from '@/lib/owned-ads/source-rows';
-import { AI_DIMS, AI_DIM_LABEL, HOOK_REWRITE_BELOW, SCORE_DIMS, SCORE_LABEL, adRefId, biggestGap, fdaWatch, scoreTotal, type AdReading, type AdRef, type AiEstimate, type AiRun } from '@/lib/ai/compare-shared';
+import { AI_DIMS, AI_DIM_LABEL, HOOK_REWRITE_BELOW, SCORE_DIMS, SCORE_HINT, SCORE_LABEL, SCORE_LEVELS, adRefId, biggestGap, fdaWatch, scoreLead, scoreLevel, scoreTotal, type AdReading, type AdRef, type AiEstimate, type AiRun, type ScoreCell, type ScoreDim } from '@/lib/ai/compare-shared';
 import { ownedName, type Rival } from './selection';
 import { ownedStatus } from './labels';
 import styles from './comparison.module.css';
@@ -141,17 +141,18 @@ export function AiCompare({ ads, ourThrough, onCopyLink, linkLabel }: {
       <div className={styles.score} data-testid="compare-ai-score">
         <div className={styles.scoreHead}>
           <h3>คะแนนครีเอทีฟ</h3>
-          <span className={styles.muted}>AI ให้แบบเข้มงวด 0–10 จากภาพและข้อความ · ไม่ใช่ผลจริง ดูคู่กับตัวเลขด้านบน</span>
+          <span className={styles.muted}>AI ให้คะแนนแบบเข้มงวด จากภาพและข้อความ · เป็นความเห็นของ AI ไม่ใช่ผลขายจริง ดูคู่กับตัวเลขด้านบน</span>
         </div>
-        <div className={styles.scoreGrid} style={{ gridTemplateColumns: `minmax(120px, 1fr) repeat(${ads.length}, minmax(0, 1.4fr))` }}>
-          <span />
+        {ownReading && rivalReading ? <p className={styles.scoreLead} data-testid="compare-ai-score-lead">{scoreLead(ownReading.scores, rivalReading.scores)}</p> : null}
+        <p className={styles.scoreScale}>อ่านคะแนน (เต็ม 10): {SCORE_LEVELS.map(([from, to, word]) => `${from}–${to} ${word}`).join(' · ')}</p>
+        <div className={styles.scoreGrid} style={{ '--score-cols': ads.length } as CSSProperties}>
+          <span className={styles.scoreCorner} />
           {ads.map(item => <span key={compareId(item)} className={styles.scoreWho}>
             <span className={item.kind === 'own' ? styles.kindOurs : styles.kindRival}>{item.kind === 'own' ? 'แอดเรา' : 'คู่แข่ง'}</span>
             <strong>{totalText(readingOf(item))}</strong>
           </span>)}
-          {SCORE_DIMS.map(dim => <ScoreRow key={dim} label={SCORE_LABEL[dim]} gap={gap?.dim === dim} cells={ads.map(item => ({ id: compareId(item), own: item.kind === 'own', score: readingOf(item)?.scores[dim].score ?? null }))} />)}
+          {SCORE_DIMS.map(dim => <ScoreRow key={dim} dim={dim} gap={gap?.dim === dim} cells={ads.map(item => ({ id: compareId(item), own: item.kind === 'own', cell: readingOf(item)?.scores[dim] }))} />)}
         </div>
-        {gap ? <p className={styles.scoreGap}>ห่างกันมากสุด: <strong>{SCORE_LABEL[gap.dim]}</strong> (เรา {gap.ours} · คู่แข่ง {gap.theirs})</p> : null}
       </div>
       {ownReading?.fix || hookScore !== null && hookScore < HOOK_REWRITE_BELOW ? <div className={styles.fix} data-testid="compare-ai-fix">
         <h3>แก้ตรงนี้ก่อน (แอดเรา)</h3>
@@ -200,13 +201,6 @@ export function AiCompare({ ads, ourThrough, onCopyLink, linkLabel }: {
             const claims = readingOf(item)?.claims;
             return <td key={adRefId(refOf(item))}>{claims ? claims.items.length ? <ul className={styles.aiClaims}>{claims.items.map((claim, index) => <li key={index} className={claim.risky ? styles.aiRisk : undefined}>{claim.risky ? '⚠ ' : ''}{claim.text}</li>)}</ul> : <span className={styles.muted}>ไม่พบคำอ้าง</span> : <span className={styles.muted}>—</span>}</td>;
           })}</tr>
-          <tr><th scope="rowgroup" colSpan={ads.length + 1} className={styles.aiGroup}>เหตุผลของคะแนน</th></tr>
-          {SCORE_DIMS.map(dim => <tr key={`score-${dim}`}><th scope="row" className={styles.aiDim}>{SCORE_LABEL[dim]}</th>{ads.map(item => {
-            const score = readingOf(item)?.scores[dim];
-            return <td key={adRefId(refOf(item))}>{score ? <>
-              <strong>{score.score === null ? 'ไม่มีภาพให้ดู' : `${score.score}/10`}</strong>{score.why ? <span className={styles.aiSrc}>{score.why}</span> : null}
-            </> : <span className={styles.muted}>—</span>}</td>;
-          })}</tr>)}
           {/* Our own data, never AI: days running for both sides, in the same words. */}
           <tr><th scope="row" className={styles.aiDim}>{AI_DIM_LABEL.age}</th>{ads.map(item => <td key={adRefId(refOf(item))}>
             {item.kind === 'own'
@@ -234,13 +228,22 @@ function Watch({ text }: { text: string }) {
   return words.length ? <span className={styles.watch} data-testid="compare-ai-watch">⚠ มีคำที่มักผิดเกณฑ์ อย.: {words.join(' · ')}</span> : null;
 }
 
-/** One rubric part: a bar per ad, so the gap reads at a glance. */
-function ScoreRow({ label, cells, gap }: { label: string; gap: boolean; cells: { id: string; own: boolean; score: number | null }[] }) {
+/** One rubric part: what it asks, then per ad a bar, the score in words, and AI's reason. */
+function ScoreRow({ dim, cells, gap }: { dim: ScoreDim; gap: boolean; cells: { id: string; own: boolean; cell: ScoreCell | undefined }[] }) {
   return <>
-    <span className={gap ? styles.scoreLabelGap : styles.scoreLabel}>{label}</span>
-    {cells.map(cell => <span key={cell.id} className={styles.scoreCell}>
-      <span className={styles.scoreBar} aria-hidden="true"><span className={cell.own ? styles.scoreFillOurs : styles.scoreFill} style={{ width: `${(cell.score ?? 0) * 10}%` }} /></span>
-      <span className={styles.scoreNum}>{cell.score === null ? '—' : cell.score}</span>
-    </span>)}
+    <span className={gap ? styles.scoreLabelGap : styles.scoreLabel}>
+      <strong>{SCORE_LABEL[dim]}</strong>
+      <small>{SCORE_HINT[dim]}</small>
+    </span>
+    {cells.map(({ id, own, cell }) => {
+      const score = cell?.score ?? null;
+      return <span key={id} className={styles.scoreCell}>
+        <span className={styles.scoreTop}>
+          <span className={styles.scoreBar} aria-hidden="true"><span className={own ? styles.scoreFillOurs : styles.scoreFill} style={{ width: `${(score ?? 0) * 10}%` }} /></span>
+          <span className={styles.scoreNum}><strong>{score ?? '—'}</strong> {cell ? scoreLevel(score) : ''}</span>
+        </span>
+        {cell?.why ? <span className={styles.scoreWhy}>{cell.why}</span> : null}
+      </span>;
+    })}
   </>;
 }
