@@ -63,7 +63,10 @@ export function AdComparison({ datasets, seed, initialOwned, initialPeriod, init
   const [images, setImages] = useState<Record<string, string>>({});
   const [videoIds, setVideoIds] = useState<Record<string, string | null>>({});
   const [units, setUnits] = useState<{ id: string; name: string }[]>([]);
-  const [falling, setFalling] = useState<CommandAd[]>([]);
+  // null while loading; an error is said, never shown as "0".
+  const [fallingRead, setFallingRead] = useState<{ ads: CommandAd[]; total: number } | null>(null);
+  const [fallingError, setFallingError] = useState(false);
+  const [fallingRetry, setFallingRetry] = useState(0);
   const [board, setBoard] = useState<RivalBoard | null>(null);
   const [average, setAverage] = useState<{ key: string; value: UnitAverage | null } | null>(null);
   const [rivalSuggest, setRivalSuggest] = useState<{ key: string; rows: Rival[] } | null>(null);
@@ -77,18 +80,26 @@ export function AdComparison({ datasets, seed, initialOwned, initialPeriod, init
     if (!next.get('period')) next.set('period', 'all');
     return next;
   }, [performanceSource, returnHref]);
-  const periodParams = useMemo(() => new URLSearchParams(['period', 'from', 'to'].flatMap(key => base.get(key) ? [[key, base.get(key)!]] : [])), [base]);
-
-  // Reference data, once: units for the picker, falling ads for the badges, competitor pages per unit.
+  // Reference data, once: units for the picker and competitor pages per unit.
   useEffect(() => {
     const controller = new AbortController();
     json<OwnedPerformanceData>(`/api/owned-ads/performance?${base}`, controller.signal).then(data => { setUnits(data.filters.units); if (!period) setPeriod({ date_start: data.period.from, date_end: data.period.to }); }).catch(() => {});
-    json<CommandCenterData>(`/api/owned-ads/command-center?${periodParams}`, controller.signal).then(data => setFalling(data.falling)).catch(() => {});
     json<RivalBoard>('/api/rivals', controller.signal).then(setBoard).catch(() => {});
     return () => controller.abort();
     // Loaded once per screen; period only fills in when nothing set it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [base, periodParams]);
+  }, [base]);
+
+  // Falling ads use fixed windows (latest 7 days vs the 7 before, ending at the snapshot), whatever
+  // period is asked. Asking for 7 days keeps the query light: "all" ran past the database time limit.
+  useEffect(() => {
+    const controller = new AbortController();
+    json<CommandCenterData>('/api/owned-ads/command-center?period=7d', controller.signal)
+      .then(data => { setFallingRead({ ads: data.falling, total: data.falling_total }); setFallingError(false); })
+      .catch(error => { if (error.name !== 'AbortError') setFallingError(true); });
+    return () => controller.abort();
+  }, [fallingRetry]);
+  const falling = useMemo(() => fallingRead?.ads ?? [], [fallingRead]);
 
   // A selection kept from earlier in this session, or from a shared link.
   useEffect(() => {
@@ -200,7 +211,6 @@ export function AdComparison({ datasets, seed, initialOwned, initialPeriod, init
   }, [a, b, rivalUnit, base, falling]);
 
   const fallingBy = useMemo(() => new Map(falling.map(ad => [ownKey(ad), ad])), [falling]);
-  const worseCount = useMemo(() => new Set(falling.map(creativeKey)).size, [falling]);
 
   // A pick from the falling list carries that list's window; drop its unit so it is read again over ours.
   const chooseOwn = useCallback((ad: OwnedChoice) => { setA(ad.delivery_days === undefined ? { ...ad, unit_ids: undefined, unit_names: undefined } : ad); setPicker(null); setShared(null); }, []);
@@ -237,9 +247,10 @@ export function AdComparison({ datasets, seed, initialOwned, initialPeriod, init
     {restoring ? <p role="status" className={styles.muted}>กำลังเปิดแอดที่เลือกไว้…</p> : null}
 
     {!a && !b && !restoring ? <div className={styles.shortcuts}>
-      <button type="button" onClick={() => openOwn(true)} disabled={!worseCount} data-testid="compare-start-worse">
-        <strong>แอดเราที่ผลแย่ลง <span className={styles.badgeWarn}>{number(worseCount)} ครีเอทีฟ</span></strong>
-        <span>ROAS ลดลงเทียบกับช่วงก่อน · เริ่มตรงนี้ถ้าอยากรู้ว่าตัวไหนต้องแก้ด่วน</span>
+      <button type="button" onClick={() => fallingError ? (setFallingError(false), setFallingRetry(value => value + 1)) : openOwn(true)}
+        disabled={!fallingError && (!fallingRead || !fallingRead.total)} data-testid="compare-start-worse">
+        <strong>แอดเราที่ผลแย่ลง <span className={styles.badgeWarn}>{fallingError ? 'เปิดไม่ได้ · กดลองใหม่' : fallingRead ? `${number(fallingRead.total)} แอด` : 'กำลังนับ…'}</span></strong>
+        <span>ROAS 7 วันล่าสุดต่ำกว่า 2.5 ทั้งที่ 7 วันก่อนหน้าได้ 2.5 ขึ้นไป · เริ่มตรงนี้ถ้าอยากรู้ว่าตัวไหนต้องแก้ด่วน</span>
       </button>
       <button type="button" onClick={() => setPicker('rival')} data-testid="compare-start-rival">
         <strong>เริ่มจากแอดคู่แข่ง</strong>
@@ -305,7 +316,7 @@ export function AdComparison({ datasets, seed, initialOwned, initialPeriod, init
       {shared && shared !== 'copied' ? <p className={styles.muted}>คัดลอกอัตโนมัติไม่ได้ · คัดลอกเอง: <span className={styles.shareLink}>{shared}</span></p> : null}
     </> : null}
 
-    <OwnedPicker open={picker === 'own'} onClose={() => setPicker(null)} onPick={chooseOwn} base={base} units={units} falling={falling} worseFirst={worseFirst} selected={a ? ownKey(a) : null} />
+    <OwnedPicker open={picker === 'own'} onClose={() => setPicker(null)} onPick={chooseOwn} base={base} units={units} falling={falling} fallingTotal={fallingRead?.total ?? 0} worseFirst={worseFirst} selected={a ? ownKey(a) : null} />
     <RivalPicker open={picker === 'rival'} onClose={() => setPicker(null)} onPick={chooseRival} datasets={datasets} match={unitPages} selected={b?.ad_archive_id ?? null} />
   </div>;
 }

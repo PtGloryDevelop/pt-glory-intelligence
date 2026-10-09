@@ -53,6 +53,8 @@ type OwnedPickerProps = {
   base: URLSearchParams;
   units: { id: string; name: string }[];
   falling: CommandAd[];
+  /** All falling ads; the list itself carries the 50 with the most recent spend. */
+  fallingTotal: number;
   worseFirst: boolean;
   selected: string | null;
 };
@@ -62,7 +64,7 @@ export function OwnedPicker({ open, onClose, ...props }: OwnedPickerProps & { op
   return <Panel open={open} onClose={onClose} title="เลือกแอดของเรา" note="แอดที่ใช้ภาพหรือวิดีโอเดียวกันรวมเป็นการ์ดเดียว · เรียงตามค่าแอด"><OwnedPickerBody {...props} /></Panel>;
 }
 
-function OwnedPickerBody({ onPick, base, units, falling, worseFirst, selected }: OwnedPickerProps) {
+function OwnedPickerBody({ onPick, base, units, falling, fallingTotal, worseFirst, selected }: OwnedPickerProps) {
 
   const [unit, setUnit] = useState(base.get('unit') ?? '');
   const [worse, setWorse] = useState(worseFirst);
@@ -126,14 +128,14 @@ function OwnedPickerBody({ onPick, base, units, falling, worseFirst, selected }:
       <div className={styles.chips} role="group" aria-label="ยูนิต">
         {[{ id: '', name: 'ทุกยูนิต' }, ...units].map(item => <button type="button" key={item.id || 'all'} aria-pressed={unit === item.id} onClick={() => { setUnit(item.id); setPage(0); }}>{item.name}</button>)}
       </div>
-      <label className={styles.check}><input type="checkbox" checked={worse} onChange={event => { setWorse(event.target.checked); setPage(0); }} />เฉพาะแอดที่ผลแย่ลง ({number(new Set(falling.map(creativeKey)).size)} ครีเอทีฟ)</label>
+      <label className={styles.check}><input type="checkbox" checked={worse} onChange={event => { setWorse(event.target.checked); setPage(0); }} />เฉพาะแอดที่ผลแย่ลง ({number(fallingTotal)} แอด)</label>
       <form className={styles.search} onSubmit={event => { event.preventDefault(); setQuery(search.trim()); setPage(0); }}>
         <label htmlFor="picker-own-search">ค้นหาแอดเรา<input id="picker-own-search" type="search" value={search} maxLength={160} onChange={event => setSearch(event.target.value)} placeholder="ชื่อแอด สินค้า แคมเปญ หรือ Ad ID" /></label>
         <button type="submit">ค้นหา</button>
       </form>
     </div>
     {problem ? <p role="alert">{problem}</p> : loading ? <p role="status" className={styles.loading}>กำลังเปิดแอดของเรา…</p> : <>
-      <p className={styles.resultCount}>{worse ? `${number(rows.length)} ครีเอทีฟที่ ROAS ลดลง` : `${number(total)} แอด · หน้านี้ ${number(rows.length)} ครีเอทีฟ`}</p>
+      <p className={styles.resultCount}>{worse ? `${number(rows.length)} ครีเอทีฟที่ ROAS ลดลง${fallingTotal > falling.length ? ` · แสดง ${number(falling.length)} แอดที่ใช้งบล่าสุดสูงสุด จากทั้งหมด ${number(fallingTotal)}` : ''}` : `${number(total)} แอด · หน้านี้ ${number(rows.length)} ครีเอทีฟ`}</p>
       <div className={styles.pickList}>{rows.map(ad => {
         const drop = fallingBy.get(ownKey(ad));
         const roas = summarizeOwnedReport([ad]).roas.value;
