@@ -2,14 +2,20 @@
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Creative } from '../../owned-ads/owned-client';
-import { AdCard } from '@/components/AdCard';
 import type { OwnedPerformanceData, OwnedPerformanceRow } from '@/lib/owned-ads/performance';
 import type { CommandAd } from '@/lib/owned-ads/command-center';
 import { summarizeOwnedReport } from '@/lib/owned-ads/model';
-import { ownedName, type Rival } from './selection';
+import { resolveMedia } from '@/lib/media/resolve';
+import { ownedName, rivalCopy, type Rival } from './selection';
 import styles from './comparison.module.css';
 
 const number = (value: number | null | undefined) => value == null ? '—' : value.toLocaleString('th-TH', { maximumFractionDigits: 2 });
+const FORMAT: Record<string, string> = { VIDEO: 'วิดีโอ', IMAGE: 'ภาพ', MULTI_IMAGES: 'ภาพหลายรูป', CAROUSEL: 'ภาพเลื่อน (carousel)', DCO: 'แอดหลายแบบ (DCO)', DPA: 'แอดแคตตาล็อก', PAGE_LIKE: 'แอดกดถูกใจเพจ', TEXT: 'ข้อความล้วน' };
+export const formatLabel = (value: string | null) => value ? FORMAT[value.toUpperCase()] ?? value : 'ไม่ระบุรูปแบบ';
+export const rivalImage = (ad: Rival) => {
+  const resolved = resolveMedia(ad.display_format, ad.media, { archivePath: ad.archive_path, archiveStatus: ad.archive_status, presentationUrl: ad.archive_url });
+  return 'src' in resolved ? resolved.src : null;
+};
 export const ownKey = (ad: { account_id: string; ad_id: string }) => ad.account_id + ':' + ad.ad_id;
 /** Ads that run the same video or creative are one choice: the team compares pictures, not ad ids. */
 export const creativeKey = (ad: { account_id: string; ad_id: string; video_id?: string | null; creative_id?: string | null }) => ad.video_id || ad.creative_id || ownKey(ad);
@@ -215,9 +221,20 @@ function RivalPickerBody({ onPick, datasets, match, selected }: RivalPickerProps
     </div>
     {problem ? <p role="alert">{problem}</p> : loading ? <p role="status" className={styles.loading}>กำลังเปิดแอดคู่แข่ง…</p> : <>
       <p className={styles.resultCount}>พบ {number(result?.total ?? 0)} แอด</p>
-      <div className={styles.pickGrid}>{rows.map(ad => <div key={ad.dataset_id + ':' + ad.ad_archive_id} className={selected === ad.ad_archive_id ? styles.pickedCard : undefined} data-testid={'pick-rival-' + ad.ad_archive_id}>
-        <AdCard ad={ad} compact onOpen={() => { if (ad.dataset_id) onPick(ad); }} />
-      </div>)}</div>
+      {/* Rows like our side: the page in full, days running first, and one plain "เลือก". */}
+      <div className={styles.pickList}>{rows.map(ad => {
+        const copy = rivalCopy(ad.title || ad.body_text);
+        return <button type="button" key={ad.dataset_id + ':' + ad.ad_archive_id} className={styles.pickRow} aria-pressed={selected === ad.ad_archive_id}
+          disabled={!ad.dataset_id} onClick={() => onPick(ad)} data-testid={'pick-rival-' + ad.ad_archive_id}>
+          <span className={styles.pickThumb}><Creative url={rivalImage(ad)} name={ad.page_name ?? ad.ad_archive_id} sizes="64px" /></span>
+          <span className={styles.pickBody}>
+            <strong>{ad.page_name ?? ad.page_id}</strong>
+            <span><b>ยิงมา {number(ad.ad_age_days)} วัน</b> · {ad.is_active === null ? 'ไม่ทราบสถานะ' : ad.is_active ? 'กำลังแสดง' : 'หยุดแล้ว'} · {formatLabel(ad.display_format)}</span>
+            <span className={`${styles.pickCopy} ${copy.template ? styles.muted : ''}`}>{copy.text}</span>
+          </span>
+          <span className={styles.pickAction}>{selected === ad.ad_archive_id ? 'เลือกอยู่' : 'เลือก'}</span>
+        </button>;
+      })}</div>
       {!rows.length ? <p className={styles.empty}>{useMatch ? `ยังไม่พบแอดจากคู่แข่งของ ${match!.unitName} · กด “ดูทุกหมวด”` : 'ไม่พบแอดคู่แข่ง ลองค้นด้วยคำอื่น'}</p> : null}
       {(result?.total ?? 0) > 24 ? <div className={styles.pager}><button type="button" disabled={offset === 0} onClick={() => setOffset(value => Math.max(0, value - 24))}>ก่อนหน้า</button><span>หน้า {number(offset / 24 + 1)} / {number(Math.ceil((result?.total ?? 0) / 24))}</span><button type="button" disabled={offset + 24 >= (result?.total ?? 0)} onClick={() => setOffset(value => value + 24)}>ถัดไป</button></div> : null}
     </>}

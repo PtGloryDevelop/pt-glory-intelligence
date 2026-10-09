@@ -225,3 +225,4 @@
   .signals { grid-template-columns:1fr 1fr; }
   .picker { padding:16px; }
 }
+.pickCopy { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; color:var(--muted); }

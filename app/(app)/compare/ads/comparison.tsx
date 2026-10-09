@@ -11,11 +11,10 @@ import type { OwnedPerformanceData, OwnedPerformanceRow } from '@/lib/owned-ads/
 import type { CommandAd, CommandCenterData } from '@/lib/owned-ads/command-center';
 import type { RivalBoard } from '@/lib/rivals/board';
 import type { CatalogPage } from '@/lib/read/catalog';
-import { resolveMedia } from '@/lib/media/resolve';
 import { summarizeOwnedReport } from '@/lib/owned-ads/model';
 import { comparisonSelectionKey, mergeComparisonSelection, ownedName, parseComparisonSelection, rivalCopy, rivalFromDetail, type ComparisonSelection, type Rival } from './selection';
 import { AiCompare } from './ai-compare';
-import { OwnedPicker, RivalPicker, creativeKey, ownKey, type OwnedChoice } from './pickers';
+import { OwnedPicker, RivalPicker, creativeKey, formatLabel, ownKey, rivalImage, type OwnedChoice } from './pickers';
 import styles from './comparison.module.css';
 
 type Dataset = { id: string; name: string; source: string; collected: string; count: number };
@@ -26,10 +25,6 @@ type Tone = 'good' | 'bad' | '';
 
 const number = (value: number | null | undefined) => value == null ? '—' : value.toLocaleString('th-TH', { maximumFractionDigits: 2 });
 const thaiDay = (value: string | null | undefined) => value ? new Date(`${value.slice(0, 10)}T00:00:00`).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }) : '—';
-const rivalImage = (ad: Rival) => {
-  const resolved = resolveMedia(ad.display_format, ad.media, { archivePath: ad.archive_path, archiveStatus: ad.archive_status, presentationUrl: ad.archive_url });
-  return 'src' in resolved ? resolved.src : null;
-};
 /** Against the unit's own figure: ±10% is "about the same", which is what most ads are. */
 function versus(value: number | null, average: number | null | undefined, goodUp: boolean, unit: string): { text: string; tone: Tone } {
   if (value == null || !average) return { text: '', tone: '' };
@@ -281,7 +276,7 @@ export function AdComparison({ datasets, seed, initialOwned, initialPeriod, init
         <div className={styles.slotHead}><h2 id="slot-rival">แอดคู่แข่ง</h2>{b ? <button type="button" disabled={restoring} onClick={() => setPicker('rival')} data-testid="compare-change-rival">เปลี่ยน</button> : null}</div>
         {b ? <>
           <div className={styles.evidenceMedia} data-testid="compare-rival-media"><AdCreative detail={b} /></div>
-          <div><h3 className={styles.evidenceTitle}>{b.page_name ?? b.page_id}</h3><p className={styles.muted}>{rivalUnit ? `คู่แข่งของ ${rivalUnit.name} · ` : ''}{b.display_format ?? 'ไม่ระบุรูปแบบ'}{copy.template ? ' · แอดแคตตาล็อก' : ''}</p></div>
+          <div><h3 className={styles.evidenceTitle}>{b.page_name ?? b.page_id}</h3><p className={styles.muted}>{rivalUnit ? `คู่แข่งของ ${rivalUnit.name} · ` : ''}{formatLabel(b.display_format)}{copy.template ? ' · แอดแคตตาล็อก' : ''}</p></div>
           <div className={styles.signals}>
             {signal('ยิงมา', `${number(b.ad_age_days)} วัน`, b.ad_age_days >= 45 ? { text: 'ยิงนาน มักเป็นแอดที่ได้ผล', tone: 'good' } : { text: b.ad_age_days <= 10 ? 'เพิ่งเริ่ม อาจยังทดสอบอยู่' : '', tone: '' })}
             {signal('สถานะ', b.is_active === null ? 'ไม่ทราบ' : b.is_active ? 'กำลังแสดง' : 'หยุดแล้ว', { text: `เจอล่าสุด ${thaiDay(b.last_seen_at ?? b.collected_at ?? selectedDataset?.collected)}`, tone: '' })}
@@ -295,7 +290,7 @@ export function AdComparison({ datasets, seed, initialOwned, initialPeriod, init
           <span className={styles.muted}>{a && unitPages?.pageIds.length ? `คู่แข่งของ ${unitPages.unitName} ที่ยิงนานที่สุด · กดเพื่อเทียบทันที` : a && unitName ? `ยังไม่มีรายชื่อคู่แข่งของ ${unitName} · เลือกจากคลังคู่แข่งทั้งหมดได้` : 'ค้นจากคลังคู่แข่งทั้งหมด'}</span>
           {a && unitPages && rivalSuggest?.key === unitPages.pageIds.slice(0, 60).join(',') ? <div className={styles.suggest}>{rivalSuggest.rows.map(ad => <button type="button" key={ad.ad_archive_id} onClick={() => chooseRival(ad)} data-testid={'suggest-rival-' + ad.ad_archive_id}>
             <span className={styles.suggestThumb}><Creative url={rivalImage(ad)} name={ad.page_name ?? ad.ad_archive_id} sizes="48px" /></span>
-            <span><strong>{ad.page_name ?? ad.page_id}</strong><small>ยิงมา {number(ad.ad_age_days)} วัน · {ad.display_format ?? 'ไม่ระบุรูปแบบ'}</small></span>
+            <span><strong>{ad.page_name ?? ad.page_id}</strong><small>ยิงมา {number(ad.ad_age_days)} วัน · {formatLabel(ad.display_format)}</small></span>
             <span className={styles.suggestAction}>เทียบ</span>
           </button>)}</div> : null}
           <button type="button" data-variant={a && rivalSuggest?.rows.length ? undefined : 'primary'} disabled={restoring} onClick={() => setPicker('rival')} data-testid="compare-pick-rival">{a && rivalSuggest?.rows.length ? 'ดูแอดคู่แข่งทั้งหมด' : 'เลือกแอดคู่แข่ง'}</button>
