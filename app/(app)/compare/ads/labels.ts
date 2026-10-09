@@ -10,6 +10,8 @@ const FORMAT: Record<string, string> = {
   DCO: 'แอดหลายแบบ (DCO)', DPA: 'แอดแคตตาล็อก', PAGE_LIKE: 'แอดกดถูกใจเพจ', TEXT: 'ข้อความล้วน',
 };
 export const formatLabel = (value: string | null | undefined) => value ? FORMAT[value.toUpperCase()] ?? value : 'ไม่ระบุรูปแบบ';
+/** AI sometimes repeats the Ad Library code it was given ("IMAGE รูปสินค้า…"); show it in Thai. */
+export const thaiCodes = (text: string) => text.replace(/\b(MULTI_IMAGES|CAROUSEL|PAGE_LIKE|IMAGE|VIDEO|TEXT|DCO|DPA)\b/g, code => FORMAT[code]);
 
 const STATUS = new Map<string, string>(OWNED_PERFORMANCE_STATUSES.map(([value, label]) => [value, label]));
 export const ownedStatus = (value: string | null | undefined) => value ? STATUS.get(value.toUpperCase()) ?? value : 'ไม่ทราบสถานะ';

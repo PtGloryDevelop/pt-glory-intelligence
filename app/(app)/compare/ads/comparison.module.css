@@ -102,7 +102,7 @@
 .aiTable { width: 100%; border-collapse: collapse; font-size: var(--fs-meta); min-width: 720px; }
 .aiTable th, .aiTable td { padding: 12px; border-top: 1px solid var(--line); vertical-align: top; text-align: left; min-width: 170px; line-height: 1.6; overflow-wrap: anywhere; }
 .aiTable thead th { border-top: 0; font-weight: 400; }
-.aiDim { position: sticky; left: 0; z-index: 1; min-width: 130px !important; width: 130px; background: var(--surface-sunken); font-weight: 600; color: var(--ink); }
+.aiDim { position: sticky; left: 0; z-index: 1; min-width: 180px !important; width: 180px; background: var(--surface-sunken); font-weight: 600; color: var(--ink); }
 .aiOurs { background: var(--brand-tint); }
 .aiHead { display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-bottom: 8px; }
 .kindOurs, .kindRival { font-size: var(--fs-eyebrow); padding: 1px 8px; border-radius: var(--radius-pill); font-weight: 600; }
@@ -299,3 +299,18 @@
   .scoreTop { grid-template-columns:minmax(0, 1fr) auto; gap:6px; }
 }
 .watch { display:block; margin-top:4px; font-size:var(--fs-eyebrow) !important; font-weight:500; color:var(--danger); }
+
+/* --- Side-by-side table: Thai names as written, a hint under each row, gaps called out. */
+.aiTable th { text-transform:none; letter-spacing:normal; white-space:normal; }
+.aiTable thead th { color:var(--ink); }
+.aiDim small { display:block; margin-top:2px; font-size:var(--fs-eyebrow); font-weight:400; color:var(--muted); line-height:1.5; }
+.aiMissing { color:var(--warn-ink); font-weight:600; }
+.aiTagWarn, .aiTagOk { display:inline-block; margin-left:8px; padding:1px 8px; border-radius:var(--radius-pill); font-size:var(--fs-eyebrow); font-weight:600; white-space:nowrap; }
+.aiTagWarn { background:var(--warn-tint); color:var(--warn-ink); }
+.aiTagOk { background:var(--ok-tint); color:var(--ok-ink); }
+.claimWatch { display:block; margin-top:2px; font-size:var(--fs-eyebrow); font-weight:500; color:var(--warn-ink); }
+.aiRiskWatch { background:var(--warn-tint); color:var(--warn-ink); }
+.aiRiskBox h3 + p, .aiRiskNote { margin:4px 0 0; font-size:var(--fs-eyebrow); }
+.aiRiskBox ul + h3 { margin-top:12px; }
+.aiRiskBox small { font-size:var(--fs-eyebrow); opacity:.85; }
+@media (max-width:700px) { .aiDim { min-width:120px !important; width:120px; } }

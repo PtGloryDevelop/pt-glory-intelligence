@@ -47,3 +47,10 @@ test('codes on the compare screen read in Thai, and unknown codes are kept', asy
   assert.equal(formatLabel('SOMETHING_NEW'), 'SOMETHING_NEW');
   assert.equal(platformLabel(['FACEBOOK', 'AUDIENCE_NETWORK']), 'Facebook · Audience Network');
 });
+
+test('Ad Library codes AI repeats are shown in Thai', async () => {
+  const { thaiCodes } = await import('../app/(app)/compare/ads/labels.ts');
+  assert.equal(thaiCodes('IMAGE รูปสินค้า ขวดและกล่อง'), 'ภาพ รูปสินค้า ขวดและกล่อง');
+  assert.equal(thaiCodes('MULTI_IMAGES และ VIDEO'), 'ภาพหลายรูป และ วิดีโอ');
+  assert.equal(thaiCodes('ภาพนิ่ง ไม่มีรหัส'), 'ภาพนิ่ง ไม่มีรหัส');
+});

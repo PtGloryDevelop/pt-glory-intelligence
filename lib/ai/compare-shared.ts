@@ -7,6 +7,11 @@ export const AI_DIM_LABEL: Record<AiDim | 'claims' | 'age', string> = {
   pain: 'ปัญหาลูกค้าที่พูดถึง', angle: 'มุมขาย', hook: 'คำเปิด', offer: 'ข้อเสนอ',
   proof: 'หลักฐานความน่าเชื่อ', format: 'รูปแบบครีเอทีฟ', claims: 'คำอ้างที่เสี่ยง', age: 'ยิงมานานแค่ไหน',
 };
+/** One line under each row of the side-by-side table: what the row is about. */
+export const AI_DIM_HINT: Record<AiDim | 'claims' | 'age', string> = {
+  pain: 'แอดแตะปัญหาอะไรของลูกค้า', angle: 'เหตุผลหลักที่ชวนให้ซื้อ', hook: 'สิ่งแรกที่คนเห็น', offer: 'ราคา ของแถม เงื่อนไข',
+  proof: 'อะไรทำให้น่าเชื่อ', format: 'หน้าตาของแอด', claims: 'คำอ้างเรื่องสุขภาพหรือผลลัพธ์', age: 'ข้อมูลจริงจากระบบ',
+};
 
 /**
  * The creative scorecard, after the claude-ads "/ads creative" rubric: six

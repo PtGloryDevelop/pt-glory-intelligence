@@ -2,9 +2,9 @@
 
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import type { CompanyAd } from '@/lib/owned-ads/source-rows';
-import { AI_DIMS, AI_DIM_LABEL, HOOK_REWRITE_BELOW, SCORE_DIMS, SCORE_HINT, SCORE_LABEL, SCORE_LEVELS, adRefId, biggestGap, fdaWatch, scoreLead, scoreLevel, scoreTotal, type AdReading, type AdRef, type AiEstimate, type AiRun, type ScoreCell, type ScoreDim } from '@/lib/ai/compare-shared';
+import { AI_DIM_HINT, AI_DIM_LABEL, HOOK_REWRITE_BELOW, SCORE_DIMS, SCORE_HINT, SCORE_LABEL, SCORE_LEVELS, adRefId, biggestGap, fdaWatch, scoreLead, scoreLevel, scoreTotal, type AdReading, type AdRef, type AiEstimate, type AiCell, type AiDim, type AiRun, type ScoreCell, type ScoreDim } from '@/lib/ai/compare-shared';
 import { ownedName, type Rival } from './selection';
-import { ownedStatus } from './labels';
+import { ownedStatus, thaiCodes } from './labels';
 import styles from './comparison.module.css';
 import { UsageBars } from '@/components/UsageBars';
 
@@ -90,6 +90,9 @@ export function AiCompare({ ads, ourThrough, onCopyLink, linkLabel }: {
     : []);
   const own = ads.find(item => item.kind === 'own');
   const ownReading = own ? readingOf(own) : undefined;
+  // Claims in our ad AI did not flag but that carry words which often break FDA rules (a plain word match).
+  const watched = (ownReading?.claims.items ?? []).filter(claim => !claim.risky)
+    .map(claim => ({ text: claim.text, words: fdaWatch(claim.text) })).filter(claim => claim.words.length);
   const rivalReading = ads.filter(item => item.kind === 'rival').map(readingOf).find(Boolean);
   const gap = ownReading && rivalReading ? biggestGap(ownReading.scores, rivalReading.scores) : null;
   const hookScore = ownReading?.scores.hook.score ?? null;
@@ -107,6 +110,7 @@ export function AiCompare({ ads, ourThrough, onCopyLink, linkLabel }: {
     const lines = [
       `เทียบแอด: ${ads.map(nameOf).join(' กับ ')}`, '',
       ...(risky.length ? ['คำเสี่ยง อย. ในแอดเรา', ...risky.map(item => `• ${item.text}`), ''] : []),
+      ...(watched.length ? ['ควรตรวจคำ อย. ในแอดเรา', ...watched.map(item => `• ${item.text} (คำ: ${item.words.join(', ')})`), ''] : []),
       `คะแนนครีเอทีฟจาก AI: ${ads.map(item => `${item.kind === 'own' ? 'แอดเรา' : 'คู่แข่ง'} ${totalText(readingOf(item))}`).join(' · ')}`,
       ...(ownReading?.fix ? [`แก้ก่อน: ${ownReading.fix}`] : []), '',
       'ต่างกันตรงไหน', ...result.summary.diffs.map(item => `• ${item.text}`), '',
@@ -156,9 +160,16 @@ export function AiCompare({ ads, ourThrough, onCopyLink, linkLabel }: {
       <div className={styles.ideas}><h3>แอดเราลองทำอะไร</h3><ul>{result.summary.ideas.map((item, index) => <li key={index}>{item.text}<Watch text={item.text} /></li>)}</ul></div>
       </div>
       <div className={styles.aiSide}>
-      {risky.length ? <div className={`${styles.aiRiskBox} ${styles.aiRiskFound}`} data-testid="compare-ai-risk">
-        <h3>คำในแอดเราที่อาจผิดเกณฑ์ อย. ({risky.length})</h3>
-        <ul>{risky.map((claim, index) => <li key={index}>{claim.text}</li>)}</ul>
+      {risky.length || watched.length ? <div className={`${styles.aiRiskBox} ${risky.length ? styles.aiRiskFound : styles.aiRiskWatch}`} data-testid="compare-ai-risk">
+        {risky.length ? <>
+          <h3>คำในแอดเราที่อาจผิดเกณฑ์ อย. ({risky.length})</h3>
+          <ul>{risky.map((claim, index) => <li key={index}>{claim.text}</li>)}</ul>
+        </> : null}
+        {watched.length ? <>
+          <h3>{risky.length ? 'ควรตรวจเพิ่ม' : 'ควรตรวจคำ อย. ในแอดเรา'}</h3>
+          <p className={styles.aiRiskNote}>AI ไม่ได้ติดธง แต่มีคำที่มักผิดเกณฑ์ อย.</p>
+          <ul>{watched.map((claim, index) => <li key={index}>{claim.text} <small>(คำ: {claim.words.join(' · ')})</small></li>)}</ul>
+        </> : null}
       </div> : <p className={styles.aiOk} data-testid="compare-ai-risk">✓ ไม่พบคำเสี่ยงผิดเกณฑ์ อย. ในแอดเรา</p>}
       {ownReading?.fix || hookScore !== null && hookScore < HOOK_REWRITE_BELOW ? <div className={styles.fix} data-testid="compare-ai-fix">
         <h3>แก้ตรงนี้ก่อน (แอดเรา)</h3>
@@ -190,23 +201,40 @@ export function AiCompare({ ads, ourThrough, onCopyLink, linkLabel }: {
       <div className={styles.aiScroll}>
       <table className={styles.aiTable}>
         <thead><tr><th scope="col" className={styles.aiDim}><span className={styles.srOnly}>หัวข้อ</span></th>{ads.map(item => <th scope="col" key={adRefId(refOf(item))}>
-          <span className={item.kind === 'own' ? styles.kindOurs : styles.kindRival}>{item.kind === 'own' ? 'แอดของเรา' : 'คู่แข่ง'}</span>
+          <span className={item.kind === 'own' ? styles.kindOurs : styles.kindRival}>{item.kind === 'own' ? 'แอดเรา' : 'คู่แข่ง'}</span>
           <strong className={styles.aiName}>{nameOf(item)}</strong>
         </th>)}</tr></thead>
         <tbody>
-          {AI_DIMS.map(dim => <tr key={dim}><th scope="row" className={styles.aiDim}>{AI_DIM_LABEL[dim]}</th>{ads.map(item => {
-            const cell = readingOf(item)?.[dim];
-            return <td key={adRefId(refOf(item))}>{cell ? <>
-              <span className={cell.source === 'ไม่พบ' ? styles.muted : undefined}>{cell.value}</span>
-              {quotes && cell.quote ? <q className={styles.aiQuote}>{cell.quote}<small> · จาก{cell.source}</small></q> : null}
-            </> : <span className={styles.muted}>—</span>}</td>;
-          })}</tr>)}
-          <tr><th scope="row" className={styles.aiDim}>{AI_DIM_LABEL.claims}</th>{ads.map(item => {
+          {DETAIL_DIMS.map(dim => {
+            // A part one side has and the other lacks is the most telling thing in the table.
+            const has = (item: CompareAd) => { const cell = readingOf(item)?.[dim]; return Boolean(cell && !absent(cell)); };
+            const ownHas = ads.some(item => item.kind === 'own' && has(item));
+            const rivalHas = ads.some(item => item.kind === 'rival' && has(item));
+            return <tr key={dim}><RowHead label={AI_DIM_LABEL[dim]} hint={AI_DIM_HINT[dim]} />{ads.map(item => {
+              const cell = readingOf(item)?.[dim];
+              if (!cell) return <td key={adRefId(refOf(item))}><span className={styles.muted}>—</span></td>;
+              const missing = absent(cell);
+              return <td key={adRefId(refOf(item))}>
+                {!missing ? <span>{thaiCodes(cell.value)}</span>
+                  : item.kind === 'own' && rivalHas ? <><span className={styles.aiMissing}>ไม่มีในแอดเรา</span><span className={styles.aiTagWarn}>คู่แข่งมี</span></>
+                    : item.kind === 'rival' && ownHas ? <><span className={styles.muted}>ไม่มีในแอดคู่แข่ง</span><span className={styles.aiTagOk}>จุดต่างของเรา</span></>
+                      : <span className={styles.muted}>ไม่พบในแอด</span>}
+                {quotes && cell.quote ? <q className={styles.aiQuote}>{cell.quote}<small> · จาก{cell.source}</small></q> : null}
+              </td>;
+            })}</tr>;
+          })}
+          <tr><RowHead label={AI_DIM_LABEL.claims} hint={AI_DIM_HINT.claims} />{ads.map(item => {
             const claims = readingOf(item)?.claims;
-            return <td key={adRefId(refOf(item))}>{claims ? claims.items.length ? <ul className={styles.aiClaims}>{claims.items.map((claim, index) => <li key={index} className={claim.risky ? styles.aiRisk : undefined}>{claim.risky ? '⚠ ' : ''}{claim.text}</li>)}</ul> : <span className={styles.muted}>ไม่พบคำอ้าง</span> : <span className={styles.muted}>—</span>}</td>;
+            return <td key={adRefId(refOf(item))}>{claims ? claims.items.length ? <ul className={styles.aiClaims}>{claims.items.map((claim, index) => {
+              const words = claim.risky ? [] : fdaWatch(claim.text);
+              return <li key={index} className={claim.risky ? styles.aiRisk : undefined}>
+                {claim.risky ? '⚠ ' : ''}{claim.text}
+                {words.length ? <small className={styles.claimWatch}>⚠ ตรวจคำ: {words.join(' · ')}</small> : null}
+              </li>;
+            })}</ul> : <span className={styles.muted}>ไม่พบคำอ้าง</span> : <span className={styles.muted}>—</span>}</td>;
           })}</tr>
           {/* Our own data, never AI: days running for both sides, in the same words. */}
-          <tr><th scope="row" className={styles.aiDim}>{AI_DIM_LABEL.age}</th>{ads.map(item => <td key={adRefId(refOf(item))}>
+          <tr><RowHead label={AI_DIM_LABEL.age} hint={AI_DIM_HINT.age} />{ads.map(item => <td key={adRefId(refOf(item))}>
             {item.kind === 'own'
               ? `${item.ad.delivery_days != null ? `ยิงมา ${item.ad.delivery_days.toLocaleString('th-TH')} วัน · ` : ''}${ownedStatus(item.ad.status)}`
               : `ยิงมา ${item.ad.ad_age_days.toLocaleString('th-TH')} วัน · ${item.ad.is_active === null ? 'ไม่ทราบสถานะ' : item.ad.is_active ? 'กำลังแสดง' : 'หยุดแล้ว'}`}
@@ -224,6 +252,16 @@ export function AiCompare({ ads, ourThrough, onCopyLink, linkLabel }: {
       <UsageBars show={['ai']} refresh={run ? run.data.spent.total : 0} />
     </details>
   </section>;
+}
+
+/** The side-by-side table, the parts that decide a test first. */
+// AI marks a part it did not find with source 'ไม่พบ', but sometimes still names it ("ภาพ"): only an empty or 'not found' value counts as absent.
+const absent = (cell: AiCell) => cell.source === 'ไม่พบ' && (!cell.value.trim() || /^(ไม่พบ|ไม่มี)/.test(cell.value.trim()));
+
+const DETAIL_DIMS: AiDim[] = ['hook', 'offer', 'angle', 'pain', 'proof', 'format'];
+
+function RowHead({ label, hint }: { label: string; hint: string }) {
+  return <th scope="row" className={styles.aiDim}>{label}<small>{hint}</small></th>;
 }
 
 /** A plain word match, not AI: words in a suggestion that often break FDA rules. */
