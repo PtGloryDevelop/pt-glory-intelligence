@@ -61,9 +61,11 @@ test("the collection screens speak only to the product's own API", () => {
     assert.doesNotMatch(code, /db\/privileged|withTransaction/, name);
   }
 
-  // The form posts to the one admission entrance; the progress view only reads.
+  // The form posts to the one admission entrance, after creating a new category
+  // name through the categories API when needed; the progress view only reads.
   assert.match(collectClient, /fetch\("\/api\/collections"/);
-  assert.equal(collectClient.match(/method: "POST"/g)?.length, 1);
+  assert.deepEqual([...collectClient.matchAll(/fetch\("([^"]+)"/g)].map((found) => found[1]).sort(), ["/api/categories", "/api/collections"]);
+  assert.equal(collectClient.match(/method: "POST"/g)?.length, 2);
   assert.match(progressClient, /fetch\(`\/api\/collections\/\$\{collection\.id\}`/);
   assert.doesNotMatch(progressClient, /method: "POST"/);
   // And never the machine's own sweep endpoint.
