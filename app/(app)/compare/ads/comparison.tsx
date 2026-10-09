@@ -290,7 +290,7 @@ export function AdComparison({ datasets, seed, initialOwned, initialPeriod, init
           <div className={styles.evidenceMedia} data-testid="compare-rival-media"><AdCreative detail={b} /></div>
           <div><h3 className={styles.evidenceTitle}>{b.page_name ?? b.page_id}</h3><p className={styles.muted}>{rivalUnit ? `คู่แข่งของ ${rivalUnit.name} · ` : ''}{formatLabel(b.display_format)}{copy.template ? ' · แอดแคตตาล็อก' : ''}</p></div>
           <div className={styles.signals}>
-            {signal('ยิงมา', `${number(b.ad_age_days)} วัน`, b.ad_age_days >= 45 ? { text: 'ยิงนาน มักเป็นแอดที่ได้ผล', tone: 'good' } : { text: b.ad_age_days <= 10 ? 'เพิ่งเริ่ม อาจยังทดสอบอยู่' : '', tone: '' })}
+            {signal('ยิงมา', `${number(b.ad_age_days)} วัน`, b.ad_age_days >= 30 ? { text: 'ยิงต่อเนื่อง 30 วันขึ้นไป น่าศึกษา', tone: 'good' } : { text: b.ad_age_days <= 10 ? 'เพิ่งเริ่ม อาจยังทดสอบอยู่' : '', tone: '' })}
             {signal('สถานะ', b.is_active === null ? 'ไม่ทราบ' : b.is_active ? 'กำลังแสดง' : 'หยุดแล้ว', { text: `เจอล่าสุด ${thaiDay(b.last_seen_at ?? b.collected_at ?? selectedDataset?.collected)}`, tone: '' })}
             {signal('ช่องทาง', platformLabel(b.publisher_platform), { text: `ปุ่ม: ${ctaLabel(b.cta_text, b.cta_type)}`, tone: '' })}
           </div>

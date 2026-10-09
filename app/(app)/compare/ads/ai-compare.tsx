@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { CompanyAd } from '@/lib/owned-ads/source-rows';
-import { AI_DIMS, AI_DIM_LABEL, adRefId, type AdReading, type AdRef, type AiEstimate, type AiRun } from '@/lib/ai/compare-shared';
+import { AI_DIMS, AI_DIM_LABEL, HOOK_REWRITE_BELOW, SCORE_DIMS, SCORE_LABEL, adRefId, biggestGap, fdaWatch, scoreTotal, type AdReading, type AdRef, type AiEstimate, type AiRun } from '@/lib/ai/compare-shared';
 import { ownedName, type Rival } from './selection';
 import { ownedStatus } from './labels';
 import styles from './comparison.module.css';
@@ -29,8 +29,10 @@ async function post<T>(ads: AdRef[], dryRun: boolean): Promise<T> {
  *
  * It starts by itself once both sides are chosen (a pair read before comes
  * back from the cache at no cost; caps are enforced by the server), leads with
- * any wording in our ad that may break FDA rules, and keeps the 8-dimension
- * evidence one click away. "Age" is our own data, never AI.
+ * any wording in our ad that may break FDA rules, then a strict creative
+ * scorecard (the claude-ads "/ads creative" rubric), the one fix to make first,
+ * and three hooks to test. The evidence stays one click away. "Age" is our own
+ * data, never AI; scores are AI's judgement of the creative, not results.
  */
 export function AiCompare({ ads, ourThrough, onCopyLink, linkLabel }: {
   ads: CompareAd[]; ourThrough: string | null;
@@ -86,6 +88,17 @@ export function AiCompare({ ads, ourThrough, onCopyLink, linkLabel }: {
   const risky = ads.flatMap(item => item.kind === 'own'
     ? (readingOf(item)?.claims.items ?? []).filter(claim => claim.risky).map(claim => ({ text: claim.text, name: nameOf(item) }))
     : []);
+  const own = ads.find(item => item.kind === 'own');
+  const ownReading = own ? readingOf(own) : undefined;
+  const rivalReading = ads.filter(item => item.kind === 'rival').map(readingOf).find(Boolean);
+  const gap = ownReading && rivalReading ? biggestGap(ownReading.scores, rivalReading.scores) : null;
+  const hookScore = ownReading?.scores.hook.score ?? null;
+  const totalText = (reading: AdReading | undefined) => {
+    if (!reading) return '—';
+    const total = scoreTotal(reading.scores);
+    return `${total.got}/${total.max}`;
+  };
+
   const staleRivals = ads.filter((item): item is { kind: 'rival'; ad: Rival } => item.kind === 'rival')
     .filter(item => !item.ad.collected_at && !item.ad.last_seen_at || ourThrough && days((item.ad.collected_at ?? item.ad.last_seen_at).slice(0, 10), ourThrough) > 14);
 
@@ -94,10 +107,19 @@ export function AiCompare({ ads, ourThrough, onCopyLink, linkLabel }: {
     const lines = [
       `เทียบแอด: ${ads.map(nameOf).join(' กับ ')}`, '',
       ...(risky.length ? ['คำเสี่ยง อย. ในแอดเรา', ...risky.map(item => `• ${item.text}`), ''] : []),
+      `คะแนนครีเอทีฟจาก AI: ${ads.map(item => `${item.kind === 'own' ? 'แอดเรา' : 'คู่แข่ง'} ${totalText(readingOf(item))}`).join(' · ')}`,
+      ...(ownReading?.fix ? [`แก้ก่อน: ${ownReading.fix}`] : []), '',
       'ต่างกันตรงไหน', ...result.summary.diffs.map(item => `• ${item.text}`), '',
-      'แอดเราลองทำอะไร', ...result.summary.ideas.map(item => `• ${item.text}`),
+      'แอดเราลองทำอะไร', ...result.summary.ideas.map(item => `• ${item.text}`), '',
+      'คำเปิดใหม่ให้ลองยิง', ...result.summary.hooks.map(item => {
+        const words = fdaWatch(item.text);
+        return `• ${item.text}${words.length ? ` (⚠ ตรวจคำ: ${words.join(', ')})` : ''}`;
+      }),
     ];
     try { await navigator.clipboard.writeText(lines.join('\n')); setCopied(key); } catch { setCopied(null); }
+  }
+  async function copyHook(index: number, text: string) {
+    try { await navigator.clipboard.writeText(text); setCopied(`${key}#${index}`); } catch { setCopied(null); }
   }
 
   return <section className={styles.panel} aria-labelledby="compare-ai-heading" data-testid="compare-ai">
@@ -116,8 +138,38 @@ export function AiCompare({ ads, ourThrough, onCopyLink, linkLabel }: {
         <h3>คำในแอดเราที่อาจผิดเกณฑ์ อย. ({risky.length})</h3>
         <ul>{risky.map((claim, index) => <li key={index}>{claim.text}</li>)}</ul>
       </div> : null}
+      <div className={styles.score} data-testid="compare-ai-score">
+        <div className={styles.scoreHead}>
+          <h3>คะแนนครีเอทีฟ</h3>
+          <span className={styles.muted}>AI ให้แบบเข้มงวด 0–10 จากภาพและข้อความ · ไม่ใช่ผลจริง ดูคู่กับตัวเลขด้านบน</span>
+        </div>
+        <div className={styles.scoreGrid} style={{ gridTemplateColumns: `minmax(120px, 1fr) repeat(${ads.length}, minmax(0, 1.4fr))` }}>
+          <span />
+          {ads.map(item => <span key={compareId(item)} className={styles.scoreWho}>
+            <span className={item.kind === 'own' ? styles.kindOurs : styles.kindRival}>{item.kind === 'own' ? 'แอดเรา' : 'คู่แข่ง'}</span>
+            <strong>{totalText(readingOf(item))}</strong>
+          </span>)}
+          {SCORE_DIMS.map(dim => <ScoreRow key={dim} label={SCORE_LABEL[dim]} gap={gap?.dim === dim} cells={ads.map(item => ({ id: compareId(item), own: item.kind === 'own', score: readingOf(item)?.scores[dim].score ?? null }))} />)}
+        </div>
+        {gap ? <p className={styles.scoreGap}>ห่างกันมากสุด: <strong>{SCORE_LABEL[gap.dim]}</strong> (เรา {gap.ours} · คู่แข่ง {gap.theirs})</p> : null}
+      </div>
+      {ownReading?.fix || hookScore !== null && hookScore < HOOK_REWRITE_BELOW ? <div className={styles.fix} data-testid="compare-ai-fix">
+        <h3>แก้ตรงนี้ก่อน (แอดเรา)</h3>
+        {ownReading?.fix ? <p>{ownReading.fix}<Watch text={ownReading.fix} /></p> : null}
+        {hookScore !== null && hookScore < HOOK_REWRITE_BELOW ? <p className={styles.fixHook}>Hook ได้ {hookScore}/10 ต่ำกว่า {HOOK_REWRITE_BELOW} · ถ้าจะทำแอดใหม่จากตัวนี้ ควรเขียนคำเปิดใหม่ก่อนเพิ่มงบ</p> : null}
+      </div> : null}
       <div><h3>ต่างกันตรงไหน</h3><ul>{result.summary.diffs.map((item, index) => <li key={index}>{item.text}</li>)}</ul></div>
-      <div><h3>แอดเราลองทำอะไร</h3><ul>{result.summary.ideas.map((item, index) => <li key={index}>{item.text}</li>)}</ul></div>
+      <div><h3>แอดเราลองทำอะไร</h3><ul>{result.summary.ideas.map((item, index) => <li key={index}>{item.text}<Watch text={item.text} /></li>)}</ul></div>
+      {result.summary.hooks.length ? <div className={styles.hooks} data-testid="compare-ai-hooks">
+        <h3>คำเปิดใหม่ให้ลองยิง</h3>
+        <p className={styles.muted}>AI ถูกสั่งให้เลี่ยงคำเสี่ยง และระบบเตือนคำที่มักผิดเกณฑ์ อย. ให้ด้วย แต่ยังต้องตรวจก่อนใช้จริง</p>
+        <ol>{result.summary.hooks.map((item, index) => <li key={index}>
+          <strong>{item.text}</strong>
+          <span className={styles.muted}>{item.why}</span>
+          <Watch text={item.text} />
+          <button type="button" className={styles.linkish} onClick={() => void copyHook(index, item.text)}>{copied === `${key}#${index}` ? 'คัดลอกแล้ว' : 'คัดลอก'}</button>
+        </li>)}</ol>
+      </div> : null}
       {!risky.length ? <p className={styles.aiOk} data-testid="compare-ai-risk">✓ ไม่พบคำเสี่ยงผิดเกณฑ์ อย. ในแอดเรา</p> : null}
     </div>}
 
@@ -148,6 +200,13 @@ export function AiCompare({ ads, ourThrough, onCopyLink, linkLabel }: {
             const claims = readingOf(item)?.claims;
             return <td key={adRefId(refOf(item))}>{claims ? claims.items.length ? <ul className={styles.aiClaims}>{claims.items.map((claim, index) => <li key={index} className={claim.risky ? styles.aiRisk : undefined}>{claim.risky ? '⚠ ' : ''}{claim.text}</li>)}</ul> : <span className={styles.muted}>ไม่พบคำอ้าง</span> : <span className={styles.muted}>—</span>}</td>;
           })}</tr>
+          <tr><th scope="rowgroup" colSpan={ads.length + 1} className={styles.aiGroup}>เหตุผลของคะแนน</th></tr>
+          {SCORE_DIMS.map(dim => <tr key={`score-${dim}`}><th scope="row" className={styles.aiDim}>{SCORE_LABEL[dim]}</th>{ads.map(item => {
+            const score = readingOf(item)?.scores[dim];
+            return <td key={adRefId(refOf(item))}>{score ? <>
+              <strong>{score.score === null ? 'ไม่มีภาพให้ดู' : `${score.score}/10`}</strong>{score.why ? <span className={styles.aiSrc}>{score.why}</span> : null}
+            </> : <span className={styles.muted}>—</span>}</td>;
+          })}</tr>)}
           {/* Our own data, never AI: days running for both sides, in the same words. */}
           <tr><th scope="row" className={styles.aiDim}>{AI_DIM_LABEL.age}</th>{ads.map(item => <td key={adRefId(refOf(item))}>
             {item.kind === 'own'
@@ -167,4 +226,21 @@ export function AiCompare({ ads, ourThrough, onCopyLink, linkLabel }: {
       <UsageBars show={['ai']} refresh={run ? run.data.spent.total : 0} />
     </details>
   </section>;
+}
+
+/** A plain word match, not AI: words in a suggestion that often break FDA rules. */
+function Watch({ text }: { text: string }) {
+  const words = fdaWatch(text);
+  return words.length ? <span className={styles.watch} data-testid="compare-ai-watch">⚠ มีคำที่มักผิดเกณฑ์ อย.: {words.join(' · ')}</span> : null;
+}
+
+/** One rubric part: a bar per ad, so the gap reads at a glance. */
+function ScoreRow({ label, cells, gap }: { label: string; gap: boolean; cells: { id: string; own: boolean; score: number | null }[] }) {
+  return <>
+    <span className={gap ? styles.scoreLabelGap : styles.scoreLabel}>{label}</span>
+    {cells.map(cell => <span key={cell.id} className={styles.scoreCell}>
+      <span className={styles.scoreBar} aria-hidden="true"><span className={cell.own ? styles.scoreFillOurs : styles.scoreFill} style={{ width: `${(cell.score ?? 0) * 10}%` }} /></span>
+      <span className={styles.scoreNum}>{cell.score === null ? '—' : cell.score}</span>
+    </span>)}
+  </>;
 }

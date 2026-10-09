@@ -8,7 +8,7 @@ import {cachedOwnedImage} from '../owned-ads/media-cache.ts';
 import {summarizeOwnedReport} from '../owned-ads/model.ts';
 import type {CompanyAd} from '../owned-ads/source-rows.ts';
 import type {Media} from '../media.ts';
-import {AI_DIMS, type AdReading, type AdRef, type AiRun, type AiEstimate, type SetReading, adRefId} from './compare-shared.ts';
+import {AI_DIMS, SCORE_DIMS, cleanScores, type AdReading, type AdRef, type AiRun, type AiEstimate, type SetReading, adRefId} from './compare-shared.ts';
 export {parseAdRefs} from './compare-shared.ts';
 
 // ponytail: one model for every call; set OPENAI_MODEL to change it (cached rows are per model).
@@ -19,12 +19,12 @@ const PRICES: Record<string, [number, number]> = {
 };
 const price = PRICES[MODEL] ?? PRICES['gpt-4.1-mini'];
 // Measured order of magnitude for one ad (copy + low-detail image) and one set summary; shown before running.
-const EST_AD = (2500 * price[0] + 700 * price[1]) / 1e6;
-const EST_SET = (4000 * price[0] + 900 * price[1]) / 1e6;
+const EST_AD = (3200 * price[0] + 700 * price[1]) / 1e6;
+const EST_SET = (2400 * price[0] + 500 * price[1]) / 1e6;
 const DAILY_CAP = Number(process.env.AI_DAILY_USD) || 1;
 const TOTAL_CAP = Number(process.env.AI_TOTAL_USD) || 4.5;
-const VERSION = 'v1';
-const SET_VERSION = 'v2'; // bump when SET_PROMPT changes
+const VERSION = 'v3'; // bump when AD_PROMPT changes (v3: creative scorecard)
+const SET_VERSION = 'v7'; // bump when SET_PROMPT changes (v7: scores, 30-day rule, hooks to test)
 
 export class AiError extends Error { status: number; constructor(message: string, status: number) { super(message); this.status = status; } }
 
@@ -112,17 +112,22 @@ async function callOpenAI<T>(messages: Message[], name: string, schema: object, 
 const cell = {type: 'object', additionalProperties: false, required: ['value', 'source', 'quote'], properties: {
   value: {type: 'string'}, source: {type: 'string', enum: ['ข้อความ', 'ภาพ', 'ภาพ + ข้อความ', 'ไม่พบ']}, quote: {type: 'string'},
 }};
-const AD_SCHEMA = {type: 'object', additionalProperties: false, required: [...AI_DIMS, 'claims'], properties: {
+const AD_SCHEMA = {type: 'object', additionalProperties: false, required: [...AI_DIMS, 'claims', 'scores', 'fix'], properties: {
   ...Object.fromEntries(AI_DIMS.map(dim => [dim, cell])),
   claims: {type: 'object', additionalProperties: false, required: ['items', 'quote'], properties: {
     items: {type: 'array', items: {type: 'object', additionalProperties: false, required: ['text', 'risky'], properties: {text: {type: 'string'}, risky: {type: 'boolean'}}}},
     quote: {type: 'string'},
   }},
+  scores: {type: 'object', additionalProperties: false, required: [...SCORE_DIMS], properties: Object.fromEntries(SCORE_DIMS.map(dim => [dim, {
+    type: 'object', additionalProperties: false, required: ['score', 'why'], properties: {score: {type: ['integer', 'null']}, why: {type: 'string'}},
+  }]))},
+  fix: {type: 'string'},
 }};
 const refList = {type: 'array', items: {type: 'integer'}};
-const SET_SCHEMA = {type: 'object', additionalProperties: false, required: ['diffs', 'ideas'], properties: {
+const SET_SCHEMA = {type: 'object', additionalProperties: false, required: ['diffs', 'ideas', 'hooks'], properties: {
   diffs: {type: 'array', items: {type: 'object', additionalProperties: false, required: ['text', 'ads'], properties: {text: {type: 'string'}, ads: refList}}},
   ideas: {type: 'array', items: {type: 'object', additionalProperties: false, required: ['text', 'ads'], properties: {text: {type: 'string'}, ads: refList}}},
+  hooks: {type: 'array', items: {type: 'object', additionalProperties: false, required: ['text', 'why'], properties: {text: {type: 'string'}, why: {type: 'string'}}}},
 }};
 
 const AD_PROMPT = `คุณช่วยทีมการตลาดไทยอ่านโฆษณา Facebook ทีละตัว ตอบภาษาไทย สั้น ไม่เกิน 120 ตัวอักษรต่อช่อง
@@ -135,12 +140,30 @@ offer = ราคา จำนวน ของแถม ส่งฟรี เ�
 proof = หลักฐานความน่าเชื่อ เช่น รีวิว ผลทดสอบ เลข อย. ผู้เชี่ยวชาญ ส่วนผสม
 format = รูปแบบครีเอทีฟ (ภาพนิ่ง วิดีโอ หลายภาพ) และลักษณะที่เห็น
 claims = คำอ้างเรื่องสุขภาพหรือผลลัพธ์ทั้งหมด risky=true ถ้าเสี่ยงผิดเกณฑ์โฆษณา อย. เช่น รักษา หายขาด ถาวร ลดน้ำหนักเป็นตัวเลข อ้างแพทย์
-ห้ามคาดเดายอดขาย งบ หรือผลลัพธ์ของแอด`;
+ห้ามคาดเดายอดขาย งบ หรือผลลัพธ์ของแอด
+
+scores = ให้คะแนนคุณภาพครีเอทีฟ 0–10 (จำนวนเต็ม) แบบ creative director ที่เข้มงวด ไม่ใจดี ไม่ใช่การเดาผลลัพธ์
+เกณฑ์: 3 = อ่อน 5 = ธรรมดาเหมือนแอดทั่วไป 7 = ดีพอจะยิงต่อ 9–10 = โดดเด่นจริง หายากมาก ถ้าลังเลระหว่างสองคะแนนให้เลือกคะแนนที่ต่ำกว่า
+hook = หยุดนิ้วคนที่เลื่อนฟีดได้แค่ไหนในวินาทีแรก (บรรทัดแรก หรือข้อความใหญ่บนภาพ)
+clarity = อ่านแล้วรู้ทันทีไหมว่าขายอะไร ให้ใคร ได้อะไร
+cta = บอกชัดไหมว่าต้องทำอะไรต่อ (ทักแชท สั่งซื้อ กดลิงก์) และมีเหตุให้ทำตอนนี้
+emotion = แตะปัญหาหรือความรู้สึกจริงของลูกค้าแค่ไหน
+offer = ข้อเสนอชัดและคุ้มแค่ไหน ถ้าไม่บอกราคาหรือข้อเสนอเลยให้ 0–3
+fit = ภาพกับข้อความเล่าเรื่องเดียวกันไหม ถ้าไม่มีภาพให้ score=null
+why = เหตุผลของคะแนน อ้างสิ่งที่เห็นในแอด ไม่เกิน 80 ตัวอักษร
+fix = สิ่งเดียวที่ควรแก้ก่อนเพื่อให้แอดนี้ดีขึ้นมากที่สุด (มักเป็นส่วนที่คะแนนต่ำสุด) เขียนเป็นคำสั่งที่ทำได้เลย ไม่เกิน 120 ตัวอักษร ห้ามแต่งตัวเลขหรือคำอ้างที่ไม่มีในแอด ห้ามแนะนำให้ใช้คำอ้างที่ risky หรือคำอ้างผลต่อโรค อวัยวะ หรือระยะเวลาเห็นผล`;
 
 const SET_PROMPT = `คุณช่วยทีมการตลาดไทยสรุปการเทียบโฆษณา ตอบภาษาไทย ประโยคละไม่เกิน 160 ตัวอักษร
-ข้อมูลคือผลอ่านแอดแต่ละตัว (index เริ่มที่ 0) แอดของเรามีตัวเลขผลลัพธ์ แอดคู่แข่งไม่มีงบหรือยอดขาย ห้ามอ้างว่าคู่แข่งขายดีกว่าหรือได้ผลกว่า
-diffs = จุดที่แอดเรากับคู่แข่งต่างกันจริง 2–4 ข้อ (ข้อเสนอ มุมขาย คำเปิด หลักฐาน รูปแบบ)
-ideas = ไอเดียทดลองสำหรับแอดฝั่ง "แอดของเรา" เท่านั้น 2–4 ข้อ (เราแก้แอดคู่แข่งไม่ได้) เขียนเป็นสิ่งที่ทีมทำกับแอดเราได้เลย เช่น เปลี่ยนคำเปิด ใส่ราคา เพิ่มหลักฐาน แล้ววัดผลด้วยตัวเลขของเรา ห้ามแนะนำคำอ้างที่เสี่ยงผิดเกณฑ์ อย.
+ข้อมูลคือผลอ่านแอดแต่ละตัว (index เริ่มที่ 0) พร้อมคะแนนครีเอทีฟ 0–10 ที่ AI ให้ แอดของเรามีตัวเลขผลลัพธ์จริง แอดคู่แข่งไม่มีงบหรือยอดขาย ห้ามอ้างว่าคู่แข่งขายดีกว่าหรือได้ผลกว่า
+จำนวนวันที่คู่แข่งยิง: 30 วันขึ้นไปและยังแสดงอยู่ = คู่แข่งใช้แอดนี้ต่อเนื่อง ควรศึกษา (แต่ห้ามสรุปว่าขายดีหรือได้ผล เพราะไม่มีข้อมูลนั้น) ไม่เกิน 10 วัน = อาจยังทดสอบอยู่ อย่าเพิ่งยึดเป็นแบบ ข้อมูลนี้ไม่มีจำนวนวันของแอดเรา ห้ามพูดว่าแอดเราไม่มีข้อมูลวัน
+ถ้าตัวเลขจริงของแอดเราดีแต่คะแนนต่ำ ให้เชื่อตัวเลขจริงก่อน แนะนำเป็นการทดลองเพิ่ม ไม่ใช่ให้หยุดแอด
+ถ้า scores.fit เป็น null แปลว่า AI ไม่ได้เห็นภาพของแอดนั้น (ระบบอาจโหลดภาพไม่ได้) ห้ามสรุปว่าแอดนั้นไม่มีภาพหรือเป็นข้อความล้วน และห้ามเทียบเรื่องภาพ
+diffs = จุดที่แอดเรากับคู่แข่งต่างกันจริง 2–4 ข้อ (คำเปิด ข้อเสนอ มุมขาย CTA หลักฐาน รูปแบบ) เริ่มจากส่วนที่คะแนนห่างกันมากที่สุด
+ideas = ไอเดียทดลองสำหรับแอดฝั่ง "แอดของเรา" เท่านั้น 2–4 ข้อ (เราแก้แอดคู่แข่งไม่ได้) เขียนเป็นสิ่งที่ทีมทำกับแอดเราได้เลย เช่น เปลี่ยนคำเปิด ใส่ราคา เพิ่มหลักฐาน แล้ววัดผลด้วยตัวเลขของเรา
+hooks = คำเปิดใหม่ 3 แบบสำหรับแอดของเรา ให้ทีมยิงทดสอบ แต่ละแบบใช้มุมต่างกัน (เช่น ปัญหา ผลลัพธ์ที่พูดได้ ข้อเสนอ) text = ประโยคพร้อมใช้ ไม่เกิน 90 ตัวอักษร why = ทำไมน่าลอง ไม่เกิน 100 ตัวอักษร
+กฎของ ideas และ hooks: ใช้เฉพาะข้อเท็จจริงที่มีในแอดของเรา (ราคา ของแถม ส่วนผสม วิธีใช้) ห้ามแต่งตัวเลข รีวิว หรือคำอ้างใหม่ ห้ามลอกคำของคู่แข่งมาทั้งประโยค
+กฎ อย. เข้มที่สุด: ห้ามนำคำอ้างใน claims ที่ risky=true มาใช้ซ้ำแม้จะเรียบเรียงใหม่ ห้ามอ้างว่ารักษา ป้องกัน หรือบรรเทาโรคหรืออาการ ห้ามอ้างผลต่ออวัยวะหรือค่าเลือด (หลอดเลือด หัวใจ ความดัน ไขมัน น้ำตาล) ห้ามบอกว่าเห็นผลในกี่วัน ห้ามรับประกันผล (แน่นอน 100% หายขาด ถาวร) ห้ามอ้างแพทย์
+hooks ที่ปลอดภัยใช้มุม เช่น ข้อเสนอและราคา ความสะดวก รสชาติ วิธีกิน คำถามชวนคิดเรื่องไลฟ์สไตล์ ส่วนผสมที่มีในแอด ชื่อสินค้าให้สะกดตามที่เขียนในแอดทุกตัวอักษร
 ads = index ของแอดที่เป็นหลักฐานของข้อนั้น`;
 
 const sha = (value: string) => createHash('sha256').update(value).digest('hex').slice(0, 24);
@@ -184,13 +207,16 @@ export async function runComparison(refs: AdRef[], dryRun: boolean): Promise<AiE
     const image = await imageData(ad.image);
     const content: Exclude<Message['content'], string> = [{type: 'text', text: `ฝั่ง: ${ad.side}\nชื่อ: ${ad.label}\nรูปแบบ: ${ad.format}\n${image ? '' : 'ไม่มีภาพประกอบ อ่านจากข้อความเท่านั้น\n'}ข้อความในแอด:\n${ad.text.slice(0, 4000) || '(ไม่มีข้อความ)'}`}];
     if (image) content.push({type: 'image_url', image_url: {url: image, detail: 'low'}});
-    const call = await callOpenAI<AdReading>([{role: 'system', content: AD_PROMPT}, {role: 'user', content}], 'ad_reading', AD_SCHEMA, 900);
+    const call = await callOpenAI<AdReading>([{role: 'system', content: AD_PROMPT}, {role: 'user', content}], 'ad_reading', AD_SCHEMA, 1600);
+    call.result.scores = cleanScores(call.result.scores);
+    // Without a picture there is nothing to judge, whatever the model guessed.
+    if (!image) call.result.scores.fit = {score: null, why: 'AI ไม่ได้เห็นภาพของแอดนี้'};
     hit.set(keys[index], call.result);
     await save(keys[index], 'ad', call);
   }));
   if (!hit.has(setKey)) {
     const input = ads.map((ad, index) => ({index, side: ad.side, name: ad.label, facts: ad.facts, reading: hit.get(keys[index])}));
-    const call = await callOpenAI<SetReading>([{role: 'system', content: SET_PROMPT}, {role: 'user', content: JSON.stringify(input)}], 'set_reading', SET_SCHEMA, 1200);
+    const call = await callOpenAI<SetReading>([{role: 'system', content: SET_PROMPT}, {role: 'user', content: JSON.stringify(input)}], 'set_reading', SET_SCHEMA, 1800);
     hit.set(setKey, call.result);
     await save(setKey, 'set', call);
   }
