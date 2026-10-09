@@ -235,8 +235,24 @@
 .aiTable thead .aiName { margin-top:4px; }
 
 /* --- Creative scorecard (claude-ads "/ads creative" rubric), the fix to make first, hooks to test. */
-/* Kept to a reading width: on a wide screen bars, numbers and lines of text would drift far apart. */
+/* Narrow: one column at a reading width; the two groups dissolve into the summary grid in reading order. */
+.aiPanel { container:ai / inline-size; }
 .aiSummary { max-width:1160px; }
+.aiMain, .aiSide { display:contents; }
+.aiRiskBox { order:0; }
+.score { order:1; }
+.fix { order:2; }
+.diffs { order:3; }
+.ideas { order:4; }
+.hooks { order:5; }
+.aiOk { order:6; grid-column:1 / -1; margin:0; }
+/* Wide: what AI read on the left, what to do on the right, so the space beside the scorecard is used. */
+@container ai (min-width: 1400px) {
+  .aiSummary { max-width:none; grid-template-columns:minmax(0, 1080px) minmax(340px, 1fr); align-items:start; column-gap:40px; }
+  .aiMain { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:28px 24px; }
+  .aiSide { display:grid; align-content:start; gap:20px; padding-left:40px; border-left:1px solid var(--line); position:sticky; top:calc(var(--topbar-h, 0px) + 16px); }
+  .aiOk { order:0; padding:10px 14px; border-radius:var(--radius-sm); background:var(--ok-tint); }
+}
 .score, .fix, .hooks { grid-column:1 / -1; }
 .scoreHead { display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 12px; margin-bottom:10px; }
 .scoreHead h3 { margin:0; }

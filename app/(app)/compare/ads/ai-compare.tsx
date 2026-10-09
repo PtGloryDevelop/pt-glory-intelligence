@@ -122,7 +122,7 @@ export function AiCompare({ ads, ourThrough, onCopyLink, linkLabel }: {
     try { await navigator.clipboard.writeText(text); setCopied(`${key}#${index}`); } catch { setCopied(null); }
   }
 
-  return <section className={styles.panel} aria-labelledby="compare-ai-heading" data-testid="compare-ai">
+  return <section className={`${styles.panel} ${styles.aiPanel}`} aria-labelledby="compare-ai-heading" data-testid="compare-ai">
     <div className={styles.aiHeadRow}>
       <h2 id="compare-ai-heading">AI สรุปคู่นี้</h2>
       <span className={styles.muted}>อ่านจากภาพและข้อความ · ไม่รู้งบหรือยอดขายของคู่แข่ง</span>
@@ -134,10 +134,8 @@ export function AiCompare({ ads, ourThrough, onCopyLink, linkLabel }: {
       {failure ? <><span>{failure}</span><button type="button" onClick={() => { tried.current = null; void analyze(); }} disabled={busy}>ลองอีกครั้ง</button></>
         : <span>{busy ? 'AI กำลังอ่านภาพและข้อความของทั้งสองฝั่ง…' : 'กำลังเตรียมสรุป…'}</span>}
     </div> : <div className={styles.aiSummary} data-testid="compare-ai-summary">
-      {risky.length ? <div className={`${styles.aiRiskBox} ${styles.aiRiskFound}`} data-testid="compare-ai-risk">
-        <h3>คำในแอดเราที่อาจผิดเกณฑ์ อย. ({risky.length})</h3>
-        <ul>{risky.map((claim, index) => <li key={index}>{claim.text}</li>)}</ul>
-      </div> : null}
+      {/* Wide: what AI read on the left, what to do on the right. Narrow: one column, in reading order (see the CSS). */}
+      <div className={styles.aiMain}>
       <div className={styles.score} data-testid="compare-ai-score">
         <div className={styles.scoreHead}>
           <h3>คะแนนครีเอทีฟ</h3>
@@ -154,13 +152,19 @@ export function AiCompare({ ads, ourThrough, onCopyLink, linkLabel }: {
           {SCORE_DIMS.map(dim => <ScoreRow key={dim} dim={dim} gap={gap?.dim === dim} cells={ads.map(item => ({ id: compareId(item), own: item.kind === 'own', cell: readingOf(item)?.scores[dim] }))} />)}
         </div>
       </div>
+      <div className={styles.diffs}><h3>ต่างกันตรงไหน</h3><ul>{result.summary.diffs.map((item, index) => <li key={index}>{item.text}</li>)}</ul></div>
+      <div className={styles.ideas}><h3>แอดเราลองทำอะไร</h3><ul>{result.summary.ideas.map((item, index) => <li key={index}>{item.text}<Watch text={item.text} /></li>)}</ul></div>
+      </div>
+      <div className={styles.aiSide}>
+      {risky.length ? <div className={`${styles.aiRiskBox} ${styles.aiRiskFound}`} data-testid="compare-ai-risk">
+        <h3>คำในแอดเราที่อาจผิดเกณฑ์ อย. ({risky.length})</h3>
+        <ul>{risky.map((claim, index) => <li key={index}>{claim.text}</li>)}</ul>
+      </div> : <p className={styles.aiOk} data-testid="compare-ai-risk">✓ ไม่พบคำเสี่ยงผิดเกณฑ์ อย. ในแอดเรา</p>}
       {ownReading?.fix || hookScore !== null && hookScore < HOOK_REWRITE_BELOW ? <div className={styles.fix} data-testid="compare-ai-fix">
         <h3>แก้ตรงนี้ก่อน (แอดเรา)</h3>
         {ownReading?.fix ? <p>{ownReading.fix}<Watch text={ownReading.fix} /></p> : null}
         {hookScore !== null && hookScore < HOOK_REWRITE_BELOW ? <p className={styles.fixHook}>Hook ได้ {hookScore}/10 ต่ำกว่า {HOOK_REWRITE_BELOW} · ถ้าจะทำแอดใหม่จากตัวนี้ ควรเขียนคำเปิดใหม่ก่อนเพิ่มงบ</p> : null}
       </div> : null}
-      <div><h3>ต่างกันตรงไหน</h3><ul>{result.summary.diffs.map((item, index) => <li key={index}>{item.text}</li>)}</ul></div>
-      <div><h3>แอดเราลองทำอะไร</h3><ul>{result.summary.ideas.map((item, index) => <li key={index}>{item.text}<Watch text={item.text} /></li>)}</ul></div>
       {result.summary.hooks.length ? <div className={styles.hooks} data-testid="compare-ai-hooks">
         <h3>คำเปิดใหม่ให้ลองยิง</h3>
         <p className={styles.muted}>AI ถูกสั่งให้เลี่ยงคำเสี่ยง และระบบเตือนคำที่มักผิดเกณฑ์ อย. ให้ด้วย แต่ยังต้องตรวจก่อนใช้จริง</p>
@@ -171,7 +175,7 @@ export function AiCompare({ ads, ourThrough, onCopyLink, linkLabel }: {
           <button type="button" className={styles.linkish} onClick={() => void copyHook(index, item.text)}>{copied === `${key}#${index}` ? 'คัดลอกแล้ว' : 'คัดลอก'}</button>
         </li>)}</ol>
       </div> : null}
-      {!risky.length ? <p className={styles.aiOk} data-testid="compare-ai-risk">✓ ไม่พบคำเสี่ยงผิดเกณฑ์ อย. ในแอดเรา</p> : null}
+      </div>
     </div>}
 
     <div className={styles.aiActions}>
