@@ -26,3 +26,12 @@ test('comparison selections are stored per user', () => {
   assert.equal(comparisonSelectionKey(''), null);
   assert.notEqual(comparisonSelectionKey(user), comparisonSelectionKey('33333333-3333-4333-8333-333333333333'));
 });
+
+test('our ad has one name everywhere, and a catalog template is never printed as copy', async () => {
+  const { ownedName, rivalCopy } = await import('../app/(app)/compare/ads/selection.ts');
+  assert.equal(ownedName({ ad_name: 'U11', title: null, campaign_name: 'Test Gen Code U11' }), 'Test Gen Code U11');
+  assert.equal(ownedName({ ad_name: 'VDO 58', title: 'อื่น', campaign_name: null }), 'VDO 58');
+  assert.equal(rivalCopy('{{product.brand}}').template, true);
+  assert.equal(rivalCopy('ลด 40% {{product.name}} วันนี้วันเดียว ส่งฟรีทั่วไทย').template, false);
+  assert.equal(rivalCopy(null).text, 'ไม่มีข้อความที่บันทึกไว้');
+});

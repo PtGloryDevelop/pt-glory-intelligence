@@ -1,298 +1,316 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { PageHeader } from '@/components/shell/PageHeader';
 import { Creative } from '../../owned-ads/owned-client';
 import { OwnedVideoPlayer } from '../../owned-ads/owned-video-player';
 import { AdCreative } from '@/components/AdDrawer';
 import type { CompanyAd } from '@/lib/owned-ads/source-rows';
-import type { OwnedPerformanceData } from '@/lib/owned-ads/performance';
+import type { OwnedPerformanceData, OwnedPerformanceRow } from '@/lib/owned-ads/performance';
+import type { CommandAd, CommandCenterData } from '@/lib/owned-ads/command-center';
+import type { RivalBoard } from '@/lib/rivals/board';
+import type { CatalogPage } from '@/lib/read/catalog';
 import { resolveMedia } from '@/lib/media/resolve';
 import { summarizeOwnedReport } from '@/lib/owned-ads/model';
-import { comparisonSelectionKey, mergeComparisonSelection, parseComparisonSelection, rivalFromDetail, type ComparisonSelection, type Rival } from './selection';
-import { AiCompare, MAX_COMPARE, compareId, type CompareAd } from './ai-compare';
+import { comparisonSelectionKey, mergeComparisonSelection, ownedName, parseComparisonSelection, rivalCopy, rivalFromDetail, type ComparisonSelection, type Rival } from './selection';
+import { AiCompare } from './ai-compare';
+import { OwnedPicker, RivalPicker, creativeKey, ownKey, type OwnedChoice } from './pickers';
 import styles from './comparison.module.css';
 
 type Dataset = { id: string; name: string; source: string; collected: string; count: number };
-type OwnedResult = { rows: CompanyAd[]; total: number; snapshot: { id: string; date_start: string; date_end: string; finished_at: string; accounts: { id: string; name: string }[] } | null };
-type Step = 'owned' | 'rival' | 'review';
 type Period = { date_start: string; date_end: string };
+type Owned = CompanyAd & Partial<Pick<OwnedPerformanceRow, 'unit_ids' | 'unit_names' | 'delivery_days' | 'video_id' | 'creative_id'>> & { group_size?: number };
+type UnitAverage = { name: string; roas: number | null; cpc: number | null };
+type Tone = 'good' | 'bad' | '';
+
 const number = (value: number | null | undefined) => value == null ? '—' : value.toLocaleString('th-TH', { maximumFractionDigits: 2 });
-const ownId = (ad: CompanyAd) => ad.account_id + ':' + ad.ad_id;
-const ownName = (ad: CompanyAd) => ad.ad_name.length <= 5 ? ad.title ?? ad.campaign_name ?? ad.ad_name : ad.ad_name;
+const thaiDay = (value: string | null | undefined) => value ? new Date(`${value.slice(0, 10)}T00:00:00`).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }) : '—';
 const rivalImage = (ad: Rival) => {
   const resolved = resolveMedia(ad.display_format, ad.media, { archivePath: ad.archive_path, archiveStatus: ad.archive_status, presentationUrl: ad.archive_url });
   return 'src' in resolved ? resolved.src : null;
 };
+/** Against the unit's own figure: ±10% is "about the same", which is what most ads are. */
+function versus(value: number | null, average: number | null | undefined, goodUp: boolean, unit: string): { text: string; tone: Tone } {
+  if (value == null || !average) return { text: '', tone: '' };
+  const ratio = value / average;
+  if (ratio > 0.9 && ratio < 1.1) return { text: `ใกล้ค่าเฉลี่ย ${unit} (${number(average)})`, tone: '' };
+  const higher = ratio >= 1.1;
+  return { text: `${higher ? 'สูง' : 'ต่ำ'}กว่าค่าเฉลี่ย ${unit} (${number(average)})`, tone: higher === goodUp ? 'good' : 'bad' };
+}
 
+async function json<T>(url: string, signal: AbortSignal): Promise<T> {
+  const response = await fetch(url, { cache: 'no-store', signal });
+  const body = await response.json();
+  if (!response.ok) throw new Error(body.error ?? 'เปิดข้อมูลไม่สำเร็จ');
+  return body as T;
+}
+
+/**
+ * Our ad next to a competitor's, on one screen.
+ *
+ * Either side can be chosen first, from a panel that slides over this screen;
+ * once one side is set, the other offers matches from the same unit. Both
+ * creatives sit side by side at the same size with the few numbers each side
+ * really has, and AI sums up the pair as soon as both are there.
+ */
 export function AdComparison({ datasets, seed, initialOwned, initialPeriod, initialRival, initialError, userNamespace, returnHref = '/', performanceSource = false }: {
   datasets: Dataset[]; seed: ComparisonSelection; initialOwned: CompanyAd | null; initialPeriod: Period | null; initialRival: Rival | null; initialError: string; userNamespace: string; returnHref?: string; performanceSource?: boolean;
 }) {
   const storageKey = comparisonSelectionKey(userNamespace);
-  // The catalog filter and the selected observation have different lifetimes.
-  const [dataset, setDataset] = useState('');
-  const [owned, setOwned] = useState<OwnedResult | null>(null);
-  const [shared, setShared] = useState<string | null>(null);
-  const [rivals, setRivals] = useState<{ rows: Rival[]; total: number } | null>(null);
-  const [ownSearch, setOwnSearch] = useState('');
-  const [rivalSearch, setRivalSearch] = useState('');
-  const [ownQuery, setOwnQuery] = useState('');
-  const [rivalQuery, setRivalQuery] = useState('');
-  const [account, setAccount] = useState('');
-  const [ownPage, setOwnPage] = useState(0);
-  const [rivalPage, setRivalPage] = useState(0);
-  const [refresh, setRefresh] = useState(0);
-  const [a, setA] = useState<CompanyAd | null>(initialOwned);
-  const [period, setPeriod] = useState<Period | null>(initialPeriod);
+  const [a, setA] = useState<Owned | null>(initialOwned);
   const [b, setB] = useState<Rival | null>(initialRival ? { ...initialRival, dataset_id: seed.dataset } : null);
-  const [step, setStep] = useState<Step>(initialOwned ? initialRival ? 'review' : 'rival' : 'owned');
+  const [period, setPeriod] = useState<Period | null>(initialPeriod);
+  const [picker, setPicker] = useState<'own' | 'rival' | null>(null);
+  const [worseFirst, setWorseFirst] = useState(false);
   const [restoreError, setRestoreError] = useState(initialError);
   const [restoring, setRestoring] = useState(true);
-  const [ownError, setOwnError] = useState('');
-  const [rivalError, setRivalError] = useState('');
-  const [ownLoadedKey, setOwnLoadedKey] = useState('');
-  const [rivalLoadedKey, setRivalLoadedKey] = useState('');
-  const ownKey = JSON.stringify([ownQuery, account, ownPage]);
-  const rivalKey = JSON.stringify([dataset, rivalQuery, rivalPage]);
-  const ownLoading = ownLoadedKey !== ownKey;
-  const rivalLoading = rivalLoadedKey !== rivalKey;
-  const [extras, setExtras] = useState<CompareAd[]>([]);
-  const [adding, setAdding] = useState<'own' | 'rival' | null>(null);
   const [images, setImages] = useState<Record<string, string>>({});
   const [videoIds, setVideoIds] = useState<Record<string, string | null>>({});
-  const focusStep = useRef<Step | null>(null);
-  const ownHeading = useRef<HTMLHeadingElement>(null);
-  const rivalHeading = useRef<HTMLHeadingElement>(null);
-  const reviewHeading = useRef<HTMLHeadingElement>(null);
+  const [units, setUnits] = useState<{ id: string; name: string }[]>([]);
+  const [falling, setFalling] = useState<CommandAd[]>([]);
+  const [board, setBoard] = useState<RivalBoard | null>(null);
+  const [average, setAverage] = useState<{ key: string; value: UnitAverage | null } | null>(null);
+  const [rivalSuggest, setRivalSuggest] = useState<{ key: string; rows: Rival[] } | null>(null);
+  const [ownSuggest, setOwnSuggest] = useState<{ key: string; rows: OwnedChoice[] } | null>(null);
+  const [shared, setShared] = useState<string | null>(null);
 
-  const readOwned = useCallback(async (q: string, accountId: string, page: number, signal: AbortSignal): Promise<OwnedResult> => {
-    const filters = performanceSource ? new URLSearchParams(new URL(returnHref, 'https://pt-glory.invalid').search) : new URLSearchParams({ account: accountId, spend: 'reported' });
-    filters.set('q', q); filters.set('page', String(page)); filters.delete('compare');
-    const response = await fetch((performanceSource ? '/api/owned-ads/performance?' : '/api/owned-ads/library?') + filters, { signal });
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.error ?? 'เปิดแอดของเราไม่สำเร็จ');
-    if (!performanceSource) return result;
-    const data = result as OwnedPerformanceData;
-    return { rows: data.rows, total: data.total, snapshot: data.snapshot ? { ...data.snapshot, date_start: data.period.from, date_end: data.period.to, accounts: [] } : null };
+  // The period and filters our numbers are read with: the library's when we came from it.
+  const base = useMemo(() => {
+    const next = performanceSource ? new URLSearchParams(new URL(returnHref, 'https://pt-glory.invalid').search) : new URLSearchParams();
+    for (const key of ['q', 'page', 'compare', 'sort', 'dir']) next.delete(key);
+    if (!next.get('period')) next.set('period', 'all');
+    return next;
   }, [performanceSource, returnHref]);
+  const periodParams = useMemo(() => new URLSearchParams(['period', 'from', 'to'].flatMap(key => base.get(key) ? [[key, base.get(key)!]] : [])), [base]);
 
-  function openStep(next: Step) { focusStep.current = next; setStep(next); }
-  // The pair (a, b) anchors the page; extras ride along for the AI table only (not kept in the URL).
-  const compareAds: CompareAd[] = a && b ? [{ kind: 'own', ad: a }, ...extras.filter(item => item.kind === 'own'), { kind: 'rival', ad: b }, ...extras.filter(item => item.kind === 'rival')] : [];
-  function addCompare(item: CompareAd) {
-    if (compareAds.length < MAX_COMPARE && !compareAds.some(other => compareId(other) === compareId(item))) setExtras([...extras, item]);
-    setAdding(null); openStep('review');
-  }
-  function removeCompare(item: CompareAd) {
-    const next = extras.find(other => other.kind === item.kind);
-    if (a && item.kind === 'own' && compareId(item) === compareId({ kind: 'own', ad: a })) { if (next?.kind === 'own') { setA(next.ad); setExtras(extras.filter(other => other !== next)); } return; }
-    if (b && item.kind === 'rival' && compareId(item) === compareId({ kind: 'rival', ad: b })) { if (next?.kind === 'rival') { setB(next.ad); setExtras(extras.filter(other => other !== next)); } return; }
-    setExtras(extras.filter(other => compareId(other) !== compareId(item)));
-  }
-
+  // Reference data, once: units for the picker, falling ads for the badges, competitor pages per unit.
   useEffect(() => {
-    if (focusStep.current !== step) return;
-    focusStep.current = null;
-    const heading = step === 'owned' ? ownHeading.current : step === 'rival' ? rivalHeading.current : reviewHeading.current;
-    heading?.focus({ preventScroll: true });
-    heading?.scrollIntoView({ block: 'start', behavior: 'instant' });
-  }, [step]);
+    const controller = new AbortController();
+    json<OwnedPerformanceData>(`/api/owned-ads/performance?${base}`, controller.signal).then(data => { setUnits(data.filters.units); if (!period) setPeriod({ date_start: data.period.from, date_end: data.period.to }); }).catch(() => {});
+    json<CommandCenterData>(`/api/owned-ads/command-center?${periodParams}`, controller.signal).then(data => setFalling(data.falling)).catch(() => {});
+    json<RivalBoard>('/api/rivals', controller.signal).then(setBoard).catch(() => {});
+    return () => controller.abort();
+    // Loaded once per screen; period only fills in when nothing set it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [base, periodParams]);
 
+  // A selection kept from earlier in this session, or from a shared link.
   useEffect(() => {
     const controller = new AbortController();
     async function restore() {
       let saved = parseComparisonSelection({});
       try { if (storageKey) saved = parseComparisonSelection(JSON.parse(sessionStorage.getItem(storageKey) ?? '{}')); } catch { /* A blocked store does not prevent comparison. */ }
       const next = mergeComparisonSelection(saved, seed);
-      let own = initialOwned;
-      let ownPeriod = initialPeriod;
-      let rival = initialRival ? { ...initialRival, dataset_id: seed.dataset } : null;
       try {
-        await Promise.all([
-          !own && !seed.owned && next.owned ? readOwned(next.owned, next.account, 0, controller.signal)
-            .then(result => { own = result.rows.find(row => row.account_id === next.account && row.ad_id === next.owned) ?? null; ownPeriod = own ? result.snapshot : null; }) : null,
-          !rival && !seed.rival && next.rival && datasets.some(item => item.id === next.dataset) ? fetch('/api/ads/' + next.rival + '?datasetId=' + next.dataset, { signal: controller.signal })
-            .then(async response => { if (!response.ok) throw new Error(); const result = await response.json(); rival = { ...rivalFromDetail(result.detail), dataset_id: next.dataset }; }) : null,
+        const [own, rival] = await Promise.all([
+          !initialOwned && !seed.owned && next.owned ? json<OwnedPerformanceData>(`/api/owned-ads/performance?${new URLSearchParams({ ...Object.fromEntries(base), q: next.owned })}`, controller.signal)
+            .then(data => data.rows.find(row => row.account_id === next.account && row.ad_id === next.owned) ?? null) : Promise.resolve(initialOwned),
+          !initialRival && !seed.rival && next.rival && datasets.some(item => item.id === next.dataset) ? json<{ detail: Parameters<typeof rivalFromDetail>[0] }>(`/api/ads/${next.rival}?datasetId=${next.dataset}`, controller.signal)
+            .then(result => ({ ...rivalFromDetail(result.detail), dataset_id: next.dataset })) : Promise.resolve(initialRival ? { ...initialRival, dataset_id: seed.dataset } : null),
         ]);
-        if (!controller.signal.aborted) {
-          setA(own); setPeriod(ownPeriod); setB(rival);
-          setStep(own ? rival ? 'review' : 'rival' : 'owned');
-        }
-      } catch { if (!controller.signal.aborted) setRestoreError('เปิดแอดที่เลือกไว้ไม่สำเร็จ สามารถเลือกใหม่จากรายการได้'); }
+        if (!controller.signal.aborted) { setA(own); setB(rival); }
+      } catch { if (!controller.signal.aborted) setRestoreError('เปิดแอดที่เลือกไว้ไม่สำเร็จ สามารถเลือกใหม่ได้'); }
       finally { if (!controller.signal.aborted) setRestoring(false); }
     }
     void restore();
     return () => controller.abort();
-  }, [datasets, seed, initialOwned, initialPeriod, initialRival, storageKey, readOwned]);
+  }, [datasets, seed, initialOwned, initialRival, storageKey, base]);
 
+  // The pair lives in the address and this session, so a link or a refresh brings it back.
   useEffect(() => {
     if (restoring) return;
-    // Keep identifiers only; the authenticated APIs recheck access on return.
-    try { if (storageKey) sessionStorage.setItem(storageKey, JSON.stringify({ account: a?.account_id ?? '', owned: a?.ad_id ?? '', dataset: b?.dataset_id ?? '', rival: b?.ad_archive_id ?? '' })); } catch { /* Optional browsing convenience. */ }
+    const ids = { account: a?.account_id ?? '', owned: a?.ad_id ?? '', dataset: b?.dataset_id ?? '', rival: b?.ad_archive_id ?? '' };
+    try { if (storageKey) sessionStorage.setItem(storageKey, JSON.stringify(ids)); } catch { /* Optional browsing convenience. */ }
     const url = new URL(window.location.href);
-    if (url.pathname === '/compare/ads') {
-      for (const [key, value] of Object.entries({ account: a?.account_id ?? '', owned: a?.ad_id ?? '', dataset: b?.dataset_id ?? '', rival: b?.ad_archive_id ?? '' })) {
-        if (value) url.searchParams.set(key, value); else url.searchParams.delete(key);
-      }
-      window.history.replaceState(null, '', url.pathname + url.search + url.hash);
-    }
+    if (url.pathname !== '/compare/ads') return;
+    for (const [key, value] of Object.entries(ids)) { if (value) url.searchParams.set(key, value); else url.searchParams.delete(key); }
+    window.history.replaceState(null, '', url.pathname + url.search + url.hash);
   }, [a, b, storageKey, restoring]);
 
+  // Our ad with its unit, read over the same period as the unit's average.
+  const aKey = a ? ownKey(a) : '';
   useEffect(() => {
+    if (!a || a.unit_ids) return;
     const controller = new AbortController();
-    readOwned(ownQuery, account, ownPage, controller.signal)
+    json<OwnedPerformanceData>(`/api/owned-ads/performance?${new URLSearchParams({ ...Object.fromEntries(base), q: a.ad_id })}`, controller.signal)
       .then(data => {
-        if (!controller.signal.aborted) { setOwned(data); setOwnError(''); }
-      }).catch(error => { if (!controller.signal.aborted) setOwnError(error.message); })
-      .finally(() => { if (!controller.signal.aborted) setOwnLoadedKey(ownKey); });
+        const row = data.rows.find(item => item.account_id === a.account_id && item.ad_id === a.ad_id);
+        setA(current => current && ownKey(current) === ownKey(a) ? (row ? { ...row, group_size: current.group_size } : { ...current, unit_ids: [], unit_names: [] }) : current);
+        setPeriod({ date_start: data.period.from, date_end: data.period.to });
+      }).catch(() => { setA(current => current && ownKey(current) === ownKey(a) ? { ...current, unit_ids: [], unit_names: [] } : current); });
     return () => controller.abort();
-  }, [ownQuery, account, ownPage, ownKey, refresh, readOwned]);
+  }, [a, base]);
+
+  const unitId = a?.unit_ids?.[0] ?? null;
+  const unitName = a?.unit_names?.[0] ?? null;
+  useEffect(() => {
+    if (!unitId || !unitName) return;
+    const controller = new AbortController();
+    json<OwnedPerformanceData>(`/api/owned-ads/performance?${new URLSearchParams({ ...Object.fromEntries(base), unit: unitId })}`, controller.signal)
+      .then(data => {
+        const summary = data.summary.find(item => item.currency === a?.currency) ?? data.summary[0];
+        setAverage({ key: unitId, value: summary ? { name: unitName, roas: summary.roas, cpc: summary.cost_per_conversation } : null });
+      }).catch(() => setAverage({ key: unitId, value: null }));
+    return () => controller.abort();
+    // Currency belongs to the ad of this unit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unitId, unitName, base]);
+
+  // Fresh picture and video for our ad.
+  useEffect(() => {
+    if (!a) return;
+    const controller = new AbortController();
+    fetch('/api/owned-ads/media', { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: controller.signal, body: JSON.stringify({ items: [{ account_id: a.account_id, ad_id: a.ad_id }] }) })
+      .then(response => response.ok ? response.json() : null)
+      .then(data => {
+        const item = data?.items?.[0];
+        if (!item || controller.signal.aborted) return;
+        if (item.url) setImages(previous => ({ ...previous, [aKey]: item.url }));
+        setVideoIds(previous => ({ ...previous, [aKey]: item.video_id ?? null }));
+      }).catch(() => { /* Keep the source thumbnail when Meta is unavailable. */ });
+    return () => controller.abort();
+    // One fetch per chosen ad.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aKey]);
+
+  // Competitor pages of our unit (from the team's unit keywords), and the unit of a competitor page.
+  const unitPages = useMemo(() => {
+    const unit = board?.units.find(item => unitId && item.id === unitId) ?? null;
+    return unit ? { unitName: unit.name, pageIds: unit.pages.map(page => page.page_id) } : null;
+  }, [board, unitId]);
+  const rivalUnit = useMemo(() => b ? board?.units.find(unit => unit.pages.some(page => page.page_id === b.page_id)) ?? null : null, [board, b]);
 
   useEffect(() => {
+    if (!a || b || !unitPages?.pageIds.length) return;
+    const key = unitPages.pageIds.slice(0, 60).join(',');
     const controller = new AbortController();
-    const url = dataset ? '/api/datasets/' + dataset + '/ads' : '/api/catalog/ads';
-    fetch(url + '?' + new URLSearchParams({ search: rivalQuery, offset: String(rivalPage * 24), limit: '24' }), { signal: controller.signal })
-      .then(async response => {
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error ?? 'เปิดแอดคู่แข่งไม่สำเร็จ');
-        if (!controller.signal.aborted) {
-          const source = datasets.find(item => item.id === dataset);
-          setRivals({ ...data, rows: data.rows.map((ad: Rival) => dataset ? { ...ad, dataset_id: dataset, dataset_name: source?.name, collected_at: source?.collected } : ad) });
-          setRivalError('');
-        }
-      }).catch(error => { if (!controller.signal.aborted) setRivalError(error.message); })
-      .finally(() => { if (!controller.signal.aborted) setRivalLoadedKey(rivalKey); });
+    json<CatalogPage>(`/api/catalog/ads?${new URLSearchParams({ pages: key, active: 'active', sort: 'age', limit: '3' })}`, controller.signal)
+      .then(data => setRivalSuggest({ key, rows: data.rows as unknown as Rival[] })).catch(() => setRivalSuggest({ key, rows: [] }));
     return () => controller.abort();
-  }, [dataset, datasets, rivalQuery, rivalPage, rivalKey, refresh]);
+  }, [a, b, unitPages]);
 
   useEffect(() => {
-    const rows = [...new Map([...(a ? [a] : []), ...(step === 'owned' ? owned?.rows ?? [] : [])].map(row => [ownId(row), row])).values()];
-    if (!rows.length) return;
+    if (a || !b || !rivalUnit) return;
     const controller = new AbortController();
-    async function load() {
-      for (let offset = 0; offset < rows.length && !controller.signal.aborted; offset += 4) {
-        try {
-          const response = await fetch('/api/owned-ads/media', { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: controller.signal, body: JSON.stringify({ items: rows.slice(offset, offset + 4).map(({ account_id, ad_id }) => ({ account_id, ad_id })) }) });
-          if (!response.ok) continue;
-          const data = await response.json();
-          if (!controller.signal.aborted) {
-            setImages(previous => ({ ...previous, ...Object.fromEntries(data.items.filter((item: { url: string | null }) => item.url).map((item: { account_id: string; ad_id: string; url: string }) => [item.account_id + ':' + item.ad_id, item.url])) }));
-            setVideoIds(previous => ({ ...previous, ...Object.fromEntries(data.items.map((item: { account_id: string; ad_id: string; video_id?: string | null }) => [item.account_id + ':' + item.ad_id, item.video_id ?? null])) }));
-          }
-        } catch { /* Keep the source thumbnail when Meta is unavailable. */ }
-      }
-    }
-    void load();
+    json<OwnedPerformanceData>(`/api/owned-ads/performance?${new URLSearchParams({ ...Object.fromEntries(base), unit: rivalUnit.id, sort: 'spend' })}`, controller.signal)
+      .then(data => {
+        const seen = new Set<string>();
+        const fallingKeys = new Set(falling.map(ownKey));
+        const rows = data.rows.filter(row => !seen.has(creativeKey(row)) && seen.add(creativeKey(row)))
+          .sort((left, right) => Number(fallingKeys.has(ownKey(right))) - Number(fallingKeys.has(ownKey(left))));
+        setOwnSuggest({ key: rivalUnit.id, rows: rows.slice(0, 3) });
+      }).catch(() => setOwnSuggest({ key: rivalUnit.id, rows: [] }));
     return () => controller.abort();
-  }, [owned?.rows, a, step]);
+  }, [a, b, rivalUnit, base, falling]);
 
-  const selectedDataset = datasets.find(item => item.id === b?.dataset_id);
-  const selectedCollected = b?.collected_at ?? selectedDataset?.collected;
-  const metrics = a ? summarizeOwnedReport([a]) : null;
-  // The pair lives in the URL already; the team member's own login decides what they can open.
+  const fallingBy = useMemo(() => new Map(falling.map(ad => [ownKey(ad), ad])), [falling]);
+  const worseCount = useMemo(() => new Set(falling.map(creativeKey)).size, [falling]);
+
+  // A pick from the falling list carries that list's window; drop its unit so it is read again over ours.
+  const chooseOwn = useCallback((ad: OwnedChoice) => { setA(ad.delivery_days === undefined ? { ...ad, unit_ids: undefined, unit_names: undefined } : ad); setPicker(null); setShared(null); }, []);
+  const chooseRival = useCallback((ad: Rival) => { setB(ad); setPicker(null); setShared(null); }, []);
+  function openOwn(worse = false) { setWorseFirst(worse); setPicker('own'); }
+
   async function copyLink() {
     if (!a || !b) return;
     const link = `${window.location.origin}/compare/ads?${new URLSearchParams({ account: a.account_id, owned: a.ad_id, dataset: b.dataset_id ?? '', rival: b.ad_archive_id })}`;
     try { await navigator.clipboard.writeText(link); setShared('copied'); } catch { setShared(link); }
   }
 
+  const unitAvg = average?.key === unitId ? average.value : null;
+  const metrics = a ? summarizeOwnedReport([a]) : null;
+  const roas = metrics?.roas.value ?? null;
+  const cpc = a && a.spend != null && a.conversations ? a.spend / a.conversations : null;
+  const drop = a ? fallingBy.get(ownKey(a)) : undefined;
+  const selectedDataset = datasets.find(item => item.id === b?.dataset_id);
+  const copy = rivalCopy(b?.body_text);
+  const outsideUnit = Boolean(a && b && unitPages?.pageIds.length && !unitPages.pageIds.includes(b.page_id));
+  const returnLabel = ['/', '/market-overview'].includes(new URL(returnHref, 'https://pt-glory.invalid').pathname) ? 'กลับภาพรวม' : 'กลับคลังที่เลือกแอด';
+
+  const signal = (label: string, value: string, context: { text: string; tone: Tone }) => <div className={styles.signal}>
+    <span>{label}</span><strong>{value}</strong><small className={context.tone === 'good' ? styles.good : context.tone === 'bad' ? styles.bad : undefined}>{context.text || ' '}</small>
+  </div>;
+
   return <div className={styles.workspace}>
-    <PageHeader title="พื้นที่เปรียบเทียบแอด" description="ดูภาพและข้อความของสองฝั่ง แล้วให้ AI สรุปว่าต่างกันตรงไหนและแอดเราควรลองอะไร" actions={<Link data-testid="comparison-return" href={returnHref}>{['/','/market-overview'].includes(new URL(returnHref,'https://pt-glory.invalid').pathname)?'กลับภาพรวม':'กลับคลังที่เลือกแอด'}</Link>} />
-    <nav className={styles.steps} aria-label="ขั้นตอนเปรียบเทียบ">
-      {(['owned', 'rival', 'review'] as const).map((value, index) => <button type="button" key={value} data-testid={'compare-step-' + value} aria-current={step === value ? 'step' : undefined} disabled={restoring || value === 'review' && (!a || !b)} onClick={() => openStep(value)}>
-        <span className={styles.stepNumber}>{index < 2 && (index === 0 ? a : b) ? '✓' : index + 1}</span>
-        <span>{['เลือกแอดเรา', 'เลือกแอดคู่แข่ง', 'เทียบและสรุป'][index]}</span>
-      </button>)}
-    </nav>
+    <PageHeader title="เทียบกับคู่แข่ง" description="วางแอดเราคู่กับแอดคู่แข่ง ดูภาพข้างกัน แล้วให้ AI สรุปว่าต่างกันตรงไหน · เริ่มฝั่งไหนก่อนก็ได้"
+      actions={<span className={styles.headActions}>
+        {a || b ? <button type="button" onClick={() => { setA(null); setB(null); setShared(null); }} data-testid="compare-reset">เริ่มคู่ใหม่</button> : null}
+        <Link data-testid="comparison-return" href={returnHref}>{returnLabel}</Link>
+      </span>} />
     {restoreError ? <p className={styles.notice} role="alert">{restoreError} <button type="button" onClick={() => setRestoreError('')}>ปิด</button></p> : null}
     {restoring ? <p role="status" className={styles.muted}>กำลังเปิดแอดที่เลือกไว้…</p> : null}
-    {adding && step !== 'review' ? <p className={styles.notice} role="status">กำลังเลือก{adding === 'own' ? 'แอดของเรา' : 'แอดคู่แข่ง'}เพิ่มเพื่อเทียบด้วย AI ({compareAds.length}/{MAX_COMPARE}) <button type="button" onClick={() => { setAdding(null); openStep('review'); }}>ยกเลิก</button></p> : null}
 
-    {step !== 'review' ? <aside className={styles.context} aria-label="แอดที่เลือกเปรียบเทียบ" data-testid="compare-selection-tray">
-      <div className={styles.contextPair}>
-        <div className={styles.contextAd}>
-          <div className={styles.contextImage}>{a ? <Creative url={images[ownId(a)] ?? a.creative_url} name={a.ad_name} sizes="90px" /> : <span aria-hidden>1</span>}</div>
-          <div><span className={styles.sideLabel}>แอดของเรา</span><strong>{a ? ownName(a) : 'เลือกแอดที่ต้องการวิเคราะห์'}</strong><p>{a?.body_text ?? a?.page_name ?? 'ค้นจากชื่อสินค้า แคมเปญ หรือเพจ'}</p><button type="button" disabled={restoring} onClick={() => openStep('owned')}>{a ? 'เปลี่ยนแอดเรา' : 'เลือกแอดเรา'}</button></div>
-        </div>
-        <div className={styles.contextAd}>
-          <div className={styles.contextImage}>{b ? <Creative url={rivalImage(b)} name={b.page_name ?? b.ad_archive_id} sizes="90px" /> : <span aria-hidden>2</span>}</div>
-          <div><span className={styles.sideLabel}>แอดคู่แข่ง</span><strong>{b?.page_name ?? 'เลือกแอดที่อยากนำมาเทียบ'}</strong><p>{b?.body_text ?? 'ค้นจากคลังคู่แข่งทั้งหมดได้เลย'}</p><button type="button" disabled={restoring} onClick={() => openStep('rival')}>{b ? 'เปลี่ยนแอดคู่แข่ง' : 'เลือกแอดคู่แข่ง'}</button></div>
-        </div>
-      </div>
-      {a && b ? <div className={styles.contextActions}><span>คู่แอดที่เลือกยังอยู่</span><button type="button" data-variant="primary" disabled={restoring} onClick={() => openStep('review')}>ดูคู่แอดและสรุป →</button></div> : null}
-    </aside> : null}
+    {!a && !b && !restoring ? <div className={styles.shortcuts}>
+      <button type="button" onClick={() => openOwn(true)} disabled={!worseCount} data-testid="compare-start-worse">
+        <strong>แอดเราที่ผลแย่ลง <span className={styles.badgeWarn}>{number(worseCount)} ครีเอทีฟ</span></strong>
+        <span>ROAS ลดลงเทียบกับช่วงก่อน · เริ่มตรงนี้ถ้าอยากรู้ว่าตัวไหนต้องแก้ด่วน</span>
+      </button>
+      <button type="button" onClick={() => setPicker('rival')} data-testid="compare-start-rival">
+        <strong>เริ่มจากแอดคู่แข่ง</strong>
+        <span>เลือกแอดคู่แข่งที่น่าสนใจก่อน แล้วระบบจะแนะนำแอดเราของยูนิตเดียวกัน</span>
+      </button>
+    </div> : null}
 
-    {step === 'owned' ? <section className={styles.panel} aria-labelledby="compare-own-heading">
-      <div className={styles.sectionHead}><div><h2 id="compare-own-heading" ref={ownHeading} tabIndex={-1}>เลือกแอดของเราที่อยากวิเคราะห์</h2><p>{performanceSource ? 'ใช้ช่วงวันที่ ยูนิต เพจ และสถานะจากคลังที่เลือก' : 'แอดที่มีค่าใช้จ่ายในช่วงผลลัพธ์ · เรียงตามค่าโฆษณา'}{owned?.snapshot ? ` · ${owned.snapshot.date_start} — ${owned.snapshot.date_end}` : ''}</p></div><Link href={performanceSource ? returnHref : '/owned-ads'}>เปิดคลังแอดของเรา ↗</Link></div>
-      <form className={styles.search} onSubmit={event => { event.preventDefault(); setOwnQuery(ownSearch); setOwnPage(0); }}>
-        <label htmlFor="compare-own-search">ค้นหาแอดเรา<input id="compare-own-search" type="search" data-testid="compare-owned-search" value={ownSearch} maxLength={160} onChange={event => setOwnSearch(event.target.value)} placeholder="ชื่อสินค้า ชื่อแอด แคมเปญ หรือเพจ" /></label>
-        <button type="submit">ค้นหาแอดเรา</button>
-      </form>
-      {!performanceSource ? <details className={styles.filters}><summary>ตัวกรองเพิ่มเติม{account ? ' · เลือกบัญชีแล้ว' : ''}</summary><label>บัญชีโฆษณา<select value={account} onChange={event => { setAccount(event.target.value); setOwnPage(0); }}><option value="">ทุกบัญชี</option>{owned?.snapshot?.accounts.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label></details> : null}
-      {ownError ? <p role="alert">{ownError} <button type="button" onClick={() => setRefresh(value => value + 1)}>ลองใหม่</button></p> : ownLoading ? <p role="status" className={styles.loading}>กำลังเปิดแอดของเรา…</p> : <>
-        <p className={styles.resultCount}>พบ {number(owned?.total ?? 0)} แอด{a ? ' · แอดที่เลือกยังอยู่ แม้เปลี่ยนคำค้น' : ''}</p>
-        <div className={styles.grid} data-testid="compare-owned-grid">{owned?.rows.map(ad => <button type="button" key={ownId(ad)} className={styles.choice} data-testid={'compare-own-' + ad.ad_id} disabled={restoring} aria-pressed={a ? ownId(a) === ownId(ad) : false} onClick={() => { if (adding === 'own') { addCompare({ kind: 'own', ad }); return; } setA(ad); setPeriod(owned.snapshot); openStep(b ? 'review' : 'rival'); }}>
-          <Creative url={images[ownId(ad)] ?? ad.creative_url} name={ad.ad_name} />
-          <span className={styles.cardBody}><strong>{ownName(ad)}</strong><span className={styles.cardMeta}>{ad.page_name ?? ad.account_name}</span><span className={styles.cardCopy}>{ad.body_text ?? ad.campaign_name}</span><span className={styles.cardStats}><span>ค่าแอด<strong>{number(ad.spend)} {ad.currency}</strong></span><span>ROAS (Meta)<strong>{number(summarizeOwnedReport([ad]).roas.value)}</strong></span></span><span className={styles.choose}>{a && ownId(a) === ownId(ad) ? '✓ เลือกไว้แล้ว' : 'เลือกแอดนี้ →'}</span></span>
-        </button>)}</div>
-        {owned?.snapshot && owned.total === 0 ? <p className={styles.empty} data-testid="compare-owned-empty">ไม่พบแอด ลองค้นด้วยชื่อสินค้าหรือเลือกทุกบัญชี</p> : null}
-        {!owned?.snapshot ? <p className={styles.empty}>ยังไม่มีข้อมูลแอดของเรา <Link href="/owned-ads">เชื่อมข้อมูลแอดของเรา</Link></p> : null}
-        <Pager page={ownPage} total={owned?.total ?? 0} change={setOwnPage} name="owned" />
-      </>}
-    </section> : null}
-
-    {step === 'rival' ? <section className={styles.panel} aria-labelledby="compare-rival-heading">
-      <div className={styles.sectionHead}><div><h2 id="compare-rival-heading" ref={rivalHeading} tabIndex={-1}>เลือกแอดคู่แข่งที่น่าสนใจ</h2><p>ค้นจากคู่แข่งทั้งหมด · มองหาสินค้า ข้อเสนอ หรือวิธีเล่าที่ใกล้เคียงกับแอดเรา</p></div><Link href="/competitors">ส่องคู่แข่งเพิ่มเติม ↗</Link></div>
-      <form className={styles.search} onSubmit={event => { event.preventDefault(); setRivalQuery(rivalSearch); setRivalPage(0); }}>
-        <label htmlFor="compare-rival-search">ค้นหาแอดคู่แข่ง<input id="compare-rival-search" type="search" data-testid="compare-rival-search" value={rivalSearch} maxLength={160} onChange={event => setRivalSearch(event.target.value)} placeholder="ชื่อสินค้า ชื่อเพจ หรือข้อความในแอด" /></label><button type="submit">ค้นหาแอดคู่แข่ง</button>
-      </form>
-      <details className={styles.filters}><summary>ตัวกรองเพิ่มเติม{dataset ? ' · จำกัดแหล่งข้อมูลแล้ว' : ''}</summary><label>แหล่งข้อมูลที่ต้องการค้น<select data-testid="compare-dataset" value={dataset} onChange={event => { setDataset(event.target.value); setRivalPage(0); }}><option value="">คลังคู่แข่งทั้งหมด</option>{datasets.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><p className={styles.muted}>การเปลี่ยนตัวกรองจะไม่เปลี่ยนแอดที่เลือกเปรียบเทียบไว้</p></details>
-      {rivalError ? <p role="alert">{rivalError} <button type="button" onClick={() => setRefresh(value => value + 1)}>ลองใหม่</button></p> : rivalLoading ? <p role="status" className={styles.loading}>กำลังเปิดแอดคู่แข่ง…</p> : <>
-        <p className={styles.resultCount} data-testid="compare-rival-scope">{dataset ? 'ค้นในแหล่งข้อมูลที่เลือก' : 'ค้นในคลังคู่แข่งทั้งหมด'} · พบ {number(rivals?.total ?? 0)} แอด</p>
-        <div className={styles.grid} data-testid="compare-rival-grid">{rivals?.rows.map(ad => <button type="button" key={ad.dataset_id + ':' + ad.ad_archive_id} className={styles.choice} data-testid={'compare-rival-' + ad.ad_archive_id} disabled={restoring || !ad.dataset_id} aria-pressed={b?.ad_archive_id === ad.ad_archive_id && b?.dataset_id === ad.dataset_id} onClick={() => { if (adding === 'rival') { addCompare({ kind: 'rival', ad }); return; } setB(ad); openStep(a ? 'review' : 'owned'); }}>
-          <Creative url={rivalImage(ad)} name={ad.page_name ?? ad.ad_archive_id} />
-          <span className={styles.cardBody}><strong>{ad.page_name ?? 'ไม่ทราบชื่อเพจ'}</strong><span className={styles.cardCopy}>{ad.title ?? ad.body_text ?? 'ไม่มีข้อความที่บันทึกไว้'}</span><span className={styles.cardMeta}>{ad.is_active === null ? 'ไม่ทราบสถานะ' : ad.is_active ? 'กำลังใช้งาน' : 'ไม่ใช้งาน'} · {ad.display_format ?? 'ไม่ระบุรูปแบบ'}</span><span className={styles.choose}>{b?.ad_archive_id === ad.ad_archive_id && b?.dataset_id === ad.dataset_id ? '✓ เลือกไว้แล้ว' : 'เลือกแอดนี้ →'}</span></span>
-        </button>)}</div>
-        {rivals?.total === 0 ? <p className={styles.empty} data-testid="compare-rival-empty">{rivalQuery || dataset ? 'ไม่พบแอดคู่แข่ง ลองค้นด้วยคำอื่นหรือเลือกคลังคู่แข่งทั้งหมด' : <>ยังไม่มีข้อมูลคู่แข่ง <Link href="/competitors">เปิดคลังคู่แข่ง</Link></>}</p> : null}
-        <Pager page={rivalPage} total={rivals?.total ?? 0} change={setRivalPage} name="rival" />
-      </>}
-    </section> : null}
-
-    {step === 'review' && a && b ? <>
-      <section className={styles.panel} aria-labelledby="compare-review-heading">
-        <div className={styles.reviewHead}><div><h2 id="compare-review-heading" ref={reviewHeading} tabIndex={-1}>เทียบคู่แอดที่เลือก</h2><p>สรุปจาก AI อยู่ก่อน · ภาพและข้อความเต็มของสองฝั่งอยู่ด้านล่าง</p></div>
-          <div className={styles.shareRow}><button type="button" data-testid="compare-copy-link" onClick={() => void copyLink()}>คัดลอกลิงก์ส่งทีม</button>
-            {shared === 'copied' ? <span className={styles.muted} role="status">คัดลอกแล้ว · ทีมเปิดแล้วเห็นคู่แอดเดียวกัน</span> : shared ? <span className={styles.muted}>คัดลอกอัตโนมัติไม่ได้ · คัดลอกเอง: <span className={styles.shareLink}>{shared}</span></span> : null}</div></div>
+    <div className={styles.board}>
+      <section className={`${styles.slot} ${!a && b ? styles.slotNext : ''}`} aria-labelledby="slot-own" data-testid="compare-owned-evidence">
+        <div className={styles.slotHead}><h2 id="slot-own" className={styles.ours}>แอดของเรา</h2>{a ? <button type="button" disabled={restoring} onClick={() => openOwn()} data-testid="compare-change-own">เปลี่ยน</button> : null}</div>
+        {a ? <>
+          <div className={styles.evidenceMedia}><OwnedVideoPlayer key={aKey} ad={{ ...a, video_id: videoIds[aKey] ?? a.video_id ?? null }} url={images[aKey] ?? a.creative_url} /></div>
+          <div><h3 className={styles.evidenceTitle}>{ownedName(a)}</h3><p className={styles.muted}>{unitName ?? 'ยังไม่ผูกยูนิต'} · {a.page_name ?? a.account_name}{(a.group_size ?? 1) > 1 ? ` · ${a.group_size} แอดใช้ภาพนี้` : ''}</p></div>
+          <div className={styles.signals}>
+            {signal('ROAS (Meta)', number(roas), versus(roas, unitAvg?.roas, true, unitAvg?.name ?? ''))}
+            {signal(`ค่าแอด (${a.currency})`, number(a.spend), { text: period ? `${thaiDay(period.date_start)} – ${thaiDay(period.date_end)}` : '', tone: '' })}
+            {signal(`ค่าทัก (${a.currency})`, number(cpc), versus(cpc, unitAvg?.cpc, false, unitAvg?.name ?? ''))}
+          </div>
+          <p className={styles.metaLine}>ทัก {number(a.conversations)}{a.delivery_days != null ? ` · ยิงมา ${number(a.delivery_days)} วัน` : ''} · {drop ? <span className={styles.badgeWarn}>ROAS ลดลง {number(drop.previous_roas)} → {number(drop.recent_roas)}</span> : a.status ?? 'ไม่ทราบสถานะ'}</p>
+          <details className={styles.copyBox}><summary>อ่านข้อความในแอด</summary>{a.title ? <p className={styles.copyTitle}>{a.title}</p> : null}<p className={styles.copy} data-testid="compare-owned-copy">{a.body_text ?? 'ไม่มีข้อความในต้นทาง'}</p></details>
+        </> : <div className={styles.emptySlot}>
+          <strong>{b ? 'ขั้นต่อไป: เลือกแอดเรามาเทียบ' : 'ยังไม่ได้เลือกแอดเรา'}</strong>
+          <span className={styles.muted}>{b && rivalUnit ? `แอดเราของ ${rivalUnit.name} ซึ่งมีเพจนี้เป็นคู่แข่ง · กดเพื่อเทียบทันที` : 'เลือกยูนิตหรือสินค้า แล้วเลือกแอด · แอดที่ใช้ภาพเดียวกันรวมเป็นการ์ดเดียว'}</span>
+          {b && rivalUnit && ownSuggest?.key === rivalUnit.id ? <div className={styles.suggest}>{ownSuggest.rows.map(row => <button type="button" key={ownKey(row)} onClick={() => chooseOwn(row)} data-testid={'suggest-own-' + row.ad_id}>
+            <span className={styles.suggestThumb}><Creative url={row.creative_url} name={row.ad_name} sizes="48px" /></span>
+            <span><strong>{ownedName(row)}</strong><small className={fallingBy.has(ownKey(row)) ? styles.bad : undefined}>{fallingBy.has(ownKey(row)) ? `ROAS ลดลง ${number(fallingBy.get(ownKey(row))!.previous_roas)} → ${number(fallingBy.get(ownKey(row))!.recent_roas)}` : `ค่าแอด ${number(row.spend)} · ROAS ${number(summarizeOwnedReport([row]).roas.value)}`}</small></span>
+            <span className={styles.suggestAction}>เทียบ</span>
+          </button>)}</div> : null}
+          <button type="button" data-variant={b && rivalUnit && ownSuggest?.rows.length ? undefined : 'primary'} disabled={restoring} onClick={() => openOwn()} data-testid="compare-pick-own">{b && rivalUnit && ownSuggest?.rows.length ? 'ดูแอดเราทั้งหมด' : 'เลือกแอดของเรา'}</button>
+        </div>}
       </section>
-      {/* Survey: the team glances for ~5 minutes, so the AI verdict comes before the full evidence. */}
-      <AiCompare ads={compareAds} images={images} ourThrough={period?.date_end ?? null}
-        onAdd={kind => { setAdding(kind); openStep(kind === 'own' ? 'owned' : 'rival'); }} onRemove={removeCompare} />
-      <div className={styles.columns}>
-        <section className={styles.panel} data-testid="compare-owned-evidence">
-          <div className={styles.sectionHead}><div><span className={styles.sideLabel}>01 · แอดของเรา</span><h3 className={styles.evidenceTitle}>{ownName(a)}</h3><p>{a.page_name ?? a.account_name}</p></div><button type="button" onClick={() => openStep('owned')}>เปลี่ยนแอด</button></div>
-          <div className={styles.evidenceMedia}><OwnedVideoPlayer key={ownId(a)} ad={{...a,video_id:videoIds[ownId(a)]??a.video_id}} url={images[ownId(a)] ?? a.creative_url} /></div>
-          <div className={styles.message}><h3>ข้อความในแอด</h3>{a.title ? <p className={styles.copyTitle}>{a.title}</p> : null}<p className={styles.copy} tabIndex={0} aria-label="ข้อความแอดของเราฉบับเต็ม เลื่อนอ่านได้" data-testid="compare-owned-copy">{a.body_text ?? 'ไม่มีข้อความในต้นทาง'}</p></div>
-          <div className={styles.metricsLabel}>ผลลัพธ์แอดของเรา · {period?.date_start ?? '—'} — {period?.date_end ?? '—'}</div>
-          <dl className={styles.facts}><div><dt>ค่าแอด ({a.currency})</dt><dd>{number(a.spend)}</dd></div><div><dt>ROAS (Meta)</dt><dd>{number(metrics?.roas.value)}</dd></div><div><dt>บทสนทนา</dt><dd>{number(a.conversations)}</dd></div><div><dt>ต้นทุนต่อบทสนทนา ({a.currency})</dt><dd>{a.spend != null && a.conversations ? number(a.spend / a.conversations) : '—'}</dd></div></dl>
-          <p className={styles.source}>{a.account_name} · Ad {a.ad_id} · {a.status ?? 'ไม่ทราบสถานะ'}</p>
-        </section>
-        <section className={styles.panel} data-testid="compare-rival-evidence">
-          <div className={styles.sectionHead}><div><span className={styles.sideLabel}>02 · แอดคู่แข่ง</span><h3 className={styles.evidenceTitle}>{b.page_name ?? b.page_id}</h3><p>{b.is_active === null ? 'ไม่ทราบสถานะ' : b.is_active ? 'พบว่ากำลังใช้งาน' : 'พบว่าไม่ใช้งาน'} · {b.display_format ?? 'ไม่ระบุรูปแบบ'}</p></div><button type="button" onClick={() => openStep('rival')}>เปลี่ยนแอด</button></div>
+
+      <section className={`${styles.slot} ${a && !b ? styles.slotNext : ''}`} aria-labelledby="slot-rival" data-testid="compare-rival-evidence">
+        <div className={styles.slotHead}><h2 id="slot-rival">แอดคู่แข่ง</h2>{b ? <button type="button" disabled={restoring} onClick={() => setPicker('rival')} data-testid="compare-change-rival">เปลี่ยน</button> : null}</div>
+        {b ? <>
           <div className={styles.evidenceMedia} data-testid="compare-rival-media"><AdCreative detail={b} /></div>
-          <div className={styles.message}><h3>ข้อความในแอด</h3>{b.title ? <p className={styles.copyTitle}>{b.title}</p> : null}<p className={styles.copy} tabIndex={0} aria-label="ข้อความแอดคู่แข่งฉบับเต็ม เลื่อนอ่านได้" data-testid="compare-rival-copy">{b.body_text ?? 'ไม่มีข้อความที่บันทึกไว้'}</p></div>
-          <dl className={styles.facts}><div><dt>คำชวนให้ทำต่อ (CTA)</dt><dd>{b.cta_text ?? b.cta_type ?? '—'}</dd></div><div><dt>ช่องทางที่พบ</dt><dd>{b.publisher_platform.join(' · ') || '—'}</dd></div></dl>
-          <p className={styles.muted}>ค่าแอด ยอดขาย และ ROAS คู่แข่งยังไม่มีข้อมูล</p>
-          <p className={styles.source}>เก็บเมื่อ {selectedCollected ? new Date(selectedCollected).toLocaleString('th-TH') : '—'} · Library ID {b.ad_archive_id}<br />{b.dataset_name ?? selectedDataset?.name ?? 'ไม่ทราบชื่อแหล่งข้อมูล'}</p>
-          <Link href={'/pages/' + b.page_id + '?scope=dataset:' + b.dataset_id}>ดูเพจและติดตามคู่แข่ง ↗</Link>
-        </section>
-      </div>
+          <div><h3 className={styles.evidenceTitle}>{b.page_name ?? b.page_id}</h3><p className={styles.muted}>{rivalUnit ? `คู่แข่งของ ${rivalUnit.name} · ` : ''}{b.display_format ?? 'ไม่ระบุรูปแบบ'}{copy.template ? ' · แอดแคตตาล็อก' : ''}</p></div>
+          <div className={styles.signals}>
+            {signal('ยิงมา', `${number(b.ad_age_days)} วัน`, b.ad_age_days >= 45 ? { text: 'ยิงนาน มักเป็นแอดที่ได้ผล', tone: 'good' } : { text: b.ad_age_days <= 10 ? 'เพิ่งเริ่ม อาจยังทดสอบอยู่' : '', tone: '' })}
+            {signal('สถานะ', b.is_active === null ? 'ไม่ทราบ' : b.is_active ? 'กำลังแสดง' : 'หยุดแล้ว', { text: `เจอล่าสุด ${thaiDay(b.last_seen_at ?? b.collected_at ?? selectedDataset?.collected)}`, tone: '' })}
+            {signal('ช่องทาง', (b.publisher_platform ?? []).join(' · ') || '—', { text: b.cta_text ?? b.cta_type ?? '', tone: '' })}
+          </div>
+          <p className={styles.metaLine}>ไม่มีข้อมูลงบหรือยอดขายของคู่แข่ง · จำนวนวันที่ยิงคือสัญญาณที่ดีที่สุดที่มี · Library ID {b.ad_archive_id}</p>
+          <details className={styles.copyBox}><summary>อ่านข้อความในแอด</summary>{b.title ? <p className={styles.copyTitle}>{b.title}</p> : null}<p className={copy.template ? `${styles.copy} ${styles.muted}` : styles.copy} data-testid="compare-rival-copy">{copy.text}</p>
+            <Link href={'/pages/' + b.page_id + '?scope=dataset:' + b.dataset_id}>ดูเพจนี้ ↗</Link></details>
+        </> : <div className={styles.emptySlot}>
+          <strong>{a ? 'ขั้นต่อไป: เลือกแอดคู่แข่ง' : 'ยังไม่ได้เลือกแอดคู่แข่ง'}</strong>
+          <span className={styles.muted}>{a && unitPages?.pageIds.length ? `คู่แข่งของ ${unitPages.unitName} ที่ยิงนานที่สุด · กดเพื่อเทียบทันที` : a && unitName ? `ยังไม่มีรายชื่อคู่แข่งของ ${unitName} · เลือกจากคลังคู่แข่งทั้งหมดได้` : 'ค้นจากคลังคู่แข่งทั้งหมด'}</span>
+          {a && unitPages && rivalSuggest?.key === unitPages.pageIds.slice(0, 60).join(',') ? <div className={styles.suggest}>{rivalSuggest.rows.map(ad => <button type="button" key={ad.ad_archive_id} onClick={() => chooseRival(ad)} data-testid={'suggest-rival-' + ad.ad_archive_id}>
+            <span className={styles.suggestThumb}><Creative url={rivalImage(ad)} name={ad.page_name ?? ad.ad_archive_id} sizes="48px" /></span>
+            <span><strong>{ad.page_name ?? ad.page_id}</strong><small>ยิงมา {number(ad.ad_age_days)} วัน · {ad.display_format ?? 'ไม่ระบุรูปแบบ'}</small></span>
+            <span className={styles.suggestAction}>เทียบ</span>
+          </button>)}</div> : null}
+          <button type="button" data-variant={a && rivalSuggest?.rows.length ? undefined : 'primary'} disabled={restoring} onClick={() => setPicker('rival')} data-testid="compare-pick-rival">{a && rivalSuggest?.rows.length ? 'ดูแอดคู่แข่งทั้งหมด' : 'เลือกแอดคู่แข่ง'}</button>
+        </div>}
+      </section>
+    </div>
+
+    {a && b ? <>
+      {outsideUnit ? <p className={styles.aiWarn}>เพจนี้ยังไม่อยู่ในรายชื่อคู่แข่งของ {unitPages?.unitName} · ใช้ผลนี้ดูวิธีเล่าได้ แต่ข้อเสนอและราคาอาจเทียบกันไม่ได้</p> : null}
+      <AiCompare ads={[{ kind: 'own', ad: a }, { kind: 'rival', ad: b }]} images={images} ourThrough={period?.date_end ?? null}
+        onCopyLink={() => void copyLink()} linkLabel={shared === 'copied' ? 'คัดลอกลิงก์แล้ว' : 'คัดลอกลิงก์ส่งทีม'} />
+      {shared && shared !== 'copied' ? <p className={styles.muted}>คัดลอกอัตโนมัติไม่ได้ · คัดลอกเอง: <span className={styles.shareLink}>{shared}</span></p> : null}
     </> : null}
+
+    <OwnedPicker open={picker === 'own'} onClose={() => setPicker(null)} onPick={chooseOwn} base={base} units={units} falling={falling} worseFirst={worseFirst} selected={a ? ownKey(a) : null} />
+    <RivalPicker open={picker === 'rival'} onClose={() => setPicker(null)} onPick={chooseRival} datasets={datasets} match={unitPages} selected={b?.ad_archive_id ?? null} />
   </div>;
 }
-
-function Pager({ page, total, change, name }: { page: number; total: number; change: (page: number) => void; name: string }) {
-  return <div className={styles.pager}><button type="button" data-testid={'compare-' + name + '-prev'} disabled={page === 0} onClick={() => change(page - 1)}>ก่อนหน้า</button><span>หน้า {number(page + 1)} / {number(Math.max(1, Math.ceil(total / 24)))}</span><button type="button" data-testid={'compare-' + name + '-next'} disabled={(page + 1) * 24 >= total} onClick={() => change(page + 1)}>ถัดไป</button></div>;
-}
-
-

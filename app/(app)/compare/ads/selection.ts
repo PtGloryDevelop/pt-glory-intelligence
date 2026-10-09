@@ -43,6 +43,24 @@ export function mergeComparisonSelection(saved: ComparisonSelection, linked: Com
   };
 }
 
+/**
+ * One name for our ad everywhere on the compare screen. Ad names are often a
+ * unit code ("U11"); then the title or campaign says more. Card and AI chip
+ * used to disagree on this.
+ */
+export function ownedName(ad: { ad_name: string; title?: string | null; campaign_name?: string | null }): string {
+  return ad.ad_name.trim().length <= 5 ? ad.title || ad.campaign_name || ad.ad_name : ad.ad_name;
+}
+
+/** Catalog ads ship a template ("{{product.brand}}") instead of copy; say so rather than print it. */
+export function rivalCopy(text: string | null | undefined): { text: string; template: boolean } {
+  if (!text?.trim()) return { text: 'ไม่มีข้อความที่บันทึกไว้', template: false };
+  if (/\{\{[^}]+\}\}/.test(text) && text.replace(/\{\{[^}]+\}\}/g, '').trim().length < 12) {
+    return { text: 'ข้อความเปลี่ยนตามสินค้าที่คนเห็น (แอดแคตตาล็อก) · Meta ไม่ได้ส่งข้อความจริงมา', template: true };
+  }
+  return { text, template: false };
+}
+
 export function rivalFromDetail(detail: AdDetail & { archive_url?: string | null }): Rival {
   return { ...detail, publisher_platform: detail.publisher_platform ?? [] };
 }
