@@ -16,14 +16,21 @@ export type OwnedPerformancePeriod = { from: string; to: string };
 export type OwnedPerformanceQuery = {
   period: OwnedPeriodPreset; from: string; to: string; unit: string; pageId: string;
   q: string; status: string; sort: OwnedPerformanceSort; dir: OwnedSortDir; page: number; compare: boolean;
+  /** One row per creative (owned_media_page) instead of one per ad. */
+  media: boolean;
 };
 export type OwnedPerformanceRow = CompanyAd & {
   unit_ids: string[]; unit_names: string[]; hook_rate: number | null; cost_per_conversation: number | null;
   delivery_first: string | null; delivery_last: string | null; delivery_days: number | null;
   creative_id: string | null; video_id: string | null; created_time: string | null;
+  /** Creative rows only: figures are the sums of `ad_count` ads; the rest describes the ad with the most spend. */
+  media_key?: string; ad_count?: number; account_count?: number; active_ads?: number; first_created?: string | null;
 };
+/** Ads behind a creative row, same filters as the page. */
+export const OWNED_MEDIA_KEY = /^((v|c):\d{1,32}|a:(act_)?\d{1,32}:\d{1,32})$/;
+export type OwnedMediaMembers = { total: number; rows: (CompanyAd & { roas: number | null; cost_per_conversation: number | null; delivery_days: number | null; created_time: string | null })[] };
 export type OwnedPerformanceSummary = {
-  currency: string; ad_count: number; daily_rows: number; spend: number | null; conversations: number | null;
+  currency: string; ad_count: number; media_count?: number; daily_rows: number; spend: number | null; conversations: number | null;
   purchases: number | null; purchase_value: number | null; impressions: number | null; video_views: number | null;
   roas: number | null; cost_per_conversation: number | null; hook_rate: number | null; close_rate: null;
   coverage: Record<"spend" | "conversations" | "purchase_value" | "roas" | "hook_rate", Pick<OwnedMetric, "present" | "total">>;
@@ -54,7 +61,7 @@ const shift = (date: string, days: number): string => {
 
 /** Presets use the Bangkok calendar, including today. Source coverage never moves a preset. */
 export function parseOwnedPerformanceQuery(params: URLSearchParams): OwnedPerformanceQuery {
-  for (const key of ["period", "from", "to", "unit", "pageId", "q", "status", "sort", "dir", "page", "compare"]) {
+  for (const key of ["period", "from", "to", "unit", "pageId", "q", "status", "sort", "dir", "page", "compare", "media"]) {
     if (params.getAll(key).length > 1) throw new OwnedPerformanceQueryError("ตัวกรองซ้ำกัน");
   }
   const period = params.get("period") ?? "7d";
@@ -69,15 +76,16 @@ export function parseOwnedPerformanceQuery(params: URLSearchParams): OwnedPerfor
   const from = params.get("from") ?? "";
   const to = params.get("to") ?? "";
   const compare = params.get("compare") ?? "0";
+  const media = params.get("media") ?? "0";
   if (!(OWNED_PERIOD_PRESETS as readonly string[]).includes(period) || !(OWNED_PERFORMANCE_SORTS as readonly string[]).includes(sort)
     || !/^\d+$/.test(pageText) || !Number.isSafeInteger(page) || page > 100000 || q.length > 160
     || (unit !== "" && !UUID.test(unit)) || (pageId !== "" && !/^\d{1,32}$/.test(pageId))
     || (status !== "" && !OWNED_PERFORMANCE_STATUSES.some(([value]) => value === status))
-    || !["", "asc", "desc"].includes(dir) || !["0", "1"].includes(compare) || (from !== "" && !isOwnedPerformanceDate(from)) || (to !== "" && !isOwnedPerformanceDate(to))
+    || !["", "asc", "desc"].includes(dir) || !["0", "1"].includes(compare) || !["0", "1"].includes(media) || (from !== "" && !isOwnedPerformanceDate(from)) || (to !== "" && !isOwnedPerformanceDate(to))
     || (period === "custom" && (!from || !to || from > to))) {
     throw new OwnedPerformanceQueryError("ตัวกรองหรือช่วงวันที่ไม่ถูกต้อง");
   }
-  return { period: period as OwnedPeriodPreset, from, to, unit: unit.toLowerCase(), pageId, q, status, sort: sort as OwnedPerformanceSort, dir: (dir || defaultSortDir(sort as OwnedPerformanceSort)) as OwnedSortDir, page, compare: compare === "1" };
+  return { period: period as OwnedPeriodPreset, from, to, unit: unit.toLowerCase(), pageId, q, status, sort: sort as OwnedPerformanceSort, dir: (dir || defaultSortDir(sort as OwnedPerformanceSort)) as OwnedSortDir, page, compare: compare === "1", media: media === "1" };
 }
 
 export function ownedPerformancePeriod(query: OwnedPerformanceQuery, coverage: OwnedPerformancePeriod | null, now = new Date()): OwnedPerformancePeriod {

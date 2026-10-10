@@ -62,3 +62,13 @@ test("close rate is a sort that opens highest first", async () => {
   assert.equal(ownedSortArg(parsed), "close_rate");
   assert.equal(ownedSortArg(parseOwnedPerformanceQuery(new URLSearchParams("sort=close_rate&dir=asc"))), "close_rate:asc");
 });
+
+test("creative grouping is opt-in on the API and its keys are Meta ids or one ad", async () => {
+  const { parseOwnedPerformanceQuery, OWNED_MEDIA_KEY } = await import("../lib/owned-ads/performance.ts");
+  assert.equal(parseOwnedPerformanceQuery(new URLSearchParams()).media, false, "per ad unless asked: the compare page reads ads");
+  assert.equal(parseOwnedPerformanceQuery(new URLSearchParams("media=1")).media, true);
+  assert.throws(() => parseOwnedPerformanceQuery(new URLSearchParams("media=yes")));
+  assert.throws(() => parseOwnedPerformanceQuery(new URLSearchParams("media=1&media=0")));
+  for (const key of ["v:3221200154747773", "c:1023234730733727", "a:act_747201513533457:120250517546710673"]) assert.ok(OWNED_MEDIA_KEY.test(key), key);
+  for (const key of ["v:", "x:1", "v:1;drop", "a:act_1", "a:act_1:2:3"]) assert.ok(!OWNED_MEDIA_KEY.test(key), key);
+});

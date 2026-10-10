@@ -129,3 +129,4 @@ th[aria-sort] .sortHead { color:var(--ink); }
 .flagGood { background:var(--ok-tint); color:var(--ok-ink); }
 .fallingError { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:0; padding:10px 16px; border:1px solid var(--line); border-top:3px solid var(--warn-ink); border-radius:var(--radius); background:var(--warn-tint); color:var(--warn-ink); font-size:var(--fs-meta); }
 .fallingError button { min-height:36px; font-size:var(--fs-meta); }
+.groupBadge { display:inline-flex; align-items:center; padding:2px 10px; border-radius:var(--radius-pill); background:var(--brand-tint); color:var(--accent-blue-ink); font-size:var(--fs-eyebrow); font-weight:600; white-space:nowrap; }

@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from 'next/link';
 import { useSearchParams } from "next/navigation";
 import type { CompanyAd } from "@/lib/owned-ads/source-rows";
@@ -142,7 +142,8 @@ export function CompanyLibrary({ initialFilters }: { initialFilters: OwnedLibrar
   </>;
 }
 
-export function CompanyDetail({ad,creativeUrl,mediaLoading,period,onClose,returnTo="/owned-ads"}:{ad:CompanyAd;creativeUrl:string|null;mediaLoading:boolean;period:{date_start:string|null;date_end:string|null}|null;onClose:()=>void;returnTo?:string}){
+/** `factsTitle` names what the figures cover (a creative's sum), `status` replaces the ad's own, `children` (its ads) open the column. */
+export function CompanyDetail({ad,creativeUrl,mediaLoading,period,onClose,returnTo="/owned-ads",factsTitle="ผลลัพธ์จาก Meta",status,children}:{ad:CompanyAd;creativeUrl:string|null;mediaLoading:boolean;period:{date_start:string|null;date_end:string|null}|null;onClose:()=>void;returnTo?:string;factsTitle?:string;status?:ReactNode;children?:ReactNode}){
   const dialog=useRef<HTMLDialogElement>(null);
   useEffect(()=>{
     const element=dialog.current;const opener=document.activeElement as HTMLElement|null;
@@ -157,8 +158,8 @@ export function CompanyDetail({ad,creativeUrl,mediaLoading,period,onClose,return
       <div className={styles.detailLayout}>
         <div className={styles.detailMedia}><OwnedVideoPlayer key={`${ad.account_id}:${ad.ad_id}`} ad={ad} url={creativeUrl} mediaLoading={mediaLoading} autoLoad /></div>
         <div className={styles.detailInfo}>
-          <AdStatus status={ad.status}/><h3>{ad.title??ad.ad_name}</h3><p className={styles.detailCopy}>{ad.body_text??'ต้นทางไม่มีข้อความครีเอทีฟ'}</p>
-          <h3>ผลลัพธ์จาก Meta</h3><p>{period?`${period.date_start??'—'} — ${period.date_end??'—'}`:'ตามช่วงวันที่ของชุดข้อมูล'}</p>
+          {status??<AdStatus status={ad.status}/>}{children}<h3>{ad.title??ad.ad_name}</h3><p className={styles.detailCopy}>{ad.body_text??'ต้นทางไม่มีข้อความครีเอทีฟ'}</p>
+          <h3>{factsTitle}</h3><p>{period?`${period.date_start??'—'} — ${period.date_end??'—'}`:'ตามช่วงวันที่ของชุดข้อมูล'}</p>
           <dl className={styles.facts}>
             <div><dt>ค่าโฆษณา ({ad.currency})</dt><dd>{number(ad.spend)}</dd></div>
             <div><dt>ROAS (Meta)</dt><dd>{number(metrics.roas.value)}</dd></div>
