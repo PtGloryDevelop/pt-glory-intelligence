@@ -1,0 +1,25 @@
+# The "แอดของเรา" sync on the Ads Management VPS. From the repository root:
+#   cp deploy/owned-sync/env.example deploy/owned-sync/.env    # then fill it in
+#   docker compose -f deploy/owned-sync/docker-compose.yml up -d --build
+# Step by step: deploy/owned-sync/README.md
+services:
+  owned-sync:
+    build:
+      context: ../..
+      dockerfile: deploy/owned-sync/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      OWNED_MANAGEMENT_PROJECT_PATH: /ads-management
+      OWNED_SYNC_TIMES: "${OWNED_SYNC_TIMES:-09:00,13:00,18:00}"
+      TZ: Asia/Bangkok
+    volumes:
+      # The Ads Management checkout already on this machine, read-only: the sync loads its insight
+      # reader (src/lib/workspace-insights.ts) and token decryption (src/lib/secret-crypto.ts) from it.
+      - "${ADS_MANAGEMENT_DIR:?Set ADS_MANAGEMENT_DIR in deploy/owned-sync/.env to the Ads Management checkout}:/ads-management:ro"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { withTransaction } from "../db/privileged.ts";
 import { fetchPreview } from "../media/fetch.ts";
 import type { ArchiveStore } from "../media/store.ts";
+import { PREVIEW_BUCKET } from "../media/store-supabase.ts";
 
 /**
  * Our ad creatives in our own storage.
@@ -43,7 +44,30 @@ export async function archiveOwnedThumbs(store: ArchiveStore, { sharp = 200, con
         and coalesce(a.data->>'creative_url', '') not like '/api/%'
       order by a.spend desc nulls last`,
   ));
-  const stats = { archived: 0, failed: 0, sharp: 0, total: rows.length };
+  const stats = { archived: 0, reused: 0, failed: 0, sharp: 0, total: rows.length };
+
+  // An ad keeps its picture and each sync republishes the same ads, so a file an earlier sync
+  // stored is pointed at again instead of fetched again (a full refetch took ~17 minutes). The
+  // biggest spenders are still fetched below, so their sharp picture stays current.
+  const stored = await withTransaction((client) => client.query<{ name: string }>(
+    `select name from storage.objects where bucket_id = $1 and name = any($2::text[])`,
+    [PREVIEW_BUCKET, rows.slice(sharp).map((row) => thumbPath(row.account_id, row.ad_id))],
+  ));
+  const have = new Set(stored.rows.map((row) => row.name));
+  const reuse = rows.slice(sharp).filter((row) => have.has(thumbPath(row.account_id, row.ad_id)));
+  if (reuse.length) {
+    const updated = await withTransaction((client) => client.query(
+      `update public.owned_library_ads a
+          set data = jsonb_set(a.data, '{creative_url}', to_jsonb('/api/owned-ads/thumb/' || a.account_id || '/' || a.ad_id))
+         from unnest($1::text[], $2::text[]) as k(account_id, ad_id)
+        where a.account_id = k.account_id and a.ad_id = k.ad_id
+          and coalesce(a.data->>'creative_url', '') not like '/api/%'`,
+      [reuse.map((row) => row.account_id), reuse.map((row) => row.ad_id)],
+    ));
+    stats.reused = updated.rowCount ?? 0;
+  }
+  const reused = new Set(reuse.map((row) => `${row.account_id}:${row.ad_id}`));
+  const todo = rows.filter((row) => !reused.has(`${row.account_id}:${row.ad_id}`));
 
   async function store1(row: Row, source: string | null): Promise<boolean> {
     if (!source) return false;
@@ -65,10 +89,10 @@ export async function archiveOwnedThumbs(store: ArchiveStore, { sharp = 200, con
   }
 
   // Pass 1: sharp images for the biggest spenders, the stored thumbnail for everyone else.
-  const better = await sharpUrls(rows.slice(0, sharp));
+  const better = await sharpUrls(todo.slice(0, sharp));
   stats.sharp += better.size;
   const retry: Row[] = [];
-  await pool(rows, async (row) => {
+  await pool(todo, async (row) => {
     const sharpUrl = better.get(`${row.account_id}:${row.ad_id}`);
     if (await store1(row, sharpUrl ?? row.url) || (sharpUrl && await store1(row, row.url))) stats.archived++;
     else retry.push(row);

@@ -1,5 +1,3 @@
-import { readFile } from "node:fs/promises";
-import { parseEnv } from "node:util";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { createClient } from "@supabase/supabase-js";
@@ -7,6 +5,7 @@ import pg from "pg";
 import { companyRows } from "../lib/owned-ads/source-rows.ts";
 import { isOwnedPerformanceDate } from "../lib/owned-ads/performance.ts";
 import { readOwnedPageNames } from "./owned-page-names.mjs";
+import { sourceEnv, sourceEnvOrigin } from "./owned-source.mjs";
 
 // ponytail: local sibling-project bridge. Use a source-owned authenticated export
 // endpoint before moving either app to a separate host; no source writes here.
@@ -35,7 +34,8 @@ try {
     const sourcePath = resolve(process.env.OWNED_MANAGEMENT_PROJECT_PATH ?? "");
     const email = process.env.OWNED_MANAGEMENT_AUTHORIZED_EMAIL;
     if (!email || !process.env.OWNED_MANAGEMENT_PROJECT_PATH) throw new Error("Management source connection is not configured");
-    const env = parseEnv(await readFile(resolve(sourcePath,".env.local"),"utf8"));
+    const env = await sourceEnv(sourcePath);
+    console.log(JSON.stringify({jobId,source:sourceEnvOrigin()}));
     const service = createClient(env.SUPABASE_URL ?? env.NEXT_PUBLIC_SUPABASE_URL,env.SUPABASE_SERVICE_ROLE_KEY,{auth:{persistSession:false}});
     const member = await data(service.from("workspace_members").select("user_id,normalized_email,role,status").eq("normalized_email",email).single());
     if (member.role !== "admin" || member.status !== "active") throw new Error("Configured source administrator is not active");
