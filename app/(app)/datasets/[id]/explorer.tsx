@@ -316,11 +316,12 @@ export function Explorer({ datasetId, coverage = [], preserveDatasetInUrl = fals
       ) : null}
 
       {!error && !loading && rows.length && view === "grid" ? (
-        <div className={styles.grid} data-testid="ads-grid">
+        <div className={styles.grid} data-testid="ads-grid" data-tiles={simple || undefined}>
           {rows.map((row) => (
             <div key={row.ad_archive_id} className={styles.selectableCard}>
               {compareControl(row)}
-              <AdCard ad={row} onOpen={() => setSelected(row.ad_archive_id)} />
+              {/* From ส่องแอด (simple), the round reads as the same Finder gallery as the whole library. */}
+              <AdCard ad={row} tile={simple} selected={simple && selected === row.ad_archive_id} onOpen={() => setSelected(row.ad_archive_id)} />
             </div>
           ))}
         </div>

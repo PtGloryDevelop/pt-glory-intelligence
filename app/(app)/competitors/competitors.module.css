@@ -66,3 +66,6 @@
 .repeatWrap { position: relative; min-width: 0; display: grid; }
 .repeatBadge { position: absolute; top: 10px; right: 10px; z-index: 2; padding: 2px 9px; border-radius: var(--radius-pill); background: var(--ink); color: var(--surface); font-size: var(--fs-eyebrow); font-weight: 600; pointer-events: none; }
 button.manage { cursor:pointer; font-family:inherit; }
+.headActions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.headActions .manage, a.manage { display:inline-flex; align-items:center; gap:6px; min-height:32px; padding:0 12px; border:1px solid var(--line-strong); border-radius:7px; background:var(--surface); color:var(--ink); font-size:var(--fs-label); font-weight:500; text-decoration:none; }
+.missing { margin:0 0 12px; color:var(--warn-ink); font-size:var(--fs-meta); }

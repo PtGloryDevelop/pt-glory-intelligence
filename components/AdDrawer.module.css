@@ -10,3 +10,18 @@
 .stage { height:var(--ad-preview-height,auto); }
 .stageMedia, .stageVideo { max-height:min(var(--ad-preview-height,62dvh),62dvh); }
 @media(max-width:900px) { .stageMedia, .stageVideo { max-height:min(var(--ad-preview-height,50dvh),50dvh); } }
+/* Docked (UI v3 inspector): one column beside the grid, held in view while the grid scrolls. */
+.docked { position: sticky; top: 16px; inset: auto; display: flex; flex-direction: column; width: auto; height: auto; max-height: calc(100dvh - 32px); margin: 0; border-radius: var(--radius); box-shadow: var(--shadow); }
+.docked .header { padding: 14px 16px; }
+.docked .pageName { font-size: var(--fs-title-sm); }
+.docked .contextLine { font-size: var(--fs-label); margin-top: 2px; }
+.docked .reading { grid-template-columns: minmax(0, 1fr); height: auto; }
+.docked .creativeSection { padding: 12px; }
+.docked .stage { min-height: 200px; max-height: 340px; }
+.docked .stageMedia, .docked .stageVideo { max-height: 340px; }
+.docked .detailSections { padding: 16px; overflow: visible; border-left: 0; border-top: 1px solid var(--line); }
+.docked .section { margin-bottom: 20px; }
+.docked .facts { gap: 12px; padding: 12px; }
+.docked .actions { flex-direction: column; align-items: stretch; gap: 8px; padding: 12px 16px; }
+.docked .actions span { display: none; }
+.docked .close { display: none; }

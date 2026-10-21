@@ -32,3 +32,22 @@
 .inspect { display:flex; align-items:center; justify-content:space-between; border-top:1px solid var(--line); padding-top:14px; font-size:var(--fs-meta); color:var(--brand-ink); font-weight:500; }
 @media(max-width:640px) { .frame { height:var(--ad-preview-height,320px); } .compact .frame { height:var(--ad-preview-height,280px); } }
 @media(prefers-reduced-motion:reduce) { .card { transition:none; } }
+
+/* Tile (UI v3, the Finder gallery): the creative, then the page and its status; the inspector holds the rest.
+   The selected tile sits on a grey plate with its name on the accent, as a selected icon does in Finder. */
+.tile { min-width: 0; }
+.tileHit { display: grid; gap: 6px; width: 100%; padding: 8px; border: 0; border-radius: 12px; background: transparent; color: var(--ink); text-align: left; }
+.tileHit:hover:not(:disabled) { background: var(--row-hover); }
+.tile[data-selected] .tileHit { background: var(--row-hover); }
+.tileFrame { position: relative; display: block; width: 100%; aspect-ratio: 4 / 5; overflow: hidden; border-radius: 8px; background: var(--surface-sunken); box-shadow: 0 0 0 1px var(--line); }
+.tile[data-selected] .tileFrame { box-shadow: 0 0 0 2px var(--brand-ink); }
+.tileFrame .media { width: 100%; height: 100%; object-fit: contain; }
+.tileFrame .placeholder { padding: 12px; font-size: var(--fs-label); }
+.tileFormat, .tileReuse { position: absolute; top: 8px; display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: var(--radius-pill); background: rgba(255, 255, 255, 0.92); color: var(--ink-soft); font-size: var(--fs-eyebrow); font-weight: 600; }
+.tileFormat { left: 8px; }
+.tileReuse { right: 8px; }
+.tileName { display: block; min-width: 0; text-align: center; line-height: 1.6; }
+.tileName > span { display: inline; padding: 1px 6px; border-radius: 5px; font-size: var(--fs-label); font-weight: 600; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.tile[data-selected] .tileName > span { background: var(--brand-ink); color: #ffffff; }
+.tileMeta { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 2px 8px; color: var(--muted); font-size: var(--fs-eyebrow); }
+.tileMeta > [data-status] { padding: 0; background: transparent; font-size: var(--fs-eyebrow); font-weight: 500; }

@@ -43,8 +43,10 @@ type History = {
   publisher_platform: string[] | null; cta_type: string | null; collation_count: number | null;
 };
 
-export function AdDrawer({ adArchiveId, datasetId, onClose, compareHref, canAnalyze=false }: {
+export function AdDrawer({ adArchiveId, datasetId, onClose, compareHref, canAnalyze=false, docked=false }: {
   adArchiveId: string; datasetId: string | null; onClose: () => void; compareHref?:string; canAnalyze?:boolean;
+  /** UI v3: an inspector docked beside the grid instead of a modal over it (wide screens only). */
+  docked?: boolean;
 }) {
   const [state, setState] = useState<
     { status: "loading" } | { status: "missing" } | { status: "ready"; detail: Detail; history: History[] }
@@ -68,6 +70,8 @@ export function AdDrawer({ adArchiveId, datasetId, onClose, compareHref, canAnal
   }, [adArchiveId, datasetId]);
 
   useEffect(() => {
+    // Docked, the panel is part of the page: no modal, no scroll lock, focus stays where the reader clicked.
+    if(docked)return;
     const element=drawerRef.current;
     const opener=document.activeElement as HTMLElement|null;
     const overflow=document.body.style.overflow;
@@ -77,7 +81,7 @@ export function AdDrawer({ adArchiveId, datasetId, onClose, compareHref, canAnal
       element?.close();document.body.style.overflow=overflow;
       if(opener?.isConnected)opener.focus({preventScroll:true});
     };
-  }, []);
+  }, [docked]);
 
   const detail = state.status === "ready" ? state.detail : null;
   const title = detail?.page_name ?? "รายละเอียดโฆษณา";
@@ -92,17 +96,8 @@ export function AdDrawer({ adArchiveId, datasetId, onClose, compareHref, canAnal
   },[canAnalyze,compareHref,datasetId,detail?.observed_at,adArchiveId]);
   const comparison=compareHref??(canAnalyze&&datasetId?`/compare/ads?${new URLSearchParams({dataset:datasetId,rival:adArchiveId})}`:catalogLink);
 
-  return (
+  const inner = (
     <>
-      <dialog
-        ref={drawerRef}
-        aria-modal="true"
-        aria-label={`รายละเอียดโฆษณา ${title}`}
-        data-testid="ad-drawer"
-        className={styles.drawer}
-        onCancel={event=>{event.preventDefault();onClose();}}
-        onClick={event=>{if(event.target===event.currentTarget)onClose();}}
-      >
         <header className={styles.header}>
           <div className={styles.headerText}>
             <div className={styles.headerTop}>
@@ -141,8 +136,21 @@ export function AdDrawer({ adArchiveId, datasetId, onClose, compareHref, canAnal
           {state.status === "ready" ? <Body detail={state.detail} history={state.history} /> : null}
         </div>
         {comparison&&state.status==='ready'?<footer className={styles.actions}><span>เลือกแอดนี้ แล้วหาแอดของเราที่ขายสินค้าคล้ายกันมาเทียบ</span><Link href={comparison}>เทียบกับแอดของเรา →</Link></footer>:null}
-      </dialog>
     </>
+  );
+  if (docked) return <aside className={`${styles.drawer} ${styles.docked}`} aria-label={`รายละเอียดโฆษณา ${title}`} data-testid="ad-inspector">{inner}</aside>;
+  return (
+    <dialog
+      ref={drawerRef}
+      aria-modal="true"
+      aria-label={`รายละเอียดโฆษณา ${title}`}
+      data-testid="ad-drawer"
+      className={styles.drawer}
+      onCancel={event=>{event.preventDefault();onClose();}}
+      onClick={event=>{if(event.target===event.currentTarget)onClose();}}
+    >
+      {inner}
+    </dialog>
   );
 }
 
