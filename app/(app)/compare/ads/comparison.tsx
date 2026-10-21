@@ -239,7 +239,7 @@ export function AdComparison({ datasets, seed, initialOwned, initialPeriod, init
   </div>;
 
   return <div className={styles.workspace}>
-    <PageHeader title="เทียบกับคู่แข่ง" description="วางแอดเราคู่กับแอดคู่แข่ง ดูภาพข้างกัน แล้วให้ AI สรุปว่าต่างกันตรงไหน · เริ่มฝั่งไหนก่อนก็ได้"
+    <PageHeader title="เทียบแอด" description="วางแอดเราคู่กับแอดคู่แข่ง · ข้อเท็จจริงจากข้อมูลอยู่ด้านบน สิ่งที่ AI ตีความอยู่ด้านล่าง · เริ่มฝั่งไหนก่อนก็ได้"
       actions={<span className={styles.headActions}>
         {a || b ? <button type="button" onClick={() => { setA(null); setB(null); setShared(null); }} data-testid="compare-reset">เริ่มคู่ใหม่</button> : null}
         <Link data-testid="comparison-return" href={returnHref}>{returnLabel}</Link>
@@ -261,7 +261,7 @@ export function AdComparison({ datasets, seed, initialOwned, initialPeriod, init
 
     <div className={styles.board}>
       <section className={`${styles.slot} ${!a && b ? styles.slotNext : ''}`} aria-labelledby="slot-own" data-testid="compare-owned-evidence">
-        <div className={styles.slotHead}><h2 id="slot-own" className={styles.ours}>แอดของเรา</h2>{a ? <button type="button" disabled={restoring} onClick={() => openOwn()} data-testid="compare-change-own">เปลี่ยน</button> : null}</div>
+        <div className={styles.slotHead}><h2 id="slot-own" className={styles.ours}>แอดของเรา</h2>{a ? <span className={styles.factBadge} title="ตัวเลขจากรายงาน Meta ของบัญชีเรา">ข้อเท็จจริง</span> : null}{a ? <button type="button" disabled={restoring} onClick={() => openOwn()} data-testid="compare-change-own">เปลี่ยน</button> : null}</div>
         {a ? <>
           <div className={styles.evidenceMedia}><OwnedVideoPlayer key={aKey} ad={{ ...a, video_id: videoIds[aKey] ?? a.video_id ?? null }} url={images[aKey] ?? a.creative_url} /></div>
           <div><h3 className={styles.evidenceTitle}>{ownedName(a)}</h3><p className={styles.muted}>{unitName ?? 'ยังไม่ผูกยูนิต'} · {a.page_name ?? a.account_name}{(a.group_size ?? 1) > 1 ? ` · ${a.group_size} แอดใช้ภาพนี้` : ''}</p></div>
@@ -285,7 +285,7 @@ export function AdComparison({ datasets, seed, initialOwned, initialPeriod, init
       </section>
 
       <section className={`${styles.slot} ${a && !b ? styles.slotNext : ''}`} aria-labelledby="slot-rival" data-testid="compare-rival-evidence">
-        <div className={styles.slotHead}><h2 id="slot-rival">แอดคู่แข่ง</h2>{b ? <button type="button" disabled={restoring} onClick={() => setPicker('rival')} data-testid="compare-change-rival">เปลี่ยน</button> : null}</div>
+        <div className={styles.slotHead}><h2 id="slot-rival" className={styles.rival}>แอดคู่แข่ง</h2>{b ? <span className={styles.factBadge} title="สิ่งที่ Ad Library แสดง ตามรอบที่เก็บ">ข้อเท็จจริง</span> : null}{b ? <button type="button" disabled={restoring} onClick={() => setPicker('rival')} data-testid="compare-change-rival">เปลี่ยน</button> : null}</div>
         {b ? <>
           <div className={styles.evidenceMedia} data-testid="compare-rival-media"><AdCreative detail={b} /></div>
           <div><h3 className={styles.evidenceTitle}>{b.page_name ?? b.page_id}</h3><p className={styles.muted}>{rivalUnit ? `คู่แข่งของ ${rivalUnit.name} · ` : ''}{formatLabel(b.display_format)}{copy.template ? ' · แอดแคตตาล็อก' : ''}</p></div>

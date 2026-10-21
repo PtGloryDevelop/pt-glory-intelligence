@@ -45,7 +45,7 @@ export type Message = {role: 'system' | 'user'; content: string | ({type: 'text'
 /** One JSON-mode call. DeepSeek only guarantees the reply parses as JSON; the caller checks its shape. */
 export async function callDeepSeek(messages: Message[], maxTokens: number): Promise<{result: unknown; input: number; output: number; usd: number}> {
   const key = process.env.DEEPSEEK_API_KEY;
-  if (!key) throw new AiError('ยังไม่ได้ตั้งค่า DEEPSEEK_API_KEY ใน .env.local', 503);
+  if (!key) throw new AiError('ยังไม่ได้ตั้งค่าคีย์ DeepSeek (DEEPSEEK_API_KEY) บนเซิร์ฟเวอร์ แจ้งผู้ดูแลระบบ', 503);
   modelConfig();
   const at = new Date();
   let response: Response;

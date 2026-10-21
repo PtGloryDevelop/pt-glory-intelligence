@@ -128,7 +128,7 @@ export function AiCompare({ ads, ourThrough, onCopyLink, linkLabel }: {
 
   return <section className={`${styles.panel} ${styles.aiPanel}`} aria-labelledby="compare-ai-heading" data-testid="compare-ai">
     <div className={styles.aiHeadRow}>
-      <h2 id="compare-ai-heading">AI สรุปคู่นี้</h2>
+      <h2 id="compare-ai-heading">AI สรุปคู่นี้ <span className={styles.aiBadge}>AI ตีความ</span></h2>
       <span className={styles.muted}>อ่านจากภาพและข้อความ · ไม่รู้งบหรือยอดขายของคู่แข่ง</span>
     </div>
 
