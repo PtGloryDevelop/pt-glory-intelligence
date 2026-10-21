@@ -14,6 +14,7 @@ import {latestReviewPeriod,type ReviewOptions} from './review-model.ts';
 import {getReviewSeries} from './series-read.ts';
 import {getRivalBoard} from '../rivals/board.ts';
 import type {ReviewSeries} from './series.ts';
+import {getDailySpend,type DailySpend} from './daily-read.ts';
 
 export type DashboardMetric=OwnedMetric & {reportedValue?:number|null};
 export type DashboardCurrency={
@@ -31,13 +32,18 @@ export type DashboardRivals={
   recentAds:CatalogAdRow[]|null;week:{from:string;to:string;newAds:number}|null;
 };
 export type DashboardCollisions={units:number;unitsTotal:number|null;pages:number;confirmed:number;pending:number;newThisWeek:number;tracked:number;
-  top:{unit:string;page_id:string;page_name:string|null;matched_ads:number;new_matched_7d:number;confirmed:boolean}[]};
+  top:{unit:string;page_id:string;page_name:string|null;matched_ads:number;new_matched_7d:number;confirmed:boolean}[];
+  /** Per unit with keywords: its keywords and how many rival pages they match (the team's "unrelated" excluded). */
+  byUnit:{id:string;name:string;keywords:string[];pages:number}[]};
+/** Active rival ads that started longest ago: on the units' rival pages, or the whole library when no unit has keywords. */
+export type DashboardLongest={scope:'units'|'library';rows:CatalogAdRow[]};
 export type DashboardData={
   generatedAt:string;owned:DashboardOwned|null;rivals:DashboardRivals|null;
   review:OwnedPerformanceData|null;reviewOptions:ReviewOptions;
   rowSeries:Record<string,ReviewSeries>|null;
+  daily:DailySpend|null;
   watchlist:{total:number;items:WatchListRow[]}|null;
-  collisions:DashboardCollisions|null;
+  collisions:DashboardCollisions|null;longest:DashboardLongest|null;
   collections:{pending:number;latest:CollectionDto[]}|null;errors:string[];
 };
 
@@ -45,15 +51,20 @@ export type DashboardData={
  * or calls Meta/Apify. Partial outages keep the remaining sections usable. */
 export async function getDashboard(actor:Actor,options:ReviewOptions={window:7,sort:'spend',period:null},sections:('owned'|'watchlist'|'collections')[]=[]):Promise<DashboardData>{
   const db=await dbUser();
-  const output:DashboardData={generatedAt:new Date().toISOString(),owned:null,rivals:null,review:null,reviewOptions:options,rowSeries:null,watchlist:null,collisions:null,collections:null,errors:[]};
+  const output:DashboardData={generatedAt:new Date().toISOString(),owned:null,rivals:null,review:null,reviewOptions:options,rowSeries:null,daily:null,watchlist:null,collisions:null,longest:null,collections:null,errors:[]};
   const review=async()=>{
     const latest=await db.from('owned_library_syncs').select('id,daily_from,daily_to').eq('status','completed').order('finished_at',{ascending:false}).limit(1).maybeSingle();
     if(latest.error)throw latest.error;
     const coverage=latest.data?.daily_from&&latest.data?.daily_to?{from:latest.data.daily_from,to:latest.data.daily_to}:null;
     const period=options.period??(coverage?latestReviewPeriod(coverage,options.window):null);
     const params=new URLSearchParams({sort:options.sort,compare:'1',...(period?{period:'custom',from:period.from,to:period.to}:{period:'7d'})});
-    output.review=await getOwnedPerformance(params,latest.data?.id);
-    try{output.rowSeries=await getReviewSeries(output.review);}catch{output.errors.push('series');}
+    const result=await getOwnedPerformance(params,latest.data?.id);
+    output.review=result;
+    const currency=result.summary.find(item=>item.currency==='THB')?.currency??result.summary[0]?.currency;
+    await Promise.all([
+      getReviewSeries(result).then(value=>{output.rowSeries=value;}).catch(()=>{output.errors.push('series');}),
+      result.ready&&latest.data?.id&&currency?getDailySpend(latest.data.id,result.period,result.coverage,currency).then(value=>{output.daily=value;}).catch(()=>{output.errors.push('daily');}):Promise.resolve(),
+    ]);
   };
   const own=async()=>{
     const {data,error}=await db.rpc('dashboard_owned_summary');
@@ -94,7 +105,17 @@ export async function getDashboard(actor:Actor,options:ReviewOptions={window:7,s
     const list=[...pages.values()];
     output.collisions={units:board.units.length,unitsTotal:board.canEdit?board.units.length+board.unitsWithoutKeywords.length:null,pages:list.length,
       confirmed:list.filter(p=>p.confirmed).length,pending:list.filter(p=>!p.confirmed).length,newThisWeek:board.newThisWeek,tracked:board.tracked,
-      top:list.sort((a,b)=>b.new_matched_7d-a.new_matched_7d||Number(b.confirmed)-Number(a.confirmed)||b.matched_ads-a.matched_ads).slice(0,4)};
+      top:list.sort((a,b)=>b.new_matched_7d-a.new_matched_7d||Number(b.confirmed)-Number(a.confirmed)||b.matched_ads-a.matched_ads).slice(0,4),
+      byUnit:board.units.map(unit=>({id:unit.id,name:unit.name,keywords:unit.keywords.map(item=>item.keyword),pages:unit.pages.length}))};
+    // Longest-running needs the units' pages, so it follows the board rather than racing it.
+    const ids=list.map(page=>page.page_id).slice(0,200);
+    try{
+      const longest=await getCatalogAds({sort:'age',active:'active',pageIds:ids.length?ids:null,limit:4});
+      output.longest={scope:ids.length?'units':'library',rows:longest.rows};
+    }catch(error){
+      console.error('Dashboard longest-running ads unavailable',{code:(error as {code?:string}).code??'unknown'});
+      output.errors.push('longest');
+    }
   };
   // ponytail: owned summary, watchlist and collections stay available for callers that ask; the overview
   // page renders none of them, so it does not pay for them.

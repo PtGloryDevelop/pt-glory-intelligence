@@ -107,6 +107,8 @@
   --chrome: #ece6e9;
   --chrome-bar: rgba(250, 248, 249, 0.94);
   --row-hover: rgba(27, 31, 39, 0.06);
+  /* Every other row of a list table, a breath darker than a card. */
+  --zebra: #faf8f9;
   /* The side an entry belongs to, as its icon tile: white glyphs on each clear 3:1. */
   --tile-neutral: linear-gradient(180deg, #a5a5ab, #7e7e85);
   --tile-ours: linear-gradient(180deg, #f07aa8, #d34b82);
