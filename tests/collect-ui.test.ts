@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { countryLabel, suggestedDatasetName, FORM_MAX_RECORDS } from "../lib/collect/form.ts";
 import { ABSOLUTE_MAX_RECORDS } from "../lib/collect/limits.ts";
 import { createFakeProvider, fakeProviderEnabled } from "../lib/collect/fake-provider.ts";
-import { visibleNav } from "../components/shell/nav.ts";
+import { visibleAdminTools, visibleNav } from "../components/shell/nav.ts";
 
 /**
  * C15 — the collection screens, without a browser.
@@ -140,7 +140,8 @@ test("the admin page offers no way to start a run again", () => {
 
 test("the menu leads to pages that exist", () => {
   const analyst = visibleNav("analyst").flatMap((section) => section.items);
-  const admin = visibleNav("admin").flatMap((section) => section.items);
+  // UI v3: the admin's collector and recovery pages are on the settings page.
+  const admin = visibleAdminTools("admin");
   assert.equal(analyst.find((item) => item.label === "ค้นแอดคู่แข่งใหม่")?.href, "/collect");
   assert.equal(admin.find((item) => item.label === "การเชื่อมต่อและงบ")?.href, "/collector");
   assert.equal(admin.find((item) => item.label === "กู้คืนจากไฟล์")?.href, "/import");

@@ -101,9 +101,26 @@
   --content-max-wide: 1440px;
 
 
-  --sidebar-w: 216px;
-  --sidebar-w-rail: 68px;
-  --topbar-h: 64px;
+  /* UI v3 (macOS). The sidebar is a warm tint a step below the canvas (--muted on it 4.70:1; pink text
+     on it is not, so a selected row is a filled --brand-ink with white on it, 5.18:1). The toolbar band
+     is near-white over the canvas. */
+  --chrome: #ece6e9;
+  --chrome-bar: rgba(250, 248, 249, 0.94);
+  --row-hover: rgba(27, 31, 39, 0.06);
+  /* The side an entry belongs to, as its icon tile: white glyphs on each clear 3:1. */
+  --tile-neutral: linear-gradient(180deg, #a5a5ab, #7e7e85);
+  --tile-ours: linear-gradient(180deg, #f07aa8, #d34b82);
+  --tile-rival: linear-gradient(180deg, #5aa0f2, #256abf);
+  --tile-compare: linear-gradient(180deg, #bc7be8, #8c48c8);
+  /* Rivals as text and surfaces, the blue twin of --brand-ink / --brand-tint / --line-pink. */
+  --rival-ink: #1f5a9e;
+  --rival-tint: #eaf1fa;
+  --rival-line: #c9d7ea;
+
+
+  --sidebar-w: 236px;
+  --sidebar-w-rail: 88px;
+  --topbar-h: 56px;
 }
 
 * { box-sizing: border-box; }

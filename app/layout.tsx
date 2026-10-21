@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Sans_Thai } from "next/font/google";
+import { Anuphan } from "next/font/google";
 import "./globals.css";
 
 /**
  * One typeface with real Thai coverage, for titles, figures and tables alike.
  *
- * Kanit used to carry the titles and big numbers. Next to Plex's looped Thai its
- * heavy loopless forms read as a sale poster rather than a working tool, so the
- * hierarchy now comes from size and weight inside one family.
+ * Anuphan (UI v3): a loopless Thai close to the system face on a Mac, which the
+ * macOS-style shell is modelled on and which cannot be served on the web. The
+ * hierarchy comes from size and weight inside this one family.
  */
-const ui = IBM_Plex_Sans_Thai({
+const ui = Anuphan({
   subsets: ["thai", "latin"],
   weight: ["400", "500", "600", "700"],
   variable: "--font-ui",

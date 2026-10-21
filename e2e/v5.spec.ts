@@ -156,10 +156,10 @@ test.describe("V5 final consistency", () => {
   });
 
   test("the sidebar rail never shows a truncated section name", async ({ page }) => {
-    // Below 1440 the sidebar collapses to a 68px rail. The section headings used
+    // Below 1280 the sidebar folds to a rail of tiles. The section headings used
     // to shrink to 9px and clip; they are dividers now, and a divider cannot be
     // half a word.
-    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.setViewportSize({ width: 1200, height: 900 });
     await page.goto("/datasets");
     const heading = page.getByTestId("app-sidebar").locator("nav > div > div").first();
     await heading.waitFor();

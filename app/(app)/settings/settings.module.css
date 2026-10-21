@@ -1,0 +1,24 @@
+/* System Settings: grouped lists on the canvas, a hairline between rows that starts after the tile. */
+.page { display: grid; gap: var(--gap-section); max-width: 720px; margin: 0 auto; }
+.account { display: flex; align-items: center; gap: 14px; padding: 16px 18px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+.avatar { display: grid; place-items: center; flex: none; width: 48px; height: 48px; border-radius: 50%; background: var(--tile-neutral); color: #ffffff; }
+.accountName { font-size: var(--fs-title-sm); font-weight: 700; }
+.account form { margin: 0; }
+.signOut { min-height: 36px; font-size: var(--fs-meta); }
+.group { display: grid; gap: 8px; }
+.group h2 { display: flex; align-items: center; gap: 8px; margin: 0 4px; color: var(--muted); font-size: var(--fs-label); font-weight: 600; letter-spacing: 0; }
+.badge { padding: 0 8px; border-radius: var(--radius-pill); background: var(--neutral-tint); color: var(--muted); font-size: var(--fs-eyebrow); font-weight: 600; }
+.list { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+.row { position: relative; display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 10px 16px; color: var(--ink); text-decoration: none; }
+.row + .row::before { content: ""; position: absolute; top: 0; right: 0; left: 54px; border-top: 1px solid var(--line); }
+a.row:hover { background: var(--row-hover); color: var(--ink); text-decoration: none; }
+.text { flex: 1; min-width: 0; display: grid; }
+.name { font-weight: 500; }
+.hint { color: var(--muted); font-size: var(--fs-label); }
+.chevron { display: grid; color: var(--line-strong); }
+.stale { padding: 2px 10px; border-radius: var(--radius-pill); background: var(--warn-tint); color: var(--warn-ink); font-size: var(--fs-eyebrow); font-weight: 600; white-space: nowrap; }
+@media (max-width: 640px) {
+  .account { flex-wrap: wrap; }
+  .account form { width: 100%; }
+  .signOut { width: 100%; }
+}
