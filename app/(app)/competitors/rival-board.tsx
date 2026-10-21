@@ -85,7 +85,7 @@ export function RivalBoard(){
     {result.error?<p className={styles.problem} role="alert">{result.error}</p>:null}
     {!result.data&&!result.error?<p className={styles.loading} role="status">กำลังเปิดแอดคู่แข่ง…</p>:null}
     {result.data?(result.data.rows.length?<div className={styles.cards}>{result.data.rows.map(ad=><div key={ad.ad_archive_id} className={styles.cardWrap}>
-      <AdCard ad={ad} onOpen={()=>setSelected(ad)}/>
+      <AdCard tile ad={ad} selected={selected?.ad_archive_id===ad.ad_archive_id} onOpen={()=>setSelected(ad)}/>
       {board.canEdit?<Link className={styles.compare} href={`/compare/ads?${new URLSearchParams({dataset:ad.dataset_id,rival:ad.ad_archive_id,returnTo:'/competitors'})}`}>เทียบกับแอดเรา →</Link>:null}
     </div>)}</div>:<p className={styles.empty}>{key==='new'?'ยังไม่พบแอดใหม่จากเพจเหล่านี้ใน 7 วัน':'ยังไม่มีแอดที่กำลังแสดงจากเพจเหล่านี้'}</p>):null}
   </section>;
