@@ -15,7 +15,7 @@ import { summarizeOwnedReport } from '@/lib/owned-ads/model';
 import { comparisonSelectionKey, mergeComparisonSelection, ownedName, parseComparisonSelection, rivalCopy, rivalFromDetail, type ComparisonSelection, type Rival } from './selection';
 import { AiCompare } from './ai-compare';
 import { OwnedPicker, RivalPicker, creativeKey, ownKey, rivalImage, type OwnedChoice } from './pickers';
-import { ctaLabel, formatLabel, ownedStatus, platformLabel } from './labels';
+import { ctaLabel, formatLabel, ownedStatus, platformLabel } from '@/lib/ad-labels';
 import styles from './comparison.module.css';
 
 type Dataset = { id: string; name: string; source: string; collected: string; count: number };

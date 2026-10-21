@@ -60,8 +60,8 @@ export function PageToolbar({ scope, search, active, sort, recentDays }: {
           onChange={(event) => go({ active: event.target.value })}
         >
           <option value="">ทั้งหมด</option>
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
+          <option value="active">กำลังแสดง</option>
+          <option value="inactive">ไม่แสดงแล้ว</option>
           <option value="unknown">ไม่ทราบ</option>
         </select>
       </label>

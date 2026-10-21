@@ -1,4 +1,4 @@
-import { OWNED_PERFORMANCE_STATUSES } from '../../../../lib/owned-ads/performance.ts';
+import { OWNED_PERFORMANCE_STATUSES } from './owned-ads/performance.ts';
 
 /**
  * Thai words for the codes the compare screen shows, in one place. Codes that

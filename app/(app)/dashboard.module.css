@@ -1,5 +1,10 @@
 /* UI v2 overview: summary first (KPIs), then what changed (feed) beside competitors, then detail (table). */
 .page { display: grid; gap: var(--gap-page); max-width: 1440px; margin: auto; min-width: 0; }
+/* Our own results own the one tinted region on the page: pink means "ours" here, as the feed's แอดเรา chip does. */
+.hero { display: grid; gap: 16px; min-width: 0; }
+.heroOurs { padding: 20px; border-radius: var(--radius); background: var(--brand-tint); border: 1px solid var(--line-pink); }
+.heroOurs .seg { background: var(--surface); box-shadow: inset 0 0 0 1px var(--line-pink); }
+.heroOurs .seg button[aria-pressed='true'] { background: var(--brand-tint-strong); color: var(--accent-blue-ink); box-shadow: none; }
 .head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 .head h1 { font-family: var(--display); font-size: var(--fs-page-title); font-weight: 650; letter-spacing: -.02em; margin: 0; line-height: 1.3; text-wrap: balance; }
 .head p { margin: 6px 0 0; color: var(--muted); font-size: var(--fs-meta); }
@@ -10,9 +15,9 @@
 .problem { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 12px 16px; border-radius: var(--radius-sm); background: var(--danger-tint); color: var(--danger); font-size: var(--fs-meta); }
 .loading { color: var(--muted); font-size: var(--fs-meta); }
 
-.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
-.kpi { display: grid; gap: 2px; padding: 16px 18px; background: var(--surface); min-width: 0; }
-.kpiLabel { font-size: var(--fs-meta); color: var(--muted); }
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--line-pink); border: 1px solid var(--line-pink); border-radius: var(--radius-sm); overflow: hidden; box-shadow: var(--shadow); }
+.kpi { display: grid; gap: 2px; padding: 14px 16px; background: var(--surface); min-width: 0; }
+.kpiLabel { font-size: var(--fs-meta); font-weight: 600; color: var(--brand-ink); }
 .kpiValue { font-family: var(--display); font-size: var(--fs-page-title); font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -.01em; line-height: 1.25; }
 .kpiValue small { font-family: var(--ui); font-size: var(--fs-meta); font-weight: 500; color: var(--muted); margin-left: 4px; }
 .kpiCmp { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: var(--fs-eyebrow); color: var(--muted); font-variant-numeric: tabular-nums; }
@@ -24,14 +29,22 @@
 .grid { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr); gap: var(--gap-page); align-items: start; }
 .stack { display: grid; gap: var(--gap-page); min-width: 0; }
 .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); min-width: 0; }
-.panelHead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 16px var(--pad-card) 10px; }
+.panelHead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 14px var(--pad-card) 12px; margin-bottom: 4px; border-bottom: 1px solid var(--line); }
 .panelHead h2 { font-family: var(--display); font-size: var(--fs-subhead); font-weight: 600; margin: 0 auto 0 0; }
-.panelHead > span { font-size: var(--fs-eyebrow); color: var(--muted); }
-.panelLead { margin: 0; padding: 0 var(--pad-card) 10px; font-size: var(--fs-eyebrow); color: var(--muted); }
-.note { margin: 0; padding: 4px var(--pad-card) 14px; font-size: var(--fs-eyebrow); color: var(--muted); }
+.panelHead > span { font-size: var(--fs-meta); color: var(--muted); }
+.panelLead { margin: 0; padding: 0 var(--pad-card) 10px; font-size: var(--fs-meta); color: var(--muted); }
+/* A definition one tap away instead of a sentence on every visit. */
+.define { display: inline; margin-left: 6px; }
+.define summary { display: inline-flex; vertical-align: middle; cursor: pointer; list-style: none; color: var(--muted); }
+.define summary::-webkit-details-marker { display: none; }
+.define summary:hover { color: var(--ink); }
+.define[open] span { display: block; margin-top: 4px; color: var(--ink-soft); }
+.note { margin: 0; padding: 4px var(--pad-card) 14px; font-size: var(--fs-meta); color: var(--muted); }
 
 .feed { list-style: none; margin: 0; padding: 0 var(--pad-card) 6px; }
-.feed > li { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 14px; padding: 14px 0; border-top: 1px solid var(--line); }
+/* The creative is the richest real content here, so it gets room to be read, not a 56px stamp. */
+.feed > li { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 14px; padding: 14px 0; border-top: 1px solid var(--line); }
+.feed .thumb { width: 72px; height: 72px; }
 .feed > li:first-child { border-top: 0; }
 .isSeen { opacity: .6; }
 .feedBody { min-width: 0; }
@@ -60,12 +73,16 @@
 .thumb { position: relative; display: block; width: 56px; height: 56px; border-radius: var(--radius-sm); overflow: hidden; background: var(--surface-sunken); flex: none; }
 .thumb img { width: 100%; height: 100%; object-fit: cover; }
 .thumbEmpty { display: grid; place-items: center; width: 100%; height: 100%; color: var(--muted); font-size: var(--fs-meta); }
-.thumbKind { display: grid; place-items: center; color: var(--muted); font-size: var(--fs-eyebrow); }
+.thumbKind { display: grid; place-items: center; color: var(--muted); }
+.thumbKind svg { width: 26px; height: 26px; }
+.tileOurs { background: var(--brand-tint); color: var(--accent-blue-ink); }
+.tileRival { background: var(--ok-tint); color: var(--ok-ink); }
+.tileData { background: var(--neutral-tint); color: var(--muted); }
 .play { position: absolute; left: 4px; bottom: 4px; display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--ink); color: var(--surface); font-size: var(--fs-eyebrow); line-height: 1; padding-left: 2px; }
 
 .tableWrap { position: relative; overflow-x: auto; }
 .table { width: 100%; border-collapse: collapse; font-size: var(--fs-meta); }
-.table th { text-align: left; font-size: var(--fs-eyebrow); font-weight: 600; color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.table th { text-align: left; font-size: var(--fs-eyebrow); font-weight: 600; color: var(--muted); padding: 8px 10px; background: var(--surface-sunken); border-bottom: 1px solid var(--line); white-space: nowrap; }
 .table td { padding: 10px; border-bottom: 1px solid var(--line); vertical-align: middle; font-variant-numeric: tabular-nums; }
 .table tbody tr:last-child td { border-bottom: 0; }
 .table tbody tr:hover td { background: var(--paper); }
@@ -89,8 +106,10 @@
 .collide a:hover { color: var(--accent-blue-ink); text-decoration: underline; }
 .collide span { font-size: var(--fs-eyebrow); color: var(--muted); }
 .rivalList { list-style: none; margin: 0; padding: 0 var(--pad-card) 12px; display: grid; gap: 12px; }
-.rivalList > li { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.rivalList > li { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
 .rivalList > li:first-child { border-top: 0; padding-top: 0; }
+/* The "no new ads this week" line has no thumbnail: one column, or it wraps inside the 64px thumbnail track. */
+.rivalList > .note { display: block; }
 .rivalList b { font-size: var(--fs-meta); }
 .rivalList p { margin: 2px 0; font-size: var(--fs-meta); color: var(--muted); overflow-wrap: anywhere; }
 .rivalList .note { padding: 0; }
@@ -100,6 +119,7 @@
 @media (max-width: 1100px) { .grid { grid-template-columns: minmax(0, 1fr); } .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 560px) {
   .kpis { grid-template-columns: minmax(0, 1fr); }
-  .feed > li { grid-template-columns: 44px minmax(0, 1fr); gap: 10px; }
-  .feed .thumb { width: 44px; height: 44px; }
+  .heroOurs { padding: 16px; }
+  .feed > li { grid-template-columns: 56px minmax(0, 1fr); gap: 10px; }
+  .feed .thumb { width: 56px; height: 56px; }
 }

@@ -17,8 +17,8 @@ export function StatusBadge({ isActive, count }: {
   count?: number;
 }) {
   const [variant, label] =
-    isActive === true ? ["ok", "Active"] as const
-    : isActive === false ? ["neutral", "Inactive"] as const
+    isActive === true ? ["ok", "กำลังแสดง"] as const
+    : isActive === false ? ["neutral", "ไม่แสดงแล้ว"] as const
     : ["neutral", "ไม่ทราบ"] as const;
 
   return (

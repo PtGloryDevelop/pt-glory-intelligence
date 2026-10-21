@@ -37,7 +37,7 @@ test('our ad has one name everywhere, and a catalog template is never printed as
 });
 
 test('codes on the compare screen read in Thai, and unknown codes are kept', async () => {
-  const { ctaLabel, formatLabel, ownedStatus, platformLabel } = await import('../app/(app)/compare/ads/labels.ts');
+  const { ctaLabel, formatLabel, ownedStatus, platformLabel } = await import('../lib/ad-labels.ts');
   assert.equal(ctaLabel('SEND MESSAGE', null), 'ส่งข้อความ');
   assert.equal(ctaLabel(null, 'LEARN_MORE'), 'ดูเพิ่มเติม');
   assert.equal(ctaLabel('ทักเลย', 'SEND_MESSAGE'), 'ทักเลย');
@@ -49,7 +49,7 @@ test('codes on the compare screen read in Thai, and unknown codes are kept', asy
 });
 
 test('Ad Library codes AI repeats are shown in Thai', async () => {
-  const { thaiCodes } = await import('../app/(app)/compare/ads/labels.ts');
+  const { thaiCodes } = await import('../lib/ad-labels.ts');
   assert.equal(thaiCodes('IMAGE รูปสินค้า ขวดและกล่อง'), 'ภาพ รูปสินค้า ขวดและกล่อง');
   assert.equal(thaiCodes('MULTI_IMAGES และ VIDEO'), 'ภาพหลายรูป และ วิดีโอ');
   assert.equal(thaiCodes('ภาพนิ่ง ไม่มีรหัส'), 'ภาพนิ่ง ไม่มีรหัส');

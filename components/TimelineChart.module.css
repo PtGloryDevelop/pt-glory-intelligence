@@ -12,16 +12,16 @@
 .swatch { width: 10px; height: 10px; border-radius: 2px; }
 /* Two series, two hues from the existing system. Neither is semantic: nothing
    here is good or bad, so nothing here is green or red. */
-.started { background: var(--brand); }
-.firstSeen { background: var(--accent-blue); }
+.started { background: var(--series-b); }
+.firstSeen { background: var(--series-a); }
 .unit { margin-left: auto; }
 
 /* A long history scrolls inside the figure rather than dragging the page. */
 .scroll { overflow-x: auto; }
 .svg { display: block; }
 .axis { stroke: var(--line); stroke-width: 1; }
-.startedBar { fill: var(--brand); }
-.firstSeenBar { fill: var(--accent-blue); }
+.startedBar { fill: var(--series-b); }
+.firstSeenBar { fill: var(--series-a); }
 
 /*
  * A history is as long as the advertiser's, not as long as the page should be.

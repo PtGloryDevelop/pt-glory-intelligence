@@ -5,6 +5,7 @@ import { type Media } from "@/lib/media";
 import { MEDIA_STATE_MESSAGE, resolveMedia } from "@/lib/media/resolve";
 import { formatIdentity } from "@/lib/media/format";
 import { thaiDate } from "@/lib/format/date";
+import { ctaLabel, platformLabel } from "@/lib/ad-labels";
 import { StatusBadge } from "./StatusBadge";
 import { AdImage } from "./AdImage";
 import styles from "./AdCard.module.css";
@@ -86,9 +87,9 @@ export function AdCard({ ad, onOpen, compact = false }: { ad: AdCardData; onOpen
           </p>
 
           <div className={styles.meta}>
-            {ad.cta_type ? <span className={styles.cta}>{ad.cta_type}</span> : null}
+            {ad.cta_type ? <span className={styles.cta}>{ctaLabel(null, ad.cta_type)}</span> : null}
             <span className={styles.platforms}>
-              {ad.publisher_platform?.length ? ad.publisher_platform.join(" · ") : "—"}
+              {platformLabel(ad.publisher_platform)}
             </span>
           </div>
 

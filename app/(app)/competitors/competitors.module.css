@@ -6,7 +6,7 @@
 .hero p { color:var(--muted); font-size:var(--fs-meta); margin:6px 0 0; }
 .hero p { font-size:var(--fs-body); }
 .tabs a { font-size:var(--fs-meta); }
-.tabs a[aria-current] { background:#eef0f3; color:var(--ink); }
+.tabs a[aria-current] { background:var(--neutral-tint); color:var(--ink); }
 .sourceOptions { margin-bottom:20px; }
 .sourceOptions summary { font-size:var(--fs-meta); }
 .catalog { display:grid; gap:18px; }

@@ -31,3 +31,6 @@ next-env.d.ts
 
 # brainstorm mockups (local only)
 .superpowers/
+
+# Impeccable design-hook cache (machine-local)
+/.impeccable/hook.cache.json

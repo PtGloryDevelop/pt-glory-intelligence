@@ -18,12 +18,12 @@
   min-width: 0;
 }
 
+/* Thai labels at reading size, without the uppercase-and-tracking treatment that spaced Thai glyphs apart
+   and shouted "(META)". */
 .label {
-  font-size: var(--fs-eyebrow);
-  letter-spacing: 0.06em;
-  font-weight: 700;
+  font-size: var(--fs-meta);
+  font-weight: 600;
   color: var(--muted);
-  text-transform: uppercase;
 }
 
 /*

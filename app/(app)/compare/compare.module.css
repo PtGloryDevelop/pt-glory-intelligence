@@ -49,16 +49,19 @@
   border-radius: var(--radius);
   min-width: 0;
 }
-/* A left indicator per side, in two supporting hues. Not a scoreboard. */
-.sideCard[data-side="a"] { border-left: 3px solid var(--brand); }
-.sideCard[data-side="b"] { border-left: 3px solid var(--accent-blue); }
+/* Each side is named by a pill in its chart colour, so the tag and the bars read as one key. Not a scoreboard. */
 .sideTag {
+  justify-self: start;
+  padding: 1px 10px;
+  border-radius: var(--radius-pill);
   font-size: var(--fs-label);
   letter-spacing: 0.06em;
   font-weight: 700;
-  color: var(--muted);
+  color: #fff;
   text-transform: uppercase;
 }
+.sideCard[data-side="a"] .sideTag { background: var(--series-a); }
+.sideCard[data-side="b"] .sideTag { background: var(--series-b); }
 .sideName {
   font-size: var(--fs-title-sm);
   font-weight: 600;

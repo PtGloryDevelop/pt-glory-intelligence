@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import type { CompanyAd } from '@/lib/owned-ads/source-rows';
 import { AI_DIM_HINT, AI_DIM_LABEL, HOOK_REWRITE_BELOW, SCORE_DIMS, SCORE_HINT, SCORE_LABEL, SCORE_LEVELS, adRefId, biggestGap, fdaWatch, scoreLead, scoreLevel, scoreTotal, type AdReading, type AdRef, type AiEstimate, type AiCell, type AiDim, type AiRun, type ScoreCell, type ScoreDim } from '@/lib/ai/compare-shared';
 import { ownedName, type Rival } from './selection';
-import { ownedStatus, thaiCodes } from './labels';
+import { ownedStatus, thaiCodes } from '@/lib/ad-labels';
 import styles from './comparison.module.css';
 import { UsageBars } from '@/components/UsageBars';
 

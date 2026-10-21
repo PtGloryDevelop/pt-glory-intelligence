@@ -6,7 +6,11 @@
 .body { display:grid; grid-template-columns:200px minmax(0,1fr); gap:20px; align-items:start; }
 .board { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; min-width:0; }
 .panel { background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:14px 16px; min-width:0; }
-.fallingPanel { grid-column:1 / -1; border-top:3px solid var(--danger); }
+.fallingPanel { grid-column:1 / -1; background:var(--danger-surface); border-color:var(--danger-line); }
+.fallingPanel h2 { color:var(--danger); }
+.alertTitle { display:flex; align-items:center; gap:8px; }
+.fallingPanel .row { border-top-color:var(--danger-line); }
+.fallingPanel .row:hover { background:var(--surface); }
 .head { display:flex; justify-content:space-between; align-items:baseline; gap:10px; }
 .head h2 { margin:0; font-size:var(--fs-subhead); }
 .more { border:0; background:transparent; color:var(--accent-blue-ink); font-size:var(--fs-meta); padding:4px 0; cursor:pointer; white-space:nowrap; }

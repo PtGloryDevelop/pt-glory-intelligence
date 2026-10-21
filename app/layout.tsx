@@ -1,22 +1,14 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Sans_Thai, Kanit } from "next/font/google";
+import { IBM_Plex_Sans_Thai } from "next/font/google";
 import "./globals.css";
 
 /**
- * Two typefaces, both with real Thai coverage.
+ * One typeface with real Thai coverage, for titles, figures and tables alike.
  *
- * Kanit carries the personality — product name, page titles, big numbers. It is
- * geometric and slightly editorial without tipping into novelty.
- * IBM Plex Sans Thai does the reading work: tables, forms, metadata, long Thai
- * paragraphs. Personality in a data table costs legibility, so it stays out.
+ * Kanit used to carry the titles and big numbers. Next to Plex's looped Thai its
+ * heavy loopless forms read as a sale poster rather than a working tool, so the
+ * hierarchy now comes from size and weight inside one family.
  */
-const display = Kanit({
-  subsets: ["thai", "latin"],
-  weight: ["500", "600", "700"],
-  variable: "--font-display",
-  display: "swap",
-});
-
 const ui = IBM_Plex_Sans_Thai({
   subsets: ["thai", "latin"],
   weight: ["400", "500", "600", "700"],
@@ -31,7 +23,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="th" className={`${display.variable} ${ui.variable}`}>
+    <html lang="th" className={ui.variable}>
       <body>{children}</body>
     </html>
   );

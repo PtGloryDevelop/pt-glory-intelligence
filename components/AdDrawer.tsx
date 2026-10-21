@@ -9,6 +9,7 @@ import { thaiDate, thaiDateTime } from "@/lib/format/date";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ErrorState } from "@/components/states/ErrorState";
 import { LoadingSkeleton } from "@/components/states/LoadingSkeleton";
+import { ctaLabel, platformLabel } from "@/lib/ad-labels";
 import styles from "./AdDrawer.module.css";
 
 /**
@@ -146,7 +147,7 @@ export function AdDrawer({ adArchiveId, datasetId, onClose, compareHref, canAnal
 }
 
 function Body({ detail, history }: { detail: Detail; history: History[] }) {
-  const platforms = detail.publisher_platform?.length ? detail.publisher_platform.join(" · ") : "—";
+  const platforms = platformLabel(detail.publisher_platform);
   const categories = detail.page_categories?.length ? detail.page_categories.join(" · ") : "—";
 
   return (
@@ -174,7 +175,7 @@ function Body({ detail, history }: { detail: Detail; history: History[] }) {
         <section className={styles.section}>
           <h3 className={styles.sectionTitle}>ปุ่มและปลายทาง</h3>
           <dl className={styles.facts}>
-            <Fact label="CTA" value={detail.cta_type} />
+            <Fact label="ประเภทปุ่ม" value={detail.cta_type ? ctaLabel(null, detail.cta_type) : null} />
             <Fact label="ข้อความปุ่ม" value={detail.cta_text} />
             {detail.link_description ? <Fact label="คำอธิบายลิงก์" value={detail.link_description} /> : null}
           </dl>
@@ -198,7 +199,7 @@ function Body({ detail, history }: { detail: Detail; history: History[] }) {
           <Fact label="แพลตฟอร์ม" value={platforms} testId="drawer-platform" />
           <Fact
             label="สถานะ"
-            value={detail.is_active === null ? null : detail.is_active ? "Active" : "Inactive"}
+            value={detail.is_active === null ? null : detail.is_active ? "กำลังแสดง" : "ไม่แสดงแล้ว"}
             testId="drawer-active"
           />
           <Fact label="เริ่มแสดง" value={thaiDate(detail.start_date)} />
@@ -418,7 +419,7 @@ function ObservationHistory({ history, currentObservedAt }: {
             </div>
             <p className={styles.observationMeta}>
               <span>{row.display_format ?? "—"}</span>
-              <span>{row.cta_type ?? "—"}</span>
+              <span>{row.cta_type ? ctaLabel(null, row.cta_type) : "—"}</span>
               {row.collation_count ? <span>ใช้ซ้ำ {row.collation_count}</span> : null}
               <span title={row.collection_run_id}>{row.collection_method}</span>
             </p>

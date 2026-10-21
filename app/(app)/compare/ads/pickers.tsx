@@ -7,7 +7,7 @@ import type { CommandAd } from '@/lib/owned-ads/command-center';
 import { summarizeOwnedReport } from '@/lib/owned-ads/model';
 import { resolveMedia } from '@/lib/media/resolve';
 import { ownedName, rivalCopy, type Rival } from './selection';
-import { formatLabel } from './labels';
+import { formatLabel } from '@/lib/ad-labels';
 import styles from './comparison.module.css';
 
 const number = (value: number | null | undefined) => value == null ? '—' : value.toLocaleString('th-TH', { maximumFractionDigits: 2 });

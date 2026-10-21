@@ -13,6 +13,7 @@ import { MIN_CHATS } from "@/lib/dashboard/updates";
 import { UnitRail } from "../owned-ads/unit-rail";
 import { useJson } from "../owned-ads/use-json";
 import { CompanyDetail } from "../owned-ads/company-library";
+import { Icon } from "@/components/shell/icons";
 import styles from "./command-center.module.css";
 
 const PERIODS = [["3d", "3 วัน"], ["7d", "7 วัน"], ["14d", "14 วัน"], ["this-month", "เดือนนี้"], ["last-month", "เดือนที่แล้ว"], ["all", "ทั้งหมดที่นำเข้า"]] as const;
@@ -23,10 +24,10 @@ const key = (ad: { account_id: string; ad_id: string }) => `${ad.account_id}:${a
 
 type Panel = { id: "sales" | "cheap_chats" | "top_roas" | "oldest"; title: string; why: string; main: (ad: CommandAd) => string; unit: string; sub: (ad: CommandAd) => string; good?: boolean; empty: string };
 const PANELS: Panel[] = [
-  { id: "sales", title: "💰 สื่อที่ทำเงิน", why: "ยอดขาย (Meta) สูงสุดในช่วงที่เลือก", main: ad => n(ad.purchase_value), unit: "บาท", sub: ad => `ROAS ${n(ad.roas, 2)} · ค่าแอด ${n(ad.spend)}`, empty: "ยังไม่มีแอดที่มียอดขายในช่วงนี้" },
-  { id: "cheap_chats", title: "💬 ค่าทักถูกที่สุด", why: `เฉพาะแอดที่ทักตั้งแต่ ${MIN_CHATS} ครั้ง`, main: ad => n(ad.cost_per_conversation, 2), unit: "บาท/ทัก", sub: ad => `ทัก ${n(ad.conversations)} · %ปิด ${pct(closeRate(ad, MIN_CHATS))}`, empty: `ยังไม่มีแอดที่ทักถึง ${MIN_CHATS} ครั้ง` },
-  { id: "top_roas", title: "📈 ROAS สูงสุด", why: `เฉพาะแอดที่ใช้งบตั้งแต่ ${n(RANK_MIN_SPEND)} บาท`, main: ad => n(ad.roas, 2), unit: "ROAS (Meta)", sub: ad => `ค่าแอด ${n(ad.spend)}`, good: true, empty: `ยังไม่มีแอดที่ใช้งบถึง ${n(RANK_MIN_SPEND)} บาท` },
-  { id: "oldest", title: "⏳ สื่อที่ใช้มานาน", why: `ยังใช้งบอยู่ (ตั้งแต่ ${n(RANK_MIN_SPEND)} บาทในช่วงนี้) · นับจากวันที่สร้างแอด`, main: ad => n(daysSinceCreated(ad.created_time)), unit: "วัน", sub: ad => `ROAS ${n(ad.roas, 2)} · ค่าแอด ${n(ad.spend)}`, empty: `ยังไม่มีแอดที่ใช้งบถึง ${n(RANK_MIN_SPEND)} บาท` },
+  { id: "sales", title: "สื่อที่ทำเงิน", why: "ยอดขาย (Meta) สูงสุดในช่วงที่เลือก", main: ad => n(ad.purchase_value), unit: "บาท", sub: ad => `ROAS ${n(ad.roas, 2)} · ค่าแอด ${n(ad.spend)}`, empty: "ยังไม่มีแอดที่มียอดขายในช่วงนี้" },
+  { id: "cheap_chats", title: "ค่าทักถูกที่สุด", why: `เฉพาะแอดที่ทักตั้งแต่ ${MIN_CHATS} ครั้ง`, main: ad => n(ad.cost_per_conversation, 2), unit: "บาท/ทัก", sub: ad => `ทัก ${n(ad.conversations)} · %ปิด ${pct(closeRate(ad, MIN_CHATS))}`, empty: `ยังไม่มีแอดที่ทักถึง ${MIN_CHATS} ครั้ง` },
+  { id: "top_roas", title: "ROAS สูงสุด", why: `เฉพาะแอดที่ใช้งบตั้งแต่ ${n(RANK_MIN_SPEND)} บาท`, main: ad => n(ad.roas, 2), unit: "ROAS (Meta)", sub: ad => `ค่าแอด ${n(ad.spend)}`, good: true, empty: `ยังไม่มีแอดที่ใช้งบถึง ${n(RANK_MIN_SPEND)} บาท` },
+  { id: "oldest", title: "สื่อที่ใช้มานาน", why: `ยังใช้งบอยู่ (ตั้งแต่ ${n(RANK_MIN_SPEND)} บาทในช่วงนี้) · นับจากวันที่สร้างแอด`, main: ad => n(daysSinceCreated(ad.created_time)), unit: "วัน", sub: ad => `ROAS ${n(ad.roas, 2)} · ค่าแอด ${n(ad.spend)}`, empty: `ยังไม่มีแอดที่ใช้งบถึง ${n(RANK_MIN_SPEND)} บาท` },
 ];
 
 export function CommandCenter() {
@@ -68,7 +69,7 @@ export function CommandCenter() {
         {!data && !center.error ? <p className={styles.loading} role="status">กำลังจัดอันดับสื่อ…</p> : null}
         {data ? <>
           <section className={`${styles.panel} ${styles.fallingPanel}`} data-testid="cc-falling">
-            <div className={styles.head}><h2>⚠ สื่อที่เริ่มตก · {n(data.falling_total)} แอด{unit ? ` ใน ${unitName}` : ""}</h2>
+            <div className={styles.head}><h2 className={styles.alertTitle}><Icon name="alert" />สื่อที่เริ่มตก · {n(data.falling_total)} แอด{unit ? ` ใน ${unitName}` : ""}</h2>
               {data.falling.length > 4 ? <button type="button" className={styles.more} onClick={() => toggle("falling")}>{open.falling ? "ย่อ" : `ดูทั้ง ${n(data.falling.length)} แอด`}</button> : null}</div>
             <p className={styles.why}>เคย ROAS ≥ {FALL_ROAS} ช่วง {thai(data.windows.previous.from)}–{thai(data.windows.previous.to)} แต่ {thai(data.windows.recent.from)}–{thai(data.windows.recent.to)} ต่ำกว่า {FALL_ROAS} · งบทั้งสองช่วงตั้งแต่ {n(FALL_MIN_SPEND)} บาท · เรียงจากงบล่าสุดมากสุด</p>
             {data.falling.length ? <ol className={styles.twoCol}>{(open.falling ? data.falling : data.falling.slice(0, 4)).map((ad, index) => row(ad, index, <span className={styles.bad}>{n(ad.previous_roas, 2)} → {n(ad.recent_roas, 2)}<small>ROAS</small></span>, `งบ 7 วันล่าสุด ${n(ad.recent_spend)} บาท`))}</ol>

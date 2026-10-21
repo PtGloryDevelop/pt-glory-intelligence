@@ -1,25 +1,38 @@
 .page { display:grid; gap:24px; min-width:0; }
 .page > header { margin-bottom:0; }
-.actions,.source,.periodLine,.sectionHead,.pager,.summaryLinks { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+.actions,.periodLine,.sectionHead,.pager,.summaryLinks { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
 .actions { font-size:var(--fs-meta); }
-.source { color:var(--muted); font-size:var(--fs-meta); }
-.source a { white-space:nowrap; }
+/* Data status: a quiet pill in the header that opens the source, the period rule and how to read each number. */
+.status { position:relative; }
+.status summary { display:inline-flex; align-items:center; gap:6px; min-height:36px; padding:4px 12px; border:1px solid var(--line); border-radius:var(--radius-pill); background:var(--surface); color:var(--ink-soft); cursor:pointer; list-style:none; }
+.status summary::-webkit-details-marker { display:none; }
+.status summary:hover, .status[open] summary { border-color:var(--line-strong); background:var(--surface-sunken); }
+.statusDot { width:8px; height:8px; border-radius:50%; background:var(--warn-ink); }
+.statusPanel { position:absolute; right:0; top:calc(100% + 8px); z-index:30; width:min(440px, calc(100vw - 32px)); max-height:min(70vh, 560px); overflow:auto; display:grid; gap:10px; padding:16px; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); color:var(--ink); font-size:var(--fs-meta); line-height:1.7; text-align:left; }
+.statusPanel h3 { margin:4px 0 0; font-size:var(--fs-title-sm); }
+.statusPanel p { margin:0; }
+.statusPanel ul { margin:0; padding-left:18px; display:grid; gap:8px; color:var(--ink-soft); }
+.statusPanel > button { justify-self:start; min-height:36px; font-size:var(--fs-meta); }
+.statusRow { display:grid; gap:8px; padding:10px 12px; border-radius:var(--radius-sm); background:var(--warn-tint); }
+.statusRow button { justify-self:start; min-height:36px; font-size:var(--fs-meta); }
+@media(max-width:640px) { .statusPanel { left:0; right:auto; } }
 .kpis > div { grid-template-columns:repeat(4,minmax(0,1fr)); margin:0; }
-.figure { display:block; white-space:nowrap; font-size:var(--fs-title); }
-.currency { display:block; margin-top:4px; font-size:var(--fs-meta); color:var(--muted); font-weight:400; }
-.filters { display:grid; gap:16px; padding:20px; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); }
-.searchRow { display:flex; align-items:end; gap:12px; }
+.figure { white-space:nowrap; font-size:var(--fs-title); }
+.currency { margin-left:6px; font-size:var(--fs-meta); color:var(--muted); font-weight:400; }
+/* Pinned under the top of the window while the results scroll; compact so it costs ~130px, not a third of the screen. */
+.filters { position:sticky; top:0; z-index:5; display:grid; gap:10px; padding:12px 16px; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); }
+.filterRow { display:grid; grid-template-columns:minmax(260px,2.2fr) repeat(4,minmax(0,1fr)); gap:12px; align-items:end; }
+.searchRow { display:flex; align-items:end; gap:8px; min-width:0; }
 .searchRow label { flex:1; }
-.searchRow button { min-height:44px; flex:none; }
-.filters label { display:grid; gap:6px; min-width:0; font-size:var(--fs-meta); color:var(--muted); }
-.filters input,.filters select { width:100%; min-width:0; min-height:44px; color:var(--ink); font-size:var(--fs-body); }
-.controls { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
+.searchRow button { min-height:40px; flex:none; }
+.filters label { display:grid; gap:4px; min-width:0; font-size:var(--fs-meta); color:var(--muted); }
+.filters input,.filters select { width:100%; min-width:0; min-height:40px; color:var(--ink); font-size:var(--fs-meta); }
+.searchRow input { font-size:var(--fs-body); }
+.sortRow { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; padding-top:10px; border-top:1px solid var(--line); }
 .customDates { display:flex; align-items:end; gap:12px; flex-wrap:wrap; }
 .customDates label { flex:1; min-width:150px; }
 .customDates button { min-height:44px; }
-.clear { justify-self:start; border:0; background:transparent; padding:0; color:var(--brand-ink); min-height:44px; }
-.pageNames { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
-.pageNames button { min-height:44px; flex:none; font-size:var(--fs-meta); }
+.clear { border:0; background:transparent; padding:0; color:var(--brand-ink); min-height:34px; font-size:var(--fs-meta); }
 .periodLine { color:var(--muted); font-size:var(--fs-meta); margin-top:0; }
 .periodLine label { display:flex; align-items:center; gap:8px; }
 .notice,.empty { padding:24px; border:1px solid var(--line); border-radius:var(--radius); background:var(--surface); }
@@ -29,17 +42,19 @@
 .sectionHead { align-items:end; }
 .sectionHead p { margin:6px 0 0; color:var(--muted); font-size:var(--fs-meta); }
 .sectionHead > span { color:var(--muted); font-size:var(--fs-meta); }
-.rankingTabs { display:flex; gap:8px; flex-wrap:wrap; }
-.rankingTabs button { min-height:44px; font-size:var(--fs-meta); }
+.rankingTabs { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+.rankingTabs button { min-height:34px; padding:4px 12px; font-size:var(--fs-meta); }
 .rankingLabel { align-self:center; font-size:var(--fs-meta); color:var(--muted); }
 .sortHead { border:0; background:none; padding:0; min-height:0; font:inherit; color:inherit; cursor:pointer; white-space:nowrap; }
 th[aria-sort] .sortHead { color:var(--ink); }
 .rankingTabs button[aria-pressed="true"] { background:var(--brand-ink); color:var(--surface); border-color:var(--brand-ink); }
 .grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:20px; align-items:stretch; }
 .card { display:flex; flex-direction:column; min-width:0; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; }
-.cardHead { display:flex; align-items:center; gap:10px; min-height:76px; padding:14px 16px; }
-.cardHead > div { flex:1; min-width:0; }
-.cardHead strong { display:block; font-size:var(--fs-meta); overflow-wrap:anywhere; }
+/* Rank, then the page and its units; the status badge takes its own line under them. Side by side, a
+   no-wrap badge squeezed long page names into one word per line on four-column cards. */
+.cardHead { display:grid; grid-template-columns:32px minmax(0,1fr); align-items:start; gap:6px 10px; padding:14px 16px; }
+.cardHead > :nth-child(3) { grid-column:2; justify-self:start; }
+.cardHead strong { display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; font-size:var(--fs-meta); line-height:1.5; }
 .cardHead div > span { display:block; color:var(--muted); font-size:var(--fs-meta); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .cardHead > span:last-child { font-size:var(--fs-meta); }
 .rank { display:grid; place-items:center; background:var(--surface-sunken); border-radius:var(--radius-sm); width:32px; height:32px; flex:none; color:var(--brand-ink); font-weight:600; }
@@ -65,18 +80,14 @@ th[aria-sort] .sortHead { color:var(--ink); }
 .findings p { margin:0; color:var(--muted); font-size:var(--fs-meta); }
 .findings strong { display:inline-block; color:var(--ink); font-size:var(--fs-title-sm); margin-bottom:6px; }
 .summaryLinks { justify-content:flex-start; font-size:var(--fs-meta); }
-.basis { border-top:1px solid var(--line); padding-top:16px; font-size:var(--fs-meta); color:var(--muted); }
-.basis summary { cursor:pointer; min-height:44px; }
-.basis p { margin:10px 0 0; }
-@media(min-width:1600px) { .grid { grid-template-columns:repeat(4,minmax(0,1fr)); } }
-@media(max-width:1120px) { .controls { grid-template-columns:repeat(2,minmax(0,1fr)); } .grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .findings { grid-template-columns:1fr; gap:16px; } }
-.hero { display:grid; gap:18px; padding:20px 22px; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); }
-.hero > header { margin:0; }
-.hero .filters { padding:0; border:0; background:transparent; }
-.searchRow input { min-height:52px; font-size:var(--fs-subhead); }
-.falling { display:grid; gap:12px; padding:14px 16px; background:var(--surface); border:1px solid var(--line); border-top:3px solid var(--danger); border-radius:var(--radius); }
+/* Without the unit rail the results take the full width: four creatives a row from 1440px, the same card width the rail layout reached at 1600px. */
+@media(min-width:1440px) { .grid { grid-template-columns:repeat(4,minmax(0,1fr)); } }
+/* Below ~1180px the five fields no longer fit one row: search takes its own row above the four selects. */
+@media(max-width:1180px) { .filterRow { grid-template-columns:repeat(4,minmax(0,1fr)); } .searchRow { grid-column:1 / -1; } }
+@media(max-width:1120px) { .grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .findings { grid-template-columns:1fr; gap:16px; } }
+.falling { display:grid; gap:12px; padding:14px 16px; background:var(--danger-surface); border:1px solid var(--danger-line); border-radius:var(--radius); }
 .fallingHead { display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap; }
-.fallingHead h2 { margin:0; font-size:var(--fs-subhead); }
+.fallingHead h2 { display:flex; align-items:center; gap:8px; margin:0; font-size:var(--fs-subhead); color:var(--danger); }
 .fallingHead a, .fallingHead button { font-size:var(--fs-meta); }
 .fallingRow { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }
 .fallingAd { display:grid; grid-template-columns:52px minmax(0,1fr); gap:10px; align-items:center; padding:8px; border:1px solid var(--line); border-radius:var(--radius-sm); background:var(--surface); color:var(--ink); text-align:left; cursor:pointer; }
@@ -85,14 +96,15 @@ th[aria-sort] .sortHead { color:var(--ink); }
 .fallingAd b { display:block; font-size:var(--fs-meta); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .fallingAd small { display:block; color:var(--muted); font-size:var(--fs-eyebrow); }
 .drop { display:block; color:var(--danger); font-weight:700; font-size:var(--fs-meta); }
-.body { display:grid; grid-template-columns:200px minmax(0,1fr); gap:20px; align-items:start; }
+.body { min-width:0; }
 .results { display:grid; gap:24px; min-width:0; }
 @media (max-width:1100px) { .fallingRow { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-@media (max-width:900px) { .body { grid-template-columns:minmax(0,1fr); } .controls { grid-template-columns:minmax(0,1fr); } }
+/* On a phone a pinned panel would cover the results: it scrolls with the page there. */
+@media (max-width:900px) { .filters { position:static; } .filterRow { grid-template-columns:minmax(0,1fr); } .filters input,.filters select { min-height:44px; } .rankingTabs button { min-height:40px; } }
 .inlinePlayer { display:grid; gap:8px; justify-items:center; padding:12px; background:var(--surface-sunken); }
 .inlinePlayer iframe { height:420px; min-height:0; }
 .stopVideo { min-height:36px; font-size:var(--fs-meta); }
-@media(max-width:640px) { .page { gap:20px; } .filters,.summary { padding:16px; } .kpis > div { grid-template-columns:repeat(2,minmax(0,1fr)); } .figure { font-size:var(--fs-subhead); } .controls { gap:12px; } .grid { grid-template-columns:minmax(0,1fr); } .previewButton { --ad-preview-height:340px; } .sectionHead > span { display:none; } .customDates { display:grid; grid-template-columns:minmax(0,1fr); } .searchRow { gap:8px; } .searchRow button { padding-inline:12px; } .cardHead { gap:8px; } .cardBody { padding:16px; } .caption { min-height:0; } .periodLine label { width:100%; } }
+@media(max-width:640px) { .page { gap:20px; } .filters,.summary { padding:16px; } .kpis > div { grid-template-columns:repeat(2,minmax(0,1fr)); } .figure { font-size:var(--fs-subhead); } .grid { grid-template-columns:minmax(0,1fr); } .previewButton { --ad-preview-height:340px; } .sectionHead > span { display:none; } .customDates { display:grid; grid-template-columns:minmax(0,1fr); } .searchRow { gap:8px; } .searchRow button { padding-inline:12px; } .cardHead { gap:8px; } .cardBody { padding:16px; } .caption { min-height:0; } .periodLine label { width:100%; } }
 
 /* UI v2 table view (default) */
 .viewTools { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
@@ -127,6 +139,6 @@ th[aria-sort] .sortHead { color:var(--ink); }
 .page[data-stale] .tableWrap, .page[data-stale] .grid, .page[data-stale] .kpis { opacity:.5; transition:opacity .15s; pointer-events:none; }
 .flag { justify-self:start; margin-top:3px; padding:1px 8px; border-radius:var(--radius-pill); background:var(--warn-tint); color:var(--warn-ink); font-size:var(--fs-eyebrow); font-weight:600; overflow-wrap:anywhere; }
 .flagGood { background:var(--ok-tint); color:var(--ok-ink); }
-.fallingError { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:0; padding:10px 16px; border:1px solid var(--line); border-top:3px solid var(--warn-ink); border-radius:var(--radius); background:var(--warn-tint); color:var(--warn-ink); font-size:var(--fs-meta); }
+.fallingError { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:0; padding:10px 16px; border:1px solid var(--warn-line); border-radius:var(--radius); background:var(--warn-tint); color:var(--warn-ink); font-size:var(--fs-meta); }
 .fallingError button { min-height:36px; font-size:var(--fs-meta); }
 .groupBadge { display:inline-flex; align-items:center; padding:2px 10px; border-radius:var(--radius-pill); background:var(--brand-tint); color:var(--accent-blue-ink); font-size:var(--fs-eyebrow); font-weight:600; white-space:nowrap; }

@@ -106,9 +106,8 @@ export function AppShell(
             * section, still visible so the shape of the product is legible, but
             * never in the way of the thing somebody came to open.
             */}
-          {sections.map((section,index) => {
+          {sections.map((section) => {
             const links=<>
-              {index===0?<div className={styles.heading}>{section.heading}</div>:null}
               {[...section.items]
                 .sort((a, b) => Number(Boolean(b.href)) - Number(Boolean(a.href)))
                 .map((item) =>
@@ -146,11 +145,12 @@ export function AppShell(
                 ),
               )}
             </>;
-            return index===0?<div key={section.heading}>{links}</div>:<details key={section.heading} className={styles.advanced} open={section.items.some(item=>item.href&&isActive(item.href))||undefined}><summary>{section.heading}</summary>{links}</details>;
+            return section.folded
+              ?<details key={section.heading} className={styles.advanced} open={section.items.some(item=>item.href&&isActive(item.href))||undefined}><summary>{section.heading}</summary>{links}</details>
+              :<div key={section.heading}><div className={styles.heading}>{section.heading}</div>{links}</div>;
           })}
         </nav>
 
-        <div className={styles.workspaceNote}><span>พื้นที่วิจัยของทีม</span><small>ค้นหลักฐาน · เปรียบเทียบ · ตัดสินใจ</small></div>
         <button type="button" className={styles.collapse} aria-label={railed ? 'ขยายเมนู' : 'ย่อเมนู'} aria-expanded={!railed} onClick={() => setRailed((v) => !v)}>
           {railed ? "»" : "« ย่อเมนู"}
         </button>

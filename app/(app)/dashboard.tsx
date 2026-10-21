@@ -12,12 +12,15 @@ import {buildUpdates,MIN_CHATS,rowRoas,type DashboardUpdate} from '@/lib/dashboa
 import {DashboardSparkline} from './dashboard-sparkline';
 import styles from './dashboard.module.css';
 import {HomeChoiceButton} from '@/components/HomeChoice';
+import {Icon,type IconName} from '@/components/shell/icons';
 import {AdDrawer} from '@/components/AdDrawer';
 import {CompanyDetail} from './owned-ads/company-library';
 import type {HomeChoice} from '@/lib/home-choice';
 
 const WINDOWS=[7,14,30] as const;
 const KIND={ours:'แอดเรา',rival:'คู่แข่ง',data:'ข้อมูล'} as const;
+// An update with no ad picture gets its kind's icon in its chip colour, not a grey box that reads as a broken image.
+const TILE:Record<keyof typeof KIND,[IconName,string]>={ours:['grid',styles.tileOurs],rival:['swords',styles.tileRival],data:['layers',styles.tileData]};
 const num=(value:number|null|undefined,digits=2)=>value==null?'—':value.toLocaleString('th-TH',{minimumFractionDigits:digits,maximumFractionDigits:digits});
 // A spend jump is only good or bad next to its results: same threshold as the overview feed's surge rule.
 const SPEND_JUMP=50;
@@ -42,7 +45,7 @@ function Delta({value,goodUp}:{value:number|null;goodUp:boolean|null}){
 
 function OwnedThumb({url,video,name}:{url:string|null|undefined;video:boolean;name:string}){
   return <span className={styles.thumb}>
-    {url?<AdImage src={url} alt={name} sizes="56px" referrerPolicy="no-referrer"/>:<span className={styles.thumbEmpty} aria-hidden>{url===undefined?'…':'—'}</span>}
+    {url?<AdImage src={url} alt={name} sizes="72px" referrerPolicy="no-referrer"/>:<span className={styles.thumbEmpty} aria-hidden>{url===undefined?'…':'—'}</span>}
     {video?<span className={styles.play} aria-label="วิดีโอ">▶</span>:null}
   </span>;
 }
@@ -108,7 +111,7 @@ export function Dashboard({canAnalyze,home='overview'}:{canAnalyze:boolean;home?
   function updateRow(item:DashboardUpdate){
     const row=item.ad?rowByKey.get(reviewAdKey(item.ad)):undefined;
     return <li key={item.id} className={seen.includes(item.id)?styles.isSeen:undefined}>
-      {row?<OwnedThumb url={row.creative_url??null} video={Boolean(row.video_id)} name={row.ad_name}/>:<span className={`${styles.thumb} ${styles.thumbKind}`} aria-hidden>{item.kind==='rival'?'คู่แข่ง':'ข้อมูล'}</span>}
+      {row?<OwnedThumb url={row.creative_url??null} video={Boolean(row.video_id)} name={row.ad_name}/>:<span className={`${styles.thumb} ${styles.thumbKind} ${TILE[item.kind][1]}`} aria-hidden><Icon name={TILE[item.kind][0]}/></span>}
       <div className={styles.feedBody}>
         <div className={styles.meta}><span className={`${styles.kind} ${styles[item.kind]}`}>{KIND[item.kind]}</span><span className={`${styles.sev} ${styles[item.severity]}`}>{item.label}</span></div>
         <h3>{item.title}</h3><p>{item.body}</p>
@@ -129,6 +132,7 @@ export function Dashboard({canAnalyze,home='overview'}:{canAnalyze:boolean;home?
   const rivals=data?.rivals,recent=rivals?.recentAds?.slice(0,4)??[];
 
   return <div className={styles.page} data-testid="overview">
+    <div className={canAnalyze?`${styles.hero} ${styles.heroOurs}`:styles.hero}>
     <header className={styles.head}>
       <div>
         <h1>สัปดาห์นี้มีอะไรเปลี่ยน</h1>
@@ -136,9 +140,6 @@ export function Dashboard({canAnalyze,home='overview'}:{canAnalyze:boolean;home?
       </div>
       {canAnalyze?<div className={styles.headActs}><HomeChoiceButton target="overview" current={home}/><div className={styles.seg} role="group" aria-label="ช่วงเวลา">{WINDOWS.map(value=><button key={value} type="button" aria-pressed={value===days} onClick={()=>setWindow(value)}>{value} วัน</button>)}</div></div>:null}
     </header>
-
-    {error?<div className={styles.problem} role="alert">{error} <button type="button" className={styles.btn} onClick={()=>setRetry(value=>value+1)}>ลองใหม่</button></div>:null}
-    {!data&&!error?<p className={styles.loading} role="status">กำลังเปิดภาพรวม…</p>:null}
 
     {data&&canAnalyze&&!review?<div className={styles.problem} role="alert">ผลแอดเราเปิดไม่ได้ในรอบนี้ ส่วนอื่นยังใช้ได้ <button type="button" className={styles.btn} onClick={()=>setRetry(value=>value+1)}>ลองใหม่</button></div>:null}
     {data&&canAnalyze&&review?<section className={styles.kpis} aria-label="ผลแอดเรา">
@@ -151,6 +152,10 @@ export function Dashboard({canAnalyze,home='overview'}:{canAnalyze:boolean;home?
         </div>;
       })}
     </section>:null}
+    </div>
+
+    {error?<div className={styles.problem} role="alert">{error} <button type="button" className={styles.btn} onClick={()=>setRetry(value=>value+1)}>ลองใหม่</button></div>:null}
+    {!data&&!error?<p className={styles.loading} role="status">กำลังเปิดภาพรวม…</p>:null}
 
     {data?<div className={styles.grid}>
       <div className={styles.stack}>
@@ -193,9 +198,10 @@ export function Dashboard({canAnalyze,home='overview'}:{canAnalyze:boolean;home?
             <Link href={`/pages/${encodeURIComponent(page.page_id)}?scope=all`}>{page.page_name??page.page_id}</Link>
             <span>{page.unit} · ตรงคำค้น {page.matched_ads} แอด{page.new_matched_7d?` · ใหม่ ${page.new_matched_7d}`:''} · {page.confirmed?'ทีมตรวจแล้ว':'ยังไม่ได้ตรวจ'}</span></li>)}</ul>:null}
           {rivals?<>
-            <p className={styles.panelLead}>เพิ่งพบ {(rivals.week?.newAds??rivals.recentlyFound).toLocaleString('th-TH')} แอดใน 7 วัน · เก็บล่าสุด {thaiDate(rivals.lastCollectedAt)} · “เพิ่งพบ” คือระบบเห็นครั้งแรก แอดอาจยิงมาก่อนแล้ว</p>
+            <div className={styles.panelLead}>เพิ่งพบ {(rivals.week?.newAds??rivals.recentlyFound).toLocaleString('th-TH')} แอดใน 7 วัน · เก็บล่าสุด {thaiDate(rivals.lastCollectedAt)}
+              <details className={styles.define}><summary aria-label="“เพิ่งพบ” หมายถึงอะไร"><Icon name="info"/></summary><span>“เพิ่งพบ” คือระบบเห็นครั้งแรก แอดอาจยิงมาก่อนแล้ว</span></details></div>
             <ul className={styles.rivalList}>{recent.map(ad=><li key={`${ad.dataset_id}:${ad.ad_archive_id}`}>
-              <AdThumb ad={ad}/>
+              <AdThumb ad={ad} width={64}/>
               <div><b>{ad.page_name??ad.page_id}</b><p>{(ad.title||ad.body_text||'ไม่มีข้อความที่บันทึกไว้').slice(0,90)}</p>
                 <span className={styles.note}>ยิงมา {ad.ad_age_days.toLocaleString('th-TH')} วัน · <button type="button" className={styles.linkButton} onClick={()=>setRivalAd({ad_archive_id:ad.ad_archive_id,dataset_id:ad.dataset_id})}>ดูแอด</button></span></div>
             </li>)}{!recent.length?<li className={styles.note}>สัปดาห์นี้ยังไม่พบแอดใหม่</li>:null}</ul>

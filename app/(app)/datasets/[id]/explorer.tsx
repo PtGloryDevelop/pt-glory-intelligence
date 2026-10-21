@@ -30,7 +30,7 @@ const PAGE_SIZE = 30;
 
 /** Unknown is a state of its own, so it is always on the menu. */
 const ACTIVE_OPTIONS: [string, string][] = [
-  ["active", "Active"], ["inactive", "Inactive"], ["unknown", "ไม่ทราบ"],
+  ["active", "กำลังแสดง"], ["inactive", "ไม่แสดงแล้ว"], ["unknown", "ไม่ทราบ"],
 ];
 
 /** `—` is the honest rendering of a field the collector never provided. */

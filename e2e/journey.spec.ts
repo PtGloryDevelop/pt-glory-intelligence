@@ -193,12 +193,12 @@ test.describe("import to explorer to drawer", () => {
     const row = page.getByTestId("ads-table").locator("tbody tr").first();
     await expect(row).toContainText("IMAGE");
     await expect(row).toContainText("FACEBOOK");
-    await expect(row).toContainText("Active");
+    await expect(row).toContainText("กำลังแสดง");
     await expect(row).not.toContainText("VIDEO");
 
     await row.getByRole("button").click();
     await expect(page.getByTestId("drawer-format")).toHaveText("IMAGE");
-    await expect(page.getByTestId("drawer-active")).toHaveText("Active");
+    await expect(page.getByTestId("drawer-active")).toHaveText("กำลังแสดง");
     // History carries both runs even though the snapshot shows one.
     await expect(page.getByTestId("observation-row")).toHaveCount(2);
     // ...and exactly one of them is the observation this dataset is pinned to,
@@ -364,7 +364,7 @@ test.describe("analyst after manual import became recovery", () => {
       html.indexOf('data-testid="app-sidebar"'),
       html.indexOf("</aside>", html.indexOf('data-testid="app-sidebar"')),
     );
-    expect(sidebar).toContain("เก็บข้อมูลใหม่");
-    expect(sidebar).not.toContain("นำเข้าไฟล์ (กู้คืนระบบ)");
+    expect(sidebar).toContain("ค้นแอดคู่แข่งใหม่");
+    expect(sidebar).not.toContain("กู้คืนจากไฟล์");
   });
 });

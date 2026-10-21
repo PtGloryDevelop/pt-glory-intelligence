@@ -11,8 +11,8 @@
 }
 .key { display: inline-flex; align-items: center; gap: 6px; }
 .swatch { width: 10px; height: 10px; border-radius: 2px; }
-.firstSeen { background: var(--brand); }
-.started { background: var(--accent-blue); }
+.firstSeen { background: var(--series-a); }
+.started { background: var(--series-b); }
 .unit { margin-left: auto; }
 
 /* A long history scrolls inside the figure rather than dragging the page. */
@@ -20,8 +20,8 @@
 .svg { display: block; }
 
 .axis { stroke: var(--line); stroke-width: 1; }
-.firstSeenBar { fill: var(--brand); }
-.startedBar { fill: var(--accent-blue); }
+.firstSeenBar { fill: var(--series-a); }
+.startedBar { fill: var(--series-b); }
 
 .range {
   margin: 6px 0 0;

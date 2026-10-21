@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "border-accent-on-rounded",
+        "value": "*",
+        "files": [
+          "app/(app)/compare/ads/comparison.module.css"
+        ],
+        "createdAt": "2026-10-20T02:35:45.309Z",
+        "reason": "Tab underline on .steps buttons (border-radius:0), a standard selected-tab indicator, not an accent on a rounded card; user approved suppressing it 2026-10-20"
+      }
+    ]
+  }
+}

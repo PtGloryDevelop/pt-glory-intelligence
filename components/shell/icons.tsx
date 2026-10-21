@@ -26,7 +26,7 @@ export type IconName =
   | "home" | "search" | "folder" | "layers" | "grid" | "building" | "image"
   | "chart" | "swords" | "sparkle" | "target" | "tag" | "trend" | "compare"
   | "bookmark" | "upload" | "history" | "shield" | "brain" | "unlink" | "settings"
-  | "download" | "wallet";
+  | "download" | "wallet" | "alert" | "info";
 
 const PATHS: Record<IconName, React.ReactNode> = {
   home: <><path d="M4 10.5 12 4l8 6.5" /><path d="M6 10v9h12v-9" /></>,
@@ -55,6 +55,10 @@ const PATHS: Record<IconName, React.ReactNode> = {
   brain: <><path d="M9.5 5A2.5 2.5 0 0 0 7 7.5 2.5 2.5 0 0 0 5.5 12 2.5 2.5 0 0 0 7 16.5 2.5 2.5 0 0 0 9.5 19H12V5z" /><path d="M14.5 5A2.5 2.5 0 0 1 17 7.5 2.5 2.5 0 0 1 18.5 12 2.5 2.5 0 0 1 17 16.5 2.5 2.5 0 0 1 14.5 19H12" /></>,
   unlink: <><path d="M9 15 5.5 18.5" /><path d="M15 9 18.5 5.5" /><path d="M10 7.5 12 5.5a3.5 3.5 0 0 1 5 5l-2 2" /><path d="M14 16.5 12 18.5a3.5 3.5 0 0 1-5-5l2-2" /></>,
   settings: <><circle cx="12" cy="12" r="3" /><path d="M12 3.5v2M12 18.5v2M4.9 7.8l1.7 1M17.4 15.2l1.7 1M4.9 16.2l1.7-1M17.4 8.8l1.7-1" /></>,
+  // Something needs a look (falling ads): drawn in the set's stroke rather than the ⚠ glyph.
+  alert: <><path d="M12 4.5 3.5 19h17z" /><path d="M12 10v4" /><path d="M12 16.6v.4" /></>,
+  // Where a number comes from and how to read it.
+  info: <><circle cx="12" cy="12" r="8" /><path d="M12 11v5" /><path d="M12 8v.4" /></>,
 };
 
 export function Icon({ name }: { name: IconName }) {
