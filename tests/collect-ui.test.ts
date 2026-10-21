@@ -141,12 +141,12 @@ test("the admin page offers no way to start a run again", () => {
 test("the menu leads to pages that exist", () => {
   const analyst = visibleNav("analyst").flatMap((section) => section.items);
   const admin = visibleNav("admin").flatMap((section) => section.items);
-  assert.equal(analyst.find((item) => item.label === "เก็บข้อมูลใหม่")?.href, "/collect");
-  assert.equal(admin.find((item) => item.label === "ค่าเก็บข้อมูล")?.href, "/collector");
-  assert.equal(admin.find((item) => item.label === "นำเข้าไฟล์ (กู้คืนระบบ)")?.href, "/import");
+  assert.equal(analyst.find((item) => item.label === "ค้นแอดคู่แข่งใหม่")?.href, "/collect");
+  assert.equal(admin.find((item) => item.label === "การเชื่อมต่อและงบ")?.href, "/collector");
+  assert.equal(admin.find((item) => item.label === "กู้คืนจากไฟล์")?.href, "/import");
   // A viewer still receives none of them.
   const viewer = visibleNav("viewer").flatMap((section) => section.items).map((item) => item.label);
-  for (const label of ["เก็บข้อมูลใหม่", "ค่าเก็บข้อมูล", "นำเข้าไฟล์ (กู้คืนระบบ)"]) {
+  for (const label of ["ค้นแอดคู่แข่งใหม่", "การเชื่อมต่อและงบ", "กู้คืนจากไฟล์"]) {
     assert.ok(!viewer.includes(label), label);
   }
 });

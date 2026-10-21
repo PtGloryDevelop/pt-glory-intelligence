@@ -215,7 +215,7 @@ test.describe("an analyst collects data without ever meeting the collector", () 
 
   test("the menu leads to a form that asks only product questions", async ({ page }) => {
     await page.goto("/datasets");
-    await page.getByRole("link", { name: "เก็บข้อมูลใหม่" }).click();
+    await page.getByRole("link", { name: "ค้นแอดคู่แข่งใหม่" }).click();
     await expect(page).toHaveURL(/\/collect$/);
     await expect(page.getByTestId("collect-form")).toBeVisible();
 
@@ -512,7 +512,7 @@ test.describe("a viewer is not offered collection at all", () => {
     const html = await (await page.goto("/datasets"))!.text();
     const open = html.indexOf('data-testid="app-sidebar"');
     const sidebar = html.slice(open, html.indexOf("</aside>", open));
-    for (const label of ["เก็บข้อมูลใหม่", "ค่าเก็บข้อมูล", "นำเข้าไฟล์ (กู้คืนระบบ)"]) {
+    for (const label of ["ค้นแอดคู่แข่งใหม่", "การเชื่อมต่อและงบ", "กู้คืนจากไฟล์"]) {
       expect(sidebar, label).not.toContain(label);
     }
 

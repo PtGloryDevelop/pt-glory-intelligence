@@ -23,7 +23,7 @@ export default async function DatasetsPage() {
     <>
       <PageHeader
         eyebrow="Data"
-        title="ชุดข้อมูล"
+        title="ประวัติการเก็บข้อมูล"
         description="แต่ละชุดผูกกับรอบเก็บของตัวเอง ตัวเลขที่เห็นคือค่าของรอบนั้น ไม่ใช่ค่าล่าสุด"
         actions={
           <Link href="/import" data-cta>นำเข้าข้อมูล</Link>

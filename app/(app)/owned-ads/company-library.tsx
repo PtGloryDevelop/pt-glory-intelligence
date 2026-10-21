@@ -106,7 +106,7 @@ export function CompanyLibrary({ initialFilters }: { initialFilters: OwnedLibrar
   const snapshot=result?.data.snapshot; const progress=result?.data.progress; const total=result?.data.total ?? 0;
   const displayDate=(value:string|null|undefined)=>value?new Date(value).toLocaleString("th-TH"):"—";
   return <>
-    <PageHeader title="นำเข้าแอดเรา" description="แอดจาก Ads Management ที่มีค่าแอดใน 90 วันล่าสุด · กดอัปเดตข้อมูลเพื่อนำเข้ารอบล่าสุด"
+    <PageHeader title="อัปเดตแอดของเรา" description="แอดจาก Ads Management ที่มีค่าแอดใน 90 วันล่าสุด · กดอัปเดตข้อมูลเพื่อนำเข้ารอบล่าสุด"
       actions={<button type="button" data-testid="company-sync" onClick={()=>void sync()} disabled={watching||running}>อัปเดตข้อมูล</button>} />
     {error?<p role="alert">{error} <button type="button" onClick={()=>setRefresh(value=>value+1)}>ลองเปิดใหม่</button></p>:null}
     <div className={styles.connection} data-testid="company-source">

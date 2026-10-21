@@ -25,7 +25,7 @@ test('overview is the shared entry at its own URL; owned daily performance remai
 });
 
 test("manual import is an admin entry, and says what it is for", () => {
-  const item = itemFor("admin", "นำเข้าไฟล์ (กู้คืนระบบ)");
+  const item = itemFor("admin", "กู้คืนจากไฟล์");
   assert.ok(item, "the admin keeps the recovery import");
   assert.equal(item.href, "/import", "and it still goes to the page that exists");
   assert.equal(item.minRole, "admin");
@@ -35,14 +35,14 @@ test("manual import is an admin entry, and says what it is for", () => {
 
 test("an analyst sees the collection entry and nothing that would answer 403", () => {
   const visible = labels("analyst");
-  assert.ok(visible.includes("เก็บข้อมูลใหม่"));
-  assert.ok(!visible.includes("นำเข้าไฟล์ (กู้คืนระบบ)"), "manual import is not theirs any more");
-  assert.ok(!visible.includes("ค่าเก็บข้อมูล"), "and neither are the collector's figures");
+  assert.ok(visible.includes("ค้นแอดคู่แข่งใหม่"));
+  assert.ok(!visible.includes("กู้คืนจากไฟล์"), "manual import is not theirs any more");
+  assert.ok(!visible.includes("การเชื่อมต่อและงบ"), "and neither are the collector's figures");
 });
 
 test("a viewer sees none of the three", () => {
   const visible = labels("viewer");
-  for (const label of ["เก็บข้อมูลใหม่", "ค่าเก็บข้อมูล", "นำเข้าไฟล์ (กู้คืนระบบ)"]) {
+  for (const label of ["ค้นแอดคู่แข่งใหม่", "การเชื่อมต่อและงบ", "กู้คืนจากไฟล์"]) {
     assert.ok(!visible.includes(label), `${label} must not reach a viewer`);
   }
   // UI v2: a viewer gets the shared work surfaces only; data upkeep is not theirs.
@@ -52,8 +52,8 @@ test("a viewer sees none of the three", () => {
 test("an admin sees everything the other two do, and the admin entries as well", () => {
   const admin = labels("admin");
   for (const label of labels("analyst")) assert.ok(admin.includes(label), label);
-  assert.ok(admin.includes("ค่าเก็บข้อมูล"));
-  assert.ok(admin.includes("นำเข้าไฟล์ (กู้คืนระบบ)"));
+  assert.ok(admin.includes("การเชื่อมต่อและงบ"));
+  assert.ok(admin.includes("กู้คืนจากไฟล์"));
 });
 
 test("the two collection entries lead to the pages C15 built", () => {
@@ -61,8 +61,8 @@ test("the two collection entries lead to the pages C15 built", () => {
   // not exist yet is worse than a dead entry. C15 built both pages, so the
   // menu now goes somewhere — and each page authorizes on the server itself.
   for (const [role, label, href] of [
-    ["analyst", "เก็บข้อมูลใหม่", "/collect"],
-    ["admin", "ค่าเก็บข้อมูล", "/collector"],
+    ["analyst", "ค้นแอดคู่แข่งใหม่", "/collect"],
+    ["admin", "การเชื่อมต่อและงบ", "/collector"],
   ] as const) {
     const item = itemFor(role, label);
     assert.ok(item, label);
@@ -139,7 +139,36 @@ test("no normal surface offers a choice of collector", () => {
     }
   }
   // The label a person reads says recovery, not collection.
-  assert.match(nav, /นำเข้าไฟล์ \(กู้คืนระบบ\)/);
+  assert.match(nav, /กู้คืนจากไฟล์/);
+});
+
+test("routine updates stay in sight; admin upkeep is folded away", () => {
+  const analyst = visibleNav("analyst");
+  const routine = analyst.find((section) => section.heading === "อัปเดตข้อมูล");
+  assert.deepEqual(routine?.items.map((item) => item.label), ["ค้นแอดคู่แข่งใหม่", "อัปเดตแอดของเรา"]);
+  assert.equal(routine?.folded, undefined, "not behind a toggle");
+  assert.ok(!analyst.some((section) => section.folded), "an analyst has nothing folded away");
+  const upkeep = visibleNav("admin").filter((section) => section.folded);
+  assert.equal(upkeep.length, 1);
+  assert.deepEqual(upkeep[0].items.map((item) => item.label), ["แบรนด์คู่แข่ง", "หมวดหมู่", "ประวัติการเก็บข้อมูล", "การเชื่อมต่อและงบ", "กู้คืนจากไฟล์"]);
+  assert.ok(upkeep[0].items.every((item) => item.minRole === "admin"), "only admin pages are folded");
+});
+
+test("no two entries share an icon: the collapsed menu shows nothing else", () => {
+  const icons = NAV.flatMap((section) => section.items.map((item) => item.icon));
+  assert.equal(new Set(icons).size, icons.length);
+});
+
+test("each upkeep entry is named like the page it opens", () => {
+  for (const [label, file] of [
+    ["อัปเดตแอดของเรา", join("app", "(app)", "owned-ads", "company-library.tsx")],
+    ["ประวัติการเก็บข้อมูล", join("app", "(app)", "datasets", "page.tsx")],
+    ["การเชื่อมต่อและงบ", join("app", "(app)", "collector", "page.tsx")],
+    ["กู้คืนจากไฟล์", join("app", "(app)", "import", "page.tsx")],
+  ]) {
+    assert.ok(itemFor("admin", label), label);
+    assert.match(readFileSync(file, "utf8"), new RegExp(`title="${label}`), `${file} should open with ${label}`);
+  }
 });
 
 test('Command Center is an analyst page next to the ad library', () => {

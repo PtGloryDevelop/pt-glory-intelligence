@@ -126,7 +126,7 @@ test.describe("sticky layers never overlap", () => {
  * permission, so the proof has to be about what the server sent.
  */
 test.describe("role-aware navigation", () => {
-  const ADMIN_ONLY = ["ค่าเก็บข้อมูล", "นำเข้าไฟล์ (กู้คืนระบบ)"];
+  const ADMIN_ONLY = ["การเชื่อมต่อและงบ", "กู้คืนจากไฟล์"];
 
   /**
    * The sidebar's own markup, out of the server's response.
@@ -148,11 +148,11 @@ test.describe("role-aware navigation", () => {
     const page = await context.newPage();
     const sidebar = await sidebarHtml(page, "/datasets");
 
-    for (const label of [...ADMIN_ONLY, "เก็บข้อมูลใหม่"]) {
+    for (const label of [...ADMIN_ONLY, "ค้นแอดคู่แข่งใหม่"]) {
       expect(sidebar, `a viewer's menu must not contain ${label}`).not.toContain(label);
     }
     expect(sidebar).toContain("คู่แข่ง");
-    expect(sidebar).not.toContain("รอบเก็บข้อมูล");
+    expect(sidebar).not.toContain("ประวัติการเก็บข้อมูล");
     await context.close();
   });
 
@@ -161,14 +161,14 @@ test.describe("role-aware navigation", () => {
     const page = await context.newPage();
     const sidebar = await sidebarHtml(page, "/datasets");
 
-    expect(sidebar).toContain("เก็บข้อมูลใหม่");
+    expect(sidebar).toContain("ค้นแอดคู่แข่งใหม่");
     for (const label of ADMIN_ONLY) {
       expect(sidebar, `an analyst's menu must not contain ${label}`).not.toContain(label);
     }
     // C14 left this entry disabled because its page did not exist yet; C15
     // built the page, so it is now a real link and nothing is disabled.
     await expect(page.getByTestId("nav-/collect")).toHaveAttribute("href", "/collect");
-    await expect(page.locator('[aria-disabled="true"]', { hasText: "เก็บข้อมูลใหม่" })).toHaveCount(0);
+    await expect(page.locator('[aria-disabled="true"]', { hasText: "ค้นแอดคู่แข่งใหม่" })).toHaveCount(0);
     await context.close();
   });
 
@@ -177,7 +177,7 @@ test.describe("role-aware navigation", () => {
     const page = await context.newPage();
     await page.goto("/datasets");
 
-    for (const label of ["เก็บข้อมูลใหม่", ...ADMIN_ONLY]) {
+    for (const label of ["ค้นแอดคู่แข่งใหม่", ...ADMIN_ONLY]) {
       await expect(page.getByText(label)).toHaveCount(1);
     }
     // All three pages exist as of C15, so none of these three is a placeholder
@@ -185,7 +185,7 @@ test.describe("role-aware navigation", () => {
     for (const href of ["/import", "/collect", "/collector"]) {
       await expect(page.getByTestId(`nav-${href}`)).toHaveAttribute("href", href);
     }
-    for (const label of ["เก็บข้อมูลใหม่", "ค่าเก็บข้อมูล", "นำเข้าไฟล์ (กู้คืนระบบ)"]) {
+    for (const label of ["ค้นแอดคู่แข่งใหม่", "การเชื่อมต่อและงบ", "กู้คืนจากไฟล์"]) {
       await expect(page.locator('[aria-disabled="true"]', { hasText: label })).toHaveCount(0);
     }
     await context.close();
@@ -220,7 +220,7 @@ test.describe("the import page answers each role with a real status", () => {
     const { status, body } = await statusFor(browser, "analyst");
     expect(status).toBe(403);
     // And told where their own collection path is, without naming a collector.
-    expect(body).toContain("เก็บข้อมูลใหม่");
+    expect(body).toContain("ค้นแอดคู่แข่งใหม่");
     expect(body).not.toMatch(/apify|extension/i);
   });
 

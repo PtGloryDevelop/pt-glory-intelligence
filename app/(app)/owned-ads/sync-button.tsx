@@ -16,7 +16,7 @@ type SyncProgress = {
 /**
  * Update our-ads data from the page that shows it.
  *
- * Starts the same sync as "นำเข้าแอดเรา" and follows it here, so nobody leaves
+ * Starts the same sync as "อัปเดตแอดของเรา" and follows it here, so nobody leaves
  * the numbers to refresh them. The sync reads the Ads Management project from
  * this server's disk, so only a server configured for it can run one; anywhere
  * else this says so instead of offering a button that fails.

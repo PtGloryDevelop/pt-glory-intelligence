@@ -24,7 +24,7 @@ export default async function ImportPage() {
   return (
     <>
       <PageHeader
-        title="นำเข้าไฟล์ (กู้คืนระบบ)"
+        title="กู้คืนจากไฟล์"
         description="อัปโหลดไฟล์ JSON ของ PT Glory · ขั้นตรวจจะไม่เขียนฐานข้อมูล"
       />
       <ImportClient categories={await listCategories()} />
