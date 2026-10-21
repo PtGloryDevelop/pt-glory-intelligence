@@ -42,6 +42,8 @@ export function AppShell(
     return () => { live = false; };
   }, [pathname]);
   const chips = liveFreshness ?? freshness;
+  const fresh = [chips?.owned, chips?.rivals].filter(chip => chip != null);
+  const stale = fresh.some(chip => chip.stale);
 
   // "auto" lets the width decide; a click pins the opposite of what is on screen.
   const [state, setState] = useState<"auto" | "expanded" | "rail">("auto");
@@ -97,18 +99,25 @@ export function AppShell(
         </nav>
 
         <div className={styles.footer}>
-          <div className={styles.freshness} data-testid="shell-freshness">
-            {[chips?.owned, chips?.rivals].filter(chip => chip != null).map(chip => (
+          {/* How fresh both sides are, as one box that turns amber when either is late and opens the details. */}
+          {fresh.length ? <Link href={SETTINGS.href} className={styles.status} data-stale={stale || undefined} data-testid="shell-freshness">
+            <span className={styles.statusHead}>{stale ? <><Icon name="alert" size={13} />ข้อมูลไม่อัปเดต</> : "สถานะข้อมูล"}</span>
+            {fresh.map(chip => (
               <span key={chip.label} className={styles.fresh} title={chip.stale ? "ข้อมูลเก่ากว่าที่ควร" : undefined}>
                 <span className={chip.stale ? styles.dotWarn : styles.dot} aria-hidden />{chip.label}
               </span>
             ))}
-          </div>
-          {link({ ...SETTINGS, icon: "settings", tone: "neutral" })}
-          <div className={styles.account} title={`สิทธิ์ ${role}`}>
-            <span className={styles.avatar} aria-hidden><Icon name="shield" size={15} /></span>
+          </Link> : null}
+          <Link
+            href={SETTINGS.href}
+            className={[styles.item, active === SETTINGS.href ? styles.active : ""].join(" ")}
+            aria-current={active === SETTINGS.href ? "page" : undefined}
+            data-testid={`nav-${SETTINGS.href}`}
+          >
+            <Tile icon="settings" tone="neutral" />
+            <span className={styles.label}>{SETTINGS.label}</span>
             <span className={styles.role} data-testid="shell-role">สิทธิ์ {role}</span>
-          </div>
+          </Link>
         </div>
       </aside>
 

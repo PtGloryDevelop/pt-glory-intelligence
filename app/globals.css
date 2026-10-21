@@ -166,7 +166,8 @@ a:hover { text-decoration-thickness: 2px; }
 
 input, select, textarea, button { font: inherit; color: inherit; }
 
-input[type="text"], input[type="search"], input[type="email"], input[type="password"], select, textarea {
+/* Date and number fields share the look: left to the browser they drew a black square box beside rounded selects. */
+input[type="text"], input[type="search"], input[type="email"], input[type="password"], input[type="date"], input[type="number"], input[type="url"], input[type="datetime-local"], select, textarea {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
