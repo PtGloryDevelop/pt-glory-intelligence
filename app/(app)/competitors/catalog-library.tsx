@@ -126,7 +126,7 @@ export function CatalogLibrary({canAnalyze,keywords,datasets}:{canAnalyze:boolea
     <span>หน้า {(Math.floor(offset/PAGE)+1).toLocaleString('th-TH')}{result&&!loading?` / ${Math.max(1,Math.ceil(result.total/PAGE)).toLocaleString('th-TH')}`:''}</span>
     <button type="button" disabled={loading||!result||offset+PAGE>=result.total} onClick={()=>browse({offset:String(offset+PAGE)})}>ถัดไป</button>
    </span>
-   <span>สถานะตามครั้งที่เก็บ · “เพิ่งพบ” คือวันที่ระบบพบครั้งแรก · Ad Library ไม่มีข้อมูลงบหรือยอดขายของคู่แข่ง</span>
+   <span>สถานะตามครั้งที่เก็บ · “เพิ่งพบ” คือวันที่ระบบพบครั้งแรก · Ad Library ไม่มีงบโฆษณาและไม่มียอดขายของคู่แข่ง</span>
   </footer>
   {!wide&&selected?<AdDrawer adArchiveId={selected.ad_archive_id} datasetId={selected.dataset_id} onClose={()=>setPicked(null)} compareHref={compareHref(selected)} canAnalyze={canAnalyze}/>:null}
  </div>;
