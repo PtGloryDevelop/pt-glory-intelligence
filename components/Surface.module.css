@@ -43,7 +43,8 @@
 /* A table that lives inside a panel: the panel owns the border and radius, so
    the table drops its own outer edge and scrolls inside instead of dragging the
    page sideways. */
-.tableWrap { overflow-x: auto; }
+/* Positioned so a header's screen-reader label is clipped with the table instead of widening the page. */
+.tableWrap { position: relative; overflow-x: auto; }
 
 /*
  * A table inside a scrolling wrapper must be allowed to be wider than the
