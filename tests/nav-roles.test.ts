@@ -171,7 +171,7 @@ test("no two entries share an icon: the folded rail shows icons first", () => {
 
 test("an entry's tile colour says whose data it opens", () => {
   const tone = (label: string) => itemFor("admin", label)?.tone;
-  for (const label of ["ผลแอดเรา", "อัปเดตแอดของเรา", "Command Center"]) assert.equal(tone(label), "ours", label);
+  for (const label of ["ผลแอดเรา", "อัปเดตแอดของเรา"]) assert.equal(tone(label), "ours", label);
   for (const label of ["ส่องแอด", "ติดตามคู่แข่ง", "ค้นแอดคู่แข่งใหม่"]) assert.equal(tone(label), "rival", label);
   assert.equal(tone("เทียบ"), "compare");
   assert.equal(tone("ภาพรวม"), "neutral");
@@ -217,9 +217,15 @@ test("the lit entry follows the URL, query included", () => {
   assert.equal(lit("/brands"), undefined, "an admin tool lights nothing in the sidebar");
 });
 
-test('Command Center is an analyst page next to the ad library, until the library takes it in', () => {
-  assert.equal(itemFor('viewer', 'Command Center'), undefined);
-  for (const role of ['analyst', 'admin'] as const) assert.equal(itemFor(role, 'Command Center')?.href, '/command-center');
-  const work = visibleNav('analyst')[0].items.map(item => item.label);
-  assert.equal(work.indexOf('Command Center'), work.indexOf('ผลแอดเรา') + 1);
+test("the Command Center is the owned-ads page's quick-rankings tab, and its old URL still lands there", () => {
+  assert.ok(!labels('admin').includes('Command Center'), 'no separate entry any more');
+  const page = readFileSync(join('app', '(app)', 'command-center', 'page.tsx'), 'utf8');
+  assert.match(page, /forbidden\(\)/, 'a viewer is still refused before any redirect');
+  assert.match(page, /next\.set\("tab", "rank"\)/);
+  assert.match(page, /redirect\(`\/owned-ads\/performance\?\$\{next\}`\)/);
+  const owned = readFileSync(join('app', '(app)', 'owned-performance.tsx'), 'utf8');
+  assert.match(owned, /<QuickRankings /);
+  // The old URL lights the entry it now belongs to.
+  const items = visibleNav('analyst').flatMap(section => section.items);
+  assert.equal(activeHref(items, '/command-center', new URLSearchParams()), '/owned-ads/performance');
 });

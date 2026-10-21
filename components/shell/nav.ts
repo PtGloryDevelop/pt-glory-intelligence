@@ -24,9 +24,8 @@ export const NAV: NavSection[] = [
     { label: "ภาพรวม", icon: "home", href: "/market-overview", tone: "neutral", tab: true },
     { label: "ส่องแอด", icon: "search", href: "/competitors?view=all", tone: "rival", tab: true },
     { label: "ติดตามคู่แข่ง", icon: "swords", href: "/competitors", tone: "rival", also: ["/pages"], tab: true },
-    { label: "ผลแอดเรา", icon: "chart", href: "/owned-ads/performance", tone: "ours", minRole: "analyst", tab: true },
-    // Until the owned-ads page takes in its quick rankings (T3), the Command Center keeps its own entry.
-    { label: "Command Center", icon: "target", href: "/command-center", tone: "ours", minRole: "analyst" },
+    // The Command Center is this page's quick-rankings tab now; its old URL redirects here.
+    { label: "ผลแอดเรา", icon: "chart", href: "/owned-ads/performance", tone: "ours", minRole: "analyst", also: ["/command-center"], tab: true },
     { label: "เทียบ", icon: "compare", href: "/compare/ads", tone: "compare", minRole: "analyst", tab: true },
   ] },
   { heading: "อัปเดตข้อมูล", items: [

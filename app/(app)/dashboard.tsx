@@ -76,12 +76,20 @@ export function Dashboard({canAnalyze,home='overview'}:{canAnalyze:boolean;home?
 
   useEffect(()=>{
     const controller=new AbortController();
-    fetch(`/api/dashboard?${query}`,{signal:controller.signal,cache:'no-store'}).then(async response=>{
-      const body=await response.json();if(!response.ok)throw new Error(body.error??'เปิดภาพรวมไม่สำเร็จ');
-      if(!controller.signal.aborted){setResult({query,data:body});setProblem(null);}
-    }).catch(failure=>{if(!controller.signal.aborted)setProblem({query,message:failure.message});});
+    // A section that timed out on a cold database cache usually passes on a second try, so the first failure retries quietly.
+    const load=(attempt:number):Promise<void>=>fetch(`/api/dashboard?${query}`,{signal:controller.signal,cache:'no-store'}).then(async response=>{
+      const body=await response.json().catch(()=>({}));if(!response.ok)throw Object.assign(new Error(body.error??'เปิดภาพรวมไม่สำเร็จ'),{status:response.status});
+      if(controller.signal.aborted)return;
+      if(attempt===0&&canAnalyze&&(body as DashboardData).errors?.includes('review')){await new Promise(resolve=>setTimeout(resolve,1500));if(!controller.signal.aborted)return load(1);return;}
+      setResult({query,data:body});setProblem(null);
+    }).catch(async(failure:Error&{status?:number})=>{
+      if(controller.signal.aborted||failure.name==='AbortError')return;
+      if(attempt===0&&(failure.status==null||failure.status>=500)){await new Promise(resolve=>setTimeout(resolve,1500));if(!controller.signal.aborted)return load(1);return;}
+      setProblem({query,message:failure.message});
+    });
+    void load(0);
     return ()=>controller.abort();
-  },[query,retry]);
+  },[query,retry,canAnalyze]);
 
   const review=data?.review??null;
   const summary:OwnedPerformanceSummary|undefined=review?.summary.find(item=>item.currency==='THB')??review?.summary[0];
