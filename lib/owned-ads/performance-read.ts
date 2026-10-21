@@ -36,11 +36,11 @@ export async function getOwnedPerformance(params: URLSearchParams, snapshotId?: 
     p_search: query.q, p_sort: ownedSortArg(query), p_status: query.status, p_page: page,
   });
   const [current, prior] = await Promise.all([read(period, query.page), previous ? read(previous, 0) : Promise.resolve(null)]);
-  if (current.error || prior?.error) throw new Error("Owned daily performance unavailable");
+  if (current.error || prior?.error) throw new Error("Owned daily performance unavailable", { cause: current.error ?? prior?.error });
   const lastPage = Math.max(0, Math.ceil(current.data.total / output.pageSize) - 1);
   if (query.page > lastPage) {
     const corrected = await read(period, lastPage);
-    if (corrected.error) throw new Error("Owned daily performance unavailable");
+    if (corrected.error) throw new Error("Owned daily performance unavailable", { cause: corrected.error });
     Object.assign(output, corrected.data, { page: lastPage });
   } else Object.assign(output, current.data);
   output.rows = output.rows.map(row => ({ ...row, creative_url: cachedOwnedImage(row) ?? null }));
