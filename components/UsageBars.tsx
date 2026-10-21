@@ -42,7 +42,7 @@ export function UsageBars({show, refresh = 0}: {show: ('collect' | 'ai')[]; refr
             note={`งบที่ระบบตั้งไว้ถึง ${day(collect.windowEnd)} · ใช้จริง ${usd(collect.finalUsd)}${collect.heldUsd ? ` + กันไว้ ${usd(collect.heldUsd)}` : ''} · อ่านยอดจากบัญชี Apify ไม่ได้`}/>
         : null : null}
     {show.includes('ai') && ai
-      ? <Bar label="วิเคราะห์ด้วย AI (OpenAI)" used={ai.usedUsd} limit={ai.creditUsd} stop={ai.stopAtUsd}
+      ? <Bar label="วิเคราะห์ด้วย AI (DeepSeek)" used={ai.usedUsd} limit={ai.creditUsd} stop={ai.stopAtUsd}
           note={`นับจากที่ระบบบันทึกไว้ทุกครั้งที่เรียก · ระบบหยุดเรียกที่ ${usd(ai.stopAtUsd)} · วันนี้ ${usd(ai.todayUsd)} / ${usd(ai.dailyCapUsd)} · ${ai.model}`}/>
       : null}
   </div>;

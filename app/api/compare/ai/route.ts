@@ -6,7 +6,7 @@ export const runtime = 'nodejs';
 export const maxDuration = 180;
 const PRIVATE = {'Cache-Control': 'private, no-store'};
 
-/** Analysts only: reads our performance and spends AI credit. dryRun never calls OpenAI. */
+/** Analysts only: reads our performance and spends AI credit. dryRun never calls DeepSeek. */
 export async function POST(request: Request) {
   try {
     await requireRole('analyst');

@@ -36,7 +36,8 @@ export const HOOK_REWRITE_BELOW = 7;
 export type ScoreCell = {score: number | null; why: string};
 export type Scores = Record<ScoreDim, ScoreCell>;
 
-export type AiCell = {value: string; source: 'ข้อความ' | 'ภาพ' | 'ภาพ + ข้อความ' | 'ไม่พบ'; quote: string};
+export const AI_SOURCES = ['ข้อความ', 'ภาพ', 'ภาพ + ข้อความ', 'ไม่พบ'] as const;
+export type AiCell = {value: string; source: (typeof AI_SOURCES)[number]; quote: string};
 export type AdReading = Record<AiDim, AiCell> & {claims: {items: {text: string; risky: boolean}[]; quote: string}; scores: Scores; fix: string};
 export type SetReading = {diffs: {text: string; ads: number[]}[]; ideas: {text: string; ads: number[]}[]; hooks: {text: string; why: string}[]};
 export type AdRef = {kind: 'own'; account: string; ad: string} | {kind: 'rival'; dataset: string; ad: string};
@@ -53,6 +54,63 @@ export function cleanScores(raw: Partial<Record<ScoreDim, Partial<ScoreCell>>> |
     const value = typeof cell?.score === 'number' && Number.isFinite(cell.score) ? Math.min(10, Math.max(0, Math.round(cell.score))) : null;
     return [dim, {score: value, why: typeof cell?.why === 'string' ? cell.why : ''}];
   })) as Scores;
+}
+
+const isText = (value: unknown): value is string => typeof value === 'string';
+const record = (value: unknown): Record<string, unknown> | null =>
+  value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null;
+
+/**
+ * Model reply → AdReading, or null when a part is missing or of the wrong kind. The provider only
+ * promises JSON, not this shape, so nothing is cached or shown until it passes. Spacing in source is forgiven.
+ */
+export function readAdReading(raw: unknown): AdReading | null {
+  const reading = record(raw);
+  if (!reading) return null;
+  const cells = {} as Record<AiDim, AiCell>;
+  for (const dim of AI_DIMS) {
+    const cell = record(reading[dim]);
+    const said = typeof cell?.source === 'string' ? cell.source.replace(/\s/g, '') : null;
+    const source = AI_SOURCES.find(name => name.replace(/\s/g, '') === said);
+    if (!cell || !isText(cell.value) || !isText(cell.quote) || !source) return null;
+    cells[dim] = {value: cell.value, source, quote: cell.quote};
+  }
+  const claims = record(reading.claims), scores = record(reading.scores);
+  if (!claims || !Array.isArray(claims.items) || !isText(claims.quote) || !scores || !isText(reading.fix)) return null;
+  const items: {text: string; risky: boolean}[] = [];
+  for (const raw of claims.items) {
+    const item = record(raw);
+    if (!item || !isText(item.text) || typeof item.risky !== 'boolean') return null;
+    items.push({text: item.text, risky: item.risky});
+  }
+  for (const dim of SCORE_DIMS) {
+    const cell = record(scores[dim]);
+    if (!cell || !isText(cell.why) || !(cell.score === null || typeof cell.score === 'number')) return null;
+  }
+  return {...cells, claims: {items, quote: claims.quote}, scores: cleanScores(scores as Partial<Record<ScoreDim, ScoreCell>>), fix: reading.fix};
+}
+
+/** Model reply → SetReading, or null when malformed. Evidence keeps only indexes of ads in this set. */
+export function readSetReading(raw: unknown, count: number): SetReading | null {
+  const reading = record(raw);
+  if (!reading || !Array.isArray(reading.diffs) || !Array.isArray(reading.ideas) || !Array.isArray(reading.hooks)) return null;
+  const points = (list: unknown[]) => {
+    const out: {text: string; ads: number[]}[] = [];
+    for (const raw of list) {
+      const item = record(raw);
+      if (!item || !isText(item.text) || !Array.isArray(item.ads)) return null;
+      out.push({text: item.text, ads: [...new Set(item.ads.filter((ad): ad is number => Number.isInteger(ad) && (ad as number) >= 0 && (ad as number) < count))]});
+    }
+    return out;
+  };
+  const diffs = points(reading.diffs), ideas = points(reading.ideas);
+  const hooks: {text: string; why: string}[] = [];
+  for (const raw of reading.hooks) {
+    const item = record(raw);
+    if (!item || !isText(item.text) || !isText(item.why)) return null;
+    hooks.push({text: item.text, why: item.why});
+  }
+  return diffs && ideas ? {diffs, ideas, hooks} : null;
 }
 
 /** Points scored out of the points that could be judged (60 when every part has a score). */
