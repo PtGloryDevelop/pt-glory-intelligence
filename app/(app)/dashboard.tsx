@@ -20,11 +20,15 @@ import {reviewAdKey} from '@/lib/dashboard/series';
 import {buildUpdates} from '@/lib/dashboard/updates';
 import type {HomeChoice} from '@/lib/home-choice';
 import {daysBehind,ownedLate,rivalsLate} from '@/lib/shell/stale';
+import {REVIEW_WINDOWS,type ReviewWindow} from '@/lib/dashboard/review-model';
+import {isOwnedPerformanceDate} from '@/lib/owned-ads/performance';
 import {CompanyDetail} from './owned-ads/company-library';
 import {useJson} from './owned-ads/use-json';
 import styles from './dashboard.module.css';
 
-const WINDOWS=[7,14,30] as const;
+// Every window ends on the latest finished day with data; "custom" picks two dates inside what was imported.
+const WINDOWS:[ReviewWindow|'custom',string][]=[[3,'3 วัน'],[7,'7 วัน'],[14,'14 วัน'],[30,'30 วัน'],['month','เดือนนี้'],['custom','กำหนดเอง']];
+const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const UNIT_ROWS=6;
 const num=(value:number|null|undefined,digits=2)=>value==null?'—':value.toLocaleString('th-TH',{minimumFractionDigits:digits,maximumFractionDigits:digits});
 const whole=(value:number|null|undefined)=>value==null?'—':Math.round(value).toLocaleString('th-TH');
@@ -64,8 +68,12 @@ function DailyBars({days}:{days:DailySpend}){
 
 export function Dashboard({canAnalyze,home='overview'}:{canAnalyze:boolean;home?:HomeChoice}){
   const params=useSearchParams(),router=useRouter(),pathname=usePathname();
-  const days=WINDOWS.find(value=>String(value)===params.get('window'))??7;
-  const query=`window=${days}`;
+  const fromParam=params.get('from')??'',toParam=params.get('to')??'';
+  const custom=params.get('period')==='custom'&&isOwnedPerformanceDate(fromParam)&&isOwnedPerformanceDate(toParam)&&fromParam<=toParam?{from:fromParam,to:toParam}:null;
+  const windowValue=REVIEW_WINDOWS.find(value=>String(value)===params.get('window'))??7;
+  const unit=UUID.test(params.get('unit')??'')?params.get('unit')!:'';
+  const query=new URLSearchParams({...(custom?{period:'custom',from:custom.from,to:custom.to}:{window:String(windowValue)}),...(unit?{unit}:{})}).toString();
+  const [draft,setDraft]=useState<{from:string;to:string}|null>(null);
   const [result,setResult]=useState<{query:string;data:DashboardData}|null>(null);
   const [problem,setProblem]=useState<{query:string;message:string}|null>(null);
   const [retry,setRetry]=useState(0);
@@ -101,7 +109,7 @@ export function Dashboard({canAnalyze,home='overview'}:{canAnalyze:boolean;home?
   // The unit totals and the falling rule read the same window as the overview, so they wait for its dates.
   const period=review?new URLSearchParams({period:'custom',from:review.period.from,to:review.period.to}).toString():null;
   const units=useJson<UnitSummary>(canAnalyze&&period?`/api/owned-ads/units?${period}`:null,retry);
-  const center=useJson<CommandCenterData>(canAnalyze&&period?`/api/owned-ads/command-center?${period}`:null,retry);
+  const center=useJson<CommandCenterData>(canAnalyze&&period?`/api/owned-ads/command-center?${period}${unit?`&unit=${unit}`:''}`:null,retry);
 
   const updates=useMemo(()=>data?buildUpdates({summary,rows,series:data.rowSeries,rivals:null}):[],[data,summary,rows]);
   const falling=center.data?.falling??[],rising=center.data?.rising??[],hooks=center.data?.hook_fading??[];
@@ -115,10 +123,19 @@ export function Dashboard({canAnalyze,home='overview'}:{canAnalyze:boolean;home?
   const periodQuery=period?`?${period}`:'';
   const returnTo=`${pathname}${params.size?`?${params}`:''}`;
 
-  function setWindow(value:number){
-    const next=new URLSearchParams(params);next.set('window',String(value));
-    for(const item of ['period','from','to','dashboard','sort'])next.delete(item);
+  function setFilter(change:Record<string,string|null>){
+    const next=new URLSearchParams(params);
+    for(const [key,value] of Object.entries(change))if(value==null)next.delete(key);else next.set(key,value);
+    for(const item of ['dashboard','sort'])next.delete(item);
     router.replace(`${pathname}?${next}`,{scroll:false});
+  }
+  function pickWindow(value:ReviewWindow|'custom'){
+    if(value==='custom'){const start=custom??(review?{from:review.period.from,to:review.period.to}:null);if(start)setDraft(start);return;}
+    setDraft(null);setFilter({window:String(value),period:null,from:null,to:null});
+  }
+  function applyCustom(){
+    if(!draft||!isOwnedPerformanceDate(draft.from)||!isOwnedPerformanceDate(draft.to)||draft.from>draft.to)return;
+    setFilter({period:'custom',from:draft.from,to:draft.to,window:null});setDraft(null);
   }
   async function refreshPageNames(){
     setNames({loading:true,message:''});
@@ -160,15 +177,38 @@ export function Dashboard({canAnalyze,home='overview'}:{canAnalyze:boolean;home?
       <Icon name="search" size={15}/><input type="hidden" name="view" value="all"/>
       <input type="search" name="search" maxLength={160} placeholder="ค้นแอดคู่แข่ง" aria-label="ค้นแอดคู่แข่ง"/>
     </form>
-    {canAnalyze?<div className={styles.seg} role="group" aria-label="ช่วงเวลา">{WINDOWS.map(value=><button key={value} type="button" aria-pressed={value===days} onClick={()=>setWindow(value)}>{value} วัน</button>)}</div>:null}
     {canAnalyze?<HomeChoiceButton target="overview" current={home}/>:null}
   </div>;
+
+  // The units the reader can narrow to: ours with spend in this window, and those with rival keywords. The picked one stays listed while they load.
+  const unitNames=new Map<string,string>([...(collisions?.byUnit??[]).map(item=>[item.id,item.name] as const),...(units.data?.units??[]).filter(item=>item.id).map(item=>[item.id!,item.name] as const)]);
+  if(unit&&!unitNames.has(unit))unitNames.set(unit,'ยูนิตที่เลือก');
+  const unitOptions=[...unitNames].sort((a,b)=>a[1].localeCompare(b[1],'th',{numeric:true}));
+  const unitName=unit?unitNames.get(unit)??null:null;
+  // The units table names its rows `unit`; the picked one is marked under its own name.
+  const picked=unit;
+  const active=draft?'custom':custom?'custom':windowValue;
+  const coverage=review?.coverage??null;
+  const filters=canAnalyze?<div className={styles.filters} data-testid="overview-filters">
+    <div className={styles.seg} role="group" aria-label="ช่วงเวลา">{WINDOWS.map(([value,label])=><button key={String(value)} type="button" aria-pressed={value===active} onClick={()=>pickWindow(value)}>{label}</button>)}</div>
+    <label className={styles.pick}><span>ยูนิต</span><select value={unit} onChange={event=>setFilter({unit:event.target.value||null})}>
+      <option value="">ทุกยูนิต</option>{unitOptions.map(([id,name])=><option key={id} value={id}>{name}</option>)}
+    </select></label>
+    {draft?<form className={styles.range} onSubmit={event=>{event.preventDefault();applyCustom();}}>
+      <input type="date" aria-label="ตั้งแต่วันที่" value={draft.from} min={coverage?.from} max={draft.to} onChange={event=>setDraft({...draft,from:event.target.value})}/>
+      <span aria-hidden>–</span>
+      <input type="date" aria-label="ถึงวันที่" value={draft.to} min={draft.from} max={coverage?.to} onChange={event=>setDraft({...draft,to:event.target.value})}/>
+      <button type="submit" className={styles.mini} disabled={!draft.from||!draft.to||draft.from>draft.to}>ใช้ช่วงนี้</button>
+      <button type="button" className={styles.cancel} onClick={()=>setDraft(null)}>ยกเลิก</button>
+      {coverage?<span className={styles.rangeNote}>มีข้อมูลแอดเรา {thaiDate(coverage.from,false)} – {thaiDate(coverage.to,false)}</span>:null}
+    </form>:null}
+  </div>:null;
 
   const description=review?`${thaiDate(review.period.from)} – ${thaiDate(review.period.to)}${review.previous?` · เทียบกับ ${thaiDate(review.previous.period.from)} – ${thaiDate(review.previous.period.to)}`:''}`
     :canAnalyze?'กำลังเปิดข้อมูล…':'คู่แข่งของยูนิต และแอดคู่แข่งที่ยิงนานที่สุด';
 
   const oursLane=canAnalyze?<section className={styles.box} aria-labelledby="ours-heading" data-testid="overview-ours">
-    <div className={styles.boxHead}><Tile icon="chart" tone="ours"/><h2 id="ours-heading" className={styles.oursTitle}>แอดของเรา</h2><span className={styles.stamp}>{ownedTo?`ข้อมูลถึง ${thaiDate(ownedTo,false)}`:''}</span></div>
+    <div className={styles.boxHead}><Tile icon="chart" tone="ours"/><h2 id="ours-heading" className={styles.oursTitle}>แอดของเรา{unitName?` · ${unitName}`:''}</h2><span className={styles.stamp}>{ownedTo?`ข้อมูลถึง ${thaiDate(ownedTo,false)}`:''}</span></div>
     {data&&!review?<div className={styles.problem} role="alert">ผลแอดเราเปิดไม่ได้ในรอบนี้ ส่วนอื่นยังใช้ได้ <button type="button" onClick={()=>setRetry(value=>value+1)}>ลองใหม่</button></div>:null}
     {review?<>
       <div className={styles.stats} data-testid="overview-kpis">
@@ -217,17 +257,17 @@ export function Dashboard({canAnalyze,home='overview'}:{canAnalyze:boolean;home?
   </section>:null;
 
   const rivalLane=<section className={styles.box} aria-labelledby="rivals-heading" data-testid="overview-rivals">
-    <div className={styles.boxHead}><Tile icon="swords" tone="rival"/><h2 id="rivals-heading" className={styles.rivalTitle}>คู่แข่ง</h2><span className={styles.stamp}>{rivalsAt?`เก็บล่าสุด ${stamp(rivalsAt)}`:''}</span></div>
+    <div className={styles.boxHead}><Tile icon="swords" tone="rival"/><h2 id="rivals-heading" className={styles.rivalTitle}>คู่แข่ง{unitName?`ของ ${unitName}`:''}</h2><span className={styles.stamp}>{rivalsAt?`เก็บล่าสุด ${stamp(rivalsAt)}`:''}</span></div>
     {data?<>
       <div className={styles.stats}>
-        <Stat label="เพิ่งพบใน 7 วัน" value={rivals?whole(rivals.week?.newAds??rivals.recentlyFound):'—'} unit="แอด">
-          <details className={styles.define}><summary aria-label="“เพิ่งพบ” หมายถึงอะไร"><Icon name="info" size={14}/></summary><span>ระบบเห็นครั้งแรกใน 7 วัน แอดอาจยิงมาก่อนแล้ว</span></details>
+        <Stat label="เพิ่งพบใน 7 วัน" value={unit?(collisions?whole(collisions.newThisWeek):'—'):rivals?whole(rivals.week?.newAds??rivals.recentlyFound):'—'} unit="แอด">
+          <details className={styles.define}><summary aria-label="“เพิ่งพบ” หมายถึงอะไร"><Icon name="info" size={14}/></summary><span>{unit?'แอดที่ตรงคำค้นของยูนิตนี้ ':''}ระบบเห็นครั้งแรกใน 7 วัน แอดอาจยิงมาก่อนแล้ว</span></details>
         </Stat>
-        <Stat label="เพจคู่แข่งของยูนิต" value={collisions?whole(collisions.pages):'—'}>{collisions?<span className={styles.statNote}>{whole(collisions.units)} ยูนิตที่มีคำค้น</span>:null}</Stat>
+        <Stat label="เพจคู่แข่งของยูนิต" value={collisions?whole(collisions.pages):'—'}>{collisions&&!unit?<span className={styles.statNote}>{whole(collisions.units)} ยูนิตที่มีคำค้น</span>:null}</Stat>
         <Stat label="เพจรอทีมตรวจ" value={collisions?whole(collisions.pending):'—'}/>
         <Stat label="ยิงนานที่สุด" value={longest[0]?whole(longest[0].ad_age_days):'—'} unit={longest[0]?'วัน':undefined}><span className={styles.statNote}>นับจากวันเริ่มยิง</span></Stat>
       </div>
-      {collisions&&!collisions.units?<Link className={styles.row} href="/competitors"><span className={styles.rowText}><span className={styles.rowTitle}>ยังไม่ได้ใส่คำค้นให้ยูนิต</span><span className={styles.rowSub}>ใส่คำที่ลูกค้าใช้หาสินค้า แล้วระบบจะเสนอเพจคู่แข่งจากแอดที่เก็บไว้</span></span><span className={styles.chevron}><Icon name="chevron" size={15}/></span></Link>:null}
+      {collisions&&!collisions.units?<Link className={styles.row} href={unit?`/competitors?unit=${unit}`:'/competitors'}><span className={styles.rowText}><span className={styles.rowTitle}>ยังไม่ได้ใส่คำค้นให้ยูนิต</span><span className={styles.rowSub}>ใส่คำที่ลูกค้าใช้หาสินค้า แล้วระบบจะเสนอเพจคู่แข่งจากแอดที่เก็บไว้</span></span><span className={styles.chevron}><Icon name="chevron" size={15}/></span></Link>:null}
       <div className={styles.section}>
         <div className={styles.sectionHead}><span>{data.longest?.scope==='library'?'แอดคู่แข่งที่ยิงนานที่สุด (ทั้งคลัง)':'แอดคู่แข่งที่ยิงนานที่สุด'}</span><Link className={styles.rivalLink} href="/competitors?view=all">ส่องแอดทั้งหมด ›</Link></div>
         {longest.length?<div className={styles.ads}>{longest.map(ad=><button key={`${ad.dataset_id}:${ad.ad_archive_id}`} type="button" className={styles.adPick} onClick={()=>setRivalAd({ad_archive_id:ad.ad_archive_id,dataset_id:ad.dataset_id})} aria-label={`ดูแอด ${ad.page_name??ad.page_id}`}>
@@ -249,6 +289,7 @@ export function Dashboard({canAnalyze,home='overview'}:{canAnalyze:boolean;home?
 
   return <div className={styles.page} data-testid="overview">
     <PageHeader title="ภาพรวม" description={description} actions={tools}/>
+    {filters}
     {error?<div className={styles.problem} role="alert">{error} <button type="button" onClick={()=>setRetry(value=>value+1)}>ลองใหม่</button></div>:null}
 
     {late?<section className={styles.late} role="status" aria-labelledby="late-heading" data-testid="overview-late">
@@ -286,7 +327,7 @@ export function Dashboard({canAnalyze,home='overview'}:{canAnalyze:boolean;home?
             <thead><tr><th>ยูนิต</th><th className={styles.thOurs}>แอดของเรา</th><th className={styles.thOurs}>ค่าแอด (บาท)</th><th>สื่อที่เริ่มตก</th><th className={styles.thRival}>คู่แข่งของยูนิต</th><th><span className={styles.srOnly}>เปิด</span></th></tr></thead>
             <tbody>{unitRows.slice(0,allUnits?undefined:UNIT_ROWS).map(unit=>{
               const count=fallingByUnit.get(unit.id)??0,rival=rivalsByUnit.get(unit.id!);
-              return <tr key={unit.id} onClick={()=>router.push(unitHref(unit.id))}>
+              return <tr key={unit.id} data-selected={unit.id===picked||undefined} onClick={()=>router.push(unitHref(unit.id))}>
                 <td><Link className={styles.unitName} href={unitHref(unit.id)} onClick={event=>event.stopPropagation()}>{unit.name}</Link></td>
                 <td>{whole(unit.current?.ad_count)} แอด</td>
                 <td className={styles.num}>{whole(unit.current?.spend)}</td>

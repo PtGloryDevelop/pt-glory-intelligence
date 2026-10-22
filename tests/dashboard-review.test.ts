@@ -33,3 +33,22 @@ test('dashboard return preserves daily dates and sorting without invoking the le
  assert.throws(()=>parseReviewOptions(new URLSearchParams('period=custom&from=2026-02-30&to=2026-03-01')));
  assert.throws(()=>parseReviewOptions(new URLSearchParams('sort=spend&sort=roas')));
 });
+
+test('the overview offers 3 days and this month beside 7/14/30, each ending on the latest day with data',()=>{
+  const now=new Date('2026-10-22T05:00:00Z');
+  assert.deepEqual(latestReviewPeriod({from:'2026-09-22',to:'2026-10-21'},3,now),{from:'2026-10-19',to:'2026-10-21'});
+  assert.deepEqual(latestReviewPeriod({from:'2026-09-22',to:'2026-10-21'},'month',now),{from:'2026-10-01',to:'2026-10-21'});
+  // Late data: the month is the latest one that has data, not the calendar's.
+  assert.deepEqual(latestReviewPeriod({from:'2026-09-01',to:'2026-09-30'},'month',now),{from:'2026-09-01',to:'2026-09-30'});
+  assert.equal(parseReviewOptions(new URLSearchParams('window=3')).window,3);
+  assert.equal(parseReviewOptions(new URLSearchParams('window=month')).window,'month');
+  assert.throws(()=>parseReviewOptions(new URLSearchParams('window=60')));
+});
+
+test('a unit narrows the overview only when it is a unit id, once',()=>{
+  const id='e10087c0-edae-4f8b-b68a-63a239765bcc';
+  assert.equal(parseReviewOptions(new URLSearchParams(`unit=${id}`)).unit,id);
+  assert.equal(parseReviewOptions(new URLSearchParams('')).unit,null);
+  assert.throws(()=>parseReviewOptions(new URLSearchParams('unit=U24')));
+  assert.throws(()=>parseReviewOptions(new URLSearchParams(`unit=${id}&unit=${id}`)));
+});

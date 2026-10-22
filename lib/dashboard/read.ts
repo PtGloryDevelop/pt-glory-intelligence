@@ -49,7 +49,7 @@ export type DashboardData={
 
 /** Every read uses the caller's JWT. Opening the dashboard never starts a sync
  * or calls Meta/Apify. Partial outages keep the remaining sections usable. */
-export async function getDashboard(actor:Actor,options:ReviewOptions={window:7,sort:'spend',period:null},sections:('owned'|'watchlist'|'collections')[]=[]):Promise<DashboardData>{
+export async function getDashboard(actor:Actor,options:ReviewOptions={window:7,sort:'spend',period:null,unit:null},sections:('owned'|'watchlist'|'collections')[]=[]):Promise<DashboardData>{
   const db=await dbUser();
   const output:DashboardData={generatedAt:new Date().toISOString(),owned:null,rivals:null,review:null,reviewOptions:options,rowSeries:null,daily:null,watchlist:null,collisions:null,longest:null,collections:null,errors:[]};
   const review=async()=>{
@@ -57,13 +57,13 @@ export async function getDashboard(actor:Actor,options:ReviewOptions={window:7,s
     if(latest.error)throw latest.error;
     const coverage=latest.data?.daily_from&&latest.data?.daily_to?{from:latest.data.daily_from,to:latest.data.daily_to}:null;
     const period=options.period??(coverage?latestReviewPeriod(coverage,options.window):null);
-    const params=new URLSearchParams({sort:options.sort,compare:'1',...(period?{period:'custom',from:period.from,to:period.to}:{period:'7d'})});
+    const params=new URLSearchParams({sort:options.sort,compare:'1',...(period?{period:'custom',from:period.from,to:period.to}:{period:'7d'}),...(options.unit?{unit:options.unit}:{})});
     const result=await getOwnedPerformance(params,latest.data?.id);
     output.review=result;
     const currency=result.summary.find(item=>item.currency==='THB')?.currency??result.summary[0]?.currency;
     await Promise.all([
       getReviewSeries(result).then(value=>{output.rowSeries=value;}).catch(()=>{output.errors.push('series');}),
-      result.ready&&latest.data?.id&&currency?getDailySpend(latest.data.id,result.period,result.coverage,currency).then(value=>{output.daily=value;}).catch(()=>{output.errors.push('daily');}):Promise.resolve(),
+      result.ready&&latest.data?.id&&currency?getDailySpend(latest.data.id,result.period,result.coverage,currency,options.unit).then(value=>{output.daily=value;}).catch(()=>{output.errors.push('daily');}):Promise.resolve(),
     ]);
   };
   const own=async()=>{
@@ -97,18 +97,23 @@ export async function getDashboard(actor:Actor,options:ReviewOptions={window:7,s
   };
   const collisions=async()=>{
     const board=await getRivalBoard(actor,{withUnits:false});
+    // One unit picked: its rival pages only; the per-unit list for the units table stays whole.
+    const scoped=options.unit?board.units.filter(unit=>unit.id===options.unit):board.units;
     const pages=new Map<string,{unit:string;page_id:string;page_name:string|null;matched_ads:number;new_matched_7d:number;confirmed:boolean}>();
-    for(const unit of board.units)for(const page of unit.pages){
+    for(const unit of scoped)for(const page of unit.pages){
       const prev=pages.get(page.page_id);const confirmed=page.relation==='direct'||page.relation==='substitute';
       if(!prev||Number(confirmed)>Number(prev.confirmed)||page.matched_ads>prev.matched_ads)pages.set(page.page_id,{unit:unit.name,page_id:page.page_id,page_name:page.page_name,matched_ads:page.matched_ads,new_matched_7d:page.new_matched_7d,confirmed});
     }
     const list=[...pages.values()];
-    output.collisions={units:board.units.length,unitsTotal:board.canEdit?board.units.length+board.unitsWithoutKeywords.length:null,pages:list.length,
-      confirmed:list.filter(p=>p.confirmed).length,pending:list.filter(p=>!p.confirmed).length,newThisWeek:board.newThisWeek,tracked:board.tracked,
+    output.collisions={units:scoped.length,unitsTotal:board.canEdit?board.units.length+board.unitsWithoutKeywords.length:null,pages:list.length,
+      confirmed:list.filter(p=>p.confirmed).length,pending:list.filter(p=>!p.confirmed).length,
+      newThisWeek:options.unit?list.reduce((sum,page)=>sum+page.new_matched_7d,0):board.newThisWeek,tracked:board.tracked,
       top:list.sort((a,b)=>b.new_matched_7d-a.new_matched_7d||Number(b.confirmed)-Number(a.confirmed)||b.matched_ads-a.matched_ads).slice(0,4),
       byUnit:board.units.map(unit=>({id:unit.id,name:unit.name,keywords:unit.keywords.map(item=>item.keyword),pages:unit.pages.length}))};
     // Longest-running needs the units' pages, so it follows the board rather than racing it.
     const ids=list.map(page=>page.page_id).slice(0,200);
+    // A picked unit with no rival pages has no longest-running rival ads; the whole library would answer another question.
+    if(options.unit&&!ids.length){output.longest={scope:'units',rows:[]};return;}
     try{
       const longest=await getCatalogAds({sort:'age',active:'active',pageIds:ids.length?ids:null,limit:4});
       output.longest={scope:ids.length?'units':'library',rows:longest.rows};

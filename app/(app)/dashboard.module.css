@@ -161,3 +161,19 @@ button.row:disabled { cursor: default; background: transparent; }
   .ads { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .bridge .primary { width: 100%; }
 }
+
+/* Filters under the header: the period (ending on the latest day with data), the unit, and two dates when the period is custom. */
+.filters { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; margin-top: calc(var(--gap-page) * -0.4); }
+.pick { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: var(--fs-label); }
+.pick select, .range input[type="date"] { min-height: 32px; height: 32px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; font-size: var(--fs-label); }
+.pick select { min-width: 150px; }
+.range { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; color: var(--muted); font-size: var(--fs-label); }
+.cancel { min-height: 30px; padding: 0 8px; border: 0; background: transparent; color: var(--muted); font-size: var(--fs-label); }
+.cancel:hover:not(:disabled) { background: transparent; color: var(--ink); }
+.rangeNote { color: var(--muted); font-size: var(--fs-eyebrow); }
+.table tbody tr[data-selected] { background: var(--brand-tint); }
+.table tbody tr[data-selected] .unitName { color: var(--brand-ink); }
+/* Six periods on a phone: each label stays on one line and the row scrolls inside itself rather than squeezing. */
+.filters .seg { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.filters .seg button { flex: none; white-space: nowrap; }
+@media (max-width: 640px) { .filters .seg button { padding: 2px 11px; } }

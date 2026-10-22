@@ -1,20 +1,28 @@
 import {isOwnedPerformanceDate, parseOwnedPerformanceQuery, type OwnedPerformanceData, type OwnedPerformancePeriod, type OwnedPerformanceSort, type OwnedPerformanceSummary} from '../owned-ads/performance.ts';
 
-export type ReviewOptions={window:7|14|30;sort:OwnedPerformanceSort;period:OwnedPerformancePeriod|null};
+/** Rolling days, or "month": from the 1st of the latest month with data. Every window ends on the latest finished day with data. */
+export const REVIEW_WINDOWS=[3,7,14,30,'month'] as const;
+export type ReviewWindow=typeof REVIEW_WINDOWS[number];
+/** `unit` narrows both sides of the overview to one of our units and the rivals the team matched to it. */
+export type ReviewOptions={window:ReviewWindow;sort:OwnedPerformanceSort;period:OwnedPerformancePeriod|null;unit:string|null};
+const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export function parseReviewOptions(params:URLSearchParams):ReviewOptions{
-  if(params.getAll('window').length>1)throw new Error('ช่วงวันที่ซ้ำกัน');
+  if(params.getAll('window').length>1||params.getAll('unit').length>1)throw new Error('ตัวกรองซ้ำกัน');
   const window=params.get('window')??'7';
-  if(!['7','14','30'].includes(window))throw new Error('ช่วงวันที่ไม่ถูกต้อง');
+  const parsed=REVIEW_WINDOWS.find(value=>String(value)===window);
+  if(parsed===undefined)throw new Error('ช่วงวันที่ไม่ถูกต้อง');
+  const unit=params.get('unit')||null;
+  if(unit&&!UUID.test(unit))throw new Error('ยูนิตไม่ถูกต้อง');
   const query=parseOwnedPerformanceQuery(params);
   if(params.has('period')&&query.period!=='custom')throw new Error('ใช้ช่วงวันที่แบบกำหนดเองสำหรับภาพรวม');
-  return {window:Number(window) as ReviewOptions['window'],sort:query.sort,period:query.period==='custom'?{from:query.from,to:query.to}:null};
+  return {window:parsed,sort:query.sort,period:query.period==='custom'?{from:query.from,to:query.to}:null,unit};
 }
 
 /** End on the latest imported date before today. Never compare an unfinished day. */
-export function latestReviewPeriod(coverage:OwnedPerformancePeriod,days:number,now=new Date()):OwnedPerformancePeriod{
+export function latestReviewPeriod(coverage:OwnedPerformancePeriod,days:number|'month',now=new Date()):OwnedPerformancePeriod{
   const yesterday=new Date(now.getTime()+7*3600000-86400000).toISOString().slice(0,10);
   const to=coverage.to<yesterday?coverage.to:yesterday;
-  const from=new Date(Date.parse(to)-(days-1)*86400000).toISOString().slice(0,10);
+  const from=days==='month'?`${to.slice(0,7)}-01`:new Date(Date.parse(to)-(days-1)*86400000).toISOString().slice(0,10);
   if(!isOwnedPerformanceDate(from)||!isOwnedPerformanceDate(to))throw new Error('ช่วงข้อมูลไม่ถูกต้อง');
   return {from,to};
 }
