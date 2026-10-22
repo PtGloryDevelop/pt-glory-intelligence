@@ -17,6 +17,7 @@ import { CompanyDetail } from "./owned-ads/company-library";
 import { OwnedSyncButton } from "./owned-ads/sync-button";
 import { MediaMembers, bangkokDate } from "./owned-ads/media-members";
 import { useJson } from "./owned-ads/use-json";
+import { loadOwnedMedia } from "./owned-ads/load-media";
 import { railOrder, type CommandCenterData } from "@/lib/owned-ads/command-center";
 import type { UnitSummary as UnitSummaryData } from "@/lib/owned-ads/unit-summary";
 import type { CompanyAd } from "@/lib/owned-ads/source-rows";
@@ -157,21 +158,11 @@ export function OwnedPerformance({ home = "overview", canSync = false }: { home?
   useEffect(() => {
     if (!rows?.length) return;
     const controller = new AbortController();
-    async function load() {
-      for (let offset = 0; offset < rows!.length && !controller.signal.aborted; offset += 4) {
-        const items = rows!.slice(offset, offset + 4).filter(ad => !Object.hasOwn(media, adKey(ad))).map(({ account_id, ad_id }) => ({ account_id, ad_id }));
-        if (!items.length) continue;
-        try {
-          const response = await fetch("/api/owned-ads/media", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items }), signal: controller.signal });
-          if (!response.ok) throw new Error();
-          const body = await response.json();
-          if (!controller.signal.aborted) { setMedia(previous => ({ ...previous, ...Object.fromEntries(body.items.map((item: { account_id: string; ad_id: string; url: string | null }) => [adKey(item), item.url])) })); setMediaProblem(false); }
-        } catch {
-          if (!controller.signal.aborted) { setMedia(previous => ({ ...previous, ...Object.fromEntries(items.map(item => [adKey(item), previous[adKey(item)] ?? null])) })); setMediaProblem(true); }
-        }
-      }
-    }
-    void load();
+    const missing = rows.filter(ad => !Object.hasOwn(media, adKey(ad))).map(({ account_id, ad_id }) => ({ account_id, ad_id }));
+    void loadOwnedMedia(missing, controller.signal, (items, found) => {
+      if (found) { setMedia(previous => ({ ...previous, ...Object.fromEntries(found.map(item => [adKey(item), item.url])) })); setMediaProblem(false); }
+      else { setMedia(previous => ({ ...previous, ...Object.fromEntries(items.map(item => [adKey(item), previous[adKey(item)] ?? null])) })); setMediaProblem(true); }
+    });
     return () => controller.abort();
     // Cache entries do not restart the request for the same displayed rows.
     // eslint-disable-next-line react-hooks/exhaustive-deps

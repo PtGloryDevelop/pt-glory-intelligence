@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Creative } from '../../owned-ads/owned-client';
+import { loadOwnedMedia } from '../../owned-ads/load-media';
 import type { OwnedPerformanceData, OwnedPerformanceRow } from '@/lib/owned-ads/performance';
 import type { CommandAd } from '@/lib/owned-ads/command-center';
 import { summarizeOwnedReport } from '@/lib/owned-ads/model';
@@ -101,22 +102,13 @@ function OwnedPickerBody({ onPick, base, units, falling, fallingTotal, worseFirs
   const pageSize = result?.data.pageSize ?? 24;
   const fallingBy = new Map(falling.map(ad => [ownKey(ad), ad]));
 
-  // Fresh thumbnails, four at a time, like the library.
+  // Fresh thumbnails, loaded the same way as the library.
   useEffect(() => {
     const missing = rows.filter(row => !Object.hasOwn(media, ownKey(row))).map(({ account_id, ad_id }) => ({ account_id, ad_id }));
     if (!missing.length) return;
     const controller = new AbortController();
-    (async () => {
-      for (let offset = 0; offset < missing.length && !controller.signal.aborted; offset += 4) {
-        const items = missing.slice(offset, offset + 4);
-        try {
-          const response = await fetch('/api/owned-ads/media', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ items }), signal: controller.signal });
-          if (!response.ok) throw new Error();
-          const body = await response.json();
-          if (!controller.signal.aborted) setMedia(previous => ({ ...previous, ...Object.fromEntries(body.items.map((item: { account_id: string; ad_id: string; url: string | null }) => [ownKey(item), item.url])) }));
-        } catch { if (!controller.signal.aborted) setMedia(previous => ({ ...previous, ...Object.fromEntries(items.map(item => [ownKey(item), null])) })); }
-      }
-    })();
+    void loadOwnedMedia(missing, controller.signal, (items, found) =>
+      setMedia(previous => ({ ...previous, ...Object.fromEntries((found ?? items.map(item => ({ ...item, url: null }))).map(item => [ownKey(item), item.url])) })));
     return () => controller.abort();
     // The rows on screen decide what to load; cached entries do not restart it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
