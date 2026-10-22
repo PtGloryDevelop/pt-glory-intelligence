@@ -3,9 +3,9 @@ import { notFound } from "next/navigation";
 import { requireActorOrRedirect } from "@/lib/auth/roles";
 import {
   getAdLatestDataset, getPageActivity, getPageAds, getPageCreativeMix, getPageDetail, getPageLikeHistory,
-  getPageTimeline, getPageUnits, getScopeCollectionFilters,
+  getPageOfferRounds, getPageTimeline, getPageUnits, getScopeCollectionFilters,
 } from "@/lib/read/pages";
-import { launchPace, mostReused, offerSignals, paceWindowStart } from "@/lib/pages/summary";
+import { launchPace, mostReused, offerChange, offerSignals, paceWindowStart } from "@/lib/pages/summary";
 import { signArchivedPreviews } from "@/lib/media/presentation";
 import type { Media } from "@/lib/media";
 import { PageSummary, type PageSummaryData } from "./summary";
@@ -63,7 +63,7 @@ export default async function PageDetailPage({ params, searchParams }: {
 
   const canAnalyze = satisfies(actor.role, "analyst");
   // The summary's reads fail on their own: a part that could not be read says so, the page still opens.
-  const [mix, activity, likes, scopeName, watches, pageBrand, filters, running, weeks, units] = await Promise.all([
+  const [mix, activity, likes, scopeName, watches, pageBrand, filters, running, weeks, units, rounds] = await Promise.all([
     view === "overview" ? getPageCreativeMix(scope, pageId) : Promise.resolve([]),
     view === "overview" ? getPageActivity(scope, pageId, bucket) : Promise.resolve([]),
     view === "overview" ? getPageLikeHistory(scope, pageId) : Promise.resolve([]),
@@ -78,6 +78,7 @@ export default async function PageDetailPage({ params, searchParams }: {
     getPageAds(scope, pageId, { signal: "active", sort: "most_reused", limit: 500 }).catch(() => null),
     getPageTimeline(scope, pageId, { bucket: "week", from: paceWindowStart() }).catch(() => null),
     canAnalyze ? getPageUnits(pageId).catch(() => null) : Promise.resolve(null),
+    getPageOfferRounds(pageId).catch(() => null),
   ]);
 
   const top = running ? mostReused(running.rows) : null;
@@ -94,6 +95,7 @@ export default async function PageDetailPage({ params, searchParams }: {
       archive_url: top.archive_path ? topPreview.get(top.archive_path) ?? null : null, archive_status: top.archive_status,
     } : null,
     offers: running ? offerSignals(running.rows) : null,
+    change: rounds ? offerChange(rounds) : null,
     pace: weeks ? launchPace(weeks) : null,
     units: canAnalyze ? units ?? [] : null,
     compareHref: top && topDataset ? `/compare/ads?${new URLSearchParams({ dataset: topDataset, rival: top.ad_archive_id, returnTo: `/pages/${pageId}?scope=${scopeToParam(scope)}` })}` : null,

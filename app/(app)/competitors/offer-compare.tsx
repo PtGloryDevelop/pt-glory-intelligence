@@ -1,6 +1,7 @@
 'use client';
 import Link from 'next/link';
-import type {OfferSummary} from '@/lib/pages/summary';
+import type {OfferChange,OfferSummary} from '@/lib/pages/summary';
+import {OfferChangeLine} from '@/components/OfferChangeLine';
 import type {UnitOffers} from '@/lib/rivals/offers';
 import {useJson} from '../owned-ads/use-json';
 import styles from './offer-compare.module.css';
@@ -10,13 +11,13 @@ const n=(value:number)=>value.toLocaleString('th-TH');
 const day=(value:string)=>new Date(`${value}T12:00:00+07:00`).toLocaleDateString('th-TH',{day:'numeric',month:'short',timeZone:'Asia/Bangkok'});
 
 /** The three cells of one side: offers found, baht amounts (cheapest first, so rows line up), and how many ads were read. */
-function Cells({summary,empty}:{summary:OfferSummary|null;empty:string}){
+function Cells({summary,empty,change}:{summary:OfferSummary|null;empty:string;change?:OfferChange|null}){
   if(!summary)return <td colSpan={3} className={styles.muted}>อ่านข้อความแอดไม่สำเร็จ</td>;
   if(!summary.readable)return <td colSpan={3} className={styles.muted}>{empty}</td>;
   const of=(ads:number)=>`${n(ads)}/${n(summary.readable)}`;
   const prices=[...summary.prices].sort((a,b)=>a.baht-b.baht);
   return <>
-    <td>{summary.offers.length?<div className={styles.chips}>{summary.offers.map(offer=><span key={offer.label} className={styles.chip}><b>{offer.label}</b>{of(offer.ads)}</span>)}</div>:<span className={styles.muted}>ไม่พบคำโปร</span>}</td>
+    <td>{summary.offers.length?<div className={styles.chips}>{summary.offers.map(offer=><span key={offer.label} className={styles.chip}><b>{offer.label}</b>{of(offer.ads)}</span>)}</div>:<span className={styles.muted}>ไม่พบคำโปร</span>}{change!==undefined?<OfferChangeLine change={change} quiet/>:null}</td>
     <td>{prices.length?<div className={styles.chips}>{prices.map(price=><span key={price.baht} className={`${styles.chip} ${styles.price}`}><b>{n(price.baht)} บาท</b>{of(price.ads)}</span>)}</div>:<span className={styles.muted}>ไม่พบราคา</span>}</td>
     <td className={styles.num}>{n(summary.readable)} แอด</td>
   </>;
@@ -39,7 +40,7 @@ export function OfferCompare({unit,names,reload}:{unit:{id:string;name:string};n
           <tr className={styles.oursRow}><th scope="row"><span className={styles.who}><span className={styles.ours}>แอดเรา · {unit.name}</span><small>มีค่าแอดใน 7 วัน{data.period?` (${day(data.period.from)}–${day(data.period.to)})`:''}</small></span></th>
             <Cells summary={data.ours} empty="ไม่มีแอดที่มีค่าแอดใน 7 วัน"/></tr>
           {data.rivals.map(row=><tr key={row.page_id}><th scope="row"><span className={styles.who}><Link className={styles.rival} href={`/pages/${row.page_id}?scope=all`}>{names.get(row.page_id)??row.page_id}</Link><small>{REL[row.relation]} · กำลังแสดง</small></span></th>
-            <Cells summary={row.summary} empty="ไม่มีแอดที่กำลังแสดงในข้อมูลที่เก็บ"/></tr>)}
+            <Cells summary={row.summary} change={row.change} empty="ไม่มีแอดที่กำลังแสดงในข้อมูลที่เก็บ"/></tr>)}
           {!data.rivals.length?<tr><td colSpan={4} className={styles.muted}>ยังไม่มีเพจที่ทีมตั้งเป็นคู่แข่งตรงหรือสินค้าทดแทนของ {unit.name} · ตั้งได้ในตารางเพจคู่แข่งด้านล่าง</td></tr>:null}
         </tbody>
       </table></div>}

@@ -16,7 +16,8 @@ function sameSecret(provided: string, expected: string): boolean {
  * oracle. An unset or weak secret fails closed.
  */
 export function authenticateCollectionAdvance(header: string | null): CollectionAdvanceAuth {
-  const expected = process.env.COLLECTION_ADVANCE_TOKEN;
+  // Trimmed: a value piped or pasted into the host's env store can carry a newline, and the scheduler would then fail every tick silently.
+  const expected = process.env.COLLECTION_ADVANCE_TOKEN?.trim();
   if (!expected || expected.length < 16) return "not_configured";
 
   const prefix = "Bearer ";

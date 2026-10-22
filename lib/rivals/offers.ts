@@ -1,10 +1,11 @@
 import 'server-only';
 import {dbUser} from '../db/user.ts';
-import {getPageAds} from '../read/pages.ts';
+import {getPageAds,getPageOfferRounds} from '../read/pages.ts';
 import {latestReviewPeriod} from '../dashboard/review-model.ts';
-import {offerSignals,type OfferSummary} from '../pages/summary.ts';
+import {offerChange,offerSignals,type OfferChange,type OfferSummary} from '../pages/summary.ts';
 
-export type RivalOffer={page_id:string;relation:'direct'|'substitute';summary:OfferSummary|null};
+/** `change` compares the page's two latest collection rounds; null until two rounds saw it (or when unreadable). */
+export type RivalOffer={page_id:string;relation:'direct'|'substitute';summary:OfferSummary|null;change:OfferChange|null};
 /**
  * The offers written in a unit's ad copy beside those of the rival pages the team matched to it.
  * Ours: ads with spend in the unit over the overview's 7-day window. Rivals: their ads still running at
@@ -32,10 +33,11 @@ export async function getUnitOffers(unitId:string):Promise<UnitOffers>{
   };
   const rivals=(relations.data??[]).slice(0,MAX_PAGES).map(async(row):Promise<RivalOffer>=>{
     const relation=row.relation as RivalOffer['relation'];
-    try{
-      const ads=await getPageAds({kind:'all'},row.page_id,{signal:'active',sort:'most_reused',limit:500});
-      return {page_id:row.page_id,relation,summary:offerSignals(ads.rows)};
-    }catch{return {page_id:row.page_id,relation,summary:null};}
+    const [ads,rounds]=await Promise.all([
+      getPageAds({kind:'all'},row.page_id,{signal:'active',sort:'most_reused',limit:500}).catch(()=>null),
+      getPageOfferRounds(row.page_id).catch(()=>null),
+    ]);
+    return {page_id:row.page_id,relation,summary:ads?offerSignals(ads.rows):null,change:rounds?offerChange(rounds):null};
   });
   const [own,rivalRows]=await Promise.all([
     ours().catch(error=>{console.error('Owned unit copy unavailable',{code:(error as {code?:string}).code??'unknown'});return {period:null,summary:null};}),

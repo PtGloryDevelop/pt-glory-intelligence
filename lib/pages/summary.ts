@@ -31,29 +31,65 @@ const PRICES = [
 
 const text = (ad: Copy) => [ad.title, ad.body_text].filter(Boolean).join("\n").trim();
 
+/** What one ad's copy offers: the offer labels and baht amounts in it, or null when it has no copy. */
+function readCopy(ad: Copy): { offers: Set<string>; amounts: Set<number> } | null {
+  const copy = text(ad);
+  if (!copy) return null;
+  const offers = new Set<string>(), amounts = new Set<number>();
+  for (const [pattern, label] of RULES) for (const match of copy.matchAll(pattern)) offers.add(label(match as RegExpExecArray));
+  for (const pattern of PRICES) for (const match of copy.matchAll(pattern)) {
+    const baht = Number(match[1].replaceAll(",", ""));
+    if (baht >= 10 && baht <= 100_000) amounts.add(baht);
+  }
+  return { offers, amounts };
+}
+
 /** Offers and baht amounts found in the copy, each counted once per ad. */
 export function offerSignals(ads: Copy[]): OfferSummary {
   const offers = new Map<string, number>(), prices = new Map<number, number>();
   let readable = 0;
   for (const ad of ads) {
-    const copy = text(ad);
-    if (!copy) continue;
+    const found = readCopy(ad);
+    if (!found) continue;
     readable++;
-    const found = new Set<string>();
-    for (const [pattern, label] of RULES) for (const match of copy.matchAll(pattern)) found.add(label(match as RegExpExecArray));
-    for (const label of found) offers.set(label, (offers.get(label) ?? 0) + 1);
-    const amounts = new Set<number>();
-    for (const pattern of PRICES) for (const match of copy.matchAll(pattern)) {
-      const baht = Number(match[1].replaceAll(",", ""));
-      if (baht >= 10 && baht <= 100_000) amounts.add(baht);
-    }
-    for (const baht of amounts) prices.set(baht, (prices.get(baht) ?? 0) + 1);
+    for (const label of found.offers) offers.set(label, (offers.get(label) ?? 0) + 1);
+    for (const baht of found.amounts) prices.set(baht, (prices.get(baht) ?? 0) + 1);
   }
   const ranked = <K,>(map: Map<K, number>) => [...map].sort((a, b) => b[1] - a[1]);
   return {
     readable,
     offers: ranked(offers).slice(0, 5).map(([label, n]) => ({ label, ads: n })),
     prices: ranked(prices).slice(0, 3).map(([baht, n]) => ({ baht, ads: n })),
+  };
+}
+
+export type OfferChange = { previousAt: string; previousAds: number; latestAt: string; latestAds: number; added: string[]; gone: string[] };
+
+/**
+ * Offers and amounts written in the running ads of the latest round, against the round before it.
+ * "gone" means the latest round's ads did not carry it, not that the page stopped offering it: a round
+ * sees only what its search returned. Null until two rounds have seen the page.
+ */
+export function offerChange(rows: (Copy & { collection_run_id: string; collected_at: string })[]): OfferChange | null {
+  const rounds = new Map<string, { at: string; ads: number; labels: Set<string> }>();
+  for (const row of rows) {
+    const round = rounds.get(row.collection_run_id) ?? { at: row.collected_at, ads: 0, labels: new Set<string>() };
+    rounds.set(row.collection_run_id, round);
+    const found = readCopy(row);
+    if (!found) continue;
+    round.ads++;
+    for (const label of found.offers) round.labels.add(label);
+    for (const baht of found.amounts) round.labels.add(`${baht.toLocaleString("th-TH")} บาท`);
+  }
+  const [latest, previous] = [...rounds.values()].sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+  if (!latest || !previous) return null;
+  // Offers first in the order found, then amounts cheapest first, as the offers table reads.
+  const baht = (label: string) => label.endsWith(" บาท") ? Number(label.slice(0, -4).replaceAll(",", "")) : -1;
+  const order = (labels: string[]) => labels.sort((a, b) => (baht(a) < 0 && baht(b) < 0 ? 0 : baht(a) - baht(b)));
+  return {
+    previousAt: previous.at, previousAds: previous.ads, latestAt: latest.at, latestAds: latest.ads,
+    added: order([...latest.labels].filter((label) => !previous.labels.has(label))),
+    gone: order([...previous.labels].filter((label) => !latest.labels.has(label))),
   };
 }
 

@@ -1,0 +1,5 @@
+/* One line under a page's offers: newly seen in green, no longer seen in amber, both in plain words. */
+.line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin: 8px 0 0; color: var(--muted); font-size: var(--fs-eyebrow); line-height: 1.5; }
+.added, .gone { padding: 1px 8px; border-radius: var(--radius-pill); font-weight: 600; }
+.added { background: var(--ok-tint); color: var(--ok-ink); }
+.gone { background: var(--warn-tint); color: var(--warn-ink); }

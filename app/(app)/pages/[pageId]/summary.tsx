@@ -6,7 +6,8 @@ import { AdDrawer } from "@/components/AdDrawer";
 import { AdThumb } from "@/components/AdThumb";
 import { Tile } from "@/components/shell/Tile";
 import type { Media } from "@/lib/media";
-import type { LaunchPace, OfferSummary } from "@/lib/pages/summary";
+import type { LaunchPace, OfferChange, OfferSummary } from "@/lib/pages/summary";
+import { OfferChangeLine } from "@/components/OfferChangeLine";
 import type { PageUnit } from "@/lib/read/pages";
 import styles from "./summary.module.css";
 
@@ -16,7 +17,7 @@ export type SummaryTop = {
 };
 /** A null part could not be read; the rest of the summary still shows. `units` is null for roles that cannot compare. */
 export type PageSummaryData = {
-  active: number | null; top: SummaryTop | null; offers: OfferSummary | null; pace: LaunchPace | null;
+  active: number | null; top: SummaryTop | null; offers: OfferSummary | null; change: OfferChange | null; pace: LaunchPace | null;
   units: PageUnit[] | null; compareHref: string | null; lastObserved: string | null;
 };
 
@@ -31,7 +32,7 @@ const weekLabel = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateStri
  */
 export function PageSummary({ data, datasetId, canAnalyze }: { data: PageSummaryData; datasetId: string | null; canAnalyze: boolean }) {
   const [open, setOpen] = useState(false);
-  const { active, top, offers, pace, units, compareHref, lastObserved } = data;
+  const { active, top, offers, change, pace, units, compareHref, lastObserved } = data;
   const tallest = Math.max(1, ...(pace?.weeks.map((week) => week.started) ?? []));
 
   return (
@@ -68,6 +69,7 @@ export function PageSummary({ data, datasetId, canAnalyze }: { data: PageSummary
                 {offers.prices.map((price) => <span key={price.baht} className={`${styles.chip} ${styles.price}`}><b>{whole(price.baht)} บาท</b>{whole(price.ads)}/{whole(offers.readable)}</span>)}
               </div>
             ) : <p className={styles.detail}>ไม่พบคำโปรหรือราคาในข้อความ</p>}
+          {offers ? <OfferChangeLine change={change} /> : null}
           <p className={styles.note}>จับคำจากข้อความของแอดที่กำลังแสดง{offers ? ` ${whole(offers.readable)} แอดที่มีข้อความ` : ""} · ตัวเลขคือจำนวนแอดที่พบคำนั้น</p>
         </div>
 

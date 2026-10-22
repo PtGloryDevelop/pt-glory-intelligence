@@ -37,6 +37,18 @@ test("only the exact collection advance bearer token authenticates", () => {
   }
 });
 
+test("a stored token with a trailing newline still matches, and only itself", () => {
+  const previous = process.env.COLLECTION_ADVANCE_TOKEN;
+  process.env.COLLECTION_ADVANCE_TOKEN = `${SECRET}\r\n`;
+  try {
+    assert.equal(authenticateCollectionAdvance(`Bearer ${SECRET}`), "ok");
+    assert.equal(authenticateCollectionAdvance(`Bearer ${SECRET.slice(0, -1)}`), "unauthorized");
+  } finally {
+    if (previous === undefined) delete process.env.COLLECTION_ADVANCE_TOKEN;
+    else process.env.COLLECTION_ADVANCE_TOKEN = previous;
+  }
+});
+
 test("the advance route acknowledges work and defers each bounded step", () => {
   assert.match(ROUTE, /authenticateCollectionAdvance\(/);
   assert.match(ROUTE, /status: 401/);

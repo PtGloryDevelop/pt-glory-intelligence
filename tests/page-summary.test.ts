@@ -63,3 +63,21 @@ test("the most reused creative needs a shared creative at all", () => {
   assert.equal(mostReused([{ collation_count: 1 }, { collation_count: null }]), null);
   assert.deepEqual(mostReused([{ collation_count: 3 }, { collation_count: 18 }, { collation_count: 18 }]), { collation_count: 18 });
 });
+
+test("offer changes compare what the two latest rounds saw, and need two rounds", async () => {
+  const { offerChange } = await import("../lib/pages/summary.ts");
+  const round = (id: string, at: string, body: string) => ({ collection_run_id: id, collected_at: at, title: null, body_text: body });
+  const change = offerChange([
+    round("a", "2026-10-05T07:57:34Z", "1 แถม 1 390 บาท 2 แถม 2 750 บาท ส่งฟรี"),
+    round("a", "2026-10-05T07:57:34Z", "3 แถม 3 990 บาท"),
+    round("b", "2026-10-22T03:46:58Z", "1 แถม 1 390 บาท ส่งฟรี เก็บเงินปลายทาง"),
+    round("b", "2026-10-22T03:46:58Z", "ราคา 1,980 บาท"),
+    round("b", "2026-10-22T03:46:58Z", ""),
+  ]);
+  assert.deepEqual(change, {
+    previousAt: "2026-10-05T07:57:34Z", previousAds: 2, latestAt: "2026-10-22T03:46:58Z", latestAds: 2,
+    added: ["เก็บเงินปลายทาง", "1,980 บาท"],
+    gone: ["2 แถม 2", "3 แถม 3", "750 บาท", "990 บาท"],
+  });
+  assert.equal(offerChange([round("a", "2026-10-05T07:57:34Z", "1 แถม 1")]), null);
+});

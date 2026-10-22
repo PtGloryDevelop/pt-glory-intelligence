@@ -355,3 +355,13 @@ export async function getAdLatestDataset(adArchiveId: string): Promise<string | 
   rows.sort((a, b) => Date.parse(b.dataset.run.collected_at) - Date.parse(a.dataset.run.collected_at));
   return rows[0]?.dataset_id ?? null;
 }
+
+export type OfferRoundRow = { collection_run_id: string; collected_at: string; ad_archive_id: string; title: string | null; body_text: string | null };
+
+/** Running ads' copy from the two latest rounds that saw a page (migration 0070), for round-to-round offer changes. */
+export async function getPageOfferRounds(pageId: string): Promise<OfferRoundRow[]> {
+  const supabase = await dbUser();
+  const { data, error } = await supabase.rpc("page_offer_rounds", { p_page_id: pageId });
+  if (error) throw error;
+  return (data ?? []) as OfferRoundRow[];
+}
