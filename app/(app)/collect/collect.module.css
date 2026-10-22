@@ -1,7 +1,8 @@
 .layout { display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:28px; align-items:start; }
 .form { display:grid; gap:24px; padding:32px; border:1px solid var(--line); border-radius:14px; background:var(--surface); }
 .row { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
-.field { display:grid; gap:8px; }
+/* align-content: start, so a field beside one with a hint underneath keeps its control at 46px instead of stretching to match. */
+.field { display:grid; gap:8px; align-content:start; }
 .field label { font-weight:500; font-size:var(--fs-meta); }
 .field input,.field select { width:100%; min-height:46px; padding:10px 12px; border:1px solid var(--line); border-radius:8px; background:var(--paper); color:inherit; font:inherit; }
 .field input:focus-visible,.field select:focus-visible { outline:2px solid var(--focus); outline-offset:2px; }

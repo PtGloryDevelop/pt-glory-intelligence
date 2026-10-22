@@ -45,7 +45,8 @@ function Stat({label,value,unit,children}:{label:string;value:string;unit?:strin
 }
 
 function Thumb({url}:{url:string|null|undefined}){
-  return <span className={styles.thumb}>{url?<AdImage src={url} alt="" sizes="40px" referrerPolicy="no-referrer"/>:null}</span>;
+  // No picture in the report reads as an image icon, not as an empty tinted box.
+  return <span className={styles.thumb} data-empty={url?undefined:true}>{url?<AdImage src={url} alt="" sizes="48px" referrerPolicy="no-referrer"/>:<Icon name="image" size={18}/>}</span>;
 }
 
 /** Daily spend from the Ads Management reports; a day without complete figures is drawn as missing, never as zero. */
@@ -257,7 +258,7 @@ export function Dashboard({canAnalyze,home='overview'}:{canAnalyze:boolean;home?
       <div className={styles.bridgeText}><h2 id="bridge-heading">เทียบแอดเรากับคู่แข่ง</h2><p>เริ่มจากแอดเราที่ผลแย่ลง หรือแอดคู่แข่งที่ยิงนานที่สุด แล้วให้ AI สรุปว่าต่างกันตรงไหน</p></div>
       {oursPick?<span className={`${styles.token} ${styles.tokenOurs}`}><Thumb url={oursPick.creative_url}/><span className={styles.tokenText}>แอดเรา: {oursPick.ad_name}</span></span>:null}
       {oursPick&&rivalPick?<span aria-hidden className={styles.swap}>↔</span>:null}
-      {rivalPick?<span className={`${styles.token} ${styles.tokenRival}`}><span className={styles.tokenText}>คู่แข่ง: {rivalPick.page_name??rivalPick.page_id}</span></span>:null}
+      {rivalPick?<span className={`${styles.token} ${styles.tokenRival}`}><AdThumb ad={rivalPick} width={32}/><span className={styles.tokenText}>คู่แข่ง: {rivalPick.page_name??rivalPick.page_id}</span></span>:null}
       <Link className={styles.primary} href={compareHref} data-testid="overview-compare">เริ่มเทียบ</Link>
     </section>:null}
 

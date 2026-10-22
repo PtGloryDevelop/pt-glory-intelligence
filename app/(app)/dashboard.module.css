@@ -74,10 +74,12 @@ button.row:disabled { cursor: default; background: transparent; }
 .chevron, .chevronCell { color: var(--line-strong); }
 .chevron { display: grid; flex: none; }
 .count { padding: 0 8px; border-radius: var(--radius-pill); background: var(--danger); color: #ffffff; font-size: var(--fs-eyebrow); font-weight: 600; }
-.thumb { position: relative; display: block; flex: none; width: 32px; height: 40px; overflow: hidden; border-radius: 6px; background: var(--surface-sunken); }
+/* Big enough to recognise the creative (4:5, as Meta crops it); the falling stack overlaps only a little so each one shows. */
+.thumb { position: relative; display: block; flex: none; width: 44px; height: 55px; overflow: hidden; border-radius: 7px; background: var(--surface-sunken); box-shadow: inset 0 0 0 1px var(--line); }
 .thumb img { object-fit: cover; }
+.thumb[data-empty] { display: grid; place-items: center; color: var(--muted); }
 .stack { display: flex; flex: none; }
-.stack .thumb + .thumb { margin-left: -12px; box-shadow: 0 0 0 2px var(--surface); }
+.stack .thumb + .thumb { margin-left: -10px; box-shadow: 0 0 0 2px var(--surface); }
 .mini { display: inline-flex; flex: none; align-items: center; min-height: 30px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 7px; background: var(--surface); color: var(--ink); font-size: var(--fs-label); text-decoration: none; white-space: nowrap; }
 .mini:hover { color: var(--ink); text-decoration: none; }
 .foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: auto; padding: 12px 18px 14px; border-top: 1px solid var(--line); }
@@ -104,10 +106,10 @@ button.row:disabled { cursor: default; background: transparent; }
 .bridgeText { flex: 1 1 320px; min-width: 0; }
 .bridgeText h2 { margin: 0; font-size: var(--fs-title-sm); font-weight: 600; letter-spacing: 0; }
 .bridgeText p { margin: 0; color: var(--muted); font-size: var(--fs-label); }
-.token { display: inline-flex; align-items: center; gap: 6px; max-width: 280px; min-height: 30px; padding: 2px 12px 2px 4px; border-radius: var(--radius-pill); font-size: var(--fs-label); font-weight: 500; }
-.token .thumb { width: 22px; height: 26px; border-radius: 4px; }
+.token { display: inline-flex; align-items: center; gap: 8px; max-width: 300px; min-height: 48px; padding: 4px 14px 4px 4px; border-radius: 12px; font-size: var(--fs-label); font-weight: 500; }
+.token .thumb { width: 32px; height: 40px; border-radius: 8px; }
 .tokenOurs { background: var(--brand-tint); color: var(--brand-ink); }
-.tokenRival { padding-left: 12px; background: var(--rival-tint); color: var(--rival-ink); }
+.tokenRival { background: var(--rival-tint); color: var(--rival-ink); }
 .tokenText { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .swap { color: var(--muted); }
 .primary { display: inline-flex; align-items: center; justify-content: center; min-height: 34px; padding: 0 18px; border-radius: 8px; background: var(--brand-ink); color: #ffffff; font-size: var(--fs-label); font-weight: 600; text-decoration: none; }
