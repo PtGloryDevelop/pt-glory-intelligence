@@ -2,9 +2,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireActorOrRedirect } from "@/lib/auth/roles";
 import {
-  getPageActivity, getPageCreativeMix, getPageDetail, getPageLikeHistory,
-  getScopeCollectionFilters,
+  getAdLatestDataset, getPageActivity, getPageAds, getPageCreativeMix, getPageDetail, getPageLikeHistory,
+  getPageTimeline, getPageUnits, getScopeCollectionFilters,
 } from "@/lib/read/pages";
+import { launchPace, mostReused, offerSignals, paceWindowStart } from "@/lib/pages/summary";
+import { signArchivedPreviews } from "@/lib/media/presentation";
+import type { Media } from "@/lib/media";
+import { PageSummary, type PageSummaryData } from "./summary";
 import { statusFilterNote } from "@/lib/domain/collection-filters";
 import { twoClockNote } from "@/lib/domain/clocks";
 import { listCategories, listDatasets } from "@/lib/read/queries";
@@ -57,7 +61,9 @@ export default async function PageDetailPage({ params, searchParams }: {
   // find something to show: that would answer a different question.
   if (!detail) notFound();
 
-  const [mix, activity, likes, scopeName, watches, pageBrand, filters] = await Promise.all([
+  const canAnalyze = satisfies(actor.role, "analyst");
+  // The summary's reads fail on their own: a part that could not be read says so, the page still opens.
+  const [mix, activity, likes, scopeName, watches, pageBrand, filters, running, weeks, units] = await Promise.all([
     view === "overview" ? getPageCreativeMix(scope, pageId) : Promise.resolve([]),
     view === "overview" ? getPageActivity(scope, pageId, bucket) : Promise.resolve([]),
     view === "overview" ? getPageLikeHistory(scope, pageId) : Promise.resolve([]),
@@ -69,7 +75,30 @@ export default async function PageDetailPage({ params, searchParams }: {
     // What the collection asked for. A status breakdown is only as wide as the
     // search behind it, and until now the screen never said so.
     getScopeCollectionFilters(scope),
+    getPageAds(scope, pageId, { signal: "active", sort: "most_reused", limit: 500 }).catch(() => null),
+    getPageTimeline(scope, pageId, { bucket: "week", from: paceWindowStart() }).catch(() => null),
+    canAnalyze ? getPageUnits(pageId).catch(() => null) : Promise.resolve(null),
   ]);
+
+  const top = running ? mostReused(running.rows) : null;
+  const [topDataset, topPreview] = await Promise.all([
+    top && units?.length ? (scope.kind === "dataset" ? Promise.resolve(scope.id) : getAdLatestDataset(top.ad_archive_id).catch(() => null)) : Promise.resolve(null),
+    top ? signArchivedPreviews([top]) : Promise.resolve(new Map<string, string>()),
+  ]);
+  const summary: PageSummaryData = {
+    active: running ? running.rows.length : null,
+    top: top ? {
+      ad_archive_id: top.ad_archive_id, collation: top.collation_count ?? 0,
+      line: (top.title || top.body_text || "").split("\n")[0].trim().slice(0, 120),
+      display_format: top.display_format, media: (top.media ?? {}) as Media,
+      archive_url: top.archive_path ? topPreview.get(top.archive_path) ?? null : null, archive_status: top.archive_status,
+    } : null,
+    offers: running ? offerSignals(running.rows) : null,
+    pace: weeks ? launchPace(weeks) : null,
+    units: canAnalyze ? units ?? [] : null,
+    compareHref: top && topDataset ? `/compare/ads?${new URLSearchParams({ dataset: topDataset, rival: top.ad_archive_id, returnTo: `/pages/${pageId}?scope=${scopeToParam(scope)}` })}` : null,
+    lastObserved: detail.last_observed_at ? thaiDate(detail.last_observed_at) : null,
+  };
 
   // Already watching this exact page in this exact scope? Then the control is a
   // link to that watch, not a second copy of it.
@@ -118,6 +147,8 @@ export default async function PageDetailPage({ params, searchParams }: {
           </span>
         }
       />
+
+      <PageSummary data={summary} datasetId={scope.kind === "dataset" ? scope.id : null} canAnalyze={canAnalyze} />
 
       <ContextBar
         items={[

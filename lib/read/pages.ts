@@ -327,3 +327,31 @@ export async function getScopeCollectionFilters(
   const row = ((data ?? []) as CollectionFilters[])[0] ?? null;
   return row && Number(row.runs) > 0 ? { ...row, runs: Number(row.runs) } : null;
 }
+
+/* ------------------------------------------------------------- page summary */
+
+export type PageUnit = { unit_id: string; unit_name: string; relation: "direct" | "substitute" };
+
+/** Our units the team matched this page to as a rival (relation is a team decision, never inferred). */
+export async function getPageUnits(pageId: string): Promise<PageUnit[]> {
+  const supabase = await dbUser();
+  const { data, error } = await supabase.from("rival_page_units").select("unit_id,unit_name,relation")
+    .eq("page_id", pageId).in("relation", ["direct", "substitute"]).order("unit_name");
+  if (error) throw error;
+  return (data ?? []) as PageUnit[];
+}
+
+/** The newest live dataset holding an ad, so a link into the compare page can name it. */
+export async function getAdLatestDataset(adArchiveId: string): Promise<string | null> {
+  const supabase = await dbUser();
+  const ad = await supabase.from("ads").select("id").eq("ad_archive_id", adArchiveId).maybeSingle();
+  if (ad.error) throw ad.error;
+  if (!ad.data) return null;
+  const { data, error } = await supabase.from("dataset_ads")
+    .select("dataset_id,dataset:datasets!inner(deleted_at,run:collection_runs!inner(collected_at))")
+    .eq("ad_ref", ad.data.id).is("dataset.deleted_at", null);
+  if (error) throw error;
+  const rows = (data ?? []) as unknown as { dataset_id: string; dataset: { run: { collected_at: string } } }[];
+  rows.sort((a, b) => Date.parse(b.dataset.run.collected_at) - Date.parse(a.dataset.run.collected_at));
+  return rows[0]?.dataset_id ?? null;
+}
