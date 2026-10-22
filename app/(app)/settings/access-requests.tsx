@@ -47,13 +47,13 @@ export async function AccessRequests({ notice, problem }: { notice: string | nul
             <div key={request.id} className={styles.request} data-testid={`access-${request.email}`}>
               <span className={styles.avatarSmall} aria-hidden><Icon name="shield" size={16} /></span>
               <span className={styles.text}>
-                <span className={styles.name}>{request.full_name}</span>
-                <span className={styles.hint}>{request.email}{request.team ? ` · ${request.team}` : ""} · ขอเมื่อ {when(request.created_at)}</span>
+                <span className={styles.name}>{request.full_name ?? request.email}</span>
+                <span className={styles.hint}>{request.full_name ? `${request.email} · ` : ""}{request.team ?? "ไม่ได้ระบุทีม"} · ขอเมื่อ {when(request.created_at)}</span>
                 {request.note ? <span className={styles.quote}>“{request.note}”</span> : null}
               </span>
               <form action={decide} className={styles.decide}>
                 <input type="hidden" name="id" value={request.id} />
-                <label className={styles.srOnly} htmlFor={`role-${request.id}`}>สิทธิ์ของ {request.full_name}</label>
+                <label className={styles.srOnly} htmlFor={`role-${request.id}`}>สิทธิ์ของ {request.full_name ?? request.email}</label>
                 <select id={`role-${request.id}`} name="role" defaultValue="analyst">
                   {(["analyst", "viewer", "admin"] as Role[]).map((role) => <option key={role} value={role}>{ROLE_LABEL[role]}</option>)}
                 </select>
@@ -67,7 +67,7 @@ export async function AccessRequests({ notice, problem }: { notice: string | nul
           ))}
       </div>
       {data?.recent.length ? (
-        <p className={styles.recent}>ล่าสุด: {data.recent.map((request) => `${request.full_name} ${request.status === "approved" ? `อนุมัติเป็น ${request.role}` : "ปฏิเสธ"} (${when(request.decided_at)})`).join(" · ")}</p>
+        <p className={styles.recent}>ล่าสุด: {data.recent.map((request) => `${request.full_name ?? request.email} ${request.status === "approved" ? `อนุมัติเป็น ${request.role}` : "ปฏิเสธ"} (${when(request.decided_at)})`).join(" · ")}</p>
       ) : null}
     </section>
   );

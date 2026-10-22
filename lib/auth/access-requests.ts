@@ -6,7 +6,7 @@ import type { Role } from "./role-model.ts";
 import type { AccessRequestInput } from "./access-request-model.ts";
 
 export type AccessRequestRow = {
-  id: string; email: string; full_name: string; team: string | null; note: string | null;
+  id: string; email: string; full_name: string | null; team: string | null; note: string | null;
   status: "pending" | "approved" | "rejected"; role: Role | null; created_at: string; decided_at: string | null;
 };
 
@@ -33,7 +33,7 @@ export async function requestAccess(input: AccessRequestInput): Promise<RequestR
   if (waiting.error) throw waiting.error;
   if (waiting.data) return { ok: true, already: true };
   const created = await service.auth.admin.createUser({
-    email: input.email, password: input.password, email_confirm: false, user_metadata: { full_name: input.fullName },
+    email: input.email, password: input.password, email_confirm: false,
   });
   if (created.error || !created.data.user) {
     if (created.error?.code === "email_exists" || created.error?.status === 422) {
@@ -42,7 +42,7 @@ export async function requestAccess(input: AccessRequestInput): Promise<RequestR
     throw created.error ?? new Error("Sign-up failed");
   }
   const row = await service.from("access_requests").insert({
-    user_id: created.data.user.id, email: input.email, full_name: input.fullName, team: input.team, note: input.note,
+    user_id: created.data.user.id, email: input.email, team: input.team,
   });
   if (row.error) {
     // No request without its login, and no unconfirmed login without a request an admin can see.

@@ -13,21 +13,20 @@ import { checkAccessRequest, createLimiter } from "../lib/auth/access-request-mo
 const form = (fields: Record<string, string>) => ({ get: (name: string) => fields[name] ?? null });
 // Generated, never typed: the security suite refuses password literals in test files.
 const secret = randomUUID(), tooShort = secret.slice(0, 5), thaiLong = "ก".repeat(30);
-const good = { full_name: "  สมชาย   ใจดี ", email: " Somchai@PTGlory.co ", password: secret, confirm: secret, team: " ทีมยิงแอด U24 ", note: "" };
+const good = { email: " Somchai@PTGlory.co ", password: secret, confirm: secret, team: " ทีมยิงแอด U24 " };
 
-test("a complete form is read clean: one-spaced name, lower-case email, empty optionals as null", () => {
-  const checked = checkAccessRequest(form(good));
-  assert.deepEqual(checked, { ok: true, value: { fullName: "สมชาย ใจดี", email: "somchai@ptglory.co", password: secret, team: "ทีมยิงแอด U24", note: null } });
+test("the form asks only for email, the password twice and an optional team", () => {
+  assert.deepEqual(checkAccessRequest(form(good)), { ok: true, value: { email: "somchai@ptglory.co", password: secret, team: "ทีมยิงแอด U24" } });
+  assert.deepEqual(checkAccessRequest(form({ ...good, team: "  " })), { ok: true, value: { email: "somchai@ptglory.co", password: secret, team: null } });
 });
 
 test("each broken field says what to fix", () => {
   const error = (fields: Record<string, string>) => { const checked = checkAccessRequest(form({ ...good, ...fields })); return checked.ok ? null : checked.error; };
-  assert.match(error({ full_name: "ก" })!, /ชื่อ/);
   assert.match(error({ email: "not-an-email" })!, /อีเมล/);
   assert.match(error({ password: tooShort, confirm: tooShort })!, /8 ตัวอักษร/);
   assert.match(error({ confirm: `${secret}x` })!, /ไม่ตรงกัน/);
   assert.match(error({ password: thaiLong, confirm: thaiLong })!, /ยาวเกินไป/, "Thai is 3 bytes a letter: 30 letters pass 72 bytes");
-  assert.match(error({ note: "x".repeat(301) })!, /300/);
+  assert.match(error({ team: "x".repeat(61) })!, /60/);
 });
 
 test("the limiter lets a few through per key, then waits for the window", () => {

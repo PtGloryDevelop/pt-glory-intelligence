@@ -6,7 +6,7 @@ import { requestAccess } from "@/lib/auth/access-requests";
 
 export type SignupState =
   | { status: "idle" }
-  | { status: "error"; error: string; values: { full_name: string; email: string; team: string; note: string } }
+  | { status: "error"; error: string; values: { email: string; team: string } }
   | { status: "sent"; already: boolean };
 
 // ponytail: five sign-ups an hour from one address, per server instance; enough for a team, a brake on a script.
@@ -14,10 +14,7 @@ const allow = createLimiter(5, 60 * 60_000);
 
 /** Public: anyone may ask. What they get is an unconfirmed login that cannot sign in until an admin approves it. */
 export async function submitSignup(_previous: SignupState, form: FormData): Promise<SignupState> {
-  const values = {
-    full_name: String(form.get("full_name") ?? ""), email: String(form.get("email") ?? ""),
-    team: String(form.get("team") ?? ""), note: String(form.get("note") ?? ""),
-  };
+  const values = { email: String(form.get("email") ?? ""), team: String(form.get("team") ?? "") };
   // A field people never see; a bot that fills it is told it worked and nothing is created.
   if (String(form.get("website") ?? "")) return { status: "sent", already: false };
   const checked = checkAccessRequest(form);

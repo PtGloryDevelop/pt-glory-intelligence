@@ -26,10 +26,6 @@ export function SignupForm() {
     <form action={action} className={login.form} data-testid="signup-form">
       {state.status === "error" ? <ErrorState title={state.error} testId="signup-error" /> : null}
       <label className={login.field}>
-        ชื่อ-นามสกุล
-        <input name="full_name" type="text" required minLength={2} maxLength={80} autoComplete="name" defaultValue={values?.full_name} />
-      </label>
-      <label className={login.field}>
         อีเมลที่ใช้ทำงาน
         <input name="email" type="email" required maxLength={254} autoComplete="email" defaultValue={values?.email} />
       </label>
@@ -47,10 +43,6 @@ export function SignupForm() {
       <label className={login.field}>
         <span>ทีม / ตำแหน่ง <span className={styles.optional}>ไม่บังคับ</span></span>
         <input name="team" type="text" maxLength={60} placeholder="เช่น ทีมยิงแอด U24" defaultValue={values?.team} />
-      </label>
-      <label className={login.field}>
-        <span>ข้อความถึงผู้ดูแล <span className={styles.optional}>ไม่บังคับ</span></span>
-        <textarea name="note" maxLength={300} rows={2} className={styles.note} defaultValue={values?.note} />
       </label>
       {/* Hidden from people; bots fill it. */}
       <input name="website" type="text" tabIndex={-1} autoComplete="off" aria-hidden className={styles.trap} />

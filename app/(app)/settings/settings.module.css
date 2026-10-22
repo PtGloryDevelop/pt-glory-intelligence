@@ -27,6 +27,7 @@ a.row:hover { background: var(--row-hover); color: var(--ink); text-decoration: 
 .count { padding: 0 8px; border-radius: var(--radius-pill); background: var(--danger); color: #ffffff; font-size: var(--fs-eyebrow); font-weight: 600; }
 .request { position: relative; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 16px; }
 .request + .request::before { content: ""; position: absolute; top: 0; right: 0; left: 54px; border-top: 1px solid var(--line); }
+.request > .text { flex: 1 1 260px; }
 .avatarSmall { display: grid; place-items: center; flex: none; width: 30px; height: 30px; border-radius: 8px; background: var(--tile-neutral); color: #ffffff; }
 .quote { color: var(--ink-soft); font-size: var(--fs-label); }
 .decide { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0; }
@@ -36,14 +37,15 @@ a.row:hover { background: var(--row-hover); color: var(--ink); text-decoration: 
 .reject summary { display: inline-flex; align-items: center; min-height: 34px; padding: 0 10px; color: var(--muted); font-size: var(--fs-label); cursor: pointer; list-style: none; }
 .reject summary::-webkit-details-marker { display: none; }
 .reject summary:hover { color: var(--danger); }
-.rejectConfirm { position: absolute; right: 0; top: calc(100% + 4px); z-index: 2; min-height: 34px; padding: 0 12px; border: 1px solid var(--danger); border-radius: 8px; background: var(--surface); color: var(--danger); font-size: var(--fs-label); white-space: nowrap; box-shadow: var(--shadow); }
+.reject[open] { display: grid; justify-items: end; gap: 6px; }
+/* Inline under its summary, never floating: the list clips anything that leaves the row. */
+.rejectConfirm { min-height: 34px; padding: 0 12px; border: 1px solid var(--danger); border-radius: 8px; background: var(--surface); color: var(--danger); font-size: var(--fs-label); white-space: nowrap; }
 .problem { margin: 0 4px; color: var(--danger); font-size: var(--fs-label); }
 .done { margin: 0 4px; color: var(--ok-ink); font-size: var(--fs-label); }
 .recent { margin: 0 4px; color: var(--muted); font-size: var(--fs-eyebrow); }
 .srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 @media (max-width: 640px) {
   .decide { width: 100%; padding-left: 42px; }
-  /* The list clips overflow on a phone, so the confirm sits under its summary instead of floating. */
-  .rejectConfirm { position: static; display: block; margin-top: 6px; box-shadow: none; }
+  .reject[open] { justify-items: start; }
 }
 .link { color: var(--ink); font-weight: 600; user-select: all; }
