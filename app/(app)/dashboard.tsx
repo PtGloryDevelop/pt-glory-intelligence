@@ -19,6 +19,7 @@ import {reviewChange} from '@/lib/dashboard/review-model';
 import {reviewAdKey} from '@/lib/dashboard/series';
 import {buildUpdates} from '@/lib/dashboard/updates';
 import type {HomeChoice} from '@/lib/home-choice';
+import {daysBehind,ownedLate,rivalsLate} from '@/lib/shell/stale';
 import {CompanyDetail} from './owned-ads/company-library';
 import {useJson} from './owned-ads/use-json';
 import styles from './dashboard.module.css';
@@ -137,6 +138,13 @@ export function Dashboard({canAnalyze,home='overview'}:{canAnalyze:boolean;home?
   const unnamed=review?ownedPageChoices(review.filters.pages).filter(page=>!page.name).length:0;
   const ownedTo=review?.coverage?.to??null,rivalsAt=rivals?.lastCollectedAt??null;
   const gap=ownedTo&&rivalsAt?Math.round((Date.parse(ownedTo)-Date.parse(bangkokDay(rivalsAt)))/86400000):null;
+  // Late by the sidebar's rule, counted from when the server read the data. Old figures stay true for their dates; they just stop there.
+  const readAt=data?Date.parse(data.generatedAt):null;
+  const ownedBehind=readAt!=null&&ownedTo&&ownedLate(ownedTo,readAt)?daysBehind(ownedTo,readAt):null;
+  const rivalsBehind=readAt!=null&&rivalsAt&&rivalsLate(rivalsAt,readAt)?daysBehind(rivalsAt,readAt):null;
+  const late=ownedBehind!=null||rivalsBehind!=null;
+  // The band already sends the reader to collect, so the upkeep list does not say it twice.
+  const showGap=gap!=null&&gap>=1&&rivalsBehind==null;
 
   // The bridge: start from an ad of ours that is slipping and the rival ad that has run longest.
   const oursPick=falling[0]??(changes[0]?.ad?rowByKey.get(reviewAdKey(changes[0].ad))??null:null);
@@ -166,7 +174,7 @@ export function Dashboard({canAnalyze,home='overview'}:{canAnalyze:boolean;home?
         <Stat label="ค่าทัก (บาท)" value={num(summary?.cost_per_conversation)}><Delta value={summary?reviewChange(review,summary,'cost_per_conversation'):null} goodUp={false}/></Stat>
       </div>
       {previous?<p className={styles.previous}>ช่วงก่อนหน้า: ค่าแอด {whole(previous.spend)} · ROAS {num(previous.roas)} · ทัก {num(previous.conversations,0)} · ค่าทัก {num(previous.cost_per_conversation)}</p>:null}
-      {data?.daily?.length?<div className={styles.section}>
+      {data?.daily?.length?<div className={`${styles.section} ${styles.chart}`}>
         <div className={styles.sectionHead}><span>ค่าแอดรายวัน (บาท)</span><span className={styles.sectionNote}>จากรายงาน Ads Management</span></div>
         <DailyBars days={data.daily}/>
       </div>:data?.errors.includes('daily')?<p className={styles.sectionNote}>กราฟค่าแอดรายวันเปิดไม่ได้ในรอบนี้</p>:null}
@@ -207,7 +215,7 @@ export function Dashboard({canAnalyze,home='overview'}:{canAnalyze:boolean;home?
       <div className={styles.section}>
         <div className={styles.sectionHead}><span>{data.longest?.scope==='library'?'แอดคู่แข่งที่ยิงนานที่สุด (ทั้งคลัง)':'แอดคู่แข่งที่ยิงนานที่สุด'}</span><Link className={styles.rivalLink} href="/competitors?view=all">ส่องแอดทั้งหมด ›</Link></div>
         {longest.length?<div className={styles.ads}>{longest.map(ad=><button key={`${ad.dataset_id}:${ad.ad_archive_id}`} type="button" className={styles.adPick} onClick={()=>setRivalAd({ad_archive_id:ad.ad_archive_id,dataset_id:ad.dataset_id})} aria-label={`ดูแอด ${ad.page_name??ad.page_id}`}>
-          <AdThumb ad={ad} width={112}/>
+          <AdThumb ad={ad} width={180}/>
           <span className={styles.adCaption}>{ad.page_name??ad.page_id}</span>
           <span className={styles.adMeta}>เริ่มยิง {whole(ad.ad_age_days)} วันก่อน</span>
         </button>)}</div>:<p className={styles.sectionNote}>{data.errors.includes('longest')?'แอดคู่แข่งเปิดไม่ได้ในขณะนี้':'ยังไม่มีแอดคู่แข่งที่กำลังแสดงในคลัง'}</p>}
@@ -226,6 +234,21 @@ export function Dashboard({canAnalyze,home='overview'}:{canAnalyze:boolean;home?
   return <div className={styles.page} data-testid="overview">
     <PageHeader title="ภาพรวม" description={description} actions={tools}/>
     {error?<div className={styles.problem} role="alert">{error} <button type="button" onClick={()=>setRetry(value=>value+1)}>ลองใหม่</button></div>:null}
+
+    {late?<section className={styles.late} role="status" aria-labelledby="late-heading" data-testid="overview-late">
+      <span className={styles.lateIcon}><Icon name="alert" size={17}/></span>
+      <div className={styles.lateText}><h2 id="late-heading">ข้อมูลไม่อัปเดต</h2><p>ตัวเลขในหน้านี้ยังถูกต้องตามวันที่ของข้อมูล แต่ยังไม่รวมช่วงหลังจากนั้น</p></div>
+      <div className={styles.lateItems}>
+        {ownedBehind!=null?<div className={styles.lateItem}>
+          <span><b className={styles.oursTitle}>แอดของเรา</b> มีข้อมูลถึง {thaiDate(ownedTo)} · {whole(ownedBehind)} วันก่อน</span>
+          <Link className={styles.mini} href="/owned-ads">อัปเดตแอดของเรา</Link>
+        </div>:null}
+        {rivalsBehind!=null?<div className={styles.lateItem}>
+          <span><b className={styles.rivalTitle}>คู่แข่ง</b> เก็บล่าสุด {thaiDate(bangkokDay(rivalsAt!))} · {whole(rivalsBehind)} วันก่อน</span>
+          {canAnalyze?<Link className={styles.mini} href="/collect">ค้นแอดคู่แข่งใหม่</Link>:null}
+        </div>:null}
+      </div>
+    </section>:null}
 
     <div className={styles.lanes} data-single={canAnalyze?undefined:true}>{oursLane}{rivalLane}</div>
 
@@ -272,12 +295,12 @@ export function Dashboard({canAnalyze,home='overview'}:{canAnalyze:boolean;home?
           <span className={styles.rowText}><span className={styles.rowTitle}>{whole(unnamed)} เพจยังไม่มีชื่อ</span><span className={styles.rowSub}>{names.message||'หลังจัดสิทธิ์เพจแล้ว กดอัปเดตชื่อให้แสดงชื่อเพจแทนรหัส'}</span></span>
           <button type="button" className={styles.mini} onClick={refreshPageNames} disabled={names.loading}>{names.loading?'กำลังอ่านชื่อเพจ…':'อัปเดตชื่อเพจ'}</button>
         </div>:null}
-        {gap!=null&&gap>=1?<div className={styles.row}>
+        {showGap?<div className={styles.row}>
           <Tile icon="alert" tone="rival"/>
-          <span className={styles.rowText}><span className={styles.rowTitle}>ข้อมูลคู่แข่งเก่ากว่าแอดเรา {whole(gap)} วัน</span><span className={styles.rowSub}>คู่แข่งเก็บล่าสุด {thaiDate(rivalsAt,false)} · แอดเรามีข้อมูลถึง {thaiDate(ownedTo,false)}</span></span>
+          <span className={styles.rowText}><span className={styles.rowTitle}>ข้อมูลคู่แข่งเก่ากว่าแอดเรา {whole(gap)} วัน</span><span className={styles.rowSub}>คู่แข่งเก็บล่าสุด {thaiDate(bangkokDay(rivalsAt!),false)} · แอดเรามีข้อมูลถึง {thaiDate(ownedTo,false)}</span></span>
           <Link className={styles.mini} href="/collect">เก็บแอดคู่แข่งใหม่</Link>
         </div>:null}
-        {!unassigned?.ad_count&&!unnamed&&!(gap!=null&&gap>=1)?<div className={styles.row}><span className={styles.rowSub}>{units.loading?'กำลังตรวจ…':'ไม่มีงานค้าง ข้อมูลพร้อมใช้'}</span></div>:null}
+        {!unassigned?.ad_count&&!unnamed&&!showGap?<div className={styles.row}><span className={styles.rowSub}>{units.loading?'กำลังตรวจ…':late?'นอกจากอัปเดตข้อมูลตามแถบด้านบน ไม่มีงานค้าง':'ไม่มีงานค้าง ข้อมูลพร้อมใช้'}</span></div>:null}
       </div>
     </section>:null}
 

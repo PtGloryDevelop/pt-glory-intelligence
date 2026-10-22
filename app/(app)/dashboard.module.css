@@ -1,6 +1,7 @@
 /* UI v3 overview (macOS): our side and the rivals' side as two grouped boxes, the bridge between them,
    then the units table and the upkeep list. Every figure is a stored field or a sum of them. */
-.page { display: grid; gap: var(--gap-page); min-width: 0; max-width: 1360px; margin: 0 auto; }
+/* Fills a 1920 screen beside the sidebar; past that the two lanes would spread their figures too far apart. */
+.page { display: grid; gap: var(--gap-page); min-width: 0; max-width: 1680px; margin: 0 auto; }
 .tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .search { display: flex; align-items: center; gap: 6px; width: 230px; height: 32px; padding: 0 10px; border-radius: 8px; background: var(--row-hover); color: var(--muted); }
 .search:focus-within { background: var(--surface); box-shadow: 0 0 0 3px var(--brand-tint-strong); }
@@ -9,6 +10,16 @@
 .seg button { min-height: 28px; padding: 2px 14px; border: 0; border-radius: 6px; background: transparent; color: var(--ink); font-size: var(--fs-label); }
 .seg button:hover:not(:disabled) { background: transparent; }
 .seg button[aria-pressed="true"], .seg button[aria-pressed="true"]:hover:not(:disabled) { background: var(--surface); font-weight: 600; box-shadow: 0 1px 2px rgba(27, 31, 39, 0.16), 0 0 0 0.5px rgba(27, 31, 39, 0.06); }
+
+/* Late data: amber like the sidebar's box, at the top where the day starts, each side with the step that fixes it. */
+.late { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; padding: 12px 18px; border: 1px solid var(--warn-line); border-radius: var(--radius); background: var(--warn-tint); }
+.lateIcon { display: grid; flex: none; place-items: center; width: 30px; height: 30px; border-radius: 8px; background: var(--surface); color: var(--warn-ink); }
+.lateText { flex: 1 1 260px; min-width: 0; }
+.lateText h2 { margin: 0; color: var(--warn-ink); font-size: var(--fs-title-sm); font-weight: 600; letter-spacing: 0; }
+.lateText p { margin: 0; color: var(--ink-soft); font-size: var(--fs-label); }
+.lateItems { display: grid; flex: 1 1 440px; gap: 6px; min-width: 0; }
+.lateItem { display: flex; align-items: center; justify-content: space-between; gap: 6px 12px; flex-wrap: wrap; font-size: var(--fs-meta); font-variant-numeric: tabular-nums; }
+.lateItem b { font-weight: 600; }
 
 .lanes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; align-items: stretch; }
 .lanes[data-single] { grid-template-columns: minmax(0, 1fr); }
@@ -41,6 +52,9 @@
 
 /* Daily spend: one bar per day, the latest in the CI pink; a day without complete figures is hatched, not zero. */
 .bars { display: flex; align-items: stretch; gap: 6px; height: 108px; }
+/* When the rivals' box beside it runs taller, the chart takes the extra height rather than leaving a gap above the footer. */
+.chart { display: flex; flex: 1; flex-direction: column; }
+.chart .bars { flex: 1; height: auto; min-height: 108px; }
 .barCol { display: flex; flex: 1; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
 .barTrack { display: flex; flex: 1; align-items: flex-end; width: 100%; }
 .bar { display: block; width: 100%; border-radius: 4px 4px 2px 2px; background: var(--brand); }
@@ -72,8 +86,10 @@ button.row:disabled { cursor: default; background: transparent; }
 .oursLink { color: var(--brand-ink); }
 .rivalLink, .rivalLink:hover { color: var(--rival-ink); }
 
-.ads { display: flex; flex-wrap: wrap; gap: 12px; }
-.adPick { display: grid; gap: 3px; width: 112px; min-width: 0; padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--ink); text-align: left; }
+/* The four longest-running ads share the row, up to 180px each, so a wide lane is not left half empty. */
+.ads { display: grid; grid-template-columns: repeat(4, minmax(0, 180px)); gap: 12px; }
+.adPick { display: grid; align-content: start; gap: 3px; min-width: 0; padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--ink); text-align: left; }
+.adPick > span:first-child { width: 100% !important; height: auto !important; aspect-ratio: 4 / 5; }
 .adPick:hover:not(:disabled) { background: transparent; }
 .adCaption { overflow: hidden; color: var(--ink-soft); font-size: var(--fs-label); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .adMeta { color: var(--muted); font-size: var(--fs-eyebrow); }
@@ -137,7 +153,6 @@ button.row:disabled { cursor: default; background: transparent; }
 @media (max-width: 640px) {
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 14px; }
   .stat:nth-child(3) { border-left: 0; }
-  .adPick { width: calc(50% - 6px); }
-  .adPick > span:first-child { width: 100% !important; height: auto !important; aspect-ratio: 4 / 5; }
+  .ads { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .bridge .primary { width: 100%; }
 }
