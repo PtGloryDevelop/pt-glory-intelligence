@@ -12,7 +12,7 @@ import {Tile} from '@/components/shell/Tile';
 import type {DashboardData} from '@/lib/dashboard/read';
 import type {DailySpend} from '@/lib/dashboard/daily-read';
 import type {OwnedPerformanceRow,OwnedPerformanceSummary} from '@/lib/owned-ads/performance';
-import {FALL_MIN_SPEND,FALL_ROAS,type CommandAd,type CommandCenterData} from '@/lib/owned-ads/command-center';
+import {FALL_MIN_SPEND,FALL_ROAS,HOOK_DROP,HOOK_MIN_SPEND,type CommandAd,type CommandCenterData} from '@/lib/owned-ads/command-center';
 import type {UnitSummary} from '@/lib/owned-ads/unit-summary';
 import {ownedPageChoices} from '@/lib/owned-ads/page-names';
 import {reviewChange} from '@/lib/dashboard/review-model';
@@ -104,8 +104,11 @@ export function Dashboard({canAnalyze,home='overview'}:{canAnalyze:boolean;home?
   const center=useJson<CommandCenterData>(canAnalyze&&period?`/api/owned-ads/command-center?${period}`:null,retry);
 
   const updates=useMemo(()=>data?buildUpdates({summary,rows,series:data.rowSeries,rivals:null}):[],[data,summary,rows]);
-  const falling=center.data?.falling??[];
-  const changes=updates.filter(item=>item.kind==='ours').slice(0,falling.length?2:3);
+  const falling=center.data?.falling??[],rising=center.data?.rising??[],hooks=center.data?.hook_fading??[];
+  // Four rows at most: each week-on-week move that has ads, then the biggest single changes.
+  const moves=[falling,rising,hooks].filter(list=>list.length).length;
+  const changes=updates.filter(item=>item.kind==='ours').slice(0,Math.max(1,4-moves));
+  const hookPct=(value:number|undefined)=>value==null?'—':`${num(value*100,1)}%`;
   const collisions=data?.collisions??null,rivals=data?.rivals??null;
   const longest=data?.longest?.rows??[];
   const pendingPages=collisions?.top.filter(page=>!page.confirmed).slice(0,2)??[];
@@ -189,13 +192,25 @@ export function Dashboard({canAnalyze,home='overview'}:{canAnalyze:boolean;home?
               <span className={styles.rowSub}>เช่น {falling.slice(0,2).map(ad=>`${ad.ad_name} ROAS ${num(ad.previous_roas)} → ${num(ad.recent_roas)}`).join(' · ')}</span></span>
             <span className={styles.chevron}><Icon name="chevron" size={15}/></span>
           </Link>:null}
+        {center.data&&rising.length?<Link className={styles.row} href="/owned-ads/performance?tab=rank" data-testid="overview-rising" title={`ROAS ต่ำกว่า ${FALL_ROAS} ใน 7 วันก่อนหน้า แต่ถึง ${FALL_ROAS} ขึ้นไปใน 7 วันล่าสุด และค่าแอดอย่างน้อย ${whole(FALL_MIN_SPEND)} บาททั้งสองช่วง`}>
+          <span className={styles.stack}>{rising.slice(0,3).map(ad=><Thumb key={adKey(ad)} url={ad.creative_url}/>)}</span>
+          <span className={styles.rowText}><span className={styles.rowTitle}>สื่อที่เริ่มดีขึ้น<span className={`${styles.count} ${styles.countGood}`}>{whole(center.data.rising_total)} แอด</span></span>
+            <span className={styles.rowSub}>เช่น {rising.slice(0,2).map(ad=>`${ad.ad_name} ROAS ${num(ad.previous_roas)} → ${num(ad.recent_roas)}`).join(' · ')}</span></span>
+          <span className={styles.chevron}><Icon name="chevron" size={15}/></span>
+        </Link>:null}
+        {center.data&&hooks.length?<Link className={styles.row} href="/owned-ads/performance?tab=rank" data-testid="overview-hooks" title={`Hook rate (ดูวิดีโอ ÷ การแสดงผล) ลดลงตั้งแต่ ${whole(HOOK_DROP*100)}% จากสัปดาห์ก่อน ยังใช้งบตั้งแต่ ${whole(HOOK_MIN_SPEND)} บาท`}>
+          <span className={styles.stack}>{hooks.slice(0,3).map(ad=><Thumb key={adKey(ad)} url={ad.creative_url}/>)}</span>
+          <span className={styles.rowText}><span className={styles.rowTitle}>hook เริ่มล้า<span className={`${styles.count} ${styles.countWarn}`}>{whole(center.data.hook_total)} แอด</span></span>
+            <span className={styles.rowSub}>เช่น {hooks.slice(0,2).map(ad=>`${ad.ad_name} hook ${hookPct(ad.previous_hook)} → ${hookPct(ad.recent_hook)}`).join(' · ')}</span></span>
+          <span className={styles.chevron}><Icon name="chevron" size={15}/></span>
+        </Link>:null}
         {changes.map(item=>{const row=item.ad?rowByKey.get(reviewAdKey(item.ad)):undefined;
           return <button key={item.id} type="button" className={styles.row} onClick={()=>row?setSelected(row):undefined} disabled={!row}>
             <Thumb url={row?.creative_url}/>
             <span className={styles.rowText}><span className={styles.rowTitle}>{item.title}</span><span className={styles.rowSub}>{item.body}</span></span>
             <span className={styles.chevron}><Icon name="chevron" size={15}/></span>
           </button>;})}
-        {!center.loading&&!center.error&&!falling.length&&!changes.length?<div className={styles.row}><span className={styles.rowSub}>ช่วงนี้ยังไม่มีแอดที่เข้าเกณฑ์ต้องตรวจ</span></div>:null}
+        {!center.loading&&!center.error&&!moves&&!changes.length?<div className={styles.row}><span className={styles.rowSub}>ช่วงนี้ยังไม่มีแอดที่เข้าเกณฑ์ต้องตรวจ</span></div>:null}
       </div>
       <div className={styles.foot}><span className={styles.footNote}>ROAS และยอดซื้อเป็นตัวเลขที่ Meta รายงาน</span><Link className={styles.oursLink} href={`/owned-ads/performance${periodQuery}`}>ดูผลครีเอทีฟของเรา ›</Link></div>
     </>:!data&&!error?<p className={styles.loading} role="status">กำลังเปิดผลแอดเรา…</p>:null}

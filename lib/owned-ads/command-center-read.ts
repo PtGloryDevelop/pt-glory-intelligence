@@ -4,7 +4,7 @@ import { cachedOwnedImage } from "./media-cache.ts";
 import { ownedPerformancePeriod, parseOwnedPerformanceQuery, type OwnedPerformancePeriod } from "./performance.ts";
 import type { CommandAd, CommandCenterData } from "./command-center.ts";
 
-const LISTS = ["falling", "sales", "cheap_chats", "top_roas", "oldest"] as const;
+const LISTS = ["falling", "sales", "cheap_chats", "top_roas", "oldest", "rising", "hook_fading"] as const;
 export type CommandCenterResult = CommandCenterData & { period: OwnedPerformancePeriod };
 
 /** JWT/RLS read on the latest completed daily snapshot; same validation as the ads list. Null when daily data is not ready. */

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { AdImage } from "@/components/AdImage";
 import { Icon } from "@/components/shell/icons";
-import { FALL_MIN_SPEND, FALL_ROAS, RANK_MIN_SPEND, type CommandAd, type CommandCenterData } from "@/lib/owned-ads/command-center";
+import { FALL_MIN_SPEND, FALL_ROAS, HOOK_DROP, HOOK_MIN_IMPRESSIONS, HOOK_MIN_SPEND, RANK_MIN_SPEND, type CommandAd, type CommandCenterData } from "@/lib/owned-ads/command-center";
 import { closeRate, daysSinceCreated } from "@/lib/owned-ads/performance";
 import { MIN_CHATS } from "@/lib/dashboard/updates";
 import styles from "./quick-rankings.module.css";
@@ -45,6 +45,19 @@ export function QuickRankings({ data, scope, onPick }: { data: CommandCenterData
       <p className={styles.why}>เคย ROAS ≥ {FALL_ROAS} ช่วง {thai(data.windows.previous.from)}–{thai(data.windows.previous.to)} แต่ {thai(data.windows.recent.from)}–{thai(data.windows.recent.to)} ต่ำกว่า {FALL_ROAS} · งบทั้งสองช่วงตั้งแต่ {n(FALL_MIN_SPEND)} บาท · เรียงจากงบล่าสุดมากสุด</p>
       {data.falling.length ? <ol className={styles.twoCol}>{(open.falling ? data.falling : data.falling.slice(0, SHOWN * 2)).map((ad, index) => row(ad, index, <span className={styles.bad}>{n(ad.previous_roas, 2)} → {n(ad.recent_roas, 2)}<small>ROAS (Meta)</small></span>, `งบ 7 วันล่าสุด ${n(ad.recent_spend)} บาท`))}</ol>
         : <p className={styles.empty}>ไม่มีสื่อที่เริ่มตก{scope ? "ในตัวกรองนี้" : ""}</p>}
+    </section>
+    {/* The two other week-on-week moves, read from the same windows: worth more budget, and worth a new opening. */}
+    <section className={styles.panel} data-testid="cc-rising">
+      <div className={styles.head}><h2 className={styles.good}><Icon name="trend" />สื่อที่เริ่มดีขึ้น · {n(data.rising_total)} แอด</h2>{more("rising", data.rising.length)}</div>
+      <p className={styles.why}>ROAS ต่ำกว่า {FALL_ROAS} ช่วง {thai(data.windows.previous.from)}–{thai(data.windows.previous.to)} แต่ {thai(data.windows.recent.from)}–{thai(data.windows.recent.to)} ถึง {FALL_ROAS} ขึ้นไป · งบทั้งสองช่วงตั้งแต่ {n(FALL_MIN_SPEND)} บาท · ทางกลับของสื่อที่เริ่มตก</p>
+      {data.rising.length ? <ol className={styles.list}>{(open.rising ? data.rising : data.rising.slice(0, SHOWN)).map((ad, index) => row(ad, index, <span className={styles.good}>{n(ad.previous_roas, 2)} → {n(ad.recent_roas, 2)}<small>ROAS (Meta)</small></span>, `งบ 7 วันล่าสุด ${n(ad.recent_spend)} บาท`))}</ol>
+        : <p className={styles.empty}>ไม่มีสื่อที่เริ่มดีขึ้น{scope ? "ในตัวกรองนี้" : ""}</p>}
+    </section>
+    <section className={styles.panel} data-testid="cc-hook">
+      <div className={styles.head}><h2 className={styles.alert}><Icon name="alert" />hook เริ่มล้า · {n(data.hook_total)} แอด</h2>{more("hook", data.hook_fading.length)}</div>
+      <p className={styles.why}>Hook rate (ดูวิดีโอ ÷ การแสดงผล ตามที่ Meta รายงาน) ช่วง {thai(data.windows.recent.from)}–{thai(data.windows.recent.to)} ลดลงตั้งแต่ {n(HOOK_DROP * 100)}% จากสัปดาห์ก่อน · ยังใช้งบตั้งแต่ {n(HOOK_MIN_SPEND)} บาท · แสดงผลอย่างน้อย {n(HOOK_MIN_IMPRESSIONS)} ครั้งทั้งสองช่วง · ถึงเวลาลองช่วงเปิดใหม่</p>
+      {data.hook_fading.length ? <ol className={styles.list}>{(open.hook ? data.hook_fading : data.hook_fading.slice(0, SHOWN)).map((ad, index) => row(ad, index, <span className={styles.bad}>{pct(ad.previous_hook ?? null)} → {pct(ad.recent_hook ?? null)}<small>Hook rate</small></span>, `งบ 7 วันล่าสุด ${n(ad.recent_spend)} บาท`))}</ol>
+        : <p className={styles.empty}>ไม่มีวิดีโอที่ hook เริ่มล้า{scope ? "ในตัวกรองนี้" : ""}</p>}
     </section>
     {PANELS.map(panel => { const list = data[panel.id]; return <section key={panel.id} className={styles.panel} data-testid={`cc-${panel.id}`}>
       <div className={styles.head}><h2>{panel.title}</h2>{more(panel.id, list.length)}</div>

@@ -5,17 +5,24 @@ export const FALL_ROAS = 2.5;
 export const FALL_MIN_SPEND = 1000;
 /** ROAS and "ใช้มานาน" rankings count only ads that spent at least this much in the period. */
 export const RANK_MIN_SPEND = 1000;
+// Rising (0069) is the falling rule turned round: below FALL_ROAS before, FALL_ROAS or more now, FALL_MIN_SPEND in both weeks.
+/** Hook wearing out (0069): hook rate (video views ÷ impressions) down by this share or more, week on week. */
+export const HOOK_DROP = 0.2;
+export const HOOK_MIN_IMPRESSIONS = 5000;
+export const HOOK_MIN_SPEND = 1000;
 
 export type CommandAd = CompanyAd & {
   unit_ids: string[]; unit_names: string[]; roas: number | null; cost_per_conversation: number | null;
   video_id: string | null; created_time: string | null;
   previous_roas?: number; recent_roas?: number; recent_spend?: number; previous_spend?: number;
+  previous_hook?: number; recent_hook?: number; previous_impressions?: number; recent_impressions?: number;
 };
 export type CommandWindow = { from: string; to: string };
 export type CommandCenterData = {
   windows: { recent: CommandWindow; previous: CommandWindow };
   falling_counts: { unit_id: string | null; count: number }[]; falling_total: number;
   falling: CommandAd[]; sales: CommandAd[]; cheap_chats: CommandAd[]; top_roas: CommandAd[]; oldest: CommandAd[];
+  rising_total: number; rising: CommandAd[]; hook_total: number; hook_fading: CommandAd[];
 };
 
 type Week = { spend: number | null; value: number | null };
