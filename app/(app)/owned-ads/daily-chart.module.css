@@ -1,0 +1,48 @@
+/* Our ads day by day: one measure, an axis and a reference line, thin columns, two labels, the rest on hover and in the table. */
+.chart { display: flex; flex: 1; flex-direction: column; gap: 8px; min-height: 0; }
+.head { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; }
+.tabs { display: inline-flex; padding: 2px; border-radius: 8px; background: var(--row-hover); }
+.tabs button { min-height: 26px; padding: 1px 10px; border: 0; border-radius: 6px; background: transparent; color: var(--ink); font-size: var(--fs-label); white-space: nowrap; }
+.tabs button:hover:not(:disabled) { background: transparent; }
+.tabs button[aria-pressed="true"], .tabs button[aria-pressed="true"]:hover:not(:disabled) { background: var(--surface); font-weight: 600; box-shadow: 0 1px 2px rgba(27, 31, 39, 0.16); }
+.summary { color: var(--ink-soft); font-size: var(--fs-label); font-variant-numeric: tabular-nums; }
+
+/* The plot: a narrow axis column, then the area where gridlines, the reference line and the columns share one scale. */
+.plot { display: grid; grid-template-columns: 44px minmax(0, 1fr); flex: 1; min-height: 150px; }
+/* The reference line runs into a gutter of its own on the right, so its label never meets a bar label. */
+.area { --gutter: 56px; }
+.axis { position: relative; }
+.axis span { position: absolute; right: 8px; transform: translateY(50%); color: var(--muted); font-size: var(--fs-eyebrow); font-variant-numeric: tabular-nums; line-height: 1; white-space: nowrap; }
+.area { position: relative; margin-top: 18px; }
+.axis { margin-top: 18px; }
+.grid { position: absolute; left: 0; right: var(--gutter); height: 0; border-top: 1px solid var(--line); }
+.reference { position: absolute; left: 0; right: 0; height: 0; border-top: 1px solid var(--ink-soft); opacity: 0.55; z-index: 1; }
+.reference em { position: absolute; right: 0; width: calc(var(--gutter) - 6px); transform: translateY(-50%); display: grid; color: var(--ink-soft); font-size: var(--fs-eyebrow); font-style: normal; line-height: 1.2; text-align: left; }
+.reference em b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+.columns { position: absolute; inset: 0 var(--gutter) 0 0; display: flex; align-items: stretch; z-index: 2; }
+.column { position: relative; display: flex; flex: 1; align-items: flex-end; justify-content: center; min-width: 0; outline: none; cursor: default; }
+.column[data-active] { background: var(--row-hover); border-radius: 6px 6px 0 0; }
+.column:focus-visible { box-shadow: inset 0 0 0 2px var(--focus); border-radius: 6px; }
+.bar { position: relative; display: block; width: min(24px, 64%); border-radius: 4px 4px 0 0; background: var(--brand); }
+.bar[data-last] { background: var(--brand-ci); }
+.missing { display: block; width: min(24px, 64%); height: 100%; border-radius: 4px 4px 0 0; background: repeating-linear-gradient(135deg, var(--surface-sunken) 0 4px, transparent 4px 8px); }
+.cap { position: absolute; bottom: calc(100% + 3px); left: 50%; transform: translateX(-50%); color: var(--ink); font-size: var(--fs-eyebrow); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.tip { position: absolute; top: 0; z-index: 3; display: grid; gap: 1px; min-width: 120px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); box-shadow: var(--shadow); transform: translateX(-50%); pointer-events: none; font-size: var(--fs-eyebrow); color: var(--muted); }
+.tip[data-edge="start"] { transform: translateX(-16px); }
+.tip[data-edge="end"] { transform: translateX(calc(-100% + 16px)); }
+.tip strong { color: var(--ink); font-size: var(--fs-label); font-variant-numeric: tabular-nums; }
+
+.xaxis { display: flex; margin: 0 56px 0 44px; }
+.xaxis span { flex: 1; min-width: 0; color: var(--muted); font-size: var(--fs-eyebrow); text-align: center; white-space: nowrap; }
+
+.table summary { width: max-content; color: var(--muted); font-size: var(--fs-eyebrow); cursor: pointer; }
+.table summary:hover { color: var(--ink); }
+.table table { width: 100%; margin-top: 6px; border-collapse: collapse; font-size: var(--fs-label); font-variant-numeric: tabular-nums; }
+.table th, .table td { padding: 4px 8px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+.table th { background: transparent; color: var(--muted); font-size: var(--fs-eyebrow); font-weight: 600; letter-spacing: 0; text-transform: none; }
+.table th:first-child, .table td:first-child { text-align: left; }
+/* The latest day's label grows leftwards from its bar, away from the reference label in the gutter. */
+.bar[data-last] .cap { left: auto; right: 0; transform: none; }
+/* Phones: columns are too narrow for two labels side by side; the latest keeps its label, the peak lives in the tooltip and table. */
+@media (max-width: 640px) { .bar:not([data-last]) .cap { display: none; } }

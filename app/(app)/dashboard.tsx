@@ -10,7 +10,6 @@ import {PageHeader} from '@/components/shell/PageHeader';
 import {Icon} from '@/components/shell/icons';
 import {Tile} from '@/components/shell/Tile';
 import type {DashboardData} from '@/lib/dashboard/read';
-import type {DailySpend} from '@/lib/dashboard/daily-read';
 import type {OwnedPerformanceRow,OwnedPerformanceSummary} from '@/lib/owned-ads/performance';
 import {FALL_MIN_SPEND,FALL_ROAS,HOOK_DROP,HOOK_MIN_SPEND,type CommandAd,type CommandCenterData} from '@/lib/owned-ads/command-center';
 import type {UnitSummary} from '@/lib/owned-ads/unit-summary';
@@ -24,6 +23,7 @@ import {REVIEW_WINDOWS,type ReviewWindow} from '@/lib/dashboard/review-model';
 import {isOwnedPerformanceDate} from '@/lib/owned-ads/performance';
 import {CompanyDetail} from './owned-ads/company-library';
 import {useJson} from './owned-ads/use-json';
+import {DailyChart} from './owned-ads/daily-chart';
 import styles from './dashboard.module.css';
 
 // Every window ends on the latest finished day with data; "custom" picks two dates inside what was imported.
@@ -51,19 +51,6 @@ function Stat({label,value,unit,children}:{label:string;value:string;unit?:strin
 function Thumb({url}:{url:string|null|undefined}){
   // No picture in the report reads as an image icon, not as an empty tinted box.
   return <span className={styles.thumb} data-empty={url?undefined:true}>{url?<AdImage src={url} alt="" sizes="48px" referrerPolicy="no-referrer"/>:<Icon name="image" size={18}/>}</span>;
-}
-
-/** Daily spend from the Ads Management reports; a day without complete figures is drawn as missing, never as zero. */
-function DailyBars({days}:{days:DailySpend}){
-  const max=Math.max(0,...days.map(item=>item.spend??0));
-  const every=days.length>20?5:days.length>10?2:1;
-  const spoken=days.map(item=>`${thaiDate(item.date,false)} ${item.spend==null?'ไม่มีข้อมูลครบ':`${whole(item.spend)} บาท`}`).join(', ');
-  return <div className={styles.bars} role="img" aria-label={`ค่าแอดรายวัน: ${spoken}`}>
-    {days.map((item,index)=><div key={item.date} className={styles.barCol} title={`${thaiDate(item.date)} · ${item.spend==null?'ข้อมูลวันนี้ไม่ครบ':`${whole(item.spend)} บาท`}`}>
-      <span className={styles.barTrack}>{item.spend==null?<span className={styles.barMissing}/>:<span className={styles.bar} data-last={index===days.length-1||undefined} style={{height:`${max?Math.max(3,item.spend/max*100):3}%`}}/>}</span>
-      <span className={styles.barLabel}>{index%every===0||index===days.length-1?(index===0?thaiDate(item.date,false):String(day(item.date).getDate())):' '}</span>
-    </div>)}
-  </div>;
 }
 
 export function Dashboard({canAnalyze,home='overview'}:{canAnalyze:boolean;home?:HomeChoice}){
@@ -219,9 +206,9 @@ export function Dashboard({canAnalyze,home='overview'}:{canAnalyze:boolean;home?
       </div>
       {previous?<p className={styles.previous}>ช่วงก่อนหน้า: ค่าแอด {whole(previous.spend)} · ROAS {num(previous.roas)} · ทัก {num(previous.conversations,0)} · ค่าทัก {num(previous.cost_per_conversation)}</p>:null}
       {data?.daily?.length?<div className={`${styles.section} ${styles.chart}`}>
-        <div className={styles.sectionHead}><span>ค่าแอดรายวัน (บาท)</span><span className={styles.sectionNote}>จากรายงาน Ads Management</span></div>
-        <DailyBars days={data.daily}/>
-      </div>:data?.errors.includes('daily')?<p className={styles.sectionNote}>กราฟค่าแอดรายวันเปิดไม่ได้ในรอบนี้</p>:null}
+        <div className={styles.sectionHead}><span>รายวัน</span><span className={styles.sectionNote}>จากรายงาน Ads Management</span></div>
+        <DailyChart days={data.daily}/>
+      </div>:data?.errors.includes('daily')?<p className={styles.sectionNote}>กราฟรายวันเปิดไม่ได้ในรอบนี้</p>:null}
       <div className={styles.sectionHead} data-flush>สิ่งที่เปลี่ยน</div>
       <div className={styles.rows}>
         {center.error?<div className={styles.row}><span className={styles.rowText}><span className={styles.rowTitle}>เปิดรายการสื่อที่เริ่มตกไม่สำเร็จ</span></span><button type="button" className={styles.mini} onClick={()=>setRetry(value=>value+1)}>ลองใหม่</button></div>

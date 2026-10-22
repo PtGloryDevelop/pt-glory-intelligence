@@ -50,17 +50,8 @@
 .sectionNote { margin: 0; color: var(--muted); font-size: var(--fs-label); font-weight: 400; }
 .box > .sectionNote { padding: 0 18px 12px; }
 
-/* Daily spend: one bar per day, the latest in the CI pink; a day without complete figures is hatched, not zero. */
-.bars { display: flex; align-items: stretch; gap: 6px; height: 108px; }
-/* When the rivals' box beside it runs taller, the chart takes the extra height rather than leaving a gap above the footer. */
+/* The daily chart (owned-ads/daily-chart) takes whatever height the rivals' box adds beside it. */
 .chart { display: flex; flex: 1; flex-direction: column; }
-.chart .bars { flex: 1; height: auto; min-height: 108px; }
-.barCol { display: flex; flex: 1; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
-.barTrack { display: flex; flex: 1; align-items: flex-end; width: 100%; }
-.bar { display: block; width: 100%; border-radius: 4px 4px 2px 2px; background: var(--brand); }
-.bar[data-last] { background: var(--brand-ci); }
-.barMissing { display: block; width: 100%; height: 100%; border-radius: 4px; background: repeating-linear-gradient(135deg, var(--surface-sunken) 0 4px, transparent 4px 8px); }
-.barLabel { color: var(--muted); font-size: var(--fs-eyebrow); line-height: 1.3; white-space: nowrap; }
 
 /* A source-list row: thumbnail or tile, two lines of text, and where it goes. */
 .rows { display: grid; }
