@@ -1,6 +1,6 @@
 ---
 name: ptg-ui
-description: Use for PT Glory frontend/UI work to enforce the approved cream-gold layout, real-data-only metrics, coverage rules, multi-value chart correctness, and AI evidence UX.
+description: Use for PT Glory frontend/UI work to enforce the approved warm off-white + CI pink layout, real-data-only metrics, coverage rules, multi-value chart correctness, and AI evidence UX.
 ---
 
 # PT Glory UI Implementation
@@ -10,8 +10,9 @@ Use when building or revising PT Glory frontend screens.
 ## Visual Direction
 
 - Thai-first
-- light warm cream/off-white
-- gold accent
+- warm off-white canvas with white cards (tokens in `app/globals.css`)
+- PT Glory CI pink accent: `#D34B82` for logo/highlights/charts, `#C0396F` for text, links and primary buttons
+- color carries meaning, not decoration: on the overview, pink marks our own ads and results
 - dark text
 - left sidebar
 - compact context bar

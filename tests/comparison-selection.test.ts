@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { comparisonDraftKey, comparisonSelectionKey, comparisonReturnHref, mergeComparisonSelection, parseComparisonDraft, parseComparisonSelection } from '../app/(app)/compare/ads/selection.ts';
+import { comparisonSelectionKey, comparisonReturnHref, mergeComparisonSelection, parseComparisonSelection } from '../app/(app)/compare/ads/selection.ts';
 
 test('comparison returns preserve library filters and reject external or unrelated destinations', () => {
   for (const path of ['/', '/market-overview', '/owned-ads/performance?period=7d&unit=example&page=2', '/?period=7d&unit=example&page=2', '/command-center?sort=roas&period=14d', '/competitors?search=ผงผัก&active=active&offset=24', '/owned-ads?spend=all&status=PAUSED&page=2']) {
@@ -21,26 +21,36 @@ test('comparison links validate identifiers and replace only their own side', ()
   assert.equal(parseComparisonSelection({ account: ['act_123'], owned: '456' }).owned, '');
 });
 
-test('comparison drafts are isolated by user and exact pair, including the observed dataset', () => {
+test('comparison selections are stored per user', () => {
   const user = '22222222-2222-4222-8222-222222222222';
-  const selection = parseComparisonSelection({ account: 'act_123', owned: '456', dataset: '99cad727-2ecf-4cb7-b572-8fbcd9f4c7aa', rival: '789' });
-  const key = comparisonDraftKey(user, selection);
-  assert.ok(key);
-  assert.notEqual(key, comparisonDraftKey('33333333-3333-4333-8333-333333333333', selection));
-  assert.notEqual(key, comparisonDraftKey(user, { ...selection, owned: '654' }));
-  assert.notEqual(key, comparisonDraftKey(user, { ...selection, account: 'act_321' }));
-  assert.notEqual(key, comparisonDraftKey(user, { ...selection, rival: '987' }));
-  assert.notEqual(key, comparisonDraftKey(user, { ...selection, dataset: '5755eb87-b46a-41f9-bb0c-90cf4b558440' }));
-  assert.equal(comparisonDraftKey(user, { ...selection, rival: '' }), null);
   assert.equal(comparisonSelectionKey(''), null);
   assert.notEqual(comparisonSelectionKey(user), comparisonSelectionKey('33333333-3333-4333-8333-333333333333'));
 });
 
-test('stored draft reads only bounded team-entered fields and never imports ad metrics', () => {
-  const draft = parseComparisonDraft({ product: 'สินค้า', hypothesis: 'เหตุผล', success: 'เกณฑ์', ourOffer: 'ข้อเสนอเรา', theirOffer: 'ข้อเสนอเขา', decision: 'ทดลองข้อเสนอใหม่', spend: 500, roas: 9, financialPayload: { revenue: 1000 } });
-  assert.deepEqual(draft, { product: 'สินค้า', ourOffer: 'ข้อเสนอเรา', theirOffer: 'ข้อเสนอเขา', decision: 'ทดลองข้อเสนอใหม่', hypothesis: 'เหตุผล', success: 'เกณฑ์' });
-  assert.equal(parseComparisonDraft({ decision: 'เพิ่มงบทันที', hypothesis: 'x'.repeat(5000), product: 'x'.repeat(300) }).decision, '');
-  assert.equal(parseComparisonDraft({ hypothesis: 'x'.repeat(5000) }).hypothesis.length, 4000);
-  assert.equal(parseComparisonDraft({ product: 'x'.repeat(300) }).product.length, 200);
-  assert.equal(parseComparisonDraft(null).hypothesis, '');
+test('our ad has one name everywhere, and a catalog template is never printed as copy', async () => {
+  const { ownedName, rivalCopy } = await import('../app/(app)/compare/ads/selection.ts');
+  assert.equal(ownedName({ ad_name: 'U11', title: null, campaign_name: 'Test Gen Code U11' }), 'Test Gen Code U11');
+  assert.equal(ownedName({ ad_name: 'VDO 58', title: 'อื่น', campaign_name: null }), 'VDO 58');
+  assert.equal(rivalCopy('{{product.brand}}').template, true);
+  assert.equal(rivalCopy('ลด 40% {{product.name}} วันนี้วันเดียว ส่งฟรีทั่วไทย').template, false);
+  assert.equal(rivalCopy(null).text, 'ไม่มีข้อความที่บันทึกไว้');
+});
+
+test('codes on the compare screen read in Thai, and unknown codes are kept', async () => {
+  const { ctaLabel, formatLabel, ownedStatus, platformLabel } = await import('../lib/ad-labels.ts');
+  assert.equal(ctaLabel('SEND MESSAGE', null), 'ส่งข้อความ');
+  assert.equal(ctaLabel(null, 'LEARN_MORE'), 'ดูเพิ่มเติม');
+  assert.equal(ctaLabel('ทักเลย', 'SEND_MESSAGE'), 'ทักเลย');
+  assert.equal(ctaLabel(null, null), 'ไม่มีปุ่ม');
+  assert.equal(ownedStatus('ADSET_PAUSED'), 'หยุดชุดแอด');
+  assert.equal(formatLabel('MULTI_IMAGES'), 'ภาพหลายรูป');
+  assert.equal(formatLabel('SOMETHING_NEW'), 'SOMETHING_NEW');
+  assert.equal(platformLabel(['FACEBOOK', 'AUDIENCE_NETWORK']), 'Facebook · Audience Network');
+});
+
+test('Ad Library codes AI repeats are shown in Thai', async () => {
+  const { thaiCodes } = await import('../lib/ad-labels.ts');
+  assert.equal(thaiCodes('IMAGE รูปสินค้า ขวดและกล่อง'), 'ภาพ รูปสินค้า ขวดและกล่อง');
+  assert.equal(thaiCodes('MULTI_IMAGES และ VIDEO'), 'ภาพหลายรูป และ วิดีโอ');
+  assert.equal(thaiCodes('ภาพนิ่ง ไม่มีรหัส'), 'ภาพนิ่ง ไม่มีรหัส');
 });

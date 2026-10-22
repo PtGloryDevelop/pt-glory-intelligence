@@ -9,6 +9,7 @@ import { thaiDate, thaiDateTime } from "@/lib/format/date";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ErrorState } from "@/components/states/ErrorState";
 import { LoadingSkeleton } from "@/components/states/LoadingSkeleton";
+import { ctaLabel, platformLabel } from "@/lib/ad-labels";
 import styles from "./AdDrawer.module.css";
 
 /**
@@ -42,8 +43,10 @@ type History = {
   publisher_platform: string[] | null; cta_type: string | null; collation_count: number | null;
 };
 
-export function AdDrawer({ adArchiveId, datasetId, onClose, compareHref, canAnalyze=false }: {
+export function AdDrawer({ adArchiveId, datasetId, onClose, compareHref, canAnalyze=false, docked=false }: {
   adArchiveId: string; datasetId: string | null; onClose: () => void; compareHref?:string; canAnalyze?:boolean;
+  /** UI v3: an inspector docked beside the grid instead of a modal over it (wide screens only). */
+  docked?: boolean;
 }) {
   const [state, setState] = useState<
     { status: "loading" } | { status: "missing" } | { status: "ready"; detail: Detail; history: History[] }
@@ -67,6 +70,8 @@ export function AdDrawer({ adArchiveId, datasetId, onClose, compareHref, canAnal
   }, [adArchiveId, datasetId]);
 
   useEffect(() => {
+    // Docked, the panel is part of the page: no modal, no scroll lock, focus stays where the reader clicked.
+    if(docked)return;
     const element=drawerRef.current;
     const opener=document.activeElement as HTMLElement|null;
     const overflow=document.body.style.overflow;
@@ -76,7 +81,7 @@ export function AdDrawer({ adArchiveId, datasetId, onClose, compareHref, canAnal
       element?.close();document.body.style.overflow=overflow;
       if(opener?.isConnected)opener.focus({preventScroll:true});
     };
-  }, []);
+  }, [docked]);
 
   const detail = state.status === "ready" ? state.detail : null;
   const title = detail?.page_name ?? "รายละเอียดโฆษณา";
@@ -91,17 +96,8 @@ export function AdDrawer({ adArchiveId, datasetId, onClose, compareHref, canAnal
   },[canAnalyze,compareHref,datasetId,detail?.observed_at,adArchiveId]);
   const comparison=compareHref??(canAnalyze&&datasetId?`/compare/ads?${new URLSearchParams({dataset:datasetId,rival:adArchiveId})}`:catalogLink);
 
-  return (
+  const inner = (
     <>
-      <dialog
-        ref={drawerRef}
-        aria-modal="true"
-        aria-label={`รายละเอียดโฆษณา ${title}`}
-        data-testid="ad-drawer"
-        className={styles.drawer}
-        onCancel={event=>{event.preventDefault();onClose();}}
-        onClick={event=>{if(event.target===event.currentTarget)onClose();}}
-      >
         <header className={styles.header}>
           <div className={styles.headerText}>
             <div className={styles.headerTop}>
@@ -140,13 +136,26 @@ export function AdDrawer({ adArchiveId, datasetId, onClose, compareHref, canAnal
           {state.status === "ready" ? <Body detail={state.detail} history={state.history} /> : null}
         </div>
         {comparison&&state.status==='ready'?<footer className={styles.actions}><span>เลือกแอดนี้ แล้วหาแอดของเราที่ขายสินค้าคล้ายกันมาเทียบ</span><Link href={comparison}>เทียบกับแอดของเรา →</Link></footer>:null}
-      </dialog>
     </>
+  );
+  if (docked) return <aside className={`${styles.drawer} ${styles.docked}`} aria-label={`รายละเอียดโฆษณา ${title}`} data-testid="ad-inspector">{inner}</aside>;
+  return (
+    <dialog
+      ref={drawerRef}
+      aria-modal="true"
+      aria-label={`รายละเอียดโฆษณา ${title}`}
+      data-testid="ad-drawer"
+      className={styles.drawer}
+      onCancel={event=>{event.preventDefault();onClose();}}
+      onClick={event=>{if(event.target===event.currentTarget)onClose();}}
+    >
+      {inner}
+    </dialog>
   );
 }
 
 function Body({ detail, history }: { detail: Detail; history: History[] }) {
-  const platforms = detail.publisher_platform?.length ? detail.publisher_platform.join(" · ") : "—";
+  const platforms = platformLabel(detail.publisher_platform);
   const categories = detail.page_categories?.length ? detail.page_categories.join(" · ") : "—";
 
   return (
@@ -174,7 +183,7 @@ function Body({ detail, history }: { detail: Detail; history: History[] }) {
         <section className={styles.section}>
           <h3 className={styles.sectionTitle}>ปุ่มและปลายทาง</h3>
           <dl className={styles.facts}>
-            <Fact label="CTA" value={detail.cta_type} />
+            <Fact label="ประเภทปุ่ม" value={detail.cta_type ? ctaLabel(null, detail.cta_type) : null} />
             <Fact label="ข้อความปุ่ม" value={detail.cta_text} />
             {detail.link_description ? <Fact label="คำอธิบายลิงก์" value={detail.link_description} /> : null}
           </dl>
@@ -198,7 +207,7 @@ function Body({ detail, history }: { detail: Detail; history: History[] }) {
           <Fact label="แพลตฟอร์ม" value={platforms} testId="drawer-platform" />
           <Fact
             label="สถานะ"
-            value={detail.is_active === null ? null : detail.is_active ? "Active" : "Inactive"}
+            value={detail.is_active === null ? null : detail.is_active ? "กำลังแสดง" : "ไม่แสดงแล้ว"}
             testId="drawer-active"
           />
           <Fact label="เริ่มแสดง" value={thaiDate(detail.start_date)} />
@@ -418,7 +427,7 @@ function ObservationHistory({ history, currentObservedAt }: {
             </div>
             <p className={styles.observationMeta}>
               <span>{row.display_format ?? "—"}</span>
-              <span>{row.cta_type ?? "—"}</span>
+              <span>{row.cta_type ? ctaLabel(null, row.cta_type) : "—"}</span>
               {row.collation_count ? <span>ใช้ซ้ำ {row.collation_count}</span> : null}
               <span title={row.collection_run_id}>{row.collection_method}</span>
             </p>

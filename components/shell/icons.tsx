@@ -26,7 +26,7 @@ export type IconName =
   | "home" | "search" | "folder" | "layers" | "grid" | "building" | "image"
   | "chart" | "swords" | "sparkle" | "target" | "tag" | "trend" | "compare"
   | "bookmark" | "upload" | "history" | "shield" | "brain" | "unlink" | "settings"
-  | "download" | "wallet";
+  | "download" | "wallet" | "alert" | "info" | "collect" | "sidebar" | "signOut" | "chevron";
 
 const PATHS: Record<IconName, React.ReactNode> = {
   home: <><path d="M4 10.5 12 4l8 6.5" /><path d="M6 10v9h12v-9" /></>,
@@ -55,8 +55,18 @@ const PATHS: Record<IconName, React.ReactNode> = {
   brain: <><path d="M9.5 5A2.5 2.5 0 0 0 7 7.5 2.5 2.5 0 0 0 5.5 12 2.5 2.5 0 0 0 7 16.5 2.5 2.5 0 0 0 9.5 19H12V5z" /><path d="M14.5 5A2.5 2.5 0 0 1 17 7.5 2.5 2.5 0 0 1 18.5 12 2.5 2.5 0 0 1 17 16.5 2.5 2.5 0 0 1 14.5 19H12" /></>,
   unlink: <><path d="M9 15 5.5 18.5" /><path d="M15 9 18.5 5.5" /><path d="M10 7.5 12 5.5a3.5 3.5 0 0 1 5 5l-2 2" /><path d="M14 16.5 12 18.5a3.5 3.5 0 0 1-5-5l2-2" /></>,
   settings: <><circle cx="12" cy="12" r="3" /><path d="M12 3.5v2M12 18.5v2M4.9 7.8l1.7 1M17.4 15.2l1.7 1M4.9 16.2l1.7-1M17.4 8.8l1.7-1" /></>,
+  // Something needs a look (falling ads): drawn in the set's stroke rather than the ⚠ glyph.
+  alert: <><path d="M12 4.5 3.5 19h17z" /><path d="M12 10v4" /><path d="M12 16.6v.4" /></>,
+  // Where a number comes from and how to read it.
+  info: <><circle cx="12" cy="12" r="8" /><path d="M12 11v5" /><path d="M12 8v.4" /></>,
+  // Collecting new rival ads: a search that adds.
+  collect: <><circle cx="11" cy="11" r="6" /><path d="m16 16 4 4" /><path d="M11 8.5v5M8.5 11h5" /></>,
+  // The window's sidebar toggle.
+  sidebar: <><rect x="3.5" y="5" width="17" height="14" rx="2.5" /><path d="M9.5 5v14" /></>,
+  signOut: <><path d="M14 5h4a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-4" /><path d="M10 8l-4 4 4 4" /><path d="M6 12h9" /></>,
+  chevron: <path d="m9 6 6 6-6 6" />,
 };
 
-export function Icon({ name }: { name: IconName }) {
-  return <svg {...base}>{PATHS[name]}</svg>;
+export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
+  return <svg {...base} width={size} height={size}>{PATHS[name]}</svg>;
 }

@@ -30,7 +30,7 @@ const PAGE_SIZE = 30;
 
 /** Unknown is a state of its own, so it is always on the menu. */
 const ACTIVE_OPTIONS: [string, string][] = [
-  ["active", "Active"], ["inactive", "Inactive"], ["unknown", "ไม่ทราบ"],
+  ["active", "กำลังแสดง"], ["inactive", "ไม่แสดงแล้ว"], ["unknown", "ไม่ทราบ"],
 ];
 
 /** `—` is the honest rendering of a field the collector never provided. */
@@ -316,11 +316,12 @@ export function Explorer({ datasetId, coverage = [], preserveDatasetInUrl = fals
       ) : null}
 
       {!error && !loading && rows.length && view === "grid" ? (
-        <div className={styles.grid} data-testid="ads-grid">
+        <div className={styles.grid} data-testid="ads-grid" data-tiles={simple || undefined}>
           {rows.map((row) => (
             <div key={row.ad_archive_id} className={styles.selectableCard}>
               {compareControl(row)}
-              <AdCard ad={row} onOpen={() => setSelected(row.ad_archive_id)} />
+              {/* From ส่องแอด (simple), the round reads as the same Finder gallery as the whole library. */}
+              <AdCard ad={row} tile={simple} selected={simple && selected === row.ad_archive_id} onOpen={() => setSelected(row.ad_archive_id)} />
             </div>
           ))}
         </div>

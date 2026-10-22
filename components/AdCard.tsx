@@ -5,6 +5,7 @@ import { type Media } from "@/lib/media";
 import { MEDIA_STATE_MESSAGE, resolveMedia } from "@/lib/media/resolve";
 import { formatIdentity } from "@/lib/media/format";
 import { thaiDate } from "@/lib/format/date";
+import { ctaLabel, platformLabel } from "@/lib/ad-labels";
 import { StatusBadge } from "./StatusBadge";
 import { AdImage } from "./AdImage";
 import styles from "./AdCard.module.css";
@@ -38,9 +39,30 @@ export type AdCardData = {
   archive_status?: string | null;
 };
 
-export function AdCard({ ad, onOpen, compact = false }: { ad: AdCardData; onOpen: () => void; compact?: boolean }) {
+export function AdCard({ ad, onOpen, compact = false, tile = false, selected = false }: {
+  ad: AdCardData; onOpen: () => void; compact?: boolean;
+  /** A Finder-style gallery tile: the creative, the page and its status; the rest lives in the inspector. */
+  tile?: boolean;
+  /** The tile whose details the inspector shows. */
+  selected?: boolean;
+}) {
   const identity = formatIdentity(ad.display_format);
   const reused = ad.collation_count && ad.collation_count > 1 ? ad.collation_count : null;
+
+  if (tile) return (
+    <article className={styles.tile} data-selected={selected || undefined} data-testid={`ad-card-${ad.ad_archive_id}`}>
+      <button type="button" className={styles.tileHit} data-testid={`open-ad-${ad.ad_archive_id}`} onClick={onOpen} aria-pressed={selected}
+        aria-label={`ดูรายละเอียดโฆษณาของ ${ad.page_name ?? "เพจที่ไม่ทราบชื่อ"}`}>
+        <span className={styles.tileFrame}>
+          <Preview ad={ad} />
+          {identity ? <span className={styles.tileFormat} data-testid={`card-format-${ad.ad_archive_id}`}>{identity.isVideo ? <VideoGlyph /> : null}{identity.label}</span> : null}
+          {reused ? <span className={styles.tileReuse} data-testid={`card-reuse-${ad.ad_archive_id}`}>ใช้ซ้ำ {reused}</span> : null}
+        </span>
+        <span className={styles.tileName}><span>{ad.page_name ?? "ไม่ทราบชื่อเพจ"}</span></span>
+        <span className={styles.tileMeta}><StatusBadge isActive={ad.is_active} /><span>เริ่ม {ad.ad_age_days.toLocaleString("th-TH")} วันก่อน</span></span>
+      </button>
+    </article>
+  );
 
   return (
     <article className={`${styles.card} ${compact ? styles.compact : ""}`} data-testid={`ad-card-${ad.ad_archive_id}`}>
@@ -86,9 +108,9 @@ export function AdCard({ ad, onOpen, compact = false }: { ad: AdCardData; onOpen
           </p>
 
           <div className={styles.meta}>
-            {ad.cta_type ? <span className={styles.cta}>{ad.cta_type}</span> : null}
+            {ad.cta_type ? <span className={styles.cta}>{ctaLabel(null, ad.cta_type)}</span> : null}
             <span className={styles.platforms}>
-              {ad.publisher_platform?.length ? ad.publisher_platform.join(" · ") : "—"}
+              {platformLabel(ad.publisher_platform)}
             </span>
           </div>
 

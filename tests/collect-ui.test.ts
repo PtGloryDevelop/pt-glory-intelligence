@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { countryLabel, suggestedDatasetName, FORM_MAX_RECORDS } from "../lib/collect/form.ts";
 import { ABSOLUTE_MAX_RECORDS } from "../lib/collect/limits.ts";
 import { createFakeProvider, fakeProviderEnabled } from "../lib/collect/fake-provider.ts";
-import { visibleNav } from "../components/shell/nav.ts";
+import { visibleAdminTools, visibleNav } from "../components/shell/nav.ts";
 
 /**
  * C15 — the collection screens, without a browser.
@@ -61,9 +61,11 @@ test("the collection screens speak only to the product's own API", () => {
     assert.doesNotMatch(code, /db\/privileged|withTransaction/, name);
   }
 
-  // The form posts to the one admission entrance; the progress view only reads.
+  // The form posts to the one admission entrance, after creating a new category
+  // name through the categories API when needed; the progress view only reads.
   assert.match(collectClient, /fetch\("\/api\/collections"/);
-  assert.equal(collectClient.match(/method: "POST"/g)?.length, 1);
+  assert.deepEqual([...collectClient.matchAll(/fetch\("([^"]+)"/g)].map((found) => found[1]).sort(), ["/api/categories", "/api/collections"]);
+  assert.equal(collectClient.match(/method: "POST"/g)?.length, 2);
   assert.match(progressClient, /fetch\(`\/api\/collections\/\$\{collection\.id\}`/);
   assert.doesNotMatch(progressClient, /method: "POST"/);
   // And never the machine's own sweep endpoint.
@@ -138,13 +140,14 @@ test("the admin page offers no way to start a run again", () => {
 
 test("the menu leads to pages that exist", () => {
   const analyst = visibleNav("analyst").flatMap((section) => section.items);
-  const admin = visibleNav("admin").flatMap((section) => section.items);
-  assert.equal(analyst.find((item) => item.label === "เก็บข้อมูลใหม่")?.href, "/collect");
-  assert.equal(admin.find((item) => item.label === "ค่าเก็บข้อมูล")?.href, "/collector");
-  assert.equal(admin.find((item) => item.label === "นำเข้าไฟล์ (กู้คืนระบบ)")?.href, "/import");
+  // UI v3: the admin's collector and recovery pages are on the settings page.
+  const admin = visibleAdminTools("admin");
+  assert.equal(analyst.find((item) => item.label === "ค้นแอดคู่แข่งใหม่")?.href, "/collect");
+  assert.equal(admin.find((item) => item.label === "การเชื่อมต่อและงบ")?.href, "/collector");
+  assert.equal(admin.find((item) => item.label === "กู้คืนจากไฟล์")?.href, "/import");
   // A viewer still receives none of them.
   const viewer = visibleNav("viewer").flatMap((section) => section.items).map((item) => item.label);
-  for (const label of ["เก็บข้อมูลใหม่", "ค่าเก็บข้อมูล", "นำเข้าไฟล์ (กู้คืนระบบ)"]) {
+  for (const label of ["ค้นแอดคู่แข่งใหม่", "การเชื่อมต่อและงบ", "กู้คืนจากไฟล์"]) {
     assert.ok(!viewer.includes(label), label);
   }
 });

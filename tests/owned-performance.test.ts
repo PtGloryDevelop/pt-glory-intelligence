@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseOwnedPerformanceQuery, ownedPerformancePeriod, previousOwnedPerformancePeriod, OwnedPerformanceQueryError } from "../lib/owned-ads/performance.ts";
+import { parseOwnedPerformanceQuery, ownedPerformancePeriod, previousOwnedPerformancePeriod, OwnedPerformanceQueryError, closeRate, daysSinceCreated } from "../lib/owned-ads/performance.ts";
 
 test("performance filters validate boundaries and calendar periods preserve real Bangkok dates", () => {
   const query = (input = "") => parseOwnedPerformanceQuery(new URLSearchParams(input));
@@ -25,4 +25,50 @@ test("performance filters validate boundaries and calendar periods preserve real
     assert.throws(() => query(input), OwnedPerformanceQueryError, input);
   }
   assert.throws(() => previousOwnedPerformancePeriod({ from: "0001-01-01", to: "0001-01-01" }), OwnedPerformanceQueryError);
+});
+
+test("sort direction defaults per metric and only a flipped direction reaches the RPC suffixed", async () => {
+  const { ownedSortArg } = await import("../lib/owned-ads/performance.ts");
+  const parse = (input: string) => parseOwnedPerformanceQuery(new URLSearchParams(input));
+  assert.equal(parse("").dir, "desc");
+  assert.equal(parse("sort=cost_per_conversation").dir, "asc");
+  assert.equal(ownedSortArg(parse("sort=spend")), "spend");
+  assert.equal(ownedSortArg(parse("sort=spend&dir=asc")), "spend:asc");
+  assert.equal(ownedSortArg(parse("sort=cost_per_conversation&dir=desc")), "cost_per_conversation:desc");
+  for (const bad of ["dir=up", "dir=asc&dir=desc"]) assert.throws(() => parse(bad), OwnedPerformanceQueryError);
+});
+
+test("close rate is Meta-reported orders over chats and hides thin samples", () => {
+  assert.equal(closeRate({ purchases: 13, conversations: 40 }, 30), 13 / 40);
+  assert.equal(closeRate({ purchases: 2, conversations: 2 }, 30), null, "two chats and two orders must not read as 100%");
+  assert.equal(closeRate({ purchases: null, conversations: 100 }, 30), null);
+  assert.equal(closeRate({ purchases: 5, conversations: null }, 30), null);
+  assert.equal(closeRate({ purchases: 0, conversations: 30 }, 30), 0);
+});
+
+test("days since creation count Bangkok calendar days", () => {
+  const now = new Date("2026-10-07T03:00:00Z"); // 10:00 on 7 Oct in Bangkok
+  assert.equal(daysSinceCreated("2026-10-06T18:30:00+00:00", now), 0); // 01:30 on 7 Oct in Bangkok
+  assert.equal(daysSinceCreated("2026-10-06T16:00:00+00:00", now), 1); // 23:00 on 6 Oct in Bangkok
+  assert.equal(daysSinceCreated("2024-11-18T09:41:15+00:00", now), 688);
+  assert.equal(daysSinceCreated(null, now), null);
+  assert.equal(daysSinceCreated("not a date", now), null);
+});
+
+test("close rate is a sort that opens highest first", async () => {
+  const { ownedSortArg } = await import("../lib/owned-ads/performance.ts");
+  const parsed = parseOwnedPerformanceQuery(new URLSearchParams("sort=close_rate"));
+  assert.equal(parsed.dir, "desc");
+  assert.equal(ownedSortArg(parsed), "close_rate");
+  assert.equal(ownedSortArg(parseOwnedPerformanceQuery(new URLSearchParams("sort=close_rate&dir=asc"))), "close_rate:asc");
+});
+
+test("creative grouping is opt-in on the API and its keys are Meta ids or one ad", async () => {
+  const { parseOwnedPerformanceQuery, OWNED_MEDIA_KEY } = await import("../lib/owned-ads/performance.ts");
+  assert.equal(parseOwnedPerformanceQuery(new URLSearchParams()).media, false, "per ad unless asked: the compare page reads ads");
+  assert.equal(parseOwnedPerformanceQuery(new URLSearchParams("media=1")).media, true);
+  assert.throws(() => parseOwnedPerformanceQuery(new URLSearchParams("media=yes")));
+  assert.throws(() => parseOwnedPerformanceQuery(new URLSearchParams("media=1&media=0")));
+  for (const key of ["v:3221200154747773", "c:1023234730733727", "a:act_747201513533457:120250517546710673"]) assert.ok(OWNED_MEDIA_KEY.test(key), key);
+  for (const key of ["v:", "x:1", "v:1;drop", "a:act_1", "a:act_1:2:3"]) assert.ok(!OWNED_MEDIA_KEY.test(key), key);
 });

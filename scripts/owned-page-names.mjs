@@ -4,13 +4,14 @@ import {resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {createClient} from '@supabase/supabase-js';
 import {ownedPageName} from '../lib/owned-ads/page-names.ts';
+import {sourceEnv} from './owned-source.mjs';
 
 // Same local source bridge as the owned-media worker. No source or Meta writes.
 export async function readOwnedPageNames() {
  const sourcePath=process.env.OWNED_MANAGEMENT_PROJECT_PATH;
  const email=process.env.OWNED_MANAGEMENT_AUTHORIZED_EMAIL;
  if(!sourcePath||!email)throw Error('Source configuration unavailable');
- const env=parseEnv(await readFile(resolve(sourcePath,'.env.local'),'utf8'));
+ const env=await sourceEnv(sourcePath);
  const db=createClient(env.SUPABASE_URL??env.NEXT_PUBLIC_SUPABASE_URL,env.SUPABASE_SERVICE_ROLE_KEY,{auth:{persistSession:false}});
  const member=await db.from('workspace_members').select('role,status').eq('normalized_email',email).single();
  if(member.error||member.data?.role!=='admin'||member.data?.status!=='active')throw Error('Source authorization required');

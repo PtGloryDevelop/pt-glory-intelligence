@@ -1,23 +1,15 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Sans_Thai, Kanit } from "next/font/google";
+import { Anuphan } from "next/font/google";
 import "./globals.css";
 
 /**
- * Two typefaces, both with real Thai coverage.
+ * One typeface with real Thai coverage, for titles, figures and tables alike.
  *
- * Kanit carries the personality — product name, page titles, big numbers. It is
- * geometric and slightly editorial without tipping into novelty.
- * IBM Plex Sans Thai does the reading work: tables, forms, metadata, long Thai
- * paragraphs. Personality in a data table costs legibility, so it stays out.
+ * Anuphan (UI v3): a loopless Thai close to the system face on a Mac, which the
+ * macOS-style shell is modelled on and which cannot be served on the web. The
+ * hierarchy comes from size and weight inside this one family.
  */
-const display = Kanit({
-  subsets: ["thai", "latin"],
-  weight: ["500", "600", "700"],
-  variable: "--font-display",
-  display: "swap",
-});
-
-const ui = IBM_Plex_Sans_Thai({
+const ui = Anuphan({
   subsets: ["thai", "latin"],
   weight: ["400", "500", "600", "700"],
   variable: "--font-ui",
@@ -31,7 +23,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="th" className={`${display.variable} ${ui.variable}`}>
+    <html lang="th" className={ui.variable}>
       <body>{children}</body>
     </html>
   );

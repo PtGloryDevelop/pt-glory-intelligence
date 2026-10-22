@@ -14,15 +14,18 @@ import { AdImage } from "./AdImage";
  * reads as video even though the archived preview is a JPEG poster. No playback
  * controls: a table of thirty players is not an analyst tool.
  */
-export function AdThumb({ ad }: {
+export function AdThumb({ ad, width = 48 }: {
   ad: {
     display_format: string | null;
     media: Media;
     archive_url?: string | null;
     archive_status?: string | null;
   };
+  /** Frame width in px; the height keeps the grid's 4:5. Rows use the default. */
+  width?: number;
 }) {
   const [broken, setBroken] = useState(false);
+  const frame = { width, height: Math.round(width * 5 / 4) };
   const resolved = resolveMedia(ad.display_format, ad.media, {
     archivePath: null,
     archiveStatus: ad.archive_status ?? null,
@@ -34,6 +37,7 @@ export function AdThumb({ ad }: {
     return (
       <span
         className={styles.placeholder}
+        style={frame}
         data-testid="row-media-placeholder"
         data-media-state={broken ? "expired" : resolved.state}
         // The distinction still matters here, it just cannot fit in 48px.
@@ -49,8 +53,8 @@ export function AdThumb({ ad }: {
   }
 
   return (
-    <span className={styles.wrap}>
-      <AdImage sizes="48px"
+    <span className={styles.wrap} style={frame}>
+      <AdImage sizes={`${width}px`}
         className={styles.thumb} src={resolved.src} alt="" loading="lazy"
         onError={() => setBroken(true)}
         data-testid="row-media" data-media-kind={resolved.kind}

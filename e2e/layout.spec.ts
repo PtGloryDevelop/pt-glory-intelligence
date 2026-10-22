@@ -94,13 +94,12 @@ test.describe("sticky layers never overlap", () => {
 
       const state = await page.evaluate(() => {
         const toolbar = document.querySelector('[data-testid="filter-toolbar"]')!;
-        const topbar = [...document.querySelectorAll("div")].find(
-          (el) => getComputedStyle(el).position === "sticky"
-            && el.querySelector('button[aria-label="เปิดเมนู"]'),
-        );
+        // UI v3: the phone's slim top bar is the shell's only sticky layer.
+        const topbar = document.querySelector('[data-testid="shell-topbar"]');
         return {
           toolbarSticky: getComputedStyle(toolbar).position === "sticky",
-          topbarVisible: Boolean(topbar) && getComputedStyle(topbar!).display !== "none",
+          topbarVisible: Boolean(topbar) && getComputedStyle(topbar!).display !== "none"
+            && getComputedStyle(topbar!).position === "sticky",
         };
       });
 
@@ -126,7 +125,7 @@ test.describe("sticky layers never overlap", () => {
  * permission, so the proof has to be about what the server sent.
  */
 test.describe("role-aware navigation", () => {
-  const ADMIN_ONLY = ["ค่าเก็บข้อมูล", "นำเข้าไฟล์ (กู้คืนระบบ)"];
+  const ADMIN_ONLY = ["การเชื่อมต่อและงบ", "กู้คืนจากไฟล์"];
 
   /**
    * The sidebar's own markup, out of the server's response.
@@ -148,11 +147,11 @@ test.describe("role-aware navigation", () => {
     const page = await context.newPage();
     const sidebar = await sidebarHtml(page, "/datasets");
 
-    for (const label of [...ADMIN_ONLY, "เก็บข้อมูลใหม่"]) {
+    for (const label of [...ADMIN_ONLY, "ค้นแอดคู่แข่งใหม่"]) {
       expect(sidebar, `a viewer's menu must not contain ${label}`).not.toContain(label);
     }
     expect(sidebar).toContain("คู่แข่ง");
-    expect(sidebar).not.toContain("รอบเก็บข้อมูล");
+    expect(sidebar).not.toContain("ประวัติการเก็บข้อมูล");
     await context.close();
   });
 
@@ -161,34 +160,56 @@ test.describe("role-aware navigation", () => {
     const page = await context.newPage();
     const sidebar = await sidebarHtml(page, "/datasets");
 
-    expect(sidebar).toContain("เก็บข้อมูลใหม่");
+    expect(sidebar).toContain("ค้นแอดคู่แข่งใหม่");
     for (const label of ADMIN_ONLY) {
       expect(sidebar, `an analyst's menu must not contain ${label}`).not.toContain(label);
     }
     // C14 left this entry disabled because its page did not exist yet; C15
     // built the page, so it is now a real link and nothing is disabled.
     await expect(page.getByTestId("nav-/collect")).toHaveAttribute("href", "/collect");
-    await expect(page.locator('[aria-disabled="true"]', { hasText: "เก็บข้อมูลใหม่" })).toHaveCount(0);
+    await expect(page.locator('[aria-disabled="true"]', { hasText: "ค้นแอดคู่แข่งใหม่" })).toHaveCount(0);
     await context.close();
   });
 
   test("an admin receives all three, and every one of them is a link", async ({ browser }) => {
     const context = await browser.newContext({ storageState: join(AUTH, "admin.json") });
     const page = await context.newPage();
-    await page.goto("/datasets");
+    // UI v3: the collection entry is in the sidebar; the admin tools are on the settings page.
+    const sidebar = await sidebarHtml(page, "/settings");
+    for (const label of ADMIN_ONLY) expect(sidebar, `${label} belongs on the settings page`).not.toContain(label);
+    await expect(page.getByTestId("nav-/collect")).toHaveAttribute("href", "/collect");
 
-    for (const label of ["เก็บข้อมูลใหม่", ...ADMIN_ONLY]) {
-      await expect(page.getByText(label)).toHaveCount(1);
+    const content = page.getByTestId("shell-content");
+    for (const label of ["ค้นแอดคู่แข่งใหม่", ...ADMIN_ONLY]) {
+      await expect(content.getByText(label, { exact: true })).toHaveCount(1);
     }
     // All three pages exist as of C15, so none of these three is a placeholder
     // any more — and each entry goes where its label says.
     for (const href of ["/import", "/collect", "/collector"]) {
-      await expect(page.getByTestId(`nav-${href}`)).toHaveAttribute("href", href);
+      await expect(page.getByTestId(`settings-${href}`)).toHaveAttribute("href", href);
     }
-    for (const label of ["เก็บข้อมูลใหม่", "ค่าเก็บข้อมูล", "นำเข้าไฟล์ (กู้คืนระบบ)"]) {
+    for (const label of ["ค้นแอดคู่แข่งใหม่", "การเชื่อมต่อและงบ", "กู้คืนจากไฟล์"]) {
       await expect(page.locator('[aria-disabled="true"]', { hasText: label })).toHaveCount(0);
     }
     await context.close();
+  });
+
+  test("the settings page offers each role only what it may open", async ({ browser }) => {
+    for (const [role, offered, withheld] of [
+      ["viewer", [], ["ค้นแอดคู่แข่งใหม่", "อัปเดตแอดของเรา", ...ADMIN_ONLY]],
+      ["analyst", ["ค้นแอดคู่แข่งใหม่", "อัปเดตแอดของเรา"], ADMIN_ONLY],
+    ] as const) {
+      const context = await browser.newContext({ storageState: join(AUTH, `${role}.json`) });
+      const page = await context.newPage();
+      const html = await (await page.goto("/settings"))!.text();
+      const start = html.indexOf('data-testid="shell-content"');
+      const content = html.slice(start);
+      for (const label of offered) expect(content, `${role} should be offered ${label}`).toContain(label);
+      for (const label of withheld) expect(content, `${role} must not receive ${label}`).not.toContain(label);
+      // Everyone can sign out here: on a phone it is the only place.
+      await expect(page.getByTestId("sign-out")).toBeVisible();
+      await context.close();
+    }
   });
 });
 
@@ -220,7 +241,7 @@ test.describe("the import page answers each role with a real status", () => {
     const { status, body } = await statusFor(browser, "analyst");
     expect(status).toBe(403);
     // And told where their own collection path is, without naming a collector.
-    expect(body).toContain("เก็บข้อมูลใหม่");
+    expect(body).toContain("ค้นแอดคู่แข่งใหม่");
     expect(body).not.toMatch(/apify|extension/i);
   });
 

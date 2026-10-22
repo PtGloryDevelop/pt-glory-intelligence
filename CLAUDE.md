@@ -231,8 +231,8 @@ Validate authorization and business rules on the server, not only in the UI.
 Main visual direction:
 
 - Thai-first language
-- warm cream/off-white background
-- orange accent `#F26522` (Amendment A1, 2026-09-02 — replaces the former gold accent)
+- warm off-white canvas (`--paper` `#F3F0F2`) with white cards that visibly lift off it
+- PT Glory CI pink: `#D34B82` for the logo, highlights and charts; `#C0396F` for text, links and primary buttons (2026-10-05 — replaces the orange `#F26522` of Amendment A1). Tokens live in `app/globals.css` and `tests/palette.test.ts` measures them
 - dark text
 - left sidebar
 - compact context bar

@@ -159,7 +159,8 @@ async function runToCompletion(page: Page, id: string) {
 async function fillForm(page: Page, keyword: string) {
   await page.goto("/collect");
   await page.getByTestId("keyword").fill(keyword);
-  await page.getByTestId("category-select").selectOption({ label: CATEGORY });
+  await page.getByTestId("category-input").fill(CATEGORY);
+  await page.getByTestId("collect-advanced").locator("summary").click();
   await page.getByTestId("max-records").fill("20");
 }
 
@@ -214,7 +215,7 @@ test.describe("an analyst collects data without ever meeting the collector", () 
 
   test("the menu leads to a form that asks only product questions", async ({ page }) => {
     await page.goto("/datasets");
-    await page.getByRole("link", { name: "เก็บข้อมูลใหม่" }).click();
+    await page.getByRole("link", { name: "ค้นแอดคู่แข่งใหม่" }).click();
     await expect(page).toHaveURL(/\/collect$/);
     await expect(page.getByTestId("collect-form")).toBeVisible();
 
@@ -227,14 +228,22 @@ test.describe("an analyst collects data without ever meeting the collector", () 
   test("the form insists on a category and respects the configured cap", async ({ page }) => {
     await page.goto("/collect");
     await page.getByTestId("keyword").fill("วิตามินซี");
-    // No category chosen yet.
+    // The box may hold the category of an earlier run; empty, the form will not go.
+    await page.getByTestId("category-input").fill("");
     await expect(page.getByTestId("collect-submit")).toBeDisabled();
     await expect(page.getByTestId("collect-invalid")).toContainText("หมวดหมู่");
 
-    await page.getByTestId("category-select").selectOption({ label: CATEGORY });
+    // A name that does not exist yet is announced as new, not refused.
+    await page.getByTestId("category-input").fill(`หมวดใหม่ ${Date.now()}`);
+    await expect(page.getByTestId("category-hint")).toContainText("จะสร้างหมวดหมู่ใหม่");
+    await expect(page.getByTestId("collect-submit")).toBeEnabled();
+
+    await page.getByTestId("category-input").fill(CATEGORY);
+    await expect(page.getByTestId("category-hint")).not.toContainText("จะสร้างหมวดหมู่ใหม่");
     await expect(page.getByTestId("collect-submit")).toBeEnabled();
 
     // Above the configured maximum it will not submit either, and it says the number.
+    await page.getByTestId("collect-advanced").locator("summary").click();
     await page.getByTestId("max-records").fill("5000");
     await expect(page.getByTestId("collect-submit")).toBeDisabled();
     await expect(page.getByTestId("collect-invalid")).toContainText("500");
@@ -503,7 +512,7 @@ test.describe("a viewer is not offered collection at all", () => {
     const html = await (await page.goto("/datasets"))!.text();
     const open = html.indexOf('data-testid="app-sidebar"');
     const sidebar = html.slice(open, html.indexOf("</aside>", open));
-    for (const label of ["เก็บข้อมูลใหม่", "ค่าเก็บข้อมูล", "นำเข้าไฟล์ (กู้คืนระบบ)"]) {
+    for (const label of ["ค้นแอดคู่แข่งใหม่", "การเชื่อมต่อและงบ", "กู้คืนจากไฟล์"]) {
       expect(sidebar, label).not.toContain(label);
     }
 

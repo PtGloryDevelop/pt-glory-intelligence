@@ -39,6 +39,8 @@ test("no server-only credential reaches the client bundle", { skip: buildSkip },
     "APIFY_TOKEN",
     // The collection scheduler credential. It is never a client setting.
     "COLLECTION_ADVANCE_TOKEN",
+    // The AI provider key (Compare page).
+    "DEEPSEEK_API_KEY",
   ] as const;
 
   for (const name of secrets) {
@@ -76,6 +78,18 @@ test("the provider client is server-only, and its token has no second path", () 
   for (const path of ["lib/collect/apify.ts", "lib/collect/provider.ts", "lib/collect/mock.ts"]) {
     assert.doesNotMatch(readFileSync(path, "utf8"), /NEXT_PUBLIC_/, path);
   }
+});
+
+test("the AI provider client is server-only, and its key has one reader", () => {
+  const deepseek = readFileSync(join("lib", "ai", "deepseek.ts"), "utf8");
+  assert.match(deepseek, /^import 'server-only';/m);
+  assert.match(deepseek, /Authorization: `Bearer \${key}`/);
+  const readers = ["lib", "app", "components"]
+    .flatMap((dir) => (existsSync(dir) ? walk(dir) : []))
+    .filter((path) => /.tsx?$/.test(path))
+    .filter((path) => readFileSync(path, "utf8").includes("DEEPSEEK_API_KEY"));
+  assert.deepEqual(readers, [join("lib", "ai", "deepseek.ts")]);
+  assert.doesNotMatch(deepseek, /NEXT_PUBLIC_/);
 });
 
 test("no test or fixture points at the provider's API host", () => {

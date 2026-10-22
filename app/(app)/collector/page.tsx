@@ -31,7 +31,7 @@ export default async function CollectorPage() {
     <>
       <PageHeader
         eyebrow="WORKSPACE SETTINGS"
-        title="การเชื่อมต่อและค่าเก็บข้อมูล"
+        title="การเชื่อมต่อและงบเก็บข้อมูล"
         description="ตั้งค่าแหล่งข้อมูลและวงเงินสำหรับการค้นแอดของทีม"
       />
       <CollectorClient usage={usage} queue={queue} settings={settings} tokenConfigured={apifyTokenConfigured()} />

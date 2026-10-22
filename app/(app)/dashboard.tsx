@@ -4,197 +4,309 @@ import {usePathname,useRouter,useSearchParams} from 'next/navigation';
 import {useEffect,useMemo,useState} from 'react';
 import {AdThumb} from '@/components/AdThumb';
 import {AdImage} from '@/components/AdImage';
+import {AdDrawer} from '@/components/AdDrawer';
+import {HomeChoiceButton} from '@/components/HomeChoice';
+import {PageHeader} from '@/components/shell/PageHeader';
+import {Icon} from '@/components/shell/icons';
+import {Tile} from '@/components/shell/Tile';
 import type {DashboardData} from '@/lib/dashboard/read';
+import type {DailySpend} from '@/lib/dashboard/daily-read';
 import type {OwnedPerformanceRow,OwnedPerformanceSummary} from '@/lib/owned-ads/performance';
+import {FALL_MIN_SPEND,FALL_ROAS,type CommandAd,type CommandCenterData} from '@/lib/owned-ads/command-center';
+import type {UnitSummary} from '@/lib/owned-ads/unit-summary';
+import {ownedPageChoices} from '@/lib/owned-ads/page-names';
 import {reviewChange} from '@/lib/dashboard/review-model';
 import {reviewAdKey} from '@/lib/dashboard/series';
-import {buildUpdates,MIN_CHATS,rowRoas,type DashboardUpdate} from '@/lib/dashboard/updates';
-import {DashboardSparkline} from './dashboard-sparkline';
+import {buildUpdates} from '@/lib/dashboard/updates';
+import type {HomeChoice} from '@/lib/home-choice';
+import {daysBehind,ownedLate,rivalsLate} from '@/lib/shell/stale';
+import {CompanyDetail} from './owned-ads/company-library';
+import {useJson} from './owned-ads/use-json';
 import styles from './dashboard.module.css';
 
 const WINDOWS=[7,14,30] as const;
-const KIND={ours:'แอดเรา',rival:'คู่แข่ง',data:'ข้อมูล'} as const;
+const UNIT_ROWS=6;
 const num=(value:number|null|undefined,digits=2)=>value==null?'—':value.toLocaleString('th-TH',{minimumFractionDigits:digits,maximumFractionDigits:digits});
-// A spend jump is only good or bad next to its results: same threshold as the overview feed's surge rule.
-const SPEND_JUMP=50;
-function spendTone(change:number,roas:number|null|undefined,overall:number|null|undefined):'good'|'bad'|'cut'|null{
-  if(roas==null||overall==null)return null;
-  if(change>=SPEND_JUMP)return roas<overall?'bad':'good';
-  // A good ad losing half its budget is a decision worth checking.
-  if(change<=-SPEND_JUMP&&roas>=overall)return 'cut';
-  return null;
-}
-const thaiDate=(value:string|null|undefined)=>value?new Date(value.length===10?`${value}T12:00:00+07:00`:value).toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'numeric',timeZone:'Asia/Bangkok'}):'—';
-const vs=(value:number|null,avg:number|null|undefined,goodUp:boolean)=>{
-  if(value==null||!avg)return '';const ratio=value/avg;
-  return goodUp?(ratio>1.1?styles.good:ratio<0.9?styles.bad:''):(ratio<0.9?styles.good:ratio>1.1?styles.bad:'');
-};
+const whole=(value:number|null|undefined)=>value==null?'—':Math.round(value).toLocaleString('th-TH');
+const day=(value:string)=>new Date(`${value.slice(0,10)}T12:00:00+07:00`);
+const thaiDate=(value:string|null|undefined,year=true)=>value?day(value).toLocaleDateString('th-TH',{day:'numeric',month:'short',...(year?{year:'numeric'}:{}),timeZone:'Asia/Bangkok'}):'—';
+const stamp=(value:string|null|undefined)=>value?new Date(value).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'}):'—';
+const bangkokDay=(value:string)=>new Date(Date.parse(value)+7*3600000).toISOString().slice(0,10);
+const adKey=(ad:{account_id:string;ad_id:string})=>`${ad.account_id}:${ad.ad_id}`;
 
 function Delta({value,goodUp}:{value:number|null;goodUp:boolean|null}){
-  if(value==null)return <span className={`${styles.delta} ${styles.flat}`}>ไม่มีช่วงเทียบ</span>;
-  const tone=goodUp==null||Math.abs(value)<1?styles.flat:(value>0)===goodUp?styles.deltaGood:styles.deltaBad;
-  return <span className={`${styles.delta} ${tone}`}>{value>0?'▲':'▼'} {Math.abs(value).toFixed(1)}%</span>;
+  if(value==null)return <span className={styles.statNote}>ไม่มีช่วงเทียบ</span>;
+  const tone=goodUp==null||Math.abs(value)<1?'':(value>0)===goodUp?styles.better:styles.worse;
+  return <span className={`${styles.statNote} ${tone}`}>{value>0?'▲':'▼'} {Math.abs(value).toFixed(1)}%</span>;
 }
 
-function OwnedThumb({url,video,name}:{url:string|null|undefined;video:boolean;name:string}){
-  return <span className={styles.thumb}>
-    {url?<AdImage src={url} alt={name} sizes="56px" referrerPolicy="no-referrer"/>:<span className={styles.thumbEmpty} aria-hidden>{url===undefined?'…':'—'}</span>}
-    {video?<span className={styles.play} aria-label="วิดีโอ">▶</span>:null}
-  </span>;
+function Stat({label,value,unit,children}:{label:string;value:string;unit?:string;children?:React.ReactNode}){
+  return <div className={styles.stat}><span className={styles.statLabel}>{label}</span><span className={styles.statValue}>{value}{unit?<small>{unit}</small>:null}</span>{children}</div>;
 }
 
-export function Dashboard({canAnalyze}:{canAnalyze:boolean}){
+function Thumb({url}:{url:string|null|undefined}){
+  return <span className={styles.thumb}>{url?<AdImage src={url} alt="" sizes="40px" referrerPolicy="no-referrer"/>:null}</span>;
+}
+
+/** Daily spend from the Ads Management reports; a day without complete figures is drawn as missing, never as zero. */
+function DailyBars({days}:{days:DailySpend}){
+  const max=Math.max(0,...days.map(item=>item.spend??0));
+  const every=days.length>20?5:days.length>10?2:1;
+  const spoken=days.map(item=>`${thaiDate(item.date,false)} ${item.spend==null?'ไม่มีข้อมูลครบ':`${whole(item.spend)} บาท`}`).join(', ');
+  return <div className={styles.bars} role="img" aria-label={`ค่าแอดรายวัน: ${spoken}`}>
+    {days.map((item,index)=><div key={item.date} className={styles.barCol} title={`${thaiDate(item.date)} · ${item.spend==null?'ข้อมูลวันนี้ไม่ครบ':`${whole(item.spend)} บาท`}`}>
+      <span className={styles.barTrack}>{item.spend==null?<span className={styles.barMissing}/>:<span className={styles.bar} data-last={index===days.length-1||undefined} style={{height:`${max?Math.max(3,item.spend/max*100):3}%`}}/>}</span>
+      <span className={styles.barLabel}>{index%every===0||index===days.length-1?(index===0?thaiDate(item.date,false):String(day(item.date).getDate())):' '}</span>
+    </div>)}
+  </div>;
+}
+
+export function Dashboard({canAnalyze,home='overview'}:{canAnalyze:boolean;home?:HomeChoice}){
   const params=useSearchParams(),router=useRouter(),pathname=usePathname();
   const days=WINDOWS.find(value=>String(value)===params.get('window'))??7;
   const query=`window=${days}`;
   const [result,setResult]=useState<{query:string;data:DashboardData}|null>(null);
   const [problem,setProblem]=useState<{query:string;message:string}|null>(null);
   const [retry,setRetry]=useState(0);
-  const [local,setLocal]=useState<{key:string;ids:string[]}|null>(null);
-  const [showSeen,setShowSeen]=useState(false);
+  const [allUnits,setAllUnits]=useState(false);
+  const [names,setNames]=useState<{loading:boolean;message:string}>({loading:false,message:''});
+  // Ads open beside the overview instead of sending the reader to another page.
+  const [selected,setSelected]=useState<OwnedPerformanceRow|CommandAd|null>(null);
+  const [rivalAd,setRivalAd]=useState<{ad_archive_id:string;dataset_id:string}|null>(null);
   const data=result?.query===query?result.data:null,error=problem?.query===query?problem.message:null;
 
   useEffect(()=>{
     const controller=new AbortController();
-    fetch(`/api/dashboard?${query}`,{signal:controller.signal,cache:'no-store'}).then(async response=>{
-      const body=await response.json();if(!response.ok)throw new Error(body.error??'เปิดภาพรวมไม่สำเร็จ');
-      if(!controller.signal.aborted){setResult({query,data:body});setProblem(null);}
-    }).catch(failure=>{if(!controller.signal.aborted)setProblem({query,message:failure.message});});
+    // A section that timed out on a cold database cache usually passes on a second try, so the first failure retries quietly.
+    const load=(attempt:number):Promise<void>=>fetch(`/api/dashboard?${query}`,{signal:controller.signal,cache:'no-store'}).then(async response=>{
+      const body=await response.json().catch(()=>({}));if(!response.ok)throw Object.assign(new Error(body.error??'เปิดภาพรวมไม่สำเร็จ'),{status:response.status});
+      if(controller.signal.aborted)return;
+      if(attempt===0&&canAnalyze&&(body as DashboardData).errors?.includes('review')){await new Promise(resolve=>setTimeout(resolve,1500));if(!controller.signal.aborted)return load(1);return;}
+      setResult({query,data:body});setProblem(null);
+    }).catch(async(failure:Error&{status?:number})=>{
+      if(controller.signal.aborted||failure.name==='AbortError')return;
+      if(attempt===0&&(failure.status==null||failure.status>=500)){await new Promise(resolve=>setTimeout(resolve,1500));if(!controller.signal.aborted)return load(1);return;}
+      setProblem({query,message:failure.message});
+    });
+    void load(0);
     return ()=>controller.abort();
-  },[query,retry]);
+  },[query,retry,canAnalyze]);
 
   const review=data?.review??null;
   const summary:OwnedPerformanceSummary|undefined=review?.summary.find(item=>item.currency==='THB')??review?.summary[0];
+  const previous=review?.previous?.summary.find(item=>item.currency===summary?.currency);
   const rows=useMemo(()=>(review?.rows??[]).filter(row=>row.currency===summary?.currency),[review,summary]);
-  const top=rows.slice(0,8);
-  const seenKey=review?`pg-overview-seen:${review.period.from}:${review.period.to}`:null;
+  const rowByKey=useMemo(()=>new Map(rows.map(row=>[reviewAdKey(row),row])),[rows]);
+  // The unit totals and the falling rule read the same window as the overview, so they wait for its dates.
+  const period=review?new URLSearchParams({period:'custom',from:review.period.from,to:review.period.to}).toString():null;
+  const units=useJson<UnitSummary>(canAnalyze&&period?`/api/owned-ads/units?${period}`:null,retry);
+  const center=useJson<CommandCenterData>(canAnalyze&&period?`/api/owned-ads/command-center?${period}`:null,retry);
 
-  // Per-viewer convenience only: what this person already looked at in this period.
-  // seenKey exists only after the client fetch, so reading storage here never runs during SSR.
-  const stored=useMemo(()=>{
-    if(!seenKey)return [];
-    try{const value:unknown=JSON.parse(localStorage.getItem(seenKey)??'[]');return Array.isArray(value)?value.filter((item):item is string=>typeof item==='string'):[];}catch{return [];}
-  },[seenKey]);
-  const seen=local?.key===seenKey?local.ids:stored;
-  function toggleSeen(id:string){
-    if(!seenKey)return;
-    const next=seen.includes(id)?seen.filter(item=>item!==id):[...seen,id];
-    setLocal({key:seenKey,ids:next});
-    try{localStorage.setItem(seenKey,JSON.stringify(next));}catch{}
-  }
-
-
-  const updates=useMemo(()=>data?buildUpdates({summary,rows,series:data.rowSeries,
-    rivals:data.collisions?{units:data.collisions.units,pages:data.collisions.pages,pending:data.collisions.pending,newThisWeek:data.collisions.newThisWeek,tracked:data.collisions.tracked}:null}):[],[data,summary,rows]);
-  const open=updates.filter(item=>!seen.includes(item.id)),done=updates.filter(item=>seen.includes(item.id));
-  const periodQuery=review?`period=custom&from=${review.period.from}&to=${review.period.to}`:'';
-  const adHref=(ad:{ad_id:string})=>`/owned-ads/performance?q=${encodeURIComponent(ad.ad_id)}${periodQuery?`&${periodQuery}`:''}`;
-  const compareHref=(ad:{account_id:string;ad_id:string})=>`/compare/ads?${new URLSearchParams({account:ad.account_id,owned:ad.ad_id})}`;
-  const rowByKey=new Map(rows.map(row=>[reviewAdKey(row),row]));
+  const updates=useMemo(()=>data?buildUpdates({summary,rows,series:data.rowSeries,rivals:null}):[],[data,summary,rows]);
+  const falling=center.data?.falling??[];
+  const changes=updates.filter(item=>item.kind==='ours').slice(0,falling.length?2:3);
+  const collisions=data?.collisions??null,rivals=data?.rivals??null;
+  const longest=data?.longest?.rows??[];
+  const pendingPages=collisions?.top.filter(page=>!page.confirmed).slice(0,2)??[];
+  const periodQuery=period?`?${period}`:'';
+  const returnTo=`${pathname}${params.size?`?${params}`:''}`;
 
   function setWindow(value:number){
     const next=new URLSearchParams(params);next.set('window',String(value));
     for(const item of ['period','from','to','dashboard','sort'])next.delete(item);
     router.replace(`${pathname}?${next}`,{scroll:false});
   }
-
-  function updateRow(item:DashboardUpdate){
-    const row=item.ad?rowByKey.get(reviewAdKey(item.ad)):undefined;
-    return <li key={item.id} className={seen.includes(item.id)?styles.isSeen:undefined}>
-      {row?<OwnedThumb url={row.creative_url??null} video={Boolean(row.video_id)} name={row.ad_name}/>:<span className={`${styles.thumb} ${styles.thumbKind}`} aria-hidden>{item.kind==='rival'?'คู่แข่ง':'ข้อมูล'}</span>}
-      <div className={styles.feedBody}>
-        <div className={styles.meta}><span className={`${styles.kind} ${styles[item.kind]}`}>{KIND[item.kind]}</span><span className={`${styles.sev} ${styles[item.severity]}`}>{item.label}</span></div>
-        <h3>{item.title}</h3><p>{item.body}</p>
-        <div className={styles.acts}>
-          {item.ad?<><Link className={styles.btnPrimary} href={adHref(item.ad)}>ดูแอด</Link><Link className={styles.btn} href={compareHref(item.ad)}>เทียบกับคู่แข่ง</Link></>
-            :item.href?<Link className={styles.btnPrimary} href={item.href}>{item.hrefLabel}</Link>:null}
-          <button type="button" className={styles.btnGhost} onClick={()=>toggleSeen(item.id)}>{seen.includes(item.id)?'ย้อนกลับ':'ดูแล้ว'}</button>
-        </div>
-      </div>
-    </li>;
+  async function refreshPageNames(){
+    setNames({loading:true,message:''});
+    try{
+      const response=await fetch('/api/owned-ads/page-names',{method:'POST'});const report=await response.json();
+      if(!response.ok)throw new Error(report.error??'อัปเดตชื่อเพจไม่สำเร็จ');
+      setNames({loading:false,message:report.unresolved?`มีชื่อแล้ว ${report.named} จาก ${report.pages} เพจ · อีก ${report.unresolved} เพจยังอ่านชื่อไม่ได้ กรุณาตรวจสิทธิ์เพจ`:`อัปเดตชื่อครบ ${report.named} เพจแล้ว`});
+      setRetry(value=>value+1);
+    }catch(failure){setNames({loading:false,message:failure instanceof Error?failure.message:'อัปเดตชื่อเพจไม่สำเร็จ'});}
   }
 
-  const kpis:[string,'spend'|'roas'|'conversations'|'cost_per_conversation',boolean|null,number,string][]=[
-    ['ค่าแอด','spend',null,0,'บาท'],['ROAS (Meta)','roas',true,2,''],
-    ['ทักจากแอด','conversations',true,0,''],['ค่าทัก','cost_per_conversation',false,2,'บาท'],
-  ];
-  const previous=review?.previous?.summary.find(item=>item.currency===summary?.currency);
-  const rivals=data?.rivals,recent=rivals?.recentAds?.slice(0,4)??[];
+  // The units table: our units with spend in this window, most ads first, with the falling rule's count and the rival pages their keywords match.
+  const fallingByUnit=new Map((center.data?.falling_counts??[]).map(row=>[row.unit_id,row.count]));
+  const rivalsByUnit=new Map((collisions?.byUnit??[]).map(unit=>[unit.id,unit]));
+  const unitRows=[...(units.data?.units??[])].sort((a,b)=>(b.current?.ad_count??0)-(a.current?.ad_count??0)||a.name.localeCompare(b.name,'th',{numeric:true}));
+  const maxFalling=Math.max(1,...unitRows.map(unit=>fallingByUnit.get(unit.id)??0));
+  const unitHref=(id:string|null)=>`/owned-ads/performance?${new URLSearchParams({...(id?{unit:id}:{}),...(review?{period:'custom',from:review.period.from,to:review.period.to}:{})})}`;
+
+  // Upkeep: only what needs doing, each with the figure that says so.
+  const unassigned=units.data?.unassigned.totals??null;
+  const unnamed=review?ownedPageChoices(review.filters.pages).filter(page=>!page.name).length:0;
+  const ownedTo=review?.coverage?.to??null,rivalsAt=rivals?.lastCollectedAt??null;
+  const gap=ownedTo&&rivalsAt?Math.round((Date.parse(ownedTo)-Date.parse(bangkokDay(rivalsAt)))/86400000):null;
+  // Late by the sidebar's rule, counted from when the server read the data. Old figures stay true for their dates; they just stop there.
+  const readAt=data?Date.parse(data.generatedAt):null;
+  const ownedBehind=readAt!=null&&ownedTo&&ownedLate(ownedTo,readAt)?daysBehind(ownedTo,readAt):null;
+  const rivalsBehind=readAt!=null&&rivalsAt&&rivalsLate(rivalsAt,readAt)?daysBehind(rivalsAt,readAt):null;
+  const late=ownedBehind!=null||rivalsBehind!=null;
+  // The band already sends the reader to collect, so the upkeep list does not say it twice.
+  const showGap=gap!=null&&gap>=1&&rivalsBehind==null;
+
+  // The bridge: start from an ad of ours that is slipping and the rival ad that has run longest.
+  const oursPick=falling[0]??(changes[0]?.ad?rowByKey.get(reviewAdKey(changes[0].ad))??null:null);
+  const rivalPick=longest[0]??null;
+  const compareHref=`/compare/ads?${new URLSearchParams({...(oursPick?{account:oursPick.account_id,owned:oursPick.ad_id}:{}),...(rivalPick?{dataset:rivalPick.dataset_id,rival:rivalPick.ad_archive_id}:{}),returnTo})}`;
+
+  const tools=<div className={styles.tools}>
+    <form action="/competitors" method="get" className={styles.search} role="search">
+      <Icon name="search" size={15}/><input type="hidden" name="view" value="all"/>
+      <input type="search" name="search" maxLength={160} placeholder="ค้นแอดคู่แข่ง" aria-label="ค้นแอดคู่แข่ง"/>
+    </form>
+    {canAnalyze?<div className={styles.seg} role="group" aria-label="ช่วงเวลา">{WINDOWS.map(value=><button key={value} type="button" aria-pressed={value===days} onClick={()=>setWindow(value)}>{value} วัน</button>)}</div>:null}
+    {canAnalyze?<HomeChoiceButton target="overview" current={home}/>:null}
+  </div>;
+
+  const description=review?`${thaiDate(review.period.from)} – ${thaiDate(review.period.to)}${review.previous?` · เทียบกับ ${thaiDate(review.previous.period.from)} – ${thaiDate(review.previous.period.to)}`:''}`
+    :canAnalyze?'กำลังเปิดข้อมูล…':'คู่แข่งของยูนิต และแอดคู่แข่งที่ยิงนานที่สุด';
+
+  const oursLane=canAnalyze?<section className={styles.box} aria-labelledby="ours-heading" data-testid="overview-ours">
+    <div className={styles.boxHead}><Tile icon="chart" tone="ours"/><h2 id="ours-heading" className={styles.oursTitle}>แอดของเรา</h2><span className={styles.stamp}>{ownedTo?`ข้อมูลถึง ${thaiDate(ownedTo,false)}`:''}</span></div>
+    {data&&!review?<div className={styles.problem} role="alert">ผลแอดเราเปิดไม่ได้ในรอบนี้ ส่วนอื่นยังใช้ได้ <button type="button" onClick={()=>setRetry(value=>value+1)}>ลองใหม่</button></div>:null}
+    {review?<>
+      <div className={styles.stats} data-testid="overview-kpis">
+        <Stat label="ค่าแอด (บาท)" value={whole(summary?.spend)}><Delta value={summary?reviewChange(review,summary,'spend'):null} goodUp={null}/></Stat>
+        <Stat label="ROAS (Meta)" value={num(summary?.roas)}><Delta value={summary?reviewChange(review,summary,'roas'):null} goodUp={true}/></Stat>
+        <Stat label="ทักจากแอด" value={num(summary?.conversations,0)}><Delta value={summary?reviewChange(review,summary,'conversations'):null} goodUp={true}/></Stat>
+        <Stat label="ค่าทัก (บาท)" value={num(summary?.cost_per_conversation)}><Delta value={summary?reviewChange(review,summary,'cost_per_conversation'):null} goodUp={false}/></Stat>
+      </div>
+      {previous?<p className={styles.previous}>ช่วงก่อนหน้า: ค่าแอด {whole(previous.spend)} · ROAS {num(previous.roas)} · ทัก {num(previous.conversations,0)} · ค่าทัก {num(previous.cost_per_conversation)}</p>:null}
+      {data?.daily?.length?<div className={`${styles.section} ${styles.chart}`}>
+        <div className={styles.sectionHead}><span>ค่าแอดรายวัน (บาท)</span><span className={styles.sectionNote}>จากรายงาน Ads Management</span></div>
+        <DailyBars days={data.daily}/>
+      </div>:data?.errors.includes('daily')?<p className={styles.sectionNote}>กราฟค่าแอดรายวันเปิดไม่ได้ในรอบนี้</p>:null}
+      <div className={styles.sectionHead} data-flush>สิ่งที่เปลี่ยน</div>
+      <div className={styles.rows}>
+        {center.error?<div className={styles.row}><span className={styles.rowText}><span className={styles.rowTitle}>เปิดรายการสื่อที่เริ่มตกไม่สำเร็จ</span></span><button type="button" className={styles.mini} onClick={()=>setRetry(value=>value+1)}>ลองใหม่</button></div>
+          :center.loading?<div className={styles.row}><span className={styles.rowSub}>กำลังตรวจสื่อที่เริ่มตก…</span></div>
+          :falling.length?<Link className={styles.row} href={`/owned-ads/performance${periodQuery}`} data-testid="overview-falling" title={`ROAS ${FALL_ROAS} ขึ้นไปใน 7 วันก่อนหน้า แต่ต่ำกว่า ${FALL_ROAS} ใน 7 วันล่าสุด และค่าแอดอย่างน้อย ${whole(FALL_MIN_SPEND)} บาททั้งสองช่วง`}>
+            <span className={styles.stack}>{falling.slice(0,3).map(ad=><Thumb key={adKey(ad)} url={ad.creative_url}/>)}</span>
+            <span className={styles.rowText}><span className={styles.rowTitle}>สื่อที่เริ่มตก<span className={styles.count}>{whole(center.data?.falling_total)} แอด</span></span>
+              <span className={styles.rowSub}>เช่น {falling.slice(0,2).map(ad=>`${ad.ad_name} ROAS ${num(ad.previous_roas)} → ${num(ad.recent_roas)}`).join(' · ')}</span></span>
+            <span className={styles.chevron}><Icon name="chevron" size={15}/></span>
+          </Link>:null}
+        {changes.map(item=>{const row=item.ad?rowByKey.get(reviewAdKey(item.ad)):undefined;
+          return <button key={item.id} type="button" className={styles.row} onClick={()=>row?setSelected(row):undefined} disabled={!row}>
+            <Thumb url={row?.creative_url}/>
+            <span className={styles.rowText}><span className={styles.rowTitle}>{item.title}</span><span className={styles.rowSub}>{item.body}</span></span>
+            <span className={styles.chevron}><Icon name="chevron" size={15}/></span>
+          </button>;})}
+        {!center.loading&&!center.error&&!falling.length&&!changes.length?<div className={styles.row}><span className={styles.rowSub}>ช่วงนี้ยังไม่มีแอดที่เข้าเกณฑ์ต้องตรวจ</span></div>:null}
+      </div>
+      <div className={styles.foot}><span className={styles.footNote}>ROAS และยอดซื้อเป็นตัวเลขที่ Meta รายงาน</span><Link className={styles.oursLink} href={`/owned-ads/performance${periodQuery}`}>ดูผลครีเอทีฟของเรา ›</Link></div>
+    </>:!data&&!error?<p className={styles.loading} role="status">กำลังเปิดผลแอดเรา…</p>:null}
+  </section>:null;
+
+  const rivalLane=<section className={styles.box} aria-labelledby="rivals-heading" data-testid="overview-rivals">
+    <div className={styles.boxHead}><Tile icon="swords" tone="rival"/><h2 id="rivals-heading" className={styles.rivalTitle}>คู่แข่ง</h2><span className={styles.stamp}>{rivalsAt?`เก็บล่าสุด ${stamp(rivalsAt)}`:''}</span></div>
+    {data?<>
+      <div className={styles.stats}>
+        <Stat label="เพิ่งพบใน 7 วัน" value={rivals?whole(rivals.week?.newAds??rivals.recentlyFound):'—'} unit="แอด">
+          <details className={styles.define}><summary aria-label="“เพิ่งพบ” หมายถึงอะไร"><Icon name="info" size={14}/></summary><span>ระบบเห็นครั้งแรกใน 7 วัน แอดอาจยิงมาก่อนแล้ว</span></details>
+        </Stat>
+        <Stat label="เพจคู่แข่งของยูนิต" value={collisions?whole(collisions.pages):'—'}>{collisions?<span className={styles.statNote}>{whole(collisions.units)} ยูนิตที่มีคำค้น</span>:null}</Stat>
+        <Stat label="เพจรอทีมตรวจ" value={collisions?whole(collisions.pending):'—'}/>
+        <Stat label="ยิงนานที่สุด" value={longest[0]?whole(longest[0].ad_age_days):'—'} unit={longest[0]?'วัน':undefined}><span className={styles.statNote}>นับจากวันเริ่มยิง</span></Stat>
+      </div>
+      {collisions&&!collisions.units?<Link className={styles.row} href="/competitors"><span className={styles.rowText}><span className={styles.rowTitle}>ยังไม่ได้ใส่คำค้นให้ยูนิต</span><span className={styles.rowSub}>ใส่คำที่ลูกค้าใช้หาสินค้า แล้วระบบจะเสนอเพจคู่แข่งจากแอดที่เก็บไว้</span></span><span className={styles.chevron}><Icon name="chevron" size={15}/></span></Link>:null}
+      <div className={styles.section}>
+        <div className={styles.sectionHead}><span>{data.longest?.scope==='library'?'แอดคู่แข่งที่ยิงนานที่สุด (ทั้งคลัง)':'แอดคู่แข่งที่ยิงนานที่สุด'}</span><Link className={styles.rivalLink} href="/competitors?view=all">ส่องแอดทั้งหมด ›</Link></div>
+        {longest.length?<div className={styles.ads}>{longest.map(ad=><button key={`${ad.dataset_id}:${ad.ad_archive_id}`} type="button" className={styles.adPick} onClick={()=>setRivalAd({ad_archive_id:ad.ad_archive_id,dataset_id:ad.dataset_id})} aria-label={`ดูแอด ${ad.page_name??ad.page_id}`}>
+          <AdThumb ad={ad} width={180}/>
+          <span className={styles.adCaption}>{ad.page_name??ad.page_id}</span>
+          <span className={styles.adMeta}>เริ่มยิง {whole(ad.ad_age_days)} วันก่อน</span>
+        </button>)}</div>:<p className={styles.sectionNote}>{data.errors.includes('longest')?'แอดคู่แข่งเปิดไม่ได้ในขณะนี้':'ยังไม่มีแอดคู่แข่งที่กำลังแสดงในคลัง'}</p>}
+      </div>
+      {pendingPages.length?<>
+        <div className={styles.sectionHead} data-flush><span>เพจที่รอทีมตรวจ</span>{collisions&&collisions.pending>pendingPages.length?<Link className={styles.rivalLink} href="/competitors">ดูทั้ง {whole(collisions.pending)} เพจ ›</Link>:null}</div>
+        <div className={styles.rows}>{pendingPages.map(page=><div key={page.page_id} className={styles.row}>
+          <span className={styles.rowText}><span className={styles.rowTitle}>{page.page_name??page.page_id}</span><span className={styles.rowSub}>{page.unit} · ตรงคำค้น {whole(page.matched_ads)} แอด</span></span>
+          <Link className={styles.mini} href="/competitors">ตรวจเพจ</Link>
+        </div>)}</div>
+      </>:null}
+      <div className={styles.foot}><span className={styles.footNote}>Ad Library ไม่มีข้อมูลงบหรือยอดขายของคู่แข่ง</span>{collisions?.pages?<Link className={styles.rivalLink} href="/competitors">ดูคู่แข่งทั้ง {whole(collisions.pages)} เพจ ›</Link>:<Link className={styles.rivalLink} href="/competitors">ติดตามคู่แข่ง ›</Link>}</div>
+    </>:!error?<p className={styles.loading} role="status">กำลังเปิดข้อมูลคู่แข่ง…</p>:null}
+  </section>;
 
   return <div className={styles.page} data-testid="overview">
-    <header className={styles.head}>
-      <div>
-        <h1>สัปดาห์นี้มีอะไรเปลี่ยน</h1>
-        <p>{review?`${thaiDate(review.period.from)} – ${thaiDate(review.period.to)}${review.previous?` เทียบกับ ${thaiDate(review.previous.period.from)} – ${thaiDate(review.previous.period.to)}`:''} · แอดเราสกุล ${summary?.currency??'THB'}`:canAnalyze?'กำลังเปิดข้อมูล…':'ภาพรวมคู่แข่งและรายการติดตาม'}</p>
+    <PageHeader title="ภาพรวม" description={description} actions={tools}/>
+    {error?<div className={styles.problem} role="alert">{error} <button type="button" onClick={()=>setRetry(value=>value+1)}>ลองใหม่</button></div>:null}
+
+    {late?<section className={styles.late} role="status" aria-labelledby="late-heading" data-testid="overview-late">
+      <span className={styles.lateIcon}><Icon name="alert" size={17}/></span>
+      <div className={styles.lateText}><h2 id="late-heading">ข้อมูลไม่อัปเดต</h2><p>ตัวเลขในหน้านี้ยังถูกต้องตามวันที่ของข้อมูล แต่ยังไม่รวมช่วงหลังจากนั้น</p></div>
+      <div className={styles.lateItems}>
+        {ownedBehind!=null?<div className={styles.lateItem}>
+          <span><b className={styles.oursTitle}>แอดของเรา</b> มีข้อมูลถึง {thaiDate(ownedTo)} · {whole(ownedBehind)} วันก่อน</span>
+          <Link className={styles.mini} href="/owned-ads">อัปเดตแอดของเรา</Link>
+        </div>:null}
+        {rivalsBehind!=null?<div className={styles.lateItem}>
+          <span><b className={styles.rivalTitle}>คู่แข่ง</b> เก็บล่าสุด {thaiDate(bangkokDay(rivalsAt!))} · {whole(rivalsBehind)} วันก่อน</span>
+          {canAnalyze?<Link className={styles.mini} href="/collect">ค้นแอดคู่แข่งใหม่</Link>:null}
+        </div>:null}
       </div>
-      {canAnalyze?<div className={styles.seg} role="group" aria-label="ช่วงเวลา">{WINDOWS.map(value=><button key={value} type="button" aria-pressed={value===days} onClick={()=>setWindow(value)}>{value} วัน</button>)}</div>:null}
-    </header>
-
-    {error?<div className={styles.problem} role="alert">{error} <button type="button" className={styles.btn} onClick={()=>setRetry(value=>value+1)}>ลองใหม่</button></div>:null}
-    {!data&&!error?<p className={styles.loading} role="status">กำลังเปิดภาพรวม…</p>:null}
-
-    {data&&canAnalyze&&!review?<div className={styles.problem} role="alert">ผลแอดเราเปิดไม่ได้ในรอบนี้ ส่วนอื่นยังใช้ได้ <button type="button" className={styles.btn} onClick={()=>setRetry(value=>value+1)}>ลองใหม่</button></div>:null}
-    {data&&canAnalyze&&review?<section className={styles.kpis} aria-label="ผลแอดเรา">
-      {kpis.map(([label,metric,goodUp,digits,unit])=>{
-        const value=summary?.[metric],before=previous?.[metric];
-        return <div key={label} className={styles.kpi}>
-          <span className={styles.kpiLabel}>{label}</span>
-          <span className={styles.kpiValue}>{num(value,digits)}{unit?<small>{unit}</small>:null}</span>
-          <span className={styles.kpiCmp}>{review&&summary?<Delta value={reviewChange(review,summary,metric)} goodUp={goodUp}/>:null}{before!=null?`ก่อนหน้า ${num(before,digits)}`:''}</span>
-        </div>;
-      })}
     </section>:null}
 
-    {data?<div className={styles.grid}>
-      <div className={styles.stack}>
-        <section className={styles.panel} aria-labelledby="updates-heading">
-          <div className={styles.panelHead}><h2 id="updates-heading">อัปเดตที่ควรรู้</h2><span>{open.length} รายการรอดู · คัดจากตัวเลขช่วงนี้ เรียงตามค่าแอดที่เกี่ยวข้อง</span></div>
-          <ul className={styles.feed}>
-            {open.length?open.map(updateRow):<li className={styles.feedEmpty}><h3>ดูครบทุกรายการแล้ว</h3><p>รายการใหม่จะขึ้นเมื่อมีข้อมูลรอบถัดไป</p></li>}
-            {done.length?<li className={styles.feedToggle}><button type="button" className={styles.btnGhost} onClick={()=>setShowSeen(value=>!value)}>{showSeen?'ซ่อน':'แสดง'}รายการที่ดูแล้ว ({done.length})</button></li>:null}
-            {showSeen?done.map(updateRow):null}
-          </ul>
-          {data.errors.includes('series')?<p className={styles.note}>กราฟรายวันเปิดไม่ได้ อัปเดตเรื่องค่าแอดที่เพิ่มขึ้นจึงอาจไม่ครบ</p>:null}
-        </section>
+    <div className={styles.lanes} data-single={canAnalyze?undefined:true}>{oursLane}{rivalLane}</div>
 
-        {canAnalyze&&top.length?<section className={styles.panel} aria-labelledby="top-heading">
-          <div className={styles.panelHead}><h2 id="top-heading">แอดใช้งบสูงสุด</h2><Link className={styles.btnGhost} href={`/owned-ads/performance${periodQuery?`?${periodQuery}`:''}`}>ดูทั้ง {summary?.ad_count.toLocaleString('th-TH')??''} แอด →</Link></div>
+    {canAnalyze&&data?<section className={styles.bridge} aria-labelledby="bridge-heading">
+      <Tile icon="compare" tone="compare" size={30}/>
+      <div className={styles.bridgeText}><h2 id="bridge-heading">เทียบแอดเรากับคู่แข่ง</h2><p>เริ่มจากแอดเราที่ผลแย่ลง หรือแอดคู่แข่งที่ยิงนานที่สุด แล้วให้ AI สรุปว่าต่างกันตรงไหน</p></div>
+      {oursPick?<span className={`${styles.token} ${styles.tokenOurs}`}><Thumb url={oursPick.creative_url}/><span className={styles.tokenText}>แอดเรา: {oursPick.ad_name}</span></span>:null}
+      {oursPick&&rivalPick?<span aria-hidden className={styles.swap}>↔</span>:null}
+      {rivalPick?<span className={`${styles.token} ${styles.tokenRival}`}><span className={styles.tokenText}>คู่แข่ง: {rivalPick.page_name??rivalPick.page_id}</span></span>:null}
+      <Link className={styles.primary} href={compareHref} data-testid="overview-compare">เริ่มเทียบ</Link>
+    </section>:null}
+
+    {canAnalyze&&review?<section className={styles.box} aria-labelledby="units-heading" data-testid="overview-units">
+      <div className={styles.boxHead}><div className={styles.headText}><h2 id="units-heading">ภาพรวมรายยูนิต</h2><span className={styles.stamp}>แอดของเรากับคู่แข่งของแต่ละยูนิตในแถวเดียว · เรียงตามจำนวนแอดที่มีค่าแอดในช่วงนี้</span></div></div>
+      {units.error?<div className={styles.problem} role="alert">{units.error} <button type="button" onClick={()=>setRetry(value=>value+1)}>ลองใหม่</button></div>
+        :units.loading?<p className={styles.loading} role="status">กำลังสรุปรายยูนิต…</p>
+        :unitRows.length?<>
           <div className={styles.tableWrap}><table className={styles.table}>
-            <thead><tr><th>แอด</th><th>ยูนิต</th><th className={styles.r}>ค่าแอด</th><th className={styles.r}>ROAS</th><th className={styles.r}>ทัก</th><th className={styles.r}>ค่าทัก</th><th>รายวัน</th><th><span className={styles.srOnly}>ทำต่อ</span></th></tr></thead>
-            <tbody>{top.map((row:OwnedPerformanceRow)=>{
-              const series=data.rowSeries?.[reviewAdKey(row)];const enough=(row.conversations??0)>=MIN_CHATS;
-              return <tr key={reviewAdKey(row)}>
-                <td><div className={styles.adCell}><OwnedThumb url={row.creative_url??null} video={Boolean(row.video_id)} name={row.ad_name}/><div><b>{row.ad_name}</b><small>{row.page_name??row.account_name}</small></div></div></td>
-                <td>{row.unit_names.length?<span className={styles.unit}>{row.unit_names.join(', ')}</span>:<span className={`${styles.unit} ${styles.unitNone}`}>ยังไม่ผูกยูนิต</span>}</td>
-                <td className={styles.r}>{num(row.spend)}{series?.change!=null?(()=>{const tone=spendTone(series.change,rowRoas(row),summary?.roas);
-                  return <span className={`${styles.sub} ${tone==='bad'?styles.bad:tone==='good'?styles.good:tone==='cut'?styles.warn:''}`} title={tone==='bad'?'ค่าแอดพุ่งแต่ ROAS ต่ำกว่าภาพรวม':tone==='good'?'เพิ่มค่าแอดแล้ว ROAS ยังสูงกว่าภาพรวม':tone==='cut'?'แอด ROAS ดีกว่าภาพรวมแต่ค่าแอดลดลงมาก ตรวจว่าตั้งใจลดหรือไม่':undefined}>{series.change>0?'▲':'▼'} {Math.abs(series.change).toFixed(Math.abs(series.change)>=100?0:1)}%</span>;})():null}</td>
-                <td className={`${styles.r} ${vs(rowRoas(row),summary?.roas,true)}`}>{num(rowRoas(row))}</td>
-                <td className={styles.r}>{num(row.conversations,0)}</td>
-                <td className={`${styles.r} ${enough?vs(row.cost_per_conversation,summary?.cost_per_conversation,false):''}`} title={enough?undefined:`ทักน้อยกว่า ${MIN_CHATS} ครั้ง ยังไม่เทียบกับภาพรวม`}>{num(row.cost_per_conversation)}</td>
-                <td className={styles.spark}><DashboardSparkline series={series} label={`ค่าแอดรายวัน ${row.ad_name}`}/></td>
-                <td><div className={styles.rowActs}><Link href={adHref(row)}>ตรวจ</Link><Link href={compareHref(row)}>เทียบ</Link></div></td>
+            <thead><tr><th>ยูนิต</th><th className={styles.thOurs}>แอดของเรา</th><th className={styles.thOurs}>ค่าแอด (บาท)</th><th>สื่อที่เริ่มตก</th><th className={styles.thRival}>คู่แข่งของยูนิต</th><th><span className={styles.srOnly}>เปิด</span></th></tr></thead>
+            <tbody>{unitRows.slice(0,allUnits?undefined:UNIT_ROWS).map(unit=>{
+              const count=fallingByUnit.get(unit.id)??0,rival=rivalsByUnit.get(unit.id!);
+              return <tr key={unit.id} onClick={()=>router.push(unitHref(unit.id))}>
+                <td><Link className={styles.unitName} href={unitHref(unit.id)} onClick={event=>event.stopPropagation()}>{unit.name}</Link></td>
+                <td>{whole(unit.current?.ad_count)} แอด</td>
+                <td className={styles.num}>{whole(unit.current?.spend)}</td>
+                <td>{center.data?<div className={styles.fall}><span className={styles.fallTrack}><span className={styles.fallFill} style={{width:`${count/maxFalling*100}%`}}/></span><b className={count?styles.fallCount:styles.zero}>{whole(count)}</b></div>:<span className={styles.zero}>—</span>}</td>
+                <td>{rival?<><b className={styles.rivalCount}>{whole(rival.pages)} เพจ</b> <span className={styles.muted}>· {rival.keywords.slice(0,3).join(', ')}</span></>:<span className={styles.muted}>ยังไม่ตั้งคำค้น</span>}</td>
+                <td className={styles.chevronCell} aria-hidden><Icon name="chevron" size={15}/></td>
               </tr>;})}</tbody>
           </table></div>
-          <p className={styles.note}>สีเขียว/แดงเทียบกับภาพรวม (ROAS {num(summary?.roas)} · ค่าทัก {num(summary?.cost_per_conversation)}) · ค่าแอดที่เพิ่มตั้งแต่ {SPEND_JUMP}% เป็นสีแดงเมื่อ ROAS ต่ำกว่าภาพรวม และเขียวเมื่อยังสูงกว่า · สีส้มคือแอดที่ ROAS ดีแต่ค่าแอดลดลงตั้งแต่ {SPEND_JUMP}% · ค่าทักเทียบเฉพาะแอดที่ทักตั้งแต่ {MIN_CHATS} ครั้ง · ROAS และมูลค่าซื้อเป็นตัวเลขที่ Meta รายงาน</p>
-        </section>:null}
-      </div>
+          {unitRows.length>UNIT_ROWS?<button type="button" className={styles.more} onClick={()=>setAllUnits(value=>!value)} aria-expanded={allUnits}>{allUnits?'แสดงเฉพาะยูนิตแรก ๆ':`ดูทุกยูนิต (${whole(unitRows.length)})`}</button>:null}
+        </>:<p className={styles.loading}>ยังไม่มียูนิตที่มีค่าแอดในช่วงนี้</p>}
+    </section>:null}
 
-      <div className={styles.stack}>
-        <section className={styles.panel} aria-labelledby="rivals-heading">
-          <div className={styles.panelHead}><h2 id="rivals-heading">คู่แข่งสัปดาห์นี้</h2><Link className={styles.btnGhost} href="/competitors">ดูทั้งหมด →</Link></div>
-          {data.collisions?.pages?<ul className={styles.collide}>{data.collisions.top.map(page=><li key={page.page_id}>
-            <Link href={`/pages/${encodeURIComponent(page.page_id)}?scope=all`}>{page.page_name??page.page_id}</Link>
-            <span>{page.unit} · ตรงคำค้น {page.matched_ads} แอด{page.new_matched_7d?` · ใหม่ ${page.new_matched_7d}`:''} · {page.confirmed?'ทีมยืนยันแล้ว':'รอยืนยัน'}</span></li>)}</ul>:null}
-          {rivals?<>
-            <p className={styles.panelLead}>เพิ่งพบ {(rivals.week?.newAds??rivals.recentlyFound).toLocaleString('th-TH')} แอดใน 7 วัน · เก็บล่าสุด {thaiDate(rivals.lastCollectedAt)} · “เพิ่งพบ” คือระบบเห็นครั้งแรก แอดอาจยิงมาก่อนแล้ว</p>
-            <ul className={styles.rivalList}>{recent.map(ad=><li key={`${ad.dataset_id}:${ad.ad_archive_id}`}>
-              <AdThumb ad={ad}/>
-              <div><b>{ad.page_name??ad.page_id}</b><p>{(ad.title||ad.body_text||'ไม่มีข้อความที่บันทึกไว้').slice(0,90)}</p>
-                <span className={styles.note}>ยิงมา {ad.ad_age_days.toLocaleString('th-TH')} วัน · <Link href={`/pages/${encodeURIComponent(ad.page_id)}?scope=dataset:${ad.dataset_id}`}>เปิดหลักฐาน</Link></span></div>
-            </li>)}{!recent.length?<li className={styles.note}>สัปดาห์นี้ยังไม่พบแอดใหม่</li>:null}</ul>
-          </>:<p className={styles.panelLead}>ข้อมูลคู่แข่งเปิดไม่ได้ในขณะนี้</p>}
-        </section>
+    {canAnalyze&&review?<section className={styles.upkeep} aria-labelledby="upkeep-heading" data-testid="overview-upkeep">
+      <h2 id="upkeep-heading">งานดูแลข้อมูล · ทำแล้วตัวเลขบนหน้านี้จะครบขึ้น</h2>
+      <div className={styles.list}>
+        {unassigned?.ad_count?<div className={styles.row}>
+          <Tile icon="layers" tone="ours"/>
+          <span className={styles.rowText}><span className={styles.rowTitle}>{whole(unassigned.ad_count)} แอดที่มีค่าแอดช่วงนี้ยังไม่ผูกยูนิต</span><span className={styles.rowSub}>ค่าแอดรวม {whole(unassigned.spend)} บาท{units.data?.unassigned.share!=null?` (${num(units.data.unassigned.share,1)}% ของทั้งหมด)`:''} · ผูกเพจเข้ายูนิตใน Ads Management แล้วตารางรายยูนิตจะครบ</span></span>
+        </div>:null}
+        {unnamed?<div className={styles.row}>
+          <Tile icon="tag" tone="neutral"/>
+          <span className={styles.rowText}><span className={styles.rowTitle}>{whole(unnamed)} เพจยังไม่มีชื่อ</span><span className={styles.rowSub}>{names.message||'หลังจัดสิทธิ์เพจแล้ว กดอัปเดตชื่อให้แสดงชื่อเพจแทนรหัส'}</span></span>
+          <button type="button" className={styles.mini} onClick={refreshPageNames} disabled={names.loading}>{names.loading?'กำลังอ่านชื่อเพจ…':'อัปเดตชื่อเพจ'}</button>
+        </div>:null}
+        {showGap?<div className={styles.row}>
+          <Tile icon="alert" tone="rival"/>
+          <span className={styles.rowText}><span className={styles.rowTitle}>ข้อมูลคู่แข่งเก่ากว่าแอดเรา {whole(gap)} วัน</span><span className={styles.rowSub}>คู่แข่งเก็บล่าสุด {thaiDate(bangkokDay(rivalsAt!),false)} · แอดเรามีข้อมูลถึง {thaiDate(ownedTo,false)}</span></span>
+          <Link className={styles.mini} href="/collect">เก็บแอดคู่แข่งใหม่</Link>
+        </div>:null}
+        {!unassigned?.ad_count&&!unnamed&&!showGap?<div className={styles.row}><span className={styles.rowSub}>{units.loading?'กำลังตรวจ…':late?'นอกจากอัปเดตข้อมูลตามแถบด้านบน ไม่มีงานค้าง':'ไม่มีงานค้าง ข้อมูลพร้อมใช้'}</span></div>:null}
       </div>
-    </div>:null}
+    </section>:null}
+
+    {selected?<CompanyDetail ad={selected} creativeUrl={selected.creative_url??null} mediaLoading={false}
+      period={review?{date_start:review.period.from,date_end:review.period.to}:null} onClose={()=>setSelected(null)} returnTo={returnTo}/>:null}
+    {rivalAd?<AdDrawer adArchiveId={rivalAd.ad_archive_id} datasetId={rivalAd.dataset_id} onClose={()=>setRivalAd(null)} canAnalyze={canAnalyze}
+      compareHref={canAnalyze?`/compare/ads?${new URLSearchParams({dataset:rivalAd.dataset_id,rival:rivalAd.ad_archive_id,returnTo:pathname})}`:undefined}/>:null}
   </div>;
 }

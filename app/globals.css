@@ -1,23 +1,32 @@
 
 :root {
 
-  --paper: #f7f8fa;
+  /* Canvas and cards. The canvas sits a step below white (1.13:1) so every card reads as a card;
+     it is as deep as it can go while pink links on it still clear AA (4.58:1). Neutrals lean warm
+     towards the CI pink rather than the cool grey they replaced. */
+  --paper: #f3f0f2;
   --surface: #ffffff;
-  --surface-pink: #f4f5f7;
-  --surface-sunken: #f2f3f5;
+  --surface-pink: #fcf4f7;
+  --surface-sunken: #efebee;
 
 
   --ink: #1b1f27;
+  /* Secondary body copy (ad text, campaign names): darker than --muted, quieter than --ink. */
+  --ink-soft: #3f4652;
   --muted: #5f6672;
-  --line: #e5e7eb;
+  --line: #e3dde1;
+  /* Hovered or emphasised edges. */
+  --line-strong: #cfc7cc;
 
-  --line-pink: #e5e7eb;
+  --line-pink: #ecc9d8;
 
 
-  --brand: #d1d5db;
-  --brand-deep: #b8bec8;
+  /* Selected-state edge, progress fill, chart highlight: a mid CI pink. Charcoal on it is 8.06:1;
+     white on it is not viable. --brand-deep is an edge only. */
+  --brand: #e9a0bf;
+  --brand-deep: #d77aa1;
   /* PT Glory CI pink #D34B82 is 4.12:1 on white: logo, highlights and charts only.
-     Text, links and button fills use a slightly deeper pink that clears AA (5.18:1 on white, 4.87:1 on paper).
+     Text, links and button fills use a slightly deeper pink that clears AA (5.18:1 on white, 4.58:1 on paper).
      Brown is not used in the product UI. */
   --brand-ci: #d34b82;
   --brand-ink: #c0396f;
@@ -41,19 +50,32 @@
   --warn-tint: rgba(245, 212, 55, 0.28);
   --danger: #b3261e;
   --danger-tint: rgba(179, 38, 30, 0.1);
-  --neutral-tint: #eef2f7;
+  /* An alert region (falling ads). Opaque so its text measures the same on the canvas and on a card:
+     --danger 5.54:1, --muted 4.90:1. The whole box carries the alert instead of a thick edge. */
+  --danger-surface: #f7e9e9;
+  --danger-line: #e9c3c1;
+  --warn-line: rgba(138, 90, 0, 0.3);
+  --neutral-tint: #f0ecee;
 
 
   --focus: #b23468;
 
 
-  --fs-page-title: 32px;
+  /* Identity of the two sides in a comparison chart, kept apart from --brand so a brand change cannot
+     merge them. Checked with the dataviz palette validator: colour-blind separation ΔE 13.0 (protan),
+     both ≥3:1 on white, white label text ≥4.5:1 on each. */
+  --series-a: #256abf;
+  --series-b: #c0396f;
+
+
+  --fs-page-title: 28px;
   --fs-title: 22px;
   --fs-subhead: 18px;
   --fs-section: 20px;
   --fs-title-sm: 16px;
   --fs-body: 15px;
-  --fs-meta: 13px;
+  /* The floor for Thai text people read: stacked vowels and tone marks need it more than Latin does. */
+  --fs-meta: 14px;
 
   --fs-eyebrow: 12px;
   --fs-label: 13px;
@@ -62,23 +84,45 @@
   --radius: 12px;
   --radius-sm: 8px;
   --radius-pill: 999px;
-  --gap-page: 24px;
-  --gap-section: 28px;
-  --pad-card: 18px;
-  --shadow: 0 1px 3px rgba(27, 31, 39, 0.04);
+  /* Dense but readable (UX direction): tighter than the airy 24/28/18 they replace. */
+  --gap-page: 20px;
+  --gap-section: 24px;
+  --pad-card: 16px;
+  /* A real lift: a close edge shadow plus a soft offset one, tinted from the warm neutrals. */
+  --shadow: 0 1px 2px rgba(51, 24, 38, 0.06), 0 8px 20px -12px rgba(51, 24, 38, 0.18);
 
 
-  --display: var(--font-display), "Noto Sans Thai", system-ui, sans-serif;
+  /* Titles and figures share the UI family (see app/layout.tsx); kept as its own token so a later display face is one line. */
+  --display: var(--font-ui), "Noto Sans Thai", system-ui, sans-serif;
   --ui: var(--font-ui), "Noto Sans Thai", "Leelawadee UI", system-ui, sans-serif;
 
 
-  --content-max: 1180px;
+  --content-max: 1280px;
   --content-max-wide: 1440px;
 
 
-  --sidebar-w: 216px;
-  --sidebar-w-rail: 68px;
-  --topbar-h: 64px;
+  /* UI v3 (macOS). The sidebar is a warm tint a step below the canvas (--muted on it 4.70:1; pink text
+     on it is not, so a selected row is a filled --brand-ink with white on it, 5.18:1). The toolbar band
+     is near-white over the canvas. */
+  --chrome: #ece6e9;
+  --chrome-bar: rgba(250, 248, 249, 0.94);
+  --row-hover: rgba(27, 31, 39, 0.06);
+  /* Every other row of a list table, a breath darker than a card. */
+  --zebra: #faf8f9;
+  /* The side an entry belongs to, as its icon tile: white glyphs on each clear 3:1. */
+  --tile-neutral: linear-gradient(180deg, #a5a5ab, #7e7e85);
+  --tile-ours: linear-gradient(180deg, #f07aa8, #d34b82);
+  --tile-rival: linear-gradient(180deg, #5aa0f2, #256abf);
+  --tile-compare: linear-gradient(180deg, #bc7be8, #8c48c8);
+  /* Rivals as text and surfaces, the blue twin of --brand-ink / --brand-tint / --line-pink. */
+  --rival-ink: #1f5a9e;
+  --rival-tint: #eaf1fa;
+  --rival-line: #c9d7ea;
+
+
+  --sidebar-w: 236px;
+  --sidebar-w-rail: 88px;
+  --topbar-h: 56px;
 }
 
 * { box-sizing: border-box; }
@@ -122,14 +166,15 @@ a:hover { text-decoration-thickness: 2px; }
 
 input, select, textarea, button { font: inherit; color: inherit; }
 
-input[type="text"], input[type="search"], input[type="email"], input[type="password"], select, textarea {
+/* Date and number fields share the look: left to the browser they drew a black square box beside rounded selects. */
+input[type="text"], input[type="search"], input[type="email"], input[type="password"], input[type="date"], input[type="number"], input[type="url"], input[type="datetime-local"], select, textarea {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   padding: 8px 10px;
   min-height: 40px;
 }
-input:hover, select:hover { border-color: #94a3b8; }
+input:hover, select:hover { border-color: var(--line-strong); }
 
 button {
   border-radius: var(--radius-sm);

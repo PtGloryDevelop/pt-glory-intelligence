@@ -4,31 +4,27 @@ import {dbUser} from '../db/user.ts';
 import {getAdDetail} from '../read/queries.ts';
 import {signArchivedPreviews} from '../media/presentation.ts';
 import {resolveMedia} from '../media/resolve.ts';
-import {cachedOwnedImage} from '../owned-ads/media-cache.ts';
+import {cachedOwnedImage, ownedMediaCache, ownedMediaKey} from '../owned-ads/media-cache.ts';
+import {metaReadConfigured, resolveWithToken} from '../owned-ads/meta-media.ts';
 import {summarizeOwnedReport} from '../owned-ads/model.ts';
 import type {CompanyAd} from '../owned-ads/source-rows.ts';
 import type {Media} from '../media.ts';
-import {AI_DIMS, type AdReading, type AdRef, type AiRun, type AiEstimate, type SetReading, adRefId} from './compare-shared.ts';
+import {AI_DIMS, AI_SOURCES, SCORE_DIMS, readAdReading, readSetReading, type AdReading, type AdRef, type AiRun, type AiEstimate, type SetReading, adRefId} from './compare-shared.ts';
+import {AiError, MODEL, callDeepSeek, estimateUsd, modelConfig, type Message} from './deepseek.ts';
 export {parseAdRefs} from './compare-shared.ts';
+export {AiError} from './deepseek.ts';
 
-// ponytail: one model for every call; set OPENAI_MODEL to change it (cached rows are per model).
-const MODEL = process.env.OPENAI_MODEL || 'gpt-4.1-mini';
-/** USD per 1M tokens [input, output]. Unknown models are priced as gpt-4.1-mini. */
-const PRICES: Record<string, [number, number]> = {
-  'gpt-4.1-mini': [0.4, 1.6], 'gpt-4.1-nano': [0.1, 0.4], 'gpt-4o-mini': [0.15, 0.6], 'gpt-5-mini': [0.25, 2], 'gpt-5-nano': [0.05, 0.4],
-};
-const price = PRICES[MODEL] ?? PRICES['gpt-4.1-mini'];
-// Measured order of magnitude for one ad (copy + low-detail image) and one set summary; shown before running.
-const EST_AD = (2500 * price[0] + 700 * price[1]) / 1e6;
-const EST_SET = (4000 * price[0] + 900 * price[1]) / 1e6;
+// Tokens [input, output] for one ad (copy + low-detail image) and one set summary, measured on gpt-4.1-mini;
+// an order of magnitude shown before running. What is recorded is DeepSeek's own count.
+const EST_AD = [3200, 700] as const, EST_SET = [2400, 500] as const;
+// A ceiling, not a target (output is billed as used): Thai can take more tokens here than it did on OpenAI.
+const MAX_OUTPUT = 4000;
 const DAILY_CAP = Number(process.env.AI_DAILY_USD) || 1;
 const TOTAL_CAP = Number(process.env.AI_TOTAL_USD) || 4.5;
-const VERSION = 'v1';
-const SET_VERSION = 'v2'; // bump when SET_PROMPT changes
+const VERSION = 'v4'; // bump when AD_PROMPT changes (v4: DeepSeek JSON mode, shape in the prompt)
+const SET_VERSION = 'v8'; // bump when SET_PROMPT changes (v8: DeepSeek JSON mode, shape in the prompt)
 
-export class AiError extends Error { status: number; constructor(message: string, status: number) { super(message); this.status = status; } }
-
-type Loaded = {ref: AdRef; side: string; label: string; format: string; text: string; image: string | null; facts: string};
+type Loaded = {ref: AdRef; side: string; label: string; format: string; text: string; image: string | null; facts: string; owned?: CompanyAd};
 
 async function loadAds(refs: AdRef[]): Promise<Loaded[]> {
   const db = await dbUser();
@@ -48,7 +44,7 @@ async function loadAds(refs: AdRef[]): Promise<Loaded[]> {
       const roas = summarizeOwnedReport([ad]).roas.value;
       return {
         ref, side: 'แอดของเรา', label: ad.ad_name, format: ad.video_id ? 'วิดีโอ' : 'ภาพ',
-        text: [ad.title, ad.body_text].filter(Boolean).join('\n'), image: cachedOwnedImage(ad) ?? null,
+        text: [ad.title, ad.body_text].filter(Boolean).join('\n'), image: cachedOwnedImage(ad) ?? null, owned: ad,
         facts: `ค่าแอด ${ad.spend ?? '—'} ${ad.currency} · ROAS ${roas == null ? '—' : roas.toFixed(2)} · บทสนทนา ${ad.conversations ?? '—'}`,
       };
     }
@@ -65,8 +61,28 @@ async function loadAds(refs: AdRef[]): Promise<Loaded[]> {
   }));
 }
 
+/**
+ * Our ad's picture for AI. The snapshot's link expires within days, and the page's own refresh may
+ * have run in another server instance (its cache is per process), so ask Meta for a fresh link when
+ * a read token is set. Called only for ads not read before, so cached readings cost no Meta call.
+ */
+async function ownedImage(row: CompanyAd): Promise<string | null> {
+  const cached = ownedMediaCache.get(ownedMediaKey(row));
+  if (cached && cached.until > Date.now() && cached.media.url) return cached.media.url;
+  if (metaReadConfigured()) {
+    const creative = (row as CompanyAd & {creative_id?: string | null}).creative_id ?? null;
+    const [media] = await resolveWithToken([{account_id: row.account_id, ad_id: row.ad_id, creative_id: creative, video_id: row.video_id ?? null}], false).catch(() => []);
+    if (media?.url) {
+      if (ownedMediaCache.size > 1000) ownedMediaCache.clear();
+      ownedMediaCache.set(ownedMediaKey(media), {until: Date.now() + 30 * 60000, media});
+      return media.url;
+    }
+  }
+  return row.creative_url ?? null;
+}
+
 const supabaseHost = (() => { try { return new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').hostname; } catch { return ''; } })();
-/** Fetch the still ourselves (allowlisted hosts only) so OpenAI never needs to reach a signed or expiring URL. */
+/** Fetch the still ourselves (allowlisted hosts only) so DeepSeek never needs to reach a signed or expiring URL. */
 async function imageData(url: string | null): Promise<string | null> {
   if (!url) return null;
   let parsed: URL;
@@ -82,48 +98,15 @@ async function imageData(url: string | null): Promise<string | null> {
   } catch { return null; }
 }
 
-type Message = {role: 'system' | 'user'; content: string | ({type: 'text'; text: string} | {type: 'image_url'; image_url: {url: string; detail: 'low'}})[]};
-async function callOpenAI<T>(messages: Message[], name: string, schema: object, maxTokens: number): Promise<{result: T; input: number; output: number; usd: number}> {
-  const key = process.env.OPENAI_API_KEY;
-  if (!key) throw new AiError('ยังไม่ได้ตั้งค่า OPENAI_API_KEY ใน .env.local', 503);
-  let response: Response;
-  try {
-    response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST', signal: AbortSignal.timeout(90_000),
-      headers: {Authorization: `Bearer ${key}`, 'Content-Type': 'application/json'},
-      body: JSON.stringify({model: MODEL, messages, max_completion_tokens: maxTokens, response_format: {type: 'json_schema', json_schema: {name, strict: true, schema}}}),
-    });
-  } catch { throw new AiError('ติดต่อ OpenAI ไม่ได้ ลองใหม่อีกครั้ง', 502); }
-  const data = await response.json().catch(() => null);
-  if (!response.ok) {
-    const code = data?.error?.code;
-    if (code === 'insufficient_quota') throw new AiError('เครดิต OpenAI หมด', 402);
-    if (response.status === 401) throw new AiError('OPENAI_API_KEY ไม่ถูกต้อง', 503);
-    if (response.status === 429) throw new AiError('OpenAI จำกัดจำนวนครั้ง รอสักครู่แล้วลองใหม่', 429);
-    console.error('OpenAI error', response.status, code);
-    throw new AiError('OpenAI ตอบกลับผิดพลาด', 502);
-  }
-  const input = Number(data?.usage?.prompt_tokens) || 0, output = Number(data?.usage?.completion_tokens) || 0;
-  let result: T;
-  try { result = JSON.parse(data.choices[0].message.content); } catch { throw new AiError('อ่านผลจาก OpenAI ไม่ได้', 502); }
-  return {result, input, output, usd: (input * price[0] + output * price[1]) / 1e6};
-}
-
-const cell = {type: 'object', additionalProperties: false, required: ['value', 'source', 'quote'], properties: {
-  value: {type: 'string'}, source: {type: 'string', enum: ['ข้อความ', 'ภาพ', 'ภาพ + ข้อความ', 'ไม่พบ']}, quote: {type: 'string'},
-}};
-const AD_SCHEMA = {type: 'object', additionalProperties: false, required: [...AI_DIMS, 'claims'], properties: {
-  ...Object.fromEntries(AI_DIMS.map(dim => [dim, cell])),
-  claims: {type: 'object', additionalProperties: false, required: ['items', 'quote'], properties: {
-    items: {type: 'array', items: {type: 'object', additionalProperties: false, required: ['text', 'risky'], properties: {text: {type: 'string'}, risky: {type: 'boolean'}}}},
-    quote: {type: 'string'},
-  }},
-}};
-const refList = {type: 'array', items: {type: 'integer'}};
-const SET_SCHEMA = {type: 'object', additionalProperties: false, required: ['diffs', 'ideas'], properties: {
-  diffs: {type: 'array', items: {type: 'object', additionalProperties: false, required: ['text', 'ads'], properties: {text: {type: 'string'}, ads: refList}}},
-  ideas: {type: 'array', items: {type: 'object', additionalProperties: false, required: ['text', 'ads'], properties: {text: {type: 'string'}, ads: refList}}},
-}};
+// DeepSeek's JSON mode takes no schema: the prompt shows the shape, and readAdReading/readSetReading enforce it.
+const blank = {value: '...', source: 'ข้อความ', quote: '...'};
+const AD_SHAPE = JSON.stringify({
+  ...Object.fromEntries(AI_DIMS.map(dim => [dim, blank])),
+  claims: {items: [{text: '...', risky: false}], quote: '...'},
+  scores: Object.fromEntries(SCORE_DIMS.map(dim => [dim, {score: 0, why: '...'}])),
+  fix: '...',
+});
+const SET_SHAPE = JSON.stringify({diffs: [{text: '...', ads: [0, 1]}], ideas: [{text: '...', ads: [0]}], hooks: [{text: '...', why: '...'}]});
 
 const AD_PROMPT = `คุณช่วยทีมการตลาดไทยอ่านโฆษณา Facebook ทีละตัว ตอบภาษาไทย สั้น ไม่เกิน 120 ตัวอักษรต่อช่อง
 ใช้เฉพาะสิ่งที่อยู่ในข้อความหรือภาพของแอดนี้ ห้ามเดา ถ้าไม่พบให้ value="ไม่พบในแอด" source="ไม่พบ" quote=""
@@ -135,20 +118,46 @@ offer = ราคา จำนวน ของแถม ส่งฟรี เ�
 proof = หลักฐานความน่าเชื่อ เช่น รีวิว ผลทดสอบ เลข อย. ผู้เชี่ยวชาญ ส่วนผสม
 format = รูปแบบครีเอทีฟ (ภาพนิ่ง วิดีโอ หลายภาพ) และลักษณะที่เห็น
 claims = คำอ้างเรื่องสุขภาพหรือผลลัพธ์ทั้งหมด risky=true ถ้าเสี่ยงผิดเกณฑ์โฆษณา อย. เช่น รักษา หายขาด ถาวร ลดน้ำหนักเป็นตัวเลข อ้างแพทย์
-ห้ามคาดเดายอดขาย งบ หรือผลลัพธ์ของแอด`;
+ห้ามคาดเดายอดขาย งบ หรือผลลัพธ์ของแอด
+
+scores = ให้คะแนนคุณภาพครีเอทีฟ 0–10 (จำนวนเต็ม) แบบ creative director ที่เข้มงวด ไม่ใจดี ไม่ใช่การเดาผลลัพธ์
+เกณฑ์: 3 = อ่อน 5 = ธรรมดาเหมือนแอดทั่วไป 7 = ดีพอจะยิงต่อ 9–10 = โดดเด่นจริง หายากมาก ถ้าลังเลระหว่างสองคะแนนให้เลือกคะแนนที่ต่ำกว่า
+hook = หยุดนิ้วคนที่เลื่อนฟีดได้แค่ไหนในวินาทีแรก (บรรทัดแรก หรือข้อความใหญ่บนภาพ)
+clarity = อ่านแล้วรู้ทันทีไหมว่าขายอะไร ให้ใคร ได้อะไร
+cta = บอกชัดไหมว่าต้องทำอะไรต่อ (ทักแชท สั่งซื้อ กดลิงก์) และมีเหตุให้ทำตอนนี้
+emotion = แตะปัญหาหรือความรู้สึกจริงของลูกค้าแค่ไหน
+offer = ข้อเสนอชัดและคุ้มแค่ไหน ถ้าไม่บอกราคาหรือข้อเสนอเลยให้ 0–3
+fit = ภาพกับข้อความเล่าเรื่องเดียวกันไหม ถ้าไม่มีภาพให้ score=null
+why = เหตุผลของคะแนน อ้างสิ่งที่เห็นในแอด ไม่เกิน 80 ตัวอักษร
+fix = สิ่งเดียวที่ควรแก้ก่อนเพื่อให้แอดนี้ดีขึ้นมากที่สุด (มักเป็นส่วนที่คะแนนต่ำสุด) เขียนเป็นคำสั่งที่ทำได้เลย ไม่เกิน 120 ตัวอักษร ห้ามแต่งตัวเลขหรือคำอ้างที่ไม่มีในแอด ห้ามแนะนำให้ใช้คำอ้างที่ risky หรือคำอ้างผลต่อโรค อวัยวะ หรือระยะเวลาเห็นผล
+
+source ใช้ได้แค่ ${AI_SOURCES.map(name => `"${name}"`).join(' ')} · score เป็นจำนวนเต็ม 0–10 หรือ null
+ตอบเป็น JSON object เดียว มีครบทุกช่องตามรูปแบบนี้ (... คือส่วนที่ให้เติม):
+${AD_SHAPE}`;
 
 const SET_PROMPT = `คุณช่วยทีมการตลาดไทยสรุปการเทียบโฆษณา ตอบภาษาไทย ประโยคละไม่เกิน 160 ตัวอักษร
-ข้อมูลคือผลอ่านแอดแต่ละตัว (index เริ่มที่ 0) แอดของเรามีตัวเลขผลลัพธ์ แอดคู่แข่งไม่มีงบหรือยอดขาย ห้ามอ้างว่าคู่แข่งขายดีกว่าหรือได้ผลกว่า
-diffs = จุดที่แอดเรากับคู่แข่งต่างกันจริง 2–4 ข้อ (ข้อเสนอ มุมขาย คำเปิด หลักฐาน รูปแบบ)
-ideas = ไอเดียทดลองสำหรับแอดฝั่ง "แอดของเรา" เท่านั้น 2–4 ข้อ (เราแก้แอดคู่แข่งไม่ได้) เขียนเป็นสิ่งที่ทีมทำกับแอดเราได้เลย เช่น เปลี่ยนคำเปิด ใส่ราคา เพิ่มหลักฐาน แล้ววัดผลด้วยตัวเลขของเรา ห้ามแนะนำคำอ้างที่เสี่ยงผิดเกณฑ์ อย.
-ads = index ของแอดที่เป็นหลักฐานของข้อนั้น`;
+ข้อมูลคือผลอ่านแอดแต่ละตัว (index เริ่มที่ 0) พร้อมคะแนนครีเอทีฟ 0–10 ที่ AI ให้ แอดของเรามีตัวเลขผลลัพธ์จริง แอดคู่แข่งไม่มีงบหรือยอดขาย ห้ามอ้างว่าคู่แข่งขายดีกว่าหรือได้ผลกว่า
+จำนวนวันที่คู่แข่งยิง: 30 วันขึ้นไปและยังแสดงอยู่ = คู่แข่งใช้แอดนี้ต่อเนื่อง ควรศึกษา (แต่ห้ามสรุปว่าขายดีหรือได้ผล เพราะไม่มีข้อมูลนั้น) ไม่เกิน 10 วัน = อาจยังทดสอบอยู่ อย่าเพิ่งยึดเป็นแบบ ข้อมูลนี้ไม่มีจำนวนวันของแอดเรา ห้ามพูดว่าแอดเราไม่มีข้อมูลวัน
+ถ้าตัวเลขจริงของแอดเราดีแต่คะแนนต่ำ ให้เชื่อตัวเลขจริงก่อน แนะนำเป็นการทดลองเพิ่ม ไม่ใช่ให้หยุดแอด
+ถ้า scores.fit เป็น null แปลว่า AI ไม่ได้เห็นภาพของแอดนั้น (ระบบอาจโหลดภาพไม่ได้) ห้ามสรุปว่าแอดนั้นไม่มีภาพหรือเป็นข้อความล้วน และห้ามเทียบเรื่องภาพ
+diffs = จุดที่แอดเรากับคู่แข่งต่างกันจริง 2–4 ข้อ (คำเปิด ข้อเสนอ มุมขาย CTA หลักฐาน รูปแบบ) เริ่มจากส่วนที่คะแนนห่างกันมากที่สุด
+ideas = ไอเดียทดลองสำหรับแอดฝั่ง "แอดของเรา" เท่านั้น 2–4 ข้อ (เราแก้แอดคู่แข่งไม่ได้) เขียนเป็นสิ่งที่ทีมทำกับแอดเราได้เลย เช่น เปลี่ยนคำเปิด ใส่ราคา เพิ่มหลักฐาน แล้ววัดผลด้วยตัวเลขของเรา
+hooks = คำเปิดใหม่ 3 แบบสำหรับแอดของเรา ให้ทีมยิงทดสอบ แต่ละแบบใช้มุมต่างกัน (เช่น ปัญหา ผลลัพธ์ที่พูดได้ ข้อเสนอ) text = ประโยคพร้อมใช้ ไม่เกิน 90 ตัวอักษร why = ทำไมน่าลอง ไม่เกิน 100 ตัวอักษร
+กฎของ ideas และ hooks: ใช้เฉพาะข้อเท็จจริงที่มีในแอดของเรา (ราคา ของแถม ส่วนผสม วิธีใช้) ห้ามแต่งตัวเลข รีวิว หรือคำอ้างใหม่ ห้ามลอกคำของคู่แข่งมาทั้งประโยค
+กฎ อย. เข้มที่สุด: ห้ามนำคำอ้างใน claims ที่ risky=true มาใช้ซ้ำแม้จะเรียบเรียงใหม่ ห้ามอ้างว่ารักษา ป้องกัน หรือบรรเทาโรคหรืออาการ ห้ามอ้างผลต่ออวัยวะหรือค่าเลือด (หลอดเลือด หัวใจ ความดัน ไขมัน น้ำตาล) ห้ามบอกว่าเห็นผลในกี่วัน ห้ามรับประกันผล (แน่นอน 100% หายขาด ถาวร) ห้ามอ้างแพทย์
+hooks ที่ปลอดภัยใช้มุม เช่น ข้อเสนอและราคา ความสะดวก รสชาติ วิธีกิน คำถามชวนคิดเรื่องไลฟ์สไตล์ ส่วนผสมที่มีในแอด ชื่อสินค้าให้สะกดตามที่เขียนในแอดทุกตัวอักษร
+ads = index ของแอดที่เป็นหลักฐานของข้อนั้น
+
+ตอบเป็น JSON object เดียว มีครบทุกช่องตามรูปแบบนี้ (... คือส่วนที่ให้เติม):
+${SET_SHAPE}`;
 
 const sha = (value: string) => createHash('sha256').update(value).digest('hex').slice(0, 24);
 const adKey = (ad: Loaded) => `ad:${VERSION}:${MODEL}:${adRefId(ad.ref)}:${sha(ad.text)}`;
 
 async function spent(db: Awaited<ReturnType<typeof dbUser>>) {
   // ponytail: sums every row in JS; fine for thousands of calls, move to SQL if the table grows large.
-  const {data, error} = await db.from('ai_analyses').select('usd,created_at');
+  // DeepSeek rows only: the caps and the credit bar track the DeepSeek balance; older OpenAI rows were another account.
+  const {data, error} = await db.from('ai_analyses').select('usd,created_at').like('model', 'deepseek%');
   if (error) throw new AiError('อ่านค่าใช้จ่าย AI ไม่สำเร็จ', 503);
   const dayStart = new Date(Date.now() + 7 * 3600e3); dayStart.setUTCHours(0, 0, 0, 0);
   const since = dayStart.getTime() - 7 * 3600e3; // Bangkok midnight
@@ -157,8 +166,9 @@ async function spent(db: Awaited<ReturnType<typeof dbUser>>) {
   return {today, total, dailyCap: DAILY_CAP, totalCap: TOTAL_CAP};
 }
 
-/** dryRun: what is cached, what a run would cost, and what has been spent. Never calls OpenAI. */
+/** dryRun: what is cached, what a run would cost, and what has been spent. Never calls DeepSeek. */
 export async function runComparison(refs: AdRef[], dryRun: boolean): Promise<AiEstimate | AiRun> {
+  const {vision} = modelConfig();
   const db = await dbUser();
   const ads = await loadAds(refs);
   const keys = ads.map(adKey);
@@ -167,7 +177,7 @@ export async function runComparison(refs: AdRef[], dryRun: boolean): Promise<AiE
   if (cached.error) throw new AiError('อ่านผลวิเคราะห์เดิมไม่สำเร็จ', 503);
   const hit = new Map((cached.data ?? []).map(row => [row.key as string, row.result]));
   const missing = ads.filter((_, index) => !hit.has(keys[index]));
-  const estimate = missing.length * EST_AD + (hit.has(setKey) ? 0 : EST_SET);
+  const estimate = missing.length * estimateUsd(...EST_AD) + (hit.has(setKey) ? 0 : estimateUsd(...EST_SET));
   const budget = await spent(db);
   if (dryRun) return {model: MODEL, cached: ads.length - missing.length, missing: missing.length, setCached: hit.has(setKey), estimate, spent: budget};
   if (estimate > 0 && (budget.today + estimate > DAILY_CAP || budget.total + estimate > TOTAL_CAP))
@@ -181,18 +191,25 @@ export async function runComparison(refs: AdRef[], dryRun: boolean): Promise<AiE
   };
   await Promise.all(ads.map(async (ad, index) => {
     if (hit.has(keys[index])) return;
-    const image = await imageData(ad.image);
+    // A model that cannot read pictures is not sent one (nor is Meta asked for it).
+    const image = vision ? await imageData(ad.owned ? await ownedImage(ad.owned) : ad.image) : null;
     const content: Exclude<Message['content'], string> = [{type: 'text', text: `ฝั่ง: ${ad.side}\nชื่อ: ${ad.label}\nรูปแบบ: ${ad.format}\n${image ? '' : 'ไม่มีภาพประกอบ อ่านจากข้อความเท่านั้น\n'}ข้อความในแอด:\n${ad.text.slice(0, 4000) || '(ไม่มีข้อความ)'}`}];
     if (image) content.push({type: 'image_url', image_url: {url: image, detail: 'low'}});
-    const call = await callOpenAI<AdReading>([{role: 'system', content: AD_PROMPT}, {role: 'user', content}], 'ad_reading', AD_SCHEMA, 900);
-    hit.set(keys[index], call.result);
-    await save(keys[index], 'ad', call);
+    const call = await callDeepSeek([{role: 'system', content: AD_PROMPT}, {role: 'user', content}], MAX_OUTPUT);
+    const reading = readAdReading(call.result);
+    if (!reading) throw new AiError('DeepSeek ตอบไม่ครบตามรูปแบบ ลองใหม่อีกครั้ง', 502);
+    // Without a picture there is nothing to judge, whatever the model guessed.
+    if (!image) reading.scores.fit = {score: null, why: 'AI ไม่ได้เห็นภาพของแอดนี้'};
+    hit.set(keys[index], reading);
+    await save(keys[index], 'ad', {...call, result: reading});
   }));
   if (!hit.has(setKey)) {
     const input = ads.map((ad, index) => ({index, side: ad.side, name: ad.label, facts: ad.facts, reading: hit.get(keys[index])}));
-    const call = await callOpenAI<SetReading>([{role: 'system', content: SET_PROMPT}, {role: 'user', content: JSON.stringify(input)}], 'set_reading', SET_SCHEMA, 1200);
-    hit.set(setKey, call.result);
-    await save(setKey, 'set', call);
+    const call = await callDeepSeek([{role: 'system', content: SET_PROMPT}, {role: 'user', content: JSON.stringify(input)}], MAX_OUTPUT);
+    const summary = readSetReading(call.result, ads.length);
+    if (!summary) throw new AiError('DeepSeek ตอบไม่ครบตามรูปแบบ ลองใหม่อีกครั้ง', 502);
+    hit.set(setKey, summary);
+    await save(setKey, 'set', {...call, result: summary});
   }
   return {
     model: MODEL, cost, spent: {...budget, today: budget.today + cost, total: budget.total + cost},
@@ -203,5 +220,5 @@ export async function runComparison(refs: AdRef[], dryRun: boolean): Promise<AiE
 
 /** What AI calls have cost (as recorded per call), for the usage bars. */
 export async function aiUsage() {
-  return {...await spent(await dbUser()), model: MODEL, creditUsd: Number(process.env.OPENAI_CREDIT_USD) || 5};
+  return {...await spent(await dbUser()), model: MODEL, creditUsd: Number(process.env.DEEPSEEK_CREDIT_USD) || 5};
 }

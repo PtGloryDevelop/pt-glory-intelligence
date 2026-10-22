@@ -9,8 +9,6 @@ export type Rival = Omit<ExplorerRow, 'total_count'> & {
   collected_at?: string;
 };
 
-export const COMPARISON_DECISIONS = ['คงแอดเดิมและติดตาม', 'ทดลองครีเอทีฟใหม่', 'ทดลองข้อเสนอใหม่', 'ตรวจผลลัพธ์เพิ่มเติมก่อนตัดสินใจ'] as const;
-
 /** Return only to evidence screens; a pasted link cannot become an external redirect. */
 export function comparisonReturnHref(value: unknown): string {
   if (typeof value !== 'string' || value.length > 2048 || !value.startsWith('/') || value.startsWith('//')) return '/';
@@ -20,28 +18,8 @@ export function comparisonReturnHref(value: unknown): string {
       ? url.pathname + url.search : '/';
   } catch { return '/'; }
 }
-export type ComparisonDraft = { product: string; ourOffer: string; theirOffer: string; decision: string; hypothesis: string; success: string };
-
-/** Browser drafts contain team-entered text only, never the ads' financial payload. */
-export function parseComparisonDraft(raw: unknown): ComparisonDraft {
-  const values = raw && typeof raw === 'object' ? raw as Record<string, unknown> : {};
-  const field = (name: string, max: number) => typeof values[name] === 'string' ? values[name].slice(0, max) : '';
-  const decision = field('decision', 100);
-  return {
-    product: field('product', 200), ourOffer: field('ourOffer', 2000), theirOffer: field('theirOffer', 2000),
-    decision: COMPARISON_DECISIONS.some(value => value === decision) ? decision : '',
-    hypothesis: field('hypothesis', 4000), success: field('success', 1000),
-  };
-}
-
 export function comparisonSelectionKey(userNamespace: string): string | null {
   return isUuid(userNamespace) ? 'pt-glory-comparison-selection:' + userNamespace : null;
-}
-
-export function comparisonDraftKey(userNamespace: string, selection: ComparisonSelection): string | null {
-  const valid = parseComparisonSelection(selection);
-  if (!comparisonSelectionKey(userNamespace) || !valid.account || !valid.owned || !valid.dataset || !valid.rival) return null;
-  return ['pt-glory-comparison-draft', userNamespace, valid.account, valid.owned, valid.dataset, valid.rival].join(':');
 }
 
 export function parseComparisonSelection(raw: Record<string, unknown>): ComparisonSelection {
@@ -63,6 +41,24 @@ export function mergeComparisonSelection(saved: ComparisonSelection, linked: Com
     dataset: linked.dataset || saved.dataset,
     rival: linked.dataset ? linked.rival : saved.rival,
   };
+}
+
+/**
+ * One name for our ad everywhere on the compare screen. Ad names are often a
+ * unit code ("U11"); then the title or campaign says more. Card and AI chip
+ * used to disagree on this.
+ */
+export function ownedName(ad: { ad_name: string; title?: string | null; campaign_name?: string | null }): string {
+  return ad.ad_name.trim().length <= 5 ? ad.title || ad.campaign_name || ad.ad_name : ad.ad_name;
+}
+
+/** Catalog ads ship a template ("{{product.brand}}") instead of copy; say so rather than print it. */
+export function rivalCopy(text: string | null | undefined): { text: string; template: boolean } {
+  if (!text?.trim()) return { text: 'ไม่มีข้อความที่บันทึกไว้', template: false };
+  if (/\{\{[^}]+\}\}/.test(text) && text.replace(/\{\{[^}]+\}\}/g, '').trim().length < 12) {
+    return { text: 'ข้อความเปลี่ยนตามสินค้าที่คนเห็น (แอดแคตตาล็อก) · Meta ไม่ได้ส่งข้อความจริงมา', template: true };
+  }
+  return { text, template: false };
 }
 
 export function rivalFromDetail(detail: AdDetail & { archive_url?: string | null }): Rival {

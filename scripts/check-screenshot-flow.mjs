@@ -53,8 +53,7 @@ try{
   await expect.poll(()=>page.getByTestId(id).locator('img').evaluateAll(images=>images.some(img=>img.complete&&img.naturalWidth>0)),{timeout:30000}).toBe(true);
   await contained(page.getByTestId(id).locator('img').first());
  }
- await expect(page.getByTestId('compare-product')).toHaveCount(1);
- assert.ok((await page.getByTestId('compare-product').boundingBox()).y<(await page.getByTestId('compare-owned-evidence').boundingBox()).y,'Comparison purpose precedes its evidence');
+ await expect(page.getByTestId('compare-copy-link')).toHaveCount(1);
  const copy=page.getByTestId('compare-rival-copy');
  assert.ok(await copy.evaluate(element=>element.scrollHeight>element.clientHeight&&element.clientHeight<=261),'Long copy remains available in a bounded reading area');
  await copy.focus();await page.keyboard.press('ArrowDown');

@@ -36,6 +36,7 @@ test('Page lookup stays in selected source scope, validates returned identity an
   const result=await runInNewContext(`(async()=>{${source}\nreturn readOwnedPageNames()})()`,{
    URL,AbortSignal,ownedPageName,process:{env:{OWNED_MANAGEMENT_PROJECT_PATH:'source',OWNED_MANAGEMENT_AUTHORIZED_EMAIL:'admin'}},
    resolve:(...args:string[])=>args.join('/'),parseEnv:()=>({SUPABASE_URL:'https://source.test',SUPABASE_SERVICE_ROLE_KEY:'test'}),
+   sourceEnv:async()=>({SUPABASE_URL:'https://source.test',SUPABASE_SERVICE_ROLE_KEY:'test'}),
    readFile:async(path:string)=>path.endsWith('.env.local')?'test':'EAA'+'a'.repeat(60),createClient:()=>db,
    fetch:async(url:URL,options:{headers:{Authorization:string}})=>{
     const id=url.pathname.split('/').at(-1)!;calls.push(id);assert.equal(url.hostname,'graph.facebook.com');

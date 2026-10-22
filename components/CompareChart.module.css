@@ -13,15 +13,15 @@
 .key { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
 .swatch { width: 10px; height: 10px; border-radius: 2px; flex: none; }
 /* Two supporting hues. Neither is a verdict. */
-.a { background: var(--brand); }
-.b { background: var(--accent-blue); }
+.a { background: var(--series-a); }
+.b { background: var(--series-b); }
 .unit { margin-left: auto; }
 
 .scroll { overflow-x: auto; }
 .svg { display: block; }
 .axis { stroke: var(--line); stroke-width: 1; }
-.barA { fill: var(--brand); }
-.barB { fill: var(--accent-blue); }
+.barA { fill: var(--series-a); }
+.barB { fill: var(--series-b); }
 
 .table { font-size: var(--fs-meta); }
 .caption {

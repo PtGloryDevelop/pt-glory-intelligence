@@ -63,16 +63,15 @@ test.describe("visual capture", () => {
       }
     }
 
-    // Sidebar collapsed, and the mobile off-canvas menu opened.
+    // Sidebar folded by its toggle, and the phone's tab bar.
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto("/datasets");
-    await page.getByRole("button", { name: "« ย่อเมนู" }).click();
+    await page.getByRole("button", { name: "ย่อหรือขยายแถบด้านข้าง" }).click();
     await page.screenshot({ path: shot("sidebar-rail-1440"), fullPage: false, animations: "disabled" });
 
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto("/datasets");
-    await page.getByRole("button", { name: "เปิดเมนู" }).click();
-    await page.screenshot({ path: shot("sidebar-open-375"), fullPage: false, animations: "disabled" });
+    await page.screenshot({ path: shot("tabbar-375"), fullPage: false, animations: "disabled" });
 
     await context.close();
   });

@@ -2,29 +2,38 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
-import type { NavSection } from "./nav.ts";
+import { usePathname, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import type { NavItem, NavSection } from "./nav.ts";
 import type { Freshness } from "../../lib/shell/freshness.ts";
+import { activeHref } from "./active.ts";
 import { Icon } from "./icons.tsx";
-import { signOut } from "../../app/(app)/sign-out.ts";
+import { Tile } from "./Tile.tsx";
 import styles from "./AppShell.module.css";
 
+/** Open to every role, so it needs no permission and lives here rather than in the menu model. */
+const SETTINGS = { label: "ตั้งค่า", href: "/settings" } as const;
+
 /**
- * Sidebar + main column for every authenticated page.
+ * Sidebar + main column for every authenticated page (UI v3, macOS).
  *
- * Client-side only for the collapse toggle and the active-route highlight. It
- * receives the actor's role AND the menu that role may see as props rather than
- * reading either — authorization stays on the server, and the shell only
- * displays what the server decided. Filtering here instead would ship every
- * admin label to every browser and call CSS a permission.
+ * Wide screens get the labelled sidebar; between 901 and 1279px it folds to a
+ * rail of tiles on its own, and the toggle overrides either way. Phones get a
+ * slim top bar and a tab bar instead.
+ *
+ * Client-side only for the toggle and the active-route highlight. It receives the
+ * actor's role AND the menu that role may see as props rather than reading either
+ * — authorization stays on the server, and the shell only displays what the
+ * server decided. Filtering here instead would ship every admin label to every
+ * browser and call CSS a permission.
  */
 export function AppShell(
   { role, sections, freshness, children }:
   { role: string; sections: NavSection[]; freshness?: Freshness; children: React.ReactNode },
 ) {
   const pathname = usePathname();
-  // The layout renders once; re-read the chips on every navigation so a collection shows up without a reload.
+  const search = useSearchParams();
+  // The layout renders once; re-read the status lines on every navigation so a collection shows up without a reload.
   const [liveFreshness, setLiveFreshness] = useState<Freshness | undefined>(undefined);
   useEffect(() => {
     let live = true;
@@ -33,158 +42,95 @@ export function AppShell(
     return () => { live = false; };
   }, [pathname]);
   const chips = liveFreshness ?? freshness;
-  const [railed, setRailed] = useState(false);
-  const [open, setOpen] = useState(false);
-  const sidebar = useRef<HTMLElement>(null);
-  const menuButton = useRef<HTMLButtonElement>(null);
+  const fresh = [chips?.owned, chips?.rivals].filter(chip => chip != null);
+  const stale = fresh.some(chip => chip.stale);
 
-  useEffect(() => {
-    if (!open) return;
-    const opener = menuButton.current;
-    const mobile = window.matchMedia('(max-width: 900px)');
-    const resized = () => { if (!mobile.matches) setOpen(false); };
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    sidebar.current?.querySelector<HTMLAnchorElement>('a')?.focus();
-    function keyboard(event: KeyboardEvent) {
-      if (event.key === 'Escape') setOpen(false);
-      if (event.key !== 'Tab') return;
-      const controls = [...(sidebar.current?.querySelectorAll<HTMLElement>('a[href],button:not([disabled]),summary') ?? [])].filter(element => element.getClientRects().length > 0);
-      const first = controls[0]; const last = controls.at(-1);
-      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
-      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
-    }
-    document.addEventListener('keydown', keyboard);
-    mobile.addEventListener('change', resized);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener('keydown', keyboard);
-      mobile.removeEventListener('change', resized);
-      opener?.focus();
-    };
-  }, [open]);
+  // "auto" lets the width decide; a click pins the opposite of what is on screen.
+  const [state, setState] = useState<"auto" | "expanded" | "rail">("auto");
+  const toggle = () => setState(current => {
+    const shown = current === "auto" ? (window.matchMedia("(min-width: 1280px)").matches ? "expanded" : "rail") : current;
+    return shown === "expanded" ? "rail" : "expanded";
+  });
+
+  const items = sections.flatMap(section => section.items);
+  const active = activeHref([...items, SETTINGS], pathname, search);
+  const tabs = items.filter(item => item.tab);
 
   // A dataset page carries the research grid, which genuinely wants the canvas.
   // Every other page reads better at a fixed measure.
-  const isWide = pathname === "/" || /^\/datasets\/[^/]+/.test(pathname)
-    || pathname === "/competitors" || pathname === "/owned-ads" || pathname === "/owned-ads/performance" || pathname === "/compare/ads" || pathname === "/command-center";
+  const path = pathname === "/" ? "/market-overview" : pathname;
+  const isWide = path === "/market-overview" || /^\/datasets\/[^/]+/.test(path)
+    || path === "/competitors" || path === "/owned-ads" || path === "/owned-ads/performance" || path === "/compare/ads" || path === "/command-center";
 
-  const activeItem=sections.flatMap(section=>section.items).filter(item=>item.href&&(item.href==='/'?pathname==='/':pathname===item.href||pathname.startsWith(`${item.href}/`))).sort((a,b)=>(b.href?.length??0)-(a.href?.length??0))[0];
-  const isActive = (href: string) => activeItem?.href===href;
+  const link = (item: Pick<NavItem, "label" | "href" | "icon" | "tone">) => (
+    <Link
+      key={item.href}
+      href={item.href}
+      className={[styles.item, active === item.href ? styles.active : ""].join(" ")}
+      aria-current={active === item.href ? "page" : undefined}
+      data-testid={`nav-${item.href}`}
+    >
+      <Tile icon={item.icon} tone={item.tone} />
+      <span className={styles.label}>{item.label}</span>
+    </Link>
+  );
 
   return (
     <div className={styles.shell}>
       <a href="#workspace-content" className={styles.skipLink}>ข้ามไปเนื้อหา</a>
-      <aside
-        ref={sidebar}
-        id="workspace-menu"
-        role={open ? 'dialog' : undefined}
-        aria-label={open ? 'เมนูหลัก' : undefined}
-        aria-modal={open || undefined}
-        className={[styles.sidebar, railed ? styles.rail : "", open ? styles.open : ""].join(" ")}
-        data-testid="app-sidebar"
-        data-state={railed ? "rail" : "expanded"}
-      >
+      <aside className={styles.sidebar} data-testid="app-sidebar" data-state={state}>
         <div className={styles.brand}>
           <Link href="/" className={styles.wordmark} aria-label="PT Glory หน้าแรก">
-            <Image className={styles.logo} src="/logo/pt-mark.png" alt="" width={36} height={36} priority />
-            <span className={styles.lockup}>PT GLORY<small>AD INTELLIGENCE</small></span>
+            <Image className={styles.logo} src="/logo/pt-mark.png" alt="" width={30} height={30} priority />
+            <span className={styles.lockup}>PT Glory<small>Ad Intelligence</small></span>
           </Link>
-          <button type="button" className={styles.mobileClose} aria-label="ปิดเมนูหลัก" onClick={() => setOpen(false)}>×</button>
+          <button type="button" className={styles.toggle} onClick={toggle} aria-label="ย่อหรือขยายแถบด้านข้าง" title="ย่อหรือขยายแถบด้านข้าง">
+            <Icon name="sidebar" />
+          </button>
         </div>
 
         <nav className={styles.nav} aria-label="เมนูหลัก">
-          {/*
-            * Built first, unbuilt last.
-            *
-            * The menu used to interleave nine unbuilt destinations among eleven
-            * working ones, so finding a screen meant discovering by clicking
-            * which greyed-out entries were decoration. Each section now leads
-            * with what works; anything without a route sinks to the end of its
-            * section, still visible so the shape of the product is legible, but
-            * never in the way of the thing somebody came to open.
-            */}
-          {sections.map((section,index) => {
-            const links=<>
-              {index===0?<div className={styles.heading}>{section.heading}</div>:null}
-              {[...section.items]
-                .sort((a, b) => Number(Boolean(b.href)) - Number(Boolean(a.href)))
-                .map((item) =>
-                item.href ? (
-                  <Link
-                    key={item.label}
-                    href={item.href}
-                    className={[styles.item, isActive(item.href) ? styles.active : ""].join(" ")}
-                    aria-current={isActive(item.href) ? "page" : undefined}
-                    data-testid={`nav-${item.href}`}
-                    // In rail mode the label is display:none, which would leave
-                    // the link with no accessible name and nothing but an icon
-                    // to identify it. The title carries the name.
-                    title={item.label}
-                    onClick={() => setOpen(false)}
-                  >
-                    <span className={styles.icon}><Icon name={item.icon} /></span>
-                    <span className={styles.label}>{item.label}</span>
-                  </Link>
-                ) : (
-                  // Reference-only until its own phase. Rendered so the shell is
-                  // recognisable, disabled so it cannot promise data we lack.
-                  <span
-                    key={item.label}
-                    className={styles.disabled}
-                    aria-disabled="true"
-                    title={`${item.label} — ยังไม่เปิดใช้งานในเฟสนี้`}
-                  >
-                    <span className={styles.icon}><Icon name={item.icon} /></span>
-                    <span className={styles.label}>{item.label}</span>
-                    {/* Said once, in place, rather than hidden in a tooltip
-                        nobody hovers on a phone. */}
-                    <span className={styles.soon}>เร็ว ๆ นี้</span>
-                  </span>
-                ),
-              )}
-            </>;
-            return index===0?<div key={section.heading}>{links}</div>:<details key={section.heading} className={styles.advanced} open={section.items.some(item=>item.href&&isActive(item.href))||undefined}><summary>{section.heading}</summary>{links}</details>;
-          })}
+          {sections.map(section => (
+            <div key={section.heading} className={styles.section}>
+              <div className={styles.heading}>{section.heading}</div>
+              {section.items.map(link)}
+            </div>
+          ))}
         </nav>
 
-        <div className={styles.workspaceNote}><span>พื้นที่วิจัยของทีม</span><small>ค้นหลักฐาน · เปรียบเทียบ · ตัดสินใจ</small></div>
-        <button type="button" className={styles.collapse} aria-label={railed ? 'ขยายเมนู' : 'ย่อเมนู'} aria-expanded={!railed} onClick={() => setRailed((v) => !v)}>
-          {railed ? "»" : "« ย่อเมนู"}
-        </button>
         <div className={styles.footer}>
-          <span data-testid="shell-role">สิทธิ์ {role}</span>
-          {/* A server action, not a click handler: the session is a cookie, and
-              only a server response can clear one. */}
-          <form action={signOut}>
-            <button type="submit" className={styles.signOut} data-testid="sign-out">
-              ออกจากระบบ
-            </button>
-          </form>
-        </div>
-      </aside>
-
-      {open ? (
-        <button
-          type="button" className={styles.scrim} aria-label="ปิดเมนู"
-          onClick={() => setOpen(false)}
-        />
-      ) : null}
-
-      <div className={styles.main} inert={open}>
-        <div className={styles.topbar}>
-          <button ref={menuButton} type="button" onClick={() => setOpen(true)} aria-label="เปิดเมนู" aria-expanded={open} aria-controls="workspace-menu">☰</button>
-          <span className={styles.breadcrumb}>PT GLORY <span>/</span> <strong>{activeItem?.label??'ข้อมูลการตลาด'}</strong></span>
-          <span className={styles.freshness} data-testid="shell-freshness">
-            {[chips?.owned, chips?.rivals].filter(chip => chip != null).map(chip => (
+          {/* How fresh both sides are, as one box that turns amber when either is late and opens the details. */}
+          {fresh.length ? <Link href={SETTINGS.href} className={styles.status} data-stale={stale || undefined} data-testid="shell-freshness">
+            <span className={styles.statusHead}>{stale ? <><Icon name="alert" size={13} />ข้อมูลไม่อัปเดต</> : "สถานะข้อมูล"}</span>
+            {fresh.map(chip => (
               <span key={chip.label} className={styles.fresh} title={chip.stale ? "ข้อมูลเก่ากว่าที่ควร" : undefined}>
                 <span className={chip.stale ? styles.dotWarn : styles.dot} aria-hidden />{chip.label}
               </span>
             ))}
-          </span>
+          </Link> : null}
+          <Link
+            href={SETTINGS.href}
+            className={[styles.item, active === SETTINGS.href ? styles.active : ""].join(" ")}
+            aria-current={active === SETTINGS.href ? "page" : undefined}
+            data-testid={`nav-${SETTINGS.href}`}
+          >
+            <Tile icon="settings" tone="neutral" />
+            <span className={styles.label}>{SETTINGS.label}</span>
+            <span className={styles.role} data-testid="shell-role">สิทธิ์ {role}</span>
+          </Link>
         </div>
-        {/* A dataset page carries the research grid, which genuinely wants the
-            canvas. Every other page reads better at a fixed measure. */}
+      </aside>
+
+      <div className={styles.main}>
+        <header className={styles.topbar} data-testid="shell-topbar">
+          <Link href="/" className={styles.wordmark} aria-label="PT Glory หน้าแรก">
+            <Image className={styles.logo} src="/logo/pt-mark.png" alt="" width={28} height={28} />
+            <span className={styles.lockup}>PT Glory</span>
+          </Link>
+          <Link href={SETTINGS.href} className={styles.settingsButton} aria-label={SETTINGS.label} aria-current={active === SETTINGS.href ? "page" : undefined}>
+            <Icon name="settings" size={20} />
+          </Link>
+        </header>
         <main
           id="workspace-content"
           tabIndex={-1}
@@ -194,6 +140,14 @@ export function AppShell(
         >
           {children}
         </main>
+        <nav className={styles.tabbar} aria-label="แถบเมนู">
+          {tabs.map(item => (
+            <Link key={item.href} href={item.href} className={styles.tab} aria-current={active === item.href ? "page" : undefined}>
+              <Icon name={item.icon} size={24} />
+              <span>{item.label}</span>
+            </Link>
+          ))}
+        </nav>
       </div>
     </div>
   );

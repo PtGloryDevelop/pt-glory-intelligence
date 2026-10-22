@@ -17,8 +17,8 @@ export default function Forbidden() {
       <EmptyState
         testId="forbidden-notice"
         title="หน้านี้สำหรับผู้ดูแลระบบ"
-        body="สิทธิ์ของคุณเข้าหน้านี้ไม่ได้ ถ้าต้องการข้อมูลใหม่ ให้ใช้เมนูเก็บข้อมูลใหม่"
-        action={<Link href="/datasets">ไปที่ชุดข้อมูล</Link>}
+        body="สิทธิ์ของคุณเข้าหน้านี้ไม่ได้ ถ้าต้องการข้อมูลใหม่ ให้ใช้เมนูค้นแอดคู่แข่งใหม่"
+        action={<Link href="/datasets">ไปที่ประวัติการเก็บข้อมูล</Link>}
       />
     </>
   );
