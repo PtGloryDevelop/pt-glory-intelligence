@@ -17,7 +17,8 @@
 .row:hover:not(:disabled) { background: var(--row-hover); }
 .rank { color: var(--muted); font-size: var(--fs-label); font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
 .thumb { position: relative; display: block; width: 40px; height: 50px; overflow: hidden; border-radius: 6px; background: var(--surface-sunken); }
-.thumb img { object-fit: cover; }
+/* Covers served from our archive are plain <img> (a signed private link skips the optimizer), so they need the box size here or they show their top-left corner. */
+.thumb img { width: 100%; height: 100%; object-fit: cover; }
 .play { position: absolute; left: 3px; bottom: 3px; display: grid; place-items: center; width: 16px; height: 16px; padding-left: 1px; border-radius: 50%; background: var(--ink); color: #ffffff; font-size: var(--fs-eyebrow); line-height: 1; }
 .name { display: grid; min-width: 0; }
 .name b { overflow: hidden; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
