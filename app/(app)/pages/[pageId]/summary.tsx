@@ -48,7 +48,7 @@ export function PageSummary({ data, datasetId, canAnalyze }: { data: PageSummary
             <p className={styles.headline}>กำลังแสดง <b>{whole(active)}</b> แอด</p>
             {top ? (
               <button type="button" className={styles.topAd} onClick={() => setOpen(true)} aria-label="ดูแอดที่ใช้ซ้ำมากที่สุด">
-                <AdThumb ad={top} width={44} />
+                <AdThumb ad={top} width={60} />
                 <span className={styles.topText}>
                   <span>ครีเอทีฟที่ Meta รวมไว้มากที่สุด <b>{whole(top.collation)}</b> แอด</span>
                   {top.line ? <span className={styles.quote}>“{top.line}”</span> : null}

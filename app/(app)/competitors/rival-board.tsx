@@ -10,6 +10,7 @@ import {AdDrawer} from '@/components/AdDrawer';
 import {UnitRail} from '../owned-ads/unit-rail';
 import {useJson} from '../owned-ads/use-json';
 import {useCollectLauncher} from '../collect/collect-launcher';
+import {OfferCompare} from './offer-compare';
 import styles from './rival-board.module.css';
 
 const REL:Record<Relation,string>={direct:'คู่แข่งตรง',substitute:'สินค้าทดแทน',unrelated:'ไม่เกี่ยว'};
@@ -142,6 +143,8 @@ export function RivalBoard(){
         </form></div></section>
       :!board.units.length?<section className={styles.panel}><div className={styles.start}><h2>เริ่มจากใส่คำค้นให้ยูนิต</h2><p>เลือกยูนิตในแถบซ้าย แล้วใส่คำที่ลูกค้าใช้หาสินค้า 3–5 คำ · ระบบจะหาเพจคู่แข่งจากแอดที่เก็บไว้</p></div></section>
       :<>
+        {/* One unit picked: its offers beside its matched rivals' first, then their ads. */}
+        {unitId&&board.canEdit&&scope[0]?<OfferCompare unit={scope[0]} names={new Map(scope[0].pages.map(page=>[page.page_id,page.page_name]))} reload={collected}/>:null}
         {strip('new',`แอดใหม่ของคู่แข่ง${fresh.data?` · ${n(fresh.data.total)} แอดใน 7 วัน`:''}`,`แอดที่ระบบเห็นครั้งแรกใน 7 วัน จากเพจคู่แข่งของ ${scopeName} · ใหม่สำหรับเรา อาจยิงมาก่อนแล้ว · เก็บล่าสุด ${thaiDate(board.lastCollectedAt)}`,fresh)}
         {strip('age','ยิงนานที่สุด',`แอดที่ยังแสดงอยู่และยิงมานานที่สุดจากเพจคู่แข่งของ ${scopeName} · ใช้หาไอเดียทำแอด`,long)}
         {scope.map(pagesTable)}
