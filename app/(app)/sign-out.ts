@@ -13,9 +13,12 @@ import { dbUser } from "@/lib/db/user";
  *
  * Missing until the pilot, which was a real gap rather than a cosmetic one — on
  * a shared machine there was no way to stop being signed in.
+ *
+ * This device only. Without a scope supabase-js signs the account out everywhere, so signing out on a phone
+ * also ended the session on the person's computer (and any other device they were using).
  */
 export async function signOut() {
   const supabase = await dbUser();
-  await supabase.auth.signOut();
+  await supabase.auth.signOut({ scope: "local" });
   redirect("/login");
 }

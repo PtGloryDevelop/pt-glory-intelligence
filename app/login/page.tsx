@@ -65,6 +65,7 @@ export default async function LoginPage({
               รหัสผ่าน
               <input name="password" type="password" required autoComplete="current-password" />
             </label>
+            <Link href="/forgot-password" className={styles.forgot} data-testid="forgot-link">ลืมรหัสผ่าน?</Link>
             <button type="submit" data-variant="primary" className={styles.submit}>
               เข้าสู่ระบบ
             </button>

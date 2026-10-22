@@ -1,25 +1,14 @@
 import "server-only";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { dbUser } from "../db/user.ts";
 import { requireRole } from "./roles.ts";
 import type { Role } from "./role-model.ts";
 import type { AccessRequestInput } from "./access-request-model.ts";
+import { serviceClient } from "./service-client.ts";
 
 export type AccessRequestRow = {
   id: string; email: string; full_name: string | null; team: string | null; note: string | null;
   status: "pending" | "approved" | "rejected"; role: Role | null; created_at: string; decided_at: string | null;
 };
-
-/**
- * Service-role client for the account steps a session cannot take: creating an unconfirmed login, writing
- * the request row, confirming or deleting the login, and the audit row. Server only; never reaches a browser.
- */
-function serviceClient(): SupabaseClient {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SECRET_KEY;
-  if (!url || !key) throw new Error("Account service not configured");
-  return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
-}
 
 export type RequestResult = { ok: true; already: boolean } | { ok: false; error: string };
 
@@ -65,12 +54,15 @@ export async function listAccessRequests(): Promise<{ pending: AccessRequestRow[
   return { pending: (pending.data ?? []) as AccessRequestRow[], recent: (recent.data ?? []) as AccessRequestRow[] };
 }
 
-/** How many wait for an admin; null for anyone who may not see them. */
+/** How many wait for an admin, sign-ups and forgotten passwords together; null for anyone who may not see them. */
 export async function pendingAccessCount(role: Role): Promise<number | null> {
   if (role !== "admin") return null;
   const db = await dbUser();
-  const { count, error } = await db.from("access_requests").select("id", { count: "exact", head: true }).eq("status", "pending");
-  return error ? null : count ?? 0;
+  const [signups, resets] = await Promise.all([
+    db.from("access_requests").select("id", { count: "exact", head: true }).eq("status", "pending"),
+    db.from("password_reset_requests").select("id", { count: "exact", head: true }).eq("status", "pending"),
+  ]);
+  return signups.error || resets.error ? null : (signups.count ?? 0) + (resets.count ?? 0);
 }
 
 export class AccessDecisionError extends Error {}

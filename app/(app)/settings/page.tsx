@@ -8,6 +8,7 @@ import { visibleAdminTools, visibleNav, type NavItem } from "@/components/shell/
 import { getFreshness, type FreshnessChip } from "@/lib/shell/freshness";
 import { signOut } from "../sign-out";
 import { AccessRequests } from "./access-requests";
+import { TeamAccounts } from "./team-accounts";
 import styles from "./settings.module.css";
 
 export const dynamic = "force-dynamic";
@@ -64,6 +65,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         </section>
 
         {actor.role === "admin" ? <AccessRequests notice={one(query.access)} problem={one(query.access_error)} /> : null}
+        {actor.role === "admin" ? <TeamAccounts /> : null}
 
         <section className={styles.group} aria-labelledby="settings-status">
           <h2 id="settings-status">สถานะข้อมูล</h2>

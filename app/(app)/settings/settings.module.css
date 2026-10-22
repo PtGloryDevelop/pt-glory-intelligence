@@ -49,3 +49,12 @@ a.row:hover { background: var(--row-hover); color: var(--ink); text-decoration: 
   .reject[open] { justify-items: start; }
 }
 .link { color: var(--ink); font-weight: 600; user-select: all; }
+
+/* Accounts: who asked for a new password is tinted; the link shows once, selectable, with a copy button. */
+.request[data-asked] { background: var(--warn-tint); }
+.asked { color: var(--warn-ink); font-weight: 600; }
+.linkButton { min-height: 34px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface); color: var(--ink); font-size: var(--fs-label); white-space: nowrap; }
+.linkBox { display: grid; gap: 4px; flex: 1 1 100%; padding-left: 42px; }
+.linkRow { display: flex; gap: 8px; }
+.linkRow input { flex: 1; min-width: 0; min-height: 34px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); color: var(--ink); font-size: var(--fs-label); }
+.linkRow button { min-height: 34px; padding: 0 14px; font-size: var(--fs-label); white-space: nowrap; }

@@ -13,3 +13,4 @@
 .submit { min-height:48px; width:100%; }
 .foot { margin:24px 0 0; font-size:var(--fs-eyebrow); color:var(--muted); text-align:center; }
 @media(max-width:480px) { .wrap { padding:20px; } .head,.body { padding:26px; } }
+.forgot { justify-self: end; margin-top: -10px; font-size: var(--fs-eyebrow); }
