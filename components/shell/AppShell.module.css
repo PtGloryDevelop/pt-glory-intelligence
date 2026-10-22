@@ -72,3 +72,8 @@
   .tab:hover { color: var(--ink); text-decoration: none; }
   .tab[aria-current="page"] { color: var(--brand-ink); font-weight: 600; }
 }
+/* Sign-up requests waiting for an admin: a count beside ตั้งค่า, a dot on the phone's settings button. */
+.waiting { margin-left: auto; padding: 0 7px; border-radius: var(--radius-pill); background: var(--danger); color: #ffffff; font-size: var(--fs-eyebrow); font-weight: 600; }
+.waiting + .role { margin-left: 6px; }
+.settingsButton { position: relative; }
+.waitingDot { position: absolute; top: 4px; right: 4px; width: 9px; height: 9px; border-radius: 50%; background: var(--danger); box-shadow: 0 0 0 2px var(--chrome-bar); }

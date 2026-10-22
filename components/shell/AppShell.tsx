@@ -44,6 +44,7 @@ export function AppShell(
   const chips = liveFreshness ?? freshness;
   const fresh = [chips?.owned, chips?.rivals].filter(chip => chip != null);
   const stale = fresh.some(chip => chip.stale);
+  const waiting = chips?.pendingAccess ?? 0;
 
   // "auto" lets the width decide; a click pins the opposite of what is on screen.
   const [state, setState] = useState<"auto" | "expanded" | "rail">("auto");
@@ -116,6 +117,7 @@ export function AppShell(
           >
             <Tile icon="settings" tone="neutral" />
             <span className={styles.label}>{SETTINGS.label}</span>
+            {waiting ? <span className={styles.waiting} title="คำขอใช้งานรออนุมัติ" data-testid="shell-access-waiting">{waiting}</span> : null}
             <span className={styles.role} data-testid="shell-role">สิทธิ์ {role}</span>
           </Link>
         </div>
@@ -129,6 +131,7 @@ export function AppShell(
           </Link>
           <Link href={SETTINGS.href} className={styles.settingsButton} aria-label={SETTINGS.label} aria-current={active === SETTINGS.href ? "page" : undefined}>
             <Icon name="settings" size={20} />
+            {waiting ? <span className={styles.waitingDot} aria-label={`คำขอใช้งานรออนุมัติ ${waiting}`} /> : null}
           </Link>
         </header>
         <main

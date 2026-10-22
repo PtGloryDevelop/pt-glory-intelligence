@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 import { dbUser } from "@/lib/db/user";
 import { getActor } from "@/lib/auth/roles";
 import { ErrorState } from "@/components/states/ErrorState";
@@ -11,6 +12,7 @@ const ERRORS: Record<string, string> = {
   invalid: "อีเมลหรือรหัสผ่านไม่ถูกต้อง",
   unavailable: "ยังเชื่อมต่อระบบเข้าสู่ระบบไม่ได้ กรุณาลองใหม่อีกครั้ง",
   no_role: "บัญชีนี้ยังไม่ได้รับสิทธิ์ใช้งาน แจ้งผู้ดูแลระบบเพื่อกำหนดสิทธิ์",
+  pending: "บัญชีนี้รอผู้ดูแลอนุมัติ เมื่ออนุมัติแล้วเข้าสู่ระบบได้ทันที",
 };
 
 export default async function LoginPage({
@@ -30,6 +32,8 @@ export default async function LoginPage({
     });
     if (error) {
       console.error("Login failed", error.code ?? error.name);
+      // A signed-up login stays unconfirmed until an admin approves it (0071).
+      if (error.code === "email_not_confirmed") redirect("/login?error=pending");
       redirect(error.name === "AuthRetryableFetchError" ? "/login?error=unavailable" : "/login?error=invalid");
     }
     // A signed-in user without a role row cannot do anything; say so explicitly
@@ -66,7 +70,7 @@ export default async function LoginPage({
             </button>
           </form>
 
-          <p className={styles.foot}>ยังไม่ได้รับสิทธิ์ใช้งาน? ติดต่อผู้ดูแลระบบ</p>
+          <p className={styles.foot}>ยังไม่มีบัญชี? <Link href="/signup" data-testid="signup-link">ขอสิทธิ์ใช้งาน</Link></p>
         </div>
       </div>
     </main>

@@ -19,7 +19,7 @@ export async function dbUser() {
           try {
             for (const { name, value, options } of list) cookieStore.set(name, value, options);
           } catch {
-            // Called from a Server Component: the middleware refreshes the session instead.
+            // Called from a Server Component, which cannot write cookies: proxy.ts refreshes the session before the page renders.
           }
         },
       },

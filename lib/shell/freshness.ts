@@ -2,9 +2,11 @@ import 'server-only';
 import {dbUser} from '../db/user.ts';
 import {satisfies,type Role} from '../auth/role-model.ts';
 import {ownedLate,rivalsLate} from './stale.ts';
+import {pendingAccessCount} from '../auth/access-requests.ts';
 
 export type FreshnessChip={label:string;stale:boolean};
-export type Freshness={owned:FreshnessChip|null;rivals:FreshnessChip|null};
+/** `pendingAccess`: sign-up requests waiting for an admin; null for everyone else. */
+export type Freshness={owned:FreshnessChip|null;rivals:FreshnessChip|null;pendingAccess?:number|null};
 
 const bangkok=(value:string,withTime=true)=>new Date(value).toLocaleString('th-TH',{day:'numeric',month:'short',timeZone:'Asia/Bangkok',...(withTime?{hour:'2-digit',minute:'2-digit'}:{})});
 
@@ -24,6 +26,6 @@ export async function getFreshness(role:Role,now=Date.now()):Promise<Freshness>{
     if(error||!latest)return null;
     return {label:`คู่แข่ง เก็บล่าสุด ${bangkok(latest)}`,stale:rivalsLate(latest,now)};
   };
-  const [o,r]=await Promise.all([owned().catch(()=>null),rivals().catch(()=>null)]);
-  return {owned:o,rivals:r};
+  const [o,r,p]=await Promise.all([owned().catch(()=>null),rivals().catch(()=>null),pendingAccessCount(role).catch(()=>null)]);
+  return {owned:o,rivals:r,pendingAccess:p};
 }

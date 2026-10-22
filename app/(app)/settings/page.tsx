@@ -7,6 +7,7 @@ import { Tile } from "@/components/shell/Tile";
 import { visibleAdminTools, visibleNav, type NavItem } from "@/components/shell/nav";
 import { getFreshness, type FreshnessChip } from "@/lib/shell/freshness";
 import { signOut } from "../sign-out";
+import { AccessRequests } from "./access-requests";
 import styles from "./settings.module.css";
 
 export const dynamic = "force-dynamic";
@@ -25,8 +26,10 @@ const ROLE_NOTE: Record<Role, string> = {
  * still checks the role itself; this page only decides what to offer. On a
  * phone this is also the only way to the two update pages and to signing out.
  */
-export default async function SettingsPage() {
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const actor = await requireActorOrRedirect();
+  const query = await searchParams;
+  const one = (value: string | string[] | undefined) => typeof value === "string" ? value : null;
   const updates = visibleNav(actor.role).find(section => section.heading === "อัปเดตข้อมูล")?.items ?? [];
   const admin = visibleAdminTools(actor.role);
   const freshness = await getFreshness(actor.role);
@@ -59,6 +62,8 @@ export default async function SettingsPage() {
             <button type="submit" className={styles.signOut} data-testid="sign-out">ออกจากระบบ</button>
           </form>
         </section>
+
+        {actor.role === "admin" ? <AccessRequests notice={one(query.access)} problem={one(query.access_error)} /> : null}
 
         <section className={styles.group} aria-labelledby="settings-status">
           <h2 id="settings-status">สถานะข้อมูล</h2>
