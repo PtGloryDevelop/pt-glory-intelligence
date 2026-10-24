@@ -2,11 +2,10 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { AccessDecisionError, decideAccessRequest, listAccessRequests, type AccessRequestRow } from "@/lib/auth/access-requests";
-import { AuthorizationError, isRole, type Role } from "@/lib/auth/role-model";
+import { AuthorizationError, isRole, ROLE_LABEL, type Role } from "@/lib/auth/role-model";
 import { Icon } from "@/components/shell/icons";
 import styles from "./settings.module.css";
 
-const ROLE_LABEL: Record<Role, string> = { analyst: "ทีมการตลาด (analyst)", viewer: "ดูอย่างเดียว (viewer)", admin: "ผู้ดูแล (admin)" };
 const when = (value: string | null) => value ? new Date(value).toLocaleString("th-TH", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" }) : "—";
 
 /** Approve or reject one request. The admin check and the writes are in decideAccessRequest; this only reads the form. */

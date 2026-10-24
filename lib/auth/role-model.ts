@@ -9,6 +9,9 @@ export type Role = (typeof ROLES)[number];
 /** Higher rank satisfies every requirement at or below it. */
 const RANK: Record<Role, number> = { viewer: 0, analyst: 1, admin: 2 };
 
+/** How each role reads on screen: what the person does, then the role's name. */
+export const ROLE_LABEL: Record<Role, string> = { analyst: "ทีมการตลาด (analyst)", viewer: "ดูอย่างเดียว (viewer)", admin: "ผู้ดูแล (admin)" };
+
 export function isRole(value: unknown): value is Role {
   return typeof value === "string" && (ROLES as readonly string[]).includes(value);
 }

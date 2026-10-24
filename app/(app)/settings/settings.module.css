@@ -53,6 +53,9 @@ a.row:hover { background: var(--row-hover); color: var(--ink); text-decoration: 
 /* Accounts: who asked for a new password is tinted; the link shows once, selectable, with a copy button. */
 .request[data-asked] { background: var(--warn-tint); }
 .asked { color: var(--warn-ink); font-weight: 600; }
+/* No access: the email steps back so the people who can sign in read first. */
+.request[data-revoked] .name { color: var(--muted); }
+.you { margin-left: 8px; padding: 0 8px; border-radius: var(--radius-pill); background: var(--brand-tint); color: var(--brand-ink); font-size: var(--fs-eyebrow); font-weight: 600; }
 .linkButton { min-height: 34px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface); color: var(--ink); font-size: var(--fs-label); white-space: nowrap; }
 .linkBox { display: grid; gap: 4px; flex: 1 1 100%; padding-left: 42px; }
 .linkRow { display: flex; gap: 8px; }

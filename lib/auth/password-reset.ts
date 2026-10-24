@@ -4,7 +4,8 @@ import { requireRole } from "./roles.ts";
 import { isRole, type Role } from "./role-model.ts";
 import { serviceClient } from "./service-client.ts";
 
-export type TeamMember = { user_id: string; email: string; role: Role; last_sign_in_at: string | null; reset_requested_at: string | null };
+/** `role` null: access was taken away (the login stays, see setTeamRole). `self`: the admin looking at the list. */
+export type TeamMember = { user_id: string; email: string; role: Role | null; self: boolean; last_sign_in_at: string | null; reset_requested_at: string | null };
 export class PasswordResetError extends Error {}
 
 // ponytail: one page of 1,000 logins covers this team; page through listUsers if it ever grows past that.
@@ -30,9 +31,12 @@ export async function requestPasswordReset(email: string): Promise<void> {
   if (row.error && row.error.code !== "23505") throw row.error;
 }
 
-/** Every approved account, those asking for a new password first. Admin only. */
+/**
+ * Every confirmed login: approved accounts, then those whose access was taken away, so it can be given back.
+ * Those asking for a new password come first. Sign-ups still waiting are not confirmed and stay out. Admin only.
+ */
 export async function listTeam(): Promise<TeamMember[]> {
-  await requireRole("admin");
+  const actor = await requireRole("admin");
   const db = await dbUser();
   const [roles, resets, logins] = await Promise.all([
     db.from("user_roles").select("user_id,role"),
@@ -41,15 +45,15 @@ export async function listTeam(): Promise<TeamMember[]> {
   ]);
   if (roles.error) throw roles.error;
   if (resets.error) throw resets.error;
-  const byId = new Map(logins.map((login) => [login.id, login]));
+  const roleOf = new Map((roles.data ?? []).filter((row) => isRole(row.role)).map((row) => [row.user_id as string, row.role as Role]));
   const asked = new Map((resets.data ?? []).map((row) => [row.email as string, row.created_at as string]));
-  return (roles.data ?? [])
-    .filter((row) => isRole(row.role) && byId.get(row.user_id)?.email)
-    .map((row) => {
-      const login = byId.get(row.user_id)!, email = login.email!.toLowerCase();
-      return { user_id: row.user_id as string, email, role: row.role as Role, last_sign_in_at: login.last_sign_in_at ?? null, reset_requested_at: asked.get(email) ?? null };
+  return logins
+    .filter((login) => login.email && (roleOf.has(login.id) || login.email_confirmed_at))
+    .map((login) => {
+      const email = login.email!.toLowerCase(), role = roleOf.get(login.id) ?? null;
+      return { user_id: login.id, email, role, self: login.id === actor.userId, last_sign_in_at: login.last_sign_in_at ?? null, reset_requested_at: role ? asked.get(email) ?? null : null };
     })
-    .sort((a, b) => Number(Boolean(b.reset_requested_at)) - Number(Boolean(a.reset_requested_at)) || a.email.localeCompare(b.email));
+    .sort((a, b) => Number(Boolean(b.reset_requested_at)) - Number(Boolean(a.reset_requested_at)) || Number(!a.role) - Number(!b.role) || a.email.localeCompare(b.email));
 }
 
 /**
