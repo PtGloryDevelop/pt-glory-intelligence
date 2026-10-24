@@ -20,7 +20,7 @@ import {buildUpdates} from '@/lib/dashboard/updates';
 import type {HomeChoice} from '@/lib/home-choice';
 import {daysBehind,ownedLate,rivalsLate} from '@/lib/shell/stale';
 import {REVIEW_WINDOWS,type ReviewWindow} from '@/lib/dashboard/review-model';
-import {isOwnedPerformanceDate} from '@/lib/owned-ads/performance';
+import {isOwnedPerformanceDate,previousCoverage} from '@/lib/owned-ads/performance';
 import {CompanyDetail} from './owned-ads/company-library';
 import {useJson} from './owned-ads/use-json';
 import {DailyChart} from './owned-ads/daily-chart';
@@ -38,8 +38,8 @@ const stamp=(value:string|null|undefined)=>value?new Date(value).toLocaleString(
 const bangkokDay=(value:string)=>new Date(Date.parse(value)+7*3600000).toISOString().slice(0,10);
 const adKey=(ad:{account_id:string;ad_id:string})=>`${ad.account_id}:${ad.ad_id}`;
 
-function Delta({value,goodUp}:{value:number|null;goodUp:boolean|null}){
-  if(value==null)return <span className={styles.statNote}>ไม่มีช่วงเทียบ</span>;
+function Delta({value,goodUp,note='ไม่มีช่วงเทียบ'}:{value:number|null;goodUp:boolean|null;note?:string}){
+  if(value==null)return <span className={styles.statNote}>{note}</span>;
   const tone=goodUp==null||Math.abs(value)<1?'':(value>0)===goodUp?styles.better:styles.worse;
   return <span className={`${styles.statNote} ${tone}`}>{value>0?'▲':'▼'} {Math.abs(value).toFixed(1)}%</span>;
 }
@@ -91,6 +91,9 @@ export function Dashboard({canAnalyze,home='overview'}:{canAnalyze:boolean;home?
   const review=data?.review??null;
   const summary:OwnedPerformanceSummary|undefined=review?.summary.find(item=>item.currency==='THB')??review?.summary[0];
   const previous=review?.previous?.summary.find(item=>item.currency===summary?.currency);
+  // "This month" and 30 days can reach back before the imported days; such a window is named, not compared.
+  const previousCover=review?.previous?previousCoverage(review.previous.period,review.coverage):null;
+  const coverNote=previousCover?.state==='partial'?'ช่วงก่อนไม่ครบ':previousCover?.state==='missing'?'ยังไม่มีช่วงก่อน':undefined;
   const rows=useMemo(()=>(review?.rows??[]).filter(row=>row.currency===summary?.currency),[review,summary]);
   const rowByKey=useMemo(()=>new Map(rows.map(row=>[reviewAdKey(row),row])),[rows]);
   // The unit totals and the falling rule read the same window as the overview, so they wait for its dates.
@@ -191,7 +194,7 @@ export function Dashboard({canAnalyze,home='overview'}:{canAnalyze:boolean;home?
     </form>:null}
   </div>:null;
 
-  const description=review?`${thaiDate(review.period.from)} – ${thaiDate(review.period.to)}${review.previous?` · เทียบกับ ${thaiDate(review.previous.period.from)} – ${thaiDate(review.previous.period.to)}`:''}`
+  const description=review?`${thaiDate(review.period.from)} – ${thaiDate(review.period.to)}${review.previous&&previousCover?.state==='full'?` · เทียบกับ ${thaiDate(review.previous.period.from)} – ${thaiDate(review.previous.period.to)}`:''}`
     :canAnalyze?'กำลังเปิดข้อมูล…':'คู่แข่งของยูนิต และแอดคู่แข่งที่ยิงนานที่สุด';
 
   const oursLane=canAnalyze?<section className={styles.box} aria-labelledby="ours-heading" data-testid="overview-ours">
@@ -199,12 +202,13 @@ export function Dashboard({canAnalyze,home='overview'}:{canAnalyze:boolean;home?
     {data&&!review?<div className={styles.problem} role="alert">ผลแอดเราเปิดไม่ได้ในรอบนี้ ส่วนอื่นยังใช้ได้ <button type="button" onClick={()=>setRetry(value=>value+1)}>ลองใหม่</button></div>:null}
     {review?<>
       <div className={styles.stats} data-testid="overview-kpis">
-        <Stat label="ค่าแอด (บาท)" value={whole(summary?.spend)}><Delta value={summary?reviewChange(review,summary,'spend'):null} goodUp={null}/></Stat>
-        <Stat label="ROAS (Meta)" value={num(summary?.roas)}><Delta value={summary?reviewChange(review,summary,'roas'):null} goodUp={true}/></Stat>
-        <Stat label="ทักจากแอด" value={num(summary?.conversations,0)}><Delta value={summary?reviewChange(review,summary,'conversations'):null} goodUp={true}/></Stat>
-        <Stat label="ค่าทัก (บาท)" value={num(summary?.cost_per_conversation)}><Delta value={summary?reviewChange(review,summary,'cost_per_conversation'):null} goodUp={false}/></Stat>
+        <Stat label="ค่าแอด (บาท)" value={whole(summary?.spend)}><Delta value={summary?reviewChange(review,summary,'spend'):null} goodUp={null} note={coverNote}/></Stat>
+        <Stat label="ROAS (Meta)" value={num(summary?.roas)}><Delta value={summary?reviewChange(review,summary,'roas'):null} goodUp={true} note={coverNote}/></Stat>
+        <Stat label="ทักจากแอด" value={num(summary?.conversations,0)}><Delta value={summary?reviewChange(review,summary,'conversations'):null} goodUp={true} note={coverNote}/></Stat>
+        <Stat label="ค่าทัก (บาท)" value={num(summary?.cost_per_conversation)}><Delta value={summary?reviewChange(review,summary,'cost_per_conversation'):null} goodUp={false} note={coverNote}/></Stat>
       </div>
-      {previous?<p className={styles.previous}>ช่วงก่อนหน้า: ค่าแอด {whole(previous.spend)} · ROAS {num(previous.roas)} · ทัก {num(previous.conversations,0)} · ค่าทัก {num(previous.cost_per_conversation)}</p>:null}
+      {previous&&previousCover?.state==='full'?<p className={styles.previous}>ช่วงก่อนหน้า: ค่าแอด {whole(previous.spend)} · ROAS {num(previous.roas)} · ทัก {num(previous.conversations,0)} · ค่าทัก {num(previous.cost_per_conversation)}</p>
+        :review.previous&&previousCover&&previousCover.state!=='full'?<p className={styles.previous} data-testid="overview-previous-gap">ไม่เทียบกับ {thaiDate(review.previous.period.from,false)} – {thaiDate(review.previous.period.to,false)} เพราะ{previousCover.state==='partial'?`ข้อมูลแอดเรามีตั้งแต่ ${thaiDate(previousCover.from,false)} ยอดรวมช่วงนั้นจึงไม่ครบ`:'ยังไม่มีข้อมูลแอดเราช่วงนั้น'}</p>:null}
       {data?.daily?.length?<div className={`${styles.section} ${styles.chart}`}>
         <div className={styles.sectionHead}><span>รายวัน</span><span className={styles.sectionNote}>จากรายงาน Ads Management</span></div>
         <DailyChart days={data.daily}/>

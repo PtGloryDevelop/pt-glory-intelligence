@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseOwnedPerformanceQuery, ownedPerformancePeriod, previousOwnedPerformancePeriod, OwnedPerformanceQueryError, closeRate, daysSinceCreated } from "../lib/owned-ads/performance.ts";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { parseOwnedPerformanceQuery, ownedPerformancePeriod, previousCoverage, previousOwnedPerformancePeriod, OwnedPerformanceQueryError, closeRate, daysSinceCreated } from "../lib/owned-ads/performance.ts";
 
 test("performance filters validate boundaries and calendar periods preserve real Bangkok dates", () => {
   const query = (input = "") => parseOwnedPerformanceQuery(new URLSearchParams(input));
@@ -71,4 +73,16 @@ test("creative grouping is opt-in on the API and its keys are Meta ids or one ad
   assert.throws(() => parseOwnedPerformanceQuery(new URLSearchParams("media=1&media=0")));
   for (const key of ["v:3221200154747773", "c:1023234730733727", "a:act_747201513533457:120250517546710673"]) assert.ok(OWNED_MEDIA_KEY.test(key), key);
   for (const key of ["v:", "x:1", "v:1;drop", "a:act_1", "a:act_1:2:3"]) assert.ok(!OWNED_MEDIA_KEY.test(key), key);
+});
+
+test("a previous window is compared only when every day of it was imported", () => {
+  // The 22 Oct import held 22 Sep – 22 Oct; "this month" (1–21 Oct) reaches back to 10–30 Sep.
+  const coverage = { from: "2026-09-22", to: "2026-10-22" };
+  assert.deepEqual(previousCoverage({ from: "2026-09-10", to: "2026-09-30" }, coverage), { state: "partial", from: "2026-09-22" });
+  assert.deepEqual(previousCoverage({ from: "2026-08-23", to: "2026-09-21" }, coverage), { state: "missing" });
+  assert.deepEqual(previousCoverage({ from: "2026-09-22", to: "2026-10-05" }, coverage), { state: "full" });
+  assert.deepEqual(previousCoverage({ from: "2026-09-22", to: "2026-10-05" }, null), { state: "missing" });
+  // The unit table does not even read a window it will not compare.
+  const source = readFileSync(join("lib", "owned-ads", "unit-summary.ts"), "utf8");
+  assert.match(source, /compare\.state === "full" \? read\(previous\) : null/);
 });

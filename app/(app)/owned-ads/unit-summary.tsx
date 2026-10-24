@@ -7,6 +7,9 @@ import styles from "./unit-summary.module.css";
 const num = (value: number | null | undefined, digits = 2) => value == null ? "—" : value.toLocaleString("th-TH", { minimumFractionDigits: digits, maximumFractionDigits: digits });
 const pct = (now: number | null | undefined, before: number | null | undefined) => now == null || before == null || before <= 0 ? null : (now / before - 1) * 100;
 const thaiDate = (value: string) => new Date(`${value}T12:00:00+07:00`).toLocaleDateString("th-TH", { day: "numeric", month: "short", timeZone: "Asia/Bangkok" });
+// Says why there is no change column rather than leaving every cell at "ไม่มีช่วงเทียบ".
+const compareText = (data: Summary) => !data.previous ? "" : data.compare.state === "full" ? ` เทียบ ${thaiDate(data.previous.from)} – ${thaiDate(data.previous.to)}`
+  : ` · ไม่เทียบกับ ${thaiDate(data.previous.from)} – ${thaiDate(data.previous.to)} (${data.compare.state === "partial" ? `ข้อมูลแอดเรามีตั้งแต่ ${thaiDate(data.compare.from)}` : "ยังไม่มีข้อมูลช่วงนั้น"})`;
 
 function Delta({ value, goodUp }: { value: number | null; goodUp: boolean | null }) {
   if (value == null) return <span className={`${styles.delta} ${styles.flat}`}>ไม่มีช่วงเทียบ</span>;
@@ -36,7 +39,7 @@ export function UnitSummary({ query, activeUnit, onPick }: { query: string; acti
   return <section className={styles.panel} aria-labelledby="unit-summary-heading" data-testid="unit-summary">
     <div className={styles.head}>
       <h2 id="unit-summary-heading">สรุปรายยูนิต</h2>
-      <span>{data ? `${thaiDate(data.period.from)} – ${thaiDate(data.period.to)}${data.previous ? ` เทียบ ${thaiDate(data.previous.from)} – ${thaiDate(data.previous.to)}` : ""} · เลือกยูนิตที่ตัวกรองด้านล่าง` : "ช่วงเดียวกับรายการแอด"}</span>
+      <span>{data ? `${thaiDate(data.period.from)} – ${thaiDate(data.period.to)}${compareText(data)} · เลือกยูนิตที่ตัวกรองด้านล่าง` : "ช่วงเดียวกับรายการแอด"}</span>
     </div>
     {error ? <p className={styles.problem} role="alert">{error} <button type="button" onClick={() => setRetry(v => v + 1)}>ลองใหม่</button></p> : null}
     {!data && !error ? <p className={styles.loading} role="status">กำลังรวมผลรายยูนิต…</p> : null}

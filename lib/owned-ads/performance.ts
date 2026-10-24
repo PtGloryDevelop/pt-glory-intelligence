@@ -114,6 +114,15 @@ export function previousOwnedPerformancePeriod(period: OwnedPerformancePeriod): 
   return { from: shift(period.from, -days), to: shift(period.from, -1) };
 }
 
+/** Days before the import have no rows, so a part-covered previous window adds up small and reads as growth.
+ * Only a window wholly inside the imported days is compared; `from` is the first imported day inside a partial one. */
+export type PreviousCoverage = { state: "full" } | { state: "partial"; from: string } | { state: "missing" };
+export function previousCoverage(previous: OwnedPerformancePeriod, coverage: OwnedPerformancePeriod | null): PreviousCoverage {
+  if (!coverage || previous.to < coverage.from || previous.from > coverage.to) return { state: "missing" };
+  if (previous.from < coverage.from) return { state: "partial", from: coverage.from };
+  return previous.to > coverage.to ? { state: "missing" } : { state: "full" };
+}
+
 /** %ปิด (Meta): Meta-reported orders ÷ conversations. Null below `minChats`, so two chats and two orders never read as 100%. */
 export function closeRate(row: { purchases: number | null; conversations: number | null }, minChats: number): number | null {
   return row.purchases != null && row.conversations != null && row.conversations >= minChats ? row.purchases / row.conversations : null;
