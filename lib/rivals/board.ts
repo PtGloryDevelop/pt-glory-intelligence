@@ -2,6 +2,7 @@ import 'server-only';
 import {dbUser} from '../db/user.ts';
 import {satisfies,type Actor} from '../auth/role-model.ts';
 import {supabaseArchiveStore} from '../media/store-supabase.ts';
+import {getUnitSummary} from '../owned-ads/unit-summary.ts';
 
 export type Relation='direct'|'substitute'|'unrelated';
 export type RivalPage={page_id:string;page_name:string|null;matched_ads:number;new_matched_7d:number;ads_total:number;active_ads:number;longest_days:number|null;last_seen_at:string|null;sample:string|null};
@@ -11,14 +12,12 @@ export type RivalBoard={units:RivalUnit[];unitsWithoutKeywords:{id:string;name:s
 
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
-/** Our units (analysts only: owned data). Names follow the latest import; viewers see units that already have keywords. */
-async function ownedUnits(db:Awaited<ReturnType<typeof dbUser>>):Promise<{id:string;name:string}[]>{
-  const latest=await db.from('owned_library_syncs').select('id,daily_ready,daily_from,daily_to').eq('status','completed').order('finished_at',{ascending:false}).limit(1).maybeSingle();
-  if(latest.error||!latest.data?.daily_ready||!latest.data.daily_from)return [];
-  const {data,error}=await db.rpc('owned_performance_units',{p_sync:latest.data.id,p_from:latest.data.daily_from,p_to:latest.data.daily_to});
-  if(error)return [];
+/** Our units (analysts only: owned data). Names follow the latest import; viewers see units that already have keywords.
+ * Read through the unit totals, which are kept per import: grouping a month of daily rows here took most of this board's time. */
+async function ownedUnits():Promise<{id:string;name:string}[]>{
+  const summary=await getUnitSummary(new URLSearchParams({period:'all'})).catch(()=>null);
   const seen=new Map<string,string>();
-  for(const row of data as {id:string|null;name:string|null}[])if(row.id&&!seen.has(row.id))seen.set(row.id,row.name??row.id);
+  for(const row of summary?.units??[])if(row.id&&!seen.has(row.id))seen.set(row.id,row.name);
   return [...seen].map(([id,name])=>({id,name})).sort((a,b)=>a.name.localeCompare(b.name,'th',{numeric:true}));
 }
 
@@ -31,7 +30,7 @@ export async function getRivalBoard(actor:Actor,{withUnits=true}:{withUnits?:boo
     db.from('rival_page_units').select('page_id,unit_id,relation'),
     db.from('rival_tracked_pages').select('page_id'),
     // Units without keywords and current unit names: the competitors page needs them, the overview does not.
-    canEdit&&withUnits?ownedUnits(db):Promise.resolve([]),
+    canEdit&&withUnits?ownedUnits():Promise.resolve([]),
     db.rpc('dataset_list').select('collected_at').order('collected_at',{ascending:false}).limit(1),
   ]);
   if(keywords.error||relations.error||tracked.error)throw new Error('Rival board unavailable');

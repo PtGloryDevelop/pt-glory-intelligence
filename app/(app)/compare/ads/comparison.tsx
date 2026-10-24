@@ -8,6 +8,7 @@ import { OwnedVideoPlayer } from '../../owned-ads/owned-video-player';
 import { AdCreative } from '@/components/AdDrawer';
 import type { CompanyAd } from '@/lib/owned-ads/source-rows';
 import type { OwnedPerformanceData, OwnedPerformanceRow } from '@/lib/owned-ads/performance';
+import type { UnitSummary } from '@/lib/owned-ads/unit-summary';
 import type { CommandAd, CommandCenterData } from '@/lib/owned-ads/command-center';
 import type { RivalBoard } from '@/lib/rivals/board';
 import type { CatalogPage } from '@/lib/read/catalog';
@@ -84,7 +85,11 @@ export function AdComparison({ datasets, seed, initialOwned, initialPeriod, init
   // Reference data, once: units for the picker and competitor pages per unit.
   useEffect(() => {
     const controller = new AbortController();
-    json<OwnedPerformanceData>(`/api/owned-ads/performance?${base}`, controller.signal).then(data => { setUnits(data.filters.units); if (!period) setPeriod({ date_start: data.period.from, date_end: data.period.to }); }).catch(() => {});
+    // The unit totals are kept per import, so this is cheap; the full ads list was read here only for its unit names.
+    json<UnitSummary>(`/api/owned-ads/units?${base}`, controller.signal).then(data => {
+      setUnits(data.units.filter(unit => unit.id).map(unit => ({ id: unit.id!, name: unit.name })).sort((a, b) => a.name.localeCompare(b.name, 'th', { numeric: true })));
+      if (!period) setPeriod({ date_start: data.period.from, date_end: data.period.to });
+    }).catch(() => {});
     json<RivalBoard>('/api/rivals', controller.signal).then(setBoard).catch(() => {});
     return () => controller.abort();
     // Loaded once per screen; period only fills in when nothing set it.
