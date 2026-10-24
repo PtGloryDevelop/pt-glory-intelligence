@@ -37,3 +37,39 @@ export async function setTeamRole(userId: string, role: Role | null): Promise<vo
     before: { role: from, email: login.data.user.email ?? null }, after: { role },
   });
 }
+
+/**
+ * Where a login is the author of team work. The first group has no delete rule, so a delete would fail; the second
+ * would be deleted along with the login (collection requests, watched items). Either way the account is kept and
+ * its access taken away instead. Other references are set to null on delete and keep their rows.
+ */
+const KEPT_WORK = [
+  ["app_settings", "updated_by"], ["audit_logs", "actor"], ["categories", "created_by"], ["collection_requests", "reservation_released_by"],
+  ["collection_runs", "created_by"], ["datasets", "created_by"], ["collection_requests", "requested_by"], ["watch_items", "created_by"],
+] as const;
+
+/**
+ * Delete an account for good: only someone else's, and only one with no team work behind it (typically a login
+ * nobody used). Pending password requests for it are removed with it; the deletion is audited.
+ */
+export async function deleteTeamAccount(userId: string): Promise<void> {
+  const actor = await requireRole("admin");
+  if (userId === actor.userId) throw new TeamRoleError("ลบบัญชีของตัวเองไม่ได้");
+  const service = serviceClient();
+  const login = await service.auth.admin.getUserById(userId);
+  if (login.error || !login.data.user) throw new TeamRoleError("ไม่พบบัญชีนี้");
+  const counts = await Promise.all(KEPT_WORK.map(([table, column]) =>
+    service.from(table).select(column, { count: "exact", head: true }).eq(column, userId)));
+  const failed = counts.find((result) => result.error);
+  if (failed?.error) throw failed.error;
+  if (counts.some((result) => result.count)) throw new TeamRoleError("บัญชีนี้มีงานในระบบ เช่น คำขอเก็บแอดหรือรายการที่ติดตาม ลบไม่ได้ ให้เลือก “ไม่มีสิทธิ์” แทน");
+  const role = await service.from("user_roles").select("role").eq("user_id", userId).maybeSingle();
+  const email = login.data.user.email?.toLowerCase() ?? null;
+  const removed = await service.auth.admin.deleteUser(userId);
+  if (removed.error) throw removed.error;
+  if (email) await service.from("password_reset_requests").delete().eq("email", email).eq("status", "pending");
+  await service.from("audit_logs").insert({
+    actor: actor.userId, action: "user.delete", entity_type: "user", entity_id: userId,
+    before: { email, role: role.data?.role ?? null, last_sign_in_at: login.data.user.last_sign_in_at ?? null }, after: null,
+  });
+}
