@@ -62,8 +62,8 @@ export function scopeLabel(scope: PageScope, name?: string | null): string {
  */
 export function scopeBasis(scope: PageScope): string {
   return scope.kind === "dataset"
-    ? "ค่าทั้งหมดมาจากรอบเก็บของ Dataset นี้เท่านั้น"
-    : "ค่าทั้งหมดมาจากการสังเกตล่าสุดของแต่ละโฆษณาภายในขอบเขตนี้ ไม่ใช่ snapshot ของ Dataset ใด";
+    ? "ค่าทั้งหมดมาจากรอบเก็บนี้รอบเดียว"
+    : "ค่าทั้งหมดมาจากครั้งล่าสุดที่เห็นแต่ละโฆษณาในขอบเขตนี้ ไม่ใช่ภาพจากรอบเก็บรอบเดียว";
 }
 
 /** Windows for "recently found". One definition, shared by every surface. */
@@ -81,7 +81,7 @@ export function recentDays(raw: string | null | undefined): number {
  * Nothing here sorts by performance, because the source carries none.
  */
 export const PAGE_SORTS: { key: string; label: string }[] = [
-  { key: "observed_ads", label: "Ads ที่พบมากสุด" },
+  { key: "observed_ads", label: "แอดที่พบมากสุด" },
   { key: "recently_found", label: "พบใหม่ล่าสุดมากสุด" },
   { key: "evergreen", label: "Evergreen มากสุด" },
   { key: "reuse", label: "ใช้ซ้ำสูงสุด" },

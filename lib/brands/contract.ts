@@ -68,7 +68,7 @@ export function unmappedSort(raw: string | null | undefined): UnmappedSort {
 }
 
 export const UNMAPPED_SORT_LABEL: Record<UnmappedSort, string> = {
-  observed_ads: "Ads ที่พบมากสุด",
+  observed_ads: "แอดที่พบมากสุด",
   recently_found: "พบใหม่ล่าสุด",
   last_observed: "สังเกตล่าสุด",
   page_name: "ชื่อเพจ",

@@ -126,7 +126,7 @@ export default async function PageDetailPage({ params, searchParams }: {
   return (
     <>
       <PageHeader
-        eyebrow="Page Intelligence"
+        eyebrow="ข้อมูลเพจ"
         title={detail.page_name ?? detail.page_id}
         back={{ href: `/pages?scope=${scopeParam}`, label: "เพจทั้งหมด" }}
         description="ข้อมูลระดับเพจ · ยังไม่ได้จับคู่เข้าเป็นแบรนด์"
@@ -222,7 +222,7 @@ export default async function PageDetailPage({ params, searchParams }: {
       <>
       <KPIRow>
         <KPIStat
-          label="Ads ที่พบ" value={detail.observed_ads}
+          label="แอดที่พบ" value={detail.observed_ads}
           helper="โฆษณาที่ไม่ซ้ำกันในขอบเขตนี้" testId="kpi-observed"
         />
         <KPIStat
@@ -239,7 +239,7 @@ export default async function PageDetailPage({ params, searchParams }: {
         />
         <KPIStat
           label="ใช้ซ้ำ" value={detail.reused_ads}
-          helper={`โฆษณาที่ collation > 1 · สูงสุด ${detail.max_collation ?? 0}`}
+          helper={`Meta รวมครีเอทีฟเดียวกันไว้หลายแอด · มากสุด ${detail.max_collation ?? 0} แอด`}
           testId="kpi-reused"
         />
       </KPIRow>

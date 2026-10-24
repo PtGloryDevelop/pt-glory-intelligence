@@ -170,7 +170,7 @@ test.describe("P2.4 page compare", () => {
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto(`/compare?scope=dataset:${firstDataset}&a=${PAGE_A}&b=${PAGE_B}`);
 
-    await expect(page.getByTestId("scope-basis")).toContainText("รอบเก็บของ Dataset นี้");
+    await expect(page.getByTestId("scope-basis")).toContainText("รอบเก็บนี้รอบเดียว");
     // The first run saw five ads for A; the later run added one. Dataset scope
     // still answers with five.
     expect(await read(page.getByTestId("cell-observed-a"))).toBe(5);

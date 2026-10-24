@@ -97,7 +97,7 @@ export default async function BrandDetailPage({ params, searchParams }: {
           helper="เพจที่จับคู่อยู่ และพบข้อมูลในขอบเขตที่เลือก" testId="kpi-pages-in-scope"
         />
         <KPIStat
-          label="Ads ที่พบ" value={detail.observed_ads}
+          label="แอดที่พบ" value={detail.observed_ads}
           helper="โฆษณาไม่ซ้ำ (ad_archive_id) จากเพจที่จับคู่อยู่" testId="kpi-observed-ads"
         />
         <KPIStat
@@ -125,7 +125,7 @@ export default async function BrandDetailPage({ params, searchParams }: {
               <thead>
                 <tr>
                   <th>เพจ</th>
-                  <th>Ads ที่พบ</th>
+                  <th>แอดที่พบ</th>
                   <th>จับคู่ตั้งแต่</th>
                   <th>โดย</th>
                   <th>สังเกตล่าสุด</th>

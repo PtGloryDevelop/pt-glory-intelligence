@@ -155,7 +155,7 @@ export async function PageTimeline({ scope, pageId, datasetId, query, pageName, 
                   <th>เก็บเมื่อ</th>
                   <th>Dataset</th>
                   <th>คำค้น / ประเทศ</th>
-                  <th>Ads ที่พบ</th>
+                  <th>แอดที่พบ</th>
                   <th>สถานะที่สังเกตได้</th>
                   <th>เพิ่งพบในขอบเขตนี้</th>
                 </tr>

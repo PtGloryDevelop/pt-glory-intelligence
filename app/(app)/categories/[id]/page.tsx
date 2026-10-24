@@ -134,7 +134,7 @@ export default async function CategoryWorkspace({ params, searchParams }: {
         items={[
           { label: "Dataset ที่ใช้", value: String(detail.dataset_count), testId: "context-datasets" },
           { label: "รอบเก็บ", value: String(detail.run_count) },
-          { label: "Ads ที่พบ", value: String(detail.observed_ads), testId: "context-ads" },
+          { label: "แอดที่พบ", value: String(detail.observed_ads), testId: "context-ads" },
           { label: "เพจที่พบ", value: String(detail.observed_pages), testId: "context-pages" },
           { label: "เก็บครั้งแรก", value: thaiDate(detail.first_collected_at) },
           { label: "เก็บล่าสุด", value: thaiDate(detail.last_collected_at) },
@@ -162,7 +162,7 @@ export default async function CategoryWorkspace({ params, searchParams }: {
         <>
           <KPIRow>
             <KPIStat
-              label="Ads ที่พบ" value={detail.observed_ads}
+              label="แอดที่พบ" value={detail.observed_ads}
               helper="โฆษณาที่ไม่ซ้ำกันในหมวดนี้" testId="kpi-observed"
             />
             <KPIStat
@@ -180,7 +180,7 @@ export default async function CategoryWorkspace({ params, searchParams }: {
             />
             <KPIStat
               label="ใช้ซ้ำ" value={detail.reused_ads}
-              helper="โฆษณาที่ collation > 1" testId="kpi-reused"
+              helper="Meta รวมครีเอทีฟเดียวกันไว้หลายแอด" testId="kpi-reused"
             />
           </KPIRow>
 
@@ -292,7 +292,7 @@ export default async function CategoryWorkspace({ params, searchParams }: {
                   <thead>
                     <tr>
                       <th>เพจ</th>
-                      <th>Ads ที่พบ</th>
+                      <th>แอดที่พบ</th>
                       <th>สัดส่วนจาก Ads ที่เราพบ</th>
                       <th>สถานะ</th>
                       <th>พบใหม่ {days} วัน</th>

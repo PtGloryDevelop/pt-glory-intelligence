@@ -139,7 +139,7 @@ export default async function UnmappedPagesPage({ searchParams }: { searchParams
                 <tr>
                   <th>เพจ</th>
                   <th className={styles.secondary}>หมวดเพจ (จาก Meta)</th>
-                  <th>Ads ที่พบ</th>
+                  <th>แอดที่พบ</th>
                   <th className={styles.secondary}>พบใหม่ 30 วัน</th>
                   <th className={styles.secondary}>เริ่มพบ</th>
                   <th className={styles.secondary}>สังเกตล่าสุด</th>

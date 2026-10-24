@@ -55,7 +55,7 @@ export const COMPARE_ROWS: {
   },
   {
     metric: "reused", label: "ใช้ซ้ำ",
-    helper: "โฆษณาที่ collation > 1 — ไม่ได้แปลว่าไฟล์เหมือนกัน และไม่ได้บอกผลลัพธ์", signal: "reused",
+    helper: "Meta รวมครีเอทีฟเดียวกันไว้หลายแอด — ไม่ได้แปลว่าไฟล์เหมือนกัน และไม่ได้บอกผลลัพธ์", signal: "reused",
   },
   { metric: "active", label: "Active", helper: "สถานะที่อ่านได้ล่าสุด", signal: "active" },
   { metric: "inactive", label: "Inactive", helper: "สถานะที่อ่านได้ล่าสุด", signal: "inactive" },

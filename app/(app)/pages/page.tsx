@@ -117,7 +117,7 @@ export default async function PagesPage({ searchParams }: { searchParams: Promis
                 <tr>
                   <th>เพจ</th>
                   <th>หมวดเพจ</th>
-                  <th>Ads ที่พบ</th>
+                  <th>แอดที่พบ</th>
                   <th>สถานะโฆษณา</th>
                   <th>พบใหม่ {days} วัน</th>
                   <th>Evergreen</th>
@@ -220,9 +220,9 @@ async function ScopeChooser() {
       ) : (
         <div className={styles.scopeGrid} data-testid="scope-chooser">
           <Panel padded>
-            <h2 className={styles.scopeHeading}>Dataset เดียว</h2>
+            <h2 className={styles.scopeHeading}>รอบเก็บรอบเดียว</h2>
             <p className={styles.scopeNote}>
-              ค่าที่เห็นคือ snapshot ของรอบเก็บนั้น ไม่เปลี่ยนเมื่อมีรอบใหม่เข้ามา
+              ค่าที่เห็นคือภาพของรอบเก็บนั้น ไม่เปลี่ยนเมื่อมีรอบใหม่เข้ามา
             </p>
             <ul className={styles.scopeList}>
               {datasets.slice(0, 12).map((row) => (

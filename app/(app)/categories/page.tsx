@@ -52,7 +52,7 @@ export default async function CategoriesPage() {
                 <tr>
                   <th>หมวดหมู่</th>
                   <th>Dataset</th>
-                  <th>Ads ที่พบ</th>
+                  <th>แอดที่พบ</th>
                   <th>เพจที่พบ</th>
                   <th>เก็บครั้งแรก</th>
                   <th>เก็บล่าสุด</th>

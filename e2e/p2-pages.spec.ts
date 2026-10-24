@@ -75,7 +75,7 @@ test.describe("P2.1 page intelligence", () => {
     await page.setViewportSize({ width: 1440, height: 1000 });
 
     await page.goto(`/pages?scope=dataset:${datasetId}`);
-    await expect(page.getByTestId("scope-basis")).toContainText("รอบเก็บของ Dataset นี้");
+    await expect(page.getByTestId("scope-basis")).toContainText("รอบเก็บนี้รอบเดียว");
 
     await page.goto("/pages?scope=all");
     await expect(page.getByTestId("scope-basis")).toContainText("ไม่ใช่ snapshot");

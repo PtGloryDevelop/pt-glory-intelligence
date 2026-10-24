@@ -136,26 +136,26 @@ export default async function WatchDetailPage({ params, searchParams }: {
         />
         {pageDetail ? (
           <KPIRow>
-            <KPIStat label="Ads ที่พบ" value={pageDetail.observed_ads}
+            <KPIStat label="แอดที่พบ" value={pageDetail.observed_ads}
               helper="โฆษณาที่ไม่ซ้ำกันในขอบเขตนี้" testId="current-observed" />
             <KPIStat label="Evergreen" value={pageDetail.evergreen_ads}
               helper="ยังแสดงอยู่ และอายุถึงเกณฑ์" testId="current-evergreen" />
             <KPIStat label="ใช้ซ้ำ" value={pageDetail.reused_ads}
-              helper="collation > 1" testId="current-reused" />
+              helper="Meta รวมครีเอทีฟเดียวกันไว้หลายแอด" testId="current-reused" />
             <KPIStat label="เริ่มพบ" value={thaiDate(pageDetail.first_observed_at)}
               helper="รอบเก็บแรกที่เห็นเพจนี้" />
           </KPIRow>
         ) : null}
         {categoryDetail ? (
           <KPIRow>
-            <KPIStat label="Ads ที่พบ" value={categoryDetail.observed_ads}
+            <KPIStat label="แอดที่พบ" value={categoryDetail.observed_ads}
               helper="โฆษณาที่ไม่ซ้ำกันในหมวดนี้" testId="current-observed" />
             <KPIStat label="เพจที่พบ" value={categoryDetail.observed_pages}
               helper="ตัวตนเพจที่ไม่ซ้ำกัน" testId="current-pages" />
             <KPIStat label="Evergreen" value={categoryDetail.evergreen_ads}
               helper={`อายุ ≥ ${categoryDetail.evergreen_threshold_days} วัน`} testId="current-evergreen" />
             <KPIStat label="ใช้ซ้ำ" value={categoryDetail.reused_ads}
-              helper="collation > 1" testId="current-reused" />
+              helper="Meta รวมครีเอทีฟเดียวกันไว้หลายแอด" testId="current-reused" />
           </KPIRow>
         ) : null}
         {pageDetail ? (

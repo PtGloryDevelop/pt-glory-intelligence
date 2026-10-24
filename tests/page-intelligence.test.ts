@@ -52,12 +52,12 @@ test("the SQL arguments carry the scope, and only ever one id", () => {
 });
 
 test("only a dataset scope claims to be a snapshot", () => {
-  assert.match(scopeBasis({ kind: "dataset", id: "x" }), /รอบเก็บของ Dataset นี้/);
+  assert.match(scopeBasis({ kind: "dataset", id: "x" }), /รอบเก็บนี้รอบเดียว/);
   for (const scope of [{ kind: "all" } as const, { kind: "category", id: "x" } as const]) {
     const basis = scopeBasis(scope);
-    assert.match(basis, /สังเกตล่าสุด/);
+    assert.match(basis, /ครั้งล่าสุดที่เห็น/);
     // The wider scopes must not be describable as a dataset snapshot.
-    assert.match(basis, /ไม่ใช่ snapshot/);
+    assert.match(basis, /ไม่ใช่ภาพจากรอบเก็บรอบเดียว/);
   }
 });
 

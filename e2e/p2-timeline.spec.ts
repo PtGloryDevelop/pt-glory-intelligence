@@ -228,7 +228,7 @@ test.describe("P2.2 page timeline", () => {
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto(timeline(`dataset:${firstDataset}`));
 
-    await expect(page.getByTestId("scope-basis")).toContainText("รอบเก็บของ Dataset นี้");
+    await expect(page.getByTestId("scope-basis")).toContainText("รอบเก็บนี้รอบเดียว");
     await expect(page.getByTestId("run-history").locator("tbody tr")).toHaveCount(1);
     // One collection point is the honest answer for one run — and the ads in it
     // still started years apart, because that is a property of the ads.
