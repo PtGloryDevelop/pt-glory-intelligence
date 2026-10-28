@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import {usePathname,useSearchParams} from 'next/navigation';
-import {useEffect,useState} from 'react';
+import {useEffect,useRef,useState} from 'react';
 import type {Relation,RivalBoard as Board,RivalRow,RivalUnit} from '@/lib/rivals/board';
 import type {CatalogAdRow,CatalogPage} from '@/lib/read/catalog';
 import type {RailUnit} from '@/lib/owned-ads/command-center';
@@ -19,10 +19,12 @@ const n=(value:number)=>value.toLocaleString('th-TH');
 type Strip='new'|'age';
 
 /** Competitor ads first (new this week, running longest), then the pages that collide with each unit. */
-export function RivalBoard(){
+export function RivalBoard({initial}:{initial?:Board}){
   const params=useSearchParams(),pathname=usePathname();
   const unitId=params.get('unit')??'';
-  const [board,setBoard]=useState<Board|null>(null);
+  // The page reads the board with its HTML; the first fetch is skipped only when that read arrived.
+  const [board,setBoard]=useState<Board|null>(initial??null);
+  const skipFetch=useRef(Boolean(initial));
   const [problem,setProblem]=useState<string|null>(null);
   const [reload,setReload]=useState(0);
   const [busy,setBusy]=useState<string|null>(null);
@@ -35,6 +37,7 @@ export function RivalBoard(){
   const collected=launcher?.version??0;
 
   useEffect(()=>{
+    if(skipFetch.current){skipFetch.current=false;return;}
     const controller=new AbortController();
     fetch('/api/rivals',{cache:'no-store',signal:controller.signal}).then(async response=>{
       const body=await response.json();if(!response.ok)throw new Error(body.error??'เปิดข้อมูลไม่สำเร็จ');
@@ -147,7 +150,22 @@ export function RivalBoard(){
         {unitId&&board.canEdit&&scope[0]?<OfferCompare unit={scope[0]} names={new Map(scope[0].pages.map(page=>[page.page_id,page.page_name]))} reload={collected}/>:null}
         {strip('new',`แอดใหม่ของคู่แข่ง${fresh.data?` · ${n(fresh.data.total)} แอดใน 7 วัน`:''}`,`แอดที่ระบบเห็นครั้งแรกใน 7 วัน จากเพจคู่แข่งของ ${scopeName} · ใหม่สำหรับเรา อาจยิงมาก่อนแล้ว · เก็บล่าสุด ${thaiDate(board.lastCollectedAt)}`,fresh)}
         {strip('age','ยิงนานที่สุด',`แอดที่ยังแสดงอยู่และยิงมานานที่สุดจากเพจคู่แข่งของ ${scopeName} · ใช้หาไอเดียทำแอด`,long)}
-        {scope.map(pagesTable)}
+        {/* Every unit's full page table stacked grows with each unit given keywords; all units get one row each, a unit gets its table. */}
+        {unitId?scope.map(pagesTable):<section className={styles.panel} aria-label="เพจคู่แข่งรายยูนิต" data-testid="rival-units">
+          <div className={styles.head}><h2>เพจคู่แข่งรายยูนิต · {n(board.units.length)} ยูนิต</h2></div>
+          <p className={styles.why}>เลือกยูนิตเพื่อดูเพจทั้งหมด ตรวจว่าเป็นคู่แข่งจริงไหม แก้คำค้น หรือเก็บแอดใหม่</p>
+          <div className={styles.tableWrap}><table className={styles.table}>
+            <thead><tr><th>ยูนิต</th><th className={styles.r}>เพจคู่แข่ง</th><th className={styles.r}>แอดใหม่ 7 วัน</th><th className={styles.r}>รอทีมตรวจ</th><th>คำค้น</th><th><span className={styles.srOnly}>เปิด</span></th></tr></thead>
+            <tbody>{board.units.map(unit=><tr key={unit.id}>
+              <td><button type="button" className={styles.unitLink} onClick={()=>{pick(unit.id);window.scrollTo({top:0});}}>{unit.name}</button></td>
+              <td className={styles.r}>{n(unit.pages.length)}</td>
+              <td className={styles.r}><b>{n(unitNew(unit))}</b></td>
+              <td className={styles.r}>{pending(unit)?<span className={`${styles.chip} ${styles.suggested}`}>{n(pending(unit))}</span>:'—'}</td>
+              <td className={styles.kwCell} title={unit.keywords.map(k=>k.keyword).join(', ')}>{unit.keywords.map(k=>k.keyword).join(', ')}</td>
+              <td className={styles.r}><button type="button" className={styles.btn} onClick={()=>{pick(unit.id);window.scrollTo({top:0});}} aria-label={`ดูเพจคู่แข่งของ ${unit.name}`}>ดูเพจ →</button></td>
+            </tr>)}</tbody>
+          </table></div>
+        </section>}
       </>}
       <p className={styles.foot}>Ads Library ไม่มีข้อมูลค่าแอดของคู่แข่ง และไม่มียอดขาย · “ใหม่” คือระบบเพิ่งเห็นครั้งแรก · เพจไม่เท่ากับแบรนด์ · ระบบเก็บแอดใหม่อยู่ {n(board.tracked)} เพจ</p>
     </div>

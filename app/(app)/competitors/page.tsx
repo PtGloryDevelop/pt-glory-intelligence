@@ -14,6 +14,7 @@ import {isUuid} from '@/lib/read/request';
 import {DEFAULT_SORT,fromQuery,toQuery} from '@/lib/explorer/filters';
 import {CatalogLibrary} from './catalog-library';
 import {RivalBoard} from './rival-board';
+import {getRivalBoard} from '@/lib/rivals/board';
 import {Icon} from '@/components/shell/icons';
 import styles from './competitors.module.css';
 export const dynamic='force-dynamic';
@@ -47,6 +48,8 @@ export default async function AdLibrary({searchParams}:{searchParams:Promise<Rec
  const firstRead=round&&unfiltered?datasetAdsPage(round,{sort:DEFAULT_SORT,limit:EXPLORER_PAGE_SIZE,offset:0},true).catch(()=>null):null;
  const launcherRead=canAnalyze?Promise.all([listCategories(),collectorFormSettings(),listCollections(1)]):null;
  launcherRead?.catch(()=>{});
+ // The rival board comes with the page too; if it fails here, the board asks again itself and shows its own error.
+ const boardRead=board?getRivalBoard(actor).catch(()=>null):null;
  const datasets=(await listDatasets()).sort((a,b)=>b.collected_at.localeCompare(a.collected_at));
  const selected=dataset?datasets.find(row=>row.dataset_id===dataset):undefined;
  let page:React.ReactNode;
@@ -54,7 +57,7 @@ export default async function AdLibrary({searchParams}:{searchParams:Promise<Rec
   page=<>
    <PageHeader title="ติดตามคู่แข่ง" description="คู่แข่งของแต่ละยูนิตจากคำค้นของยูนิต · ทีมยืนยันเพจที่ใช่ แล้วเลือกเพจที่ต้องการเก็บแอดใหม่"
     actions={<div className={styles.headActions}><Link className={styles.manage} href="/pages?scope=all" data-testid="competitor-all-pages"><Icon name="building"/>สำรวจเพจ</Link><CollectLaunchButton className={styles.manage}/></div>}/>
-   <RivalBoard/>
+   <RivalBoard initial={await boardRead??undefined}/>
   </>;
  }else if(selected){
   const [quality,first]=await Promise.all([qualityRead!,firstRead]);

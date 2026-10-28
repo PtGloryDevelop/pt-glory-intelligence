@@ -64,3 +64,7 @@
 .collect { margin-left: auto; min-height: 28px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 7px; background: var(--surface); color: var(--ink); font: inherit; font-size: var(--fs-label); font-weight: 600; cursor: pointer; white-space: nowrap; }
 @media (max-width: 900px) { .layout { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 520px) { .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* All units: one row per unit, its full page table one click away. */
+.unitLink { padding: 0; border: 0; background: none; color: var(--rival-ink); font: inherit; font-weight: 600; text-align: left; cursor: pointer; }
+.unitLink:hover { text-decoration: underline; }
+.kwCell { max-width: 280px; overflow: hidden; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; }

@@ -25,12 +25,13 @@ async function ownedUnits():Promise<{id:string;name:string}[]>{
 export async function getRivalBoard(actor:Actor,{withUnits=true}:{withUnits?:boolean}={}):Promise<RivalBoard>{
   const db=await dbUser();
   const canEdit=satisfies(actor.role,'analyst');
-  const [keywords,relations,tracked,units,collected]=await Promise.all([
+  // Units without keywords and current unit names: the competitors page needs them, the overview does not.
+  // They sum every imported day, the slowest read here, so nothing waits for them until the names are applied.
+  const unitsRead=canEdit&&withUnits?ownedUnits():Promise.resolve([]);
+  const [keywords,relations,tracked,collected]=await Promise.all([
     db.from('unit_keywords').select('id,unit_id,unit_name,keyword').order('created_at'),
     db.from('rival_page_units').select('page_id,unit_id,relation'),
     db.from('rival_tracked_pages').select('page_id'),
-    // Units without keywords and current unit names: the competitors page needs them, the overview does not.
-    canEdit&&withUnits?ownedUnits():Promise.resolve([]),
     db.rpc('dataset_list').select('collected_at').order('collected_at',{ascending:false}).limit(1),
   ]);
   if(keywords.error||relations.error||tracked.error)throw new Error('Rival board unavailable');
@@ -48,8 +49,10 @@ export async function getRivalBoard(actor:Actor,{withUnits=true}:{withUnits?:boo
     const visible=rows.filter(row=>row.relation!=='unrelated');
     // Confirmed first, then by matched ads.
     visible.sort((a,b)=>Number(Boolean(b.relation))-Number(Boolean(a.relation))||b.matched_ads-a.matched_ads);
-    return {id,name:units.find(unit=>unit.id===id)?.name??entry.name,keywords:entry.keywords,pages:visible,hidden:rows.length-visible.length};
+    return {id,name:entry.name,keywords:entry.keywords,pages:visible,hidden:rows.length-visible.length};
   }));
+  const units=await unitsRead;
+  for(const unit of groups)unit.name=units.find(owned=>owned.id===unit.id)?.name??unit.name;
   groups.sort((a,b)=>a.name.localeCompare(b.name,'th',{numeric:true}));
   // Archived page pictures, signed for an hour. A missing picture keeps the letter avatar.
   const pageIds=[...new Set(groups.flatMap(unit=>unit.pages.map(page=>page.page_id)))];
