@@ -17,8 +17,12 @@ export const rivalImage = (ad: Rival) => {
   return 'src' in resolved ? resolved.src : null;
 };
 export const ownKey = (ad: { account_id: string; ad_id: string }) => ad.account_id + ':' + ad.ad_id;
-/** Ads that run the same video or creative are one choice: the team compares pictures, not ad ids. */
-export const creativeKey = (ad: { account_id: string; ad_id: string; video_id?: string | null; creative_id?: string | null }) => ad.video_id || ad.creative_id || ownKey(ad);
+const spaced = (text: string) => text.trim().replace(/\s+/g, ' ');
+/** Ads that run the same clip are one choice: the team compares pictures, not ad ids. Same rule as the library
+ * (migration 0074): a named ad is its page + ad name + caption, since a duplicated ad carries a copy of the video. */
+export const creativeKey = (ad: { account_id: string; ad_id: string; video_id?: string | null; creative_id?: string | null; page_id?: string | null; ad_name?: string | null; body_text?: string | null }) =>
+  ad.page_id && ad.ad_name?.trim() ? `n:${ad.page_id}:${spaced(ad.ad_name).toLowerCase()}\u001f${spaced(ad.body_text ?? '')}`
+    : ad.video_id || ad.creative_id || ownKey(ad);
 
 export type OwnedChoice = OwnedPerformanceRow & { group_size?: number };
 

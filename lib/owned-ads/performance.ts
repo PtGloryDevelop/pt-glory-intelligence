@@ -26,8 +26,8 @@ export type OwnedPerformanceRow = CompanyAd & {
   /** Creative rows only: figures are the sums of `ad_count` ads; the rest describes the ad with the most spend. */
   media_key?: string; ad_count?: number; account_count?: number; active_ads?: number; first_created?: string | null;
 };
-/** Ads behind a creative row, same filters as the page. */
-export const OWNED_MEDIA_KEY = /^((v|c):\d{1,32}|a:(act_)?\d{1,32}:\d{1,32})$/;
+/** Ads behind a creative row, same filters as the page. `n:` is a hash of page + ad name + caption (migration 0074). */
+export const OWNED_MEDIA_KEY = /^((v|c):\d{1,32}|a:(act_)?\d{1,32}:\d{1,32}|n:[0-9a-f]{16})$/;
 export type OwnedMediaMembers = { total: number; rows: (CompanyAd & { roas: number | null; cost_per_conversation: number | null; delivery_days: number | null; created_time: string | null })[] };
 export type OwnedPerformanceSummary = {
   currency: string; ad_count: number; media_count?: number; daily_rows: number; spend: number | null; conversations: number | null;
