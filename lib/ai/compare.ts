@@ -9,7 +9,7 @@ import {metaReadConfigured, resolveWithToken} from '../owned-ads/meta-media.ts';
 import {summarizeOwnedReport} from '../owned-ads/model.ts';
 import type {CompanyAd} from '../owned-ads/source-rows.ts';
 import type {Media} from '../media.ts';
-import {AI_DIMS, AI_SOURCES, SCORE_DIMS, readAdReading, readSetReading, type AdReading, type AdRef, type AiRun, type AiEstimate, type SetReading, adRefId} from './compare-shared.ts';
+import {ADS_DIMS, AI_DIMS, AI_SOURCES, SCORE_DIMS, readAdReading, readAdsReading, readSetReading, type AdReading, type AdRef, type AdsReading, type AdsRun, type AiRun, type AiEstimate, type SetReading, type TeamView, adRefId} from './compare-shared.ts';
 import {AiError, MODEL, callDeepSeek, estimateUsd, modelConfig, type Message} from './deepseek.ts';
 export {parseAdRefs} from './compare-shared.ts';
 export {AiError} from './deepseek.ts';
@@ -24,7 +24,9 @@ const TOTAL_CAP = Number(process.env.AI_TOTAL_USD) || 4.5;
 const VERSION = 'v4'; // bump when AD_PROMPT changes (v4: DeepSeek JSON mode, shape in the prompt)
 const SET_VERSION = 'v8'; // bump when SET_PROMPT changes (v8: DeepSeek JSON mode, shape in the prompt)
 
-type Loaded = {ref: AdRef; side: string; label: string; format: string; text: string; image: string | null; facts: string; owned?: CompanyAd};
+type Loaded = {ref: AdRef; side: string; label: string; format: string; text: string; image: string | null; facts: string; owned?: CompanyAd;
+  /** The ad team's view names the headline and the caption apart, so the model knows which is which. */
+  headline: string | null; caption: string};
 
 async function loadAds(refs: AdRef[]): Promise<Loaded[]> {
   const db = await dbUser();
@@ -45,6 +47,7 @@ async function loadAds(refs: AdRef[]): Promise<Loaded[]> {
       return {
         ref, side: 'แอดของเรา', label: ad.ad_name, format: ad.video_id ? 'วิดีโอ' : 'ภาพ',
         text: [ad.title, ad.body_text].filter(Boolean).join('\n'), image: cachedOwnedImage(ad) ?? null, owned: ad,
+        headline: ad.title ?? null, caption: ad.body_text ?? '',
         facts: `ค่าแอด ${ad.spend ?? '—'} ${ad.currency} · ROAS ${roas == null ? '—' : roas.toFixed(2)} · บทสนทนา ${ad.conversations ?? '—'}`,
       };
     }
@@ -56,6 +59,7 @@ async function loadAds(refs: AdRef[]): Promise<Loaded[]> {
       ref, side: 'คู่แข่ง', label: detail.page_name ?? detail.page_id, format: detail.display_format ?? 'ไม่ระบุ',
       text: [detail.title, detail.body_text, detail.link_description, detail.cta_text && `ปุ่ม: ${detail.cta_text}`].filter(Boolean).join('\n'),
       image: 'src' in media ? media.src : null,
+      headline: detail.title ?? null, caption: [detail.body_text, detail.link_description, detail.cta_text && `ปุ่ม: ${detail.cta_text}`].filter(Boolean).join('\n'),
       facts: `${detail.is_active ? 'กำลังแสดง' : detail.is_active === false ? 'ไม่แสดงแล้ว' : 'ไม่ทราบสถานะ'} · ยิงมา ${detail.ad_age_days} วัน · ไม่มีข้อมูลงบหรือยอดขายของคู่แข่ง`,
     };
   }));
@@ -151,8 +155,72 @@ ads = index ของแอดที่เป็นหลักฐานขอ�
 ตอบเป็น JSON object เดียว มีครบทุกช่องตามรูปแบบนี้ (... คือส่วนที่ให้เติม):
 ${SET_SHAPE}`;
 
+// ทีมยิงแอด: only the four topics the ad team works with, each its own prompt and cache.
+const ADS_VERSION = 'v1'; // bump when ADS_AD_PROMPT changes
+const ADS_SET_VERSION = 'v1'; // bump when ADS_SET_PROMPT changes
+const ADS_SHAPE = JSON.stringify(Object.fromEntries(ADS_DIMS.map(dim => [dim, blank])));
+
+const ADS_AD_PROMPT = `คุณช่วยทีมยิงแอด Facebook ของไทยอ่านโฆษณาทีละตัว ตอบภาษาไทย สั้น ไม่เกิน 120 ตัวอักษรต่อช่อง
+ใช้เฉพาะสิ่งที่อยู่ในข้อความหรือภาพของแอดนี้ ห้ามเดา ถ้าไม่พบให้ value="ไม่พบในแอด" source="ไม่พบ" quote=""
+quote ต้องคัดลอกคำจริงจากข้อความหรือคำบนภาพ ไม่เกิน 80 ตัวอักษร ยกเว้น cover ไม่เกิน 200 ตัวอักษร
+caption = โครงของแคปชั่น: เปิดด้วยอะไร ยาวหรือสั้น โทนภาษา (เป็นกันเอง ทางการ เร่งเร้า เล่าเรื่อง) และปิดท้ายชวนให้ทำอะไร quote = บรรทัดแรกของแคปชั่น
+headline = ข้อความพาดหัว คัดลอกตามจริงทุกตัวอักษร ถ้ามี "พาดหัว (Meta)" ให้ใช้อันนั้น source="ข้อความ" ถ้าไม่มีให้ใช้ตัวหนังสือที่ใหญ่ที่สุดบนภาพ source="ภาพ" quote = คำเดียวกับ value
+content = แนวคอนเทนต์ เลือกที่ตรงที่สุด เช่น พรีเซนเตอร์พูดกับกล้อง รีวิวลูกค้า ก่อน-หลัง สอนวิธีใช้ โปรโมชั่นและราคา คนดังหรืออินฟลู เล่าเรื่องหรือละครสั้น ภาพสินค้าล้วน แล้วต่อด้วยสิ่งที่เห็นสั้นๆ
+cover = ภาพหน้าปก: ในภาพมีอะไร (คน สินค้า ฉาก สีเด่น) quote = ตัวหนังสือทั้งหมดบนภาพปก คัดลอกตามจริง เรียงจากบนลงล่าง คั่นด้วย " / " ถ้าไม่มีภาพให้ value="ไม่มีภาพให้ดู" source="ไม่พบ" quote=""
+ห้ามคาดเดายอดขาย งบ หรือผลลัพธ์ของแอด
+source ใช้ได้แค่ ${AI_SOURCES.map(name => `"${name}"`).join(' ')}
+ตอบเป็น JSON object เดียว มีครบทุกช่องตามรูปแบบนี้ (... คือส่วนที่ให้เติม):
+${ADS_SHAPE}`;
+
+const ADS_SET_PROMPT = `คุณช่วยทีมยิงแอดไทยสรุปการเทียบโฆษณา ตอบภาษาไทย ประโยคละไม่เกิน 160 ตัวอักษร
+ข้อมูลคือผลอ่านแอดแต่ละตัว (index เริ่มที่ 0) 4 หัวข้อ: caption (แคปชั่น) headline (พาดหัว) content (แนวคอนเทนต์) cover (ภาพปกและคำในปก) แอดของเรามีตัวเลขผลลัพธ์จริง แอดคู่แข่งไม่มีงบหรือยอดขาย ห้ามอ้างว่าคู่แข่งขายดีกว่าหรือได้ผลกว่า
+จำนวนวันที่คู่แข่งยิง: 30 วันขึ้นไปและยังแสดงอยู่ = คู่แข่งใช้แอดนี้ต่อเนื่อง ควรศึกษา (แต่ห้ามสรุปว่าขายดีหรือได้ผล) ไม่เกิน 10 วัน = อาจยังทดสอบอยู่ อย่าเพิ่งยึดเป็นแบบ
+ถ้า cover.source เป็น "ไม่พบ" แปลว่า AI ไม่ได้เห็นภาพปกของแอดนั้น ห้ามเทียบเรื่องภาพปก
+diffs = จุดที่แอดเรากับคู่แข่งต่างกันจริง 2–4 ข้อ เฉพาะ 4 หัวข้อนี้ ขึ้นต้นแต่ละข้อด้วยชื่อหัวข้อภาษาไทย เช่น "พาดหัว: ..."
+ideas = สิ่งที่ทีมยิงแอดลองแก้ในแอดของเรา 2–4 ข้อ เฉพาะแคปชั่น พาดหัว แนวคอนเทนต์ หรือภาพปก (เราแก้แอดคู่แข่งไม่ได้) เขียนเป็นสิ่งที่ทำได้เลย แล้ววัดผลด้วยตัวเลขของเรา
+hooks = พาดหัวหรือคำบนปกใหม่ 3 แบบสำหรับแอดของเรา ให้ทีมยิงทดสอบ แต่ละแบบใช้มุมต่างกัน text = คำพร้อมใช้ ไม่เกิน 60 ตัวอักษร why = ทำไมน่าลอง ไม่เกิน 100 ตัวอักษร
+กฎของ ideas และ hooks: ใช้เฉพาะข้อเท็จจริงที่มีในแอดของเรา (ราคา ของแถม ส่วนผสม วิธีใช้) ห้ามแต่งตัวเลข รีวิว หรือคำอ้างใหม่ ห้ามลอกคำของคู่แข่งมาทั้งประโยค
+กฎ อย. เข้มที่สุด: ห้ามอ้างว่ารักษา ป้องกัน หรือบรรเทาโรคหรืออาการ ห้ามอ้างผลต่ออวัยวะหรือค่าเลือด (หลอดเลือด หัวใจ ความดัน ไขมัน น้ำตาล) ห้ามบอกว่าเห็นผลในกี่วัน ห้ามรับประกันผล (แน่นอน 100% หายขาด ถาวร) ห้ามอ้างแพทย์ ชื่อสินค้าให้สะกดตามที่เขียนในแอดทุกตัวอักษร
+ads = index ของแอดที่เป็นหลักฐานของข้อนั้น
+
+ตอบเป็น JSON object เดียว มีครบทุกช่องตามรูปแบบนี้ (... คือส่วนที่ให้เติม):
+${SET_SHAPE}`;
+
 const sha = (value: string) => createHash('sha256').update(value).digest('hex').slice(0, 24);
-const adKey = (ad: Loaded) => `ad:${VERSION}:${MODEL}:${adRefId(ad.ref)}:${sha(ad.text)}`;
+const adsCopy = (ad: Loaded) => `พาดหัว (Meta): ${ad.headline?.trim() || '(ไม่มี)'}\nแคปชั่น:\n${ad.caption.slice(0, 4000) || '(ไม่มีข้อความ)'}`;
+
+/** What differs between team views: prompts, cache keys, the copy the model is shown, and how its reply is checked. */
+type ViewSpec = {
+  adKey: (ad: Loaded) => string; setKey: (keys: string[]) => string; adPrompt: string; setPrompt: string;
+  copy: (ad: Loaded) => string;
+  /** `seen` is false when the model was sent no picture: whatever it said about one is replaced. */
+  read: (raw: unknown, seen: boolean) => AdReading | AdsReading | null;
+};
+const VIEWS: Record<TeamView, ViewSpec> = {
+  general: {
+    adKey: ad => `ad:${VERSION}:${MODEL}:${adRefId(ad.ref)}:${sha(ad.text)}`,
+    setKey: keys => `set:${SET_VERSION}:${MODEL}:${sha(keys.join('|'))}`,
+    adPrompt: AD_PROMPT, setPrompt: SET_PROMPT,
+    copy: ad => `ข้อความในแอด:\n${ad.text.slice(0, 4000) || '(ไม่มีข้อความ)'}`,
+    read: (raw, seen) => {
+      const reading = readAdReading(raw);
+      // Without a picture there is nothing to judge, whatever the model guessed.
+      if (reading && !seen) reading.scores.fit = {score: null, why: 'AI ไม่ได้เห็นภาพของแอดนี้'};
+      return reading;
+    },
+  },
+  ads: {
+    adKey: ad => `adsteam:ad:${ADS_VERSION}:${MODEL}:${adRefId(ad.ref)}:${sha(adsCopy(ad))}`,
+    setKey: keys => `adsteam:set:${ADS_SET_VERSION}:${MODEL}:${sha(keys.join('|'))}`,
+    adPrompt: ADS_AD_PROMPT, setPrompt: ADS_SET_PROMPT,
+    copy: adsCopy,
+    read: (raw, seen) => {
+      const reading = readAdsReading(raw);
+      if (reading && !seen) reading.cover = {value: 'AI ไม่ได้เห็นภาพปกของแอดนี้', source: 'ไม่พบ', quote: ''};
+      return reading;
+    },
+  },
+};
 
 async function spent(db: Awaited<ReturnType<typeof dbUser>>) {
   // ponytail: sums every row in JS; fine for thousands of calls, move to SQL if the table grows large.
@@ -167,12 +235,13 @@ async function spent(db: Awaited<ReturnType<typeof dbUser>>) {
 }
 
 /** dryRun: what is cached, what a run would cost, and what has been spent. Never calls DeepSeek. */
-export async function runComparison(refs: AdRef[], dryRun: boolean): Promise<AiEstimate | AiRun> {
+export async function runComparison(refs: AdRef[], dryRun: boolean, view: TeamView = 'general'): Promise<AiEstimate | AiRun | AdsRun> {
   const {vision} = modelConfig();
+  const spec = VIEWS[view];
   const db = await dbUser();
   const ads = await loadAds(refs);
-  const keys = ads.map(adKey);
-  const setKey = `set:${SET_VERSION}:${MODEL}:${sha(keys.join('|'))}`;
+  const keys = ads.map(spec.adKey);
+  const setKey = spec.setKey(keys);
   const cached = await db.from('ai_analyses').select('key,result').in('key', [...keys, setKey]);
   if (cached.error) throw new AiError('อ่านผลวิเคราะห์เดิมไม่สำเร็จ', 503);
   const hit = new Map((cached.data ?? []).map(row => [row.key as string, row.result]));
@@ -193,29 +262,26 @@ export async function runComparison(refs: AdRef[], dryRun: boolean): Promise<AiE
     if (hit.has(keys[index])) return;
     // A model that cannot read pictures is not sent one (nor is Meta asked for it).
     const image = vision ? await imageData(ad.owned ? await ownedImage(ad.owned) : ad.image) : null;
-    const content: Exclude<Message['content'], string> = [{type: 'text', text: `ฝั่ง: ${ad.side}\nชื่อ: ${ad.label}\nรูปแบบ: ${ad.format}\n${image ? '' : 'ไม่มีภาพประกอบ อ่านจากข้อความเท่านั้น\n'}ข้อความในแอด:\n${ad.text.slice(0, 4000) || '(ไม่มีข้อความ)'}`}];
+    const content: Exclude<Message['content'], string> = [{type: 'text', text: `ฝั่ง: ${ad.side}\nชื่อ: ${ad.label}\nรูปแบบ: ${ad.format}\n${image ? '' : 'ไม่มีภาพประกอบ อ่านจากข้อความเท่านั้น\n'}${spec.copy(ad)}`}];
     if (image) content.push({type: 'image_url', image_url: {url: image, detail: 'low'}});
-    const call = await callDeepSeek([{role: 'system', content: AD_PROMPT}, {role: 'user', content}], MAX_OUTPUT);
-    const reading = readAdReading(call.result);
+    const call = await callDeepSeek([{role: 'system', content: spec.adPrompt}, {role: 'user', content}], MAX_OUTPUT);
+    const reading = spec.read(call.result, Boolean(image));
     if (!reading) throw new AiError('DeepSeek ตอบไม่ครบตามรูปแบบ ลองใหม่อีกครั้ง', 502);
-    // Without a picture there is nothing to judge, whatever the model guessed.
-    if (!image) reading.scores.fit = {score: null, why: 'AI ไม่ได้เห็นภาพของแอดนี้'};
     hit.set(keys[index], reading);
     await save(keys[index], 'ad', {...call, result: reading});
   }));
   if (!hit.has(setKey)) {
     const input = ads.map((ad, index) => ({index, side: ad.side, name: ad.label, facts: ad.facts, reading: hit.get(keys[index])}));
-    const call = await callDeepSeek([{role: 'system', content: SET_PROMPT}, {role: 'user', content: JSON.stringify(input)}], MAX_OUTPUT);
+    const call = await callDeepSeek([{role: 'system', content: spec.setPrompt}, {role: 'user', content: JSON.stringify(input)}], MAX_OUTPUT);
     const summary = readSetReading(call.result, ads.length);
     if (!summary) throw new AiError('DeepSeek ตอบไม่ครบตามรูปแบบ ลองใหม่อีกครั้ง', 502);
     hit.set(setKey, summary);
     await save(setKey, 'set', {...call, result: summary});
   }
-  return {
-    model: MODEL, cost, spent: {...budget, today: budget.today + cost, total: budget.total + cost},
-    ads: Object.fromEntries(ads.map((ad, index) => [adRefId(ad.ref), hit.get(keys[index]) as AdReading])),
-    summary: hit.get(setKey) as SetReading,
-  };
+  const run = {model: MODEL, cost, spent: {...budget, today: budget.today + cost, total: budget.total + cost}, summary: hit.get(setKey) as SetReading};
+  return view === 'ads'
+    ? {...run, view, ads: Object.fromEntries(ads.map((ad, index) => [adRefId(ad.ref), hit.get(keys[index]) as AdsReading]))}
+    : {...run, ads: Object.fromEntries(ads.map((ad, index) => [adRefId(ad.ref), hit.get(keys[index]) as AdReading]))};
 }
 
 /** What AI calls have cost (as recorded per call), for the usage bars. */

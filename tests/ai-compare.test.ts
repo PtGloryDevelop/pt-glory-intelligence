@@ -122,3 +122,16 @@ test('a malformed set reading is refused', () => {
   assert.equal(readSetReading({...good, hooks: [{text: 'คำเปิด'}]}, 2), null, 'no why');
   assert.equal(readSetReading('{}', 2), null);
 });
+
+test('the ad team view reads caption, headline, content and cover, each with its source and quote', async () => {
+  const {ADS_DIMS, readAdsReading} = await import('../lib/ai/compare-shared.ts');
+  const cell = (value: string, source = 'ข้อความ', quote = '') => ({value, source, quote});
+  const reply = {caption: cell('เปิดด้วยคำถาม ยาว เป็นกันเอง ปิดด้วยทักแชท', 'ข้อความ', '3 วัน หูอื้อ'), headline: cell('ต่อมลูกหมากโต 7-8 ซม.', 'ภาพ', 'ต่อมลูกหมากโต 7-8 ซม.'),
+    content: cell('พรีเซนเตอร์พูดกับกล้อง'), cover: cell('ชายถือภาพ X-ray', 'ภาพ', 'ต่อมลูกหมากโต 7-8 ซม. / ปัสสาวะไม่สุด')};
+  assert.deepEqual(Object.keys(readAdsReading(reply) ?? {}), [...ADS_DIMS]);
+  // Spacing in a source is forgiven, as in the general reading.
+  assert.equal(readAdsReading({...reply, cover: cell('ภาพ', 'ภาพ+ข้อความ')})?.cover.source, 'ภาพ + ข้อความ');
+  assert.equal(readAdsReading({...reply, cover: undefined}), null, 'every topic is required');
+  assert.equal(readAdsReading({...reply, headline: {value: 'x', source: 'เดา', quote: ''}}), null, 'source is one of the fixed names');
+  assert.equal(readAdsReading({...reply, content: {value: 1, source: 'ข้อความ', quote: ''}}), null);
+});

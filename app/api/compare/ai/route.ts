@@ -11,10 +11,12 @@ export async function POST(request: Request) {
   try {
     await requireRole('analyst');
     if (Number(request.headers.get('content-length')) > 4000) return NextResponse.json({error: 'Invalid request'}, {status: 400, headers: PRIVATE});
-    const body = await request.json().catch(() => null) as {ads?: unknown; dryRun?: unknown} | null;
+    const body = await request.json().catch(() => null) as {ads?: unknown; dryRun?: unknown; view?: unknown} | null;
     const refs = parseAdRefs(body?.ads);
     if (!refs) return NextResponse.json({error: 'เลือก 2–5 แอด และต้องมีแอดของเราอย่างน้อย 1 ตัว'}, {status: 400, headers: PRIVATE});
-    return NextResponse.json(await runComparison(refs, body?.dryRun === true), {headers: PRIVATE});
+    // A team view is one of a fixed list; anything else is the general reading.
+    const view = body?.view === 'ads' ? 'ads' : 'general';
+    return NextResponse.json(await runComparison(refs, body?.dryRun === true, view), {headers: PRIVATE});
   } catch (error) {
     if (error instanceof AuthorizationError || error instanceof AiError) return NextResponse.json({error: error.message}, {status: error.status, headers: PRIVATE});
     console.error('AI compare failed', error instanceof Error ? error.message : error);

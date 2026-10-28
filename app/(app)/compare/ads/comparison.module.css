@@ -319,3 +319,15 @@
 .aiRiskBox ul + h3 { margin-top:12px; }
 .aiRiskBox small { font-size:var(--fs-eyebrow); opacity:.85; }
 @media (max-width:700px) { .aiDim { min-width:120px !important; width:120px; } }
+
+/* Team view switch: the same segmented control as the overview's periods. */
+.viewSeg { display:inline-flex; padding:2px; border-radius:8px; background:var(--row-hover); }
+.viewSeg button { min-height:28px; padding:2px 14px; border:0; border-radius:6px; background:transparent; color:var(--ink); font-size:var(--fs-label); }
+.viewSeg button:hover:not(:disabled) { background:transparent; }
+.viewSeg button[aria-pressed="true"], .viewSeg button[aria-pressed="true"]:hover:not(:disabled) { background:var(--surface); font-weight:600; box-shadow:0 1px 2px rgba(27,31,39,.16), 0 0 0 .5px rgba(27,31,39,.06); }
+/* ทีมยิงแอด: the ad's own words, then AI's reading under a rule. */
+.adsFact summary { cursor:pointer; overflow-wrap:anywhere; }
+.adsFact p { margin:8px 0 0; white-space:pre-wrap; overflow-wrap:anywhere; max-height:240px; overflow:auto; }
+.adsFactLine { display:block; overflow-wrap:anywhere; }
+.adsAi { margin-top:10px; padding-top:10px; border-top:1px dashed var(--line); }
+.adsCoverText { display:block; margin-top:6px; padding:6px 8px; border-radius:6px; background:var(--surface-sunken); font-weight:600; overflow-wrap:anywhere; }

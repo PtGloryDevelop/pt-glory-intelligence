@@ -225,7 +225,9 @@ export function AdComparison({ datasets, seed, initialOwned, initialPeriod, init
 
   async function copyLink() {
     if (!a || !b) return;
-    const link = `${window.location.origin}/compare/ads?${new URLSearchParams({ account: a.account_id, owned: a.ad_id, dataset: b.dataset_id ?? '', rival: b.ad_archive_id })}`;
+    // The team view travels with the pair, so the ad team's link opens in their view.
+    const view = new URL(window.location.href).searchParams.get('view');
+    const link = `${window.location.origin}/compare/ads?${new URLSearchParams({ account: a.account_id, owned: a.ad_id, dataset: b.dataset_id ?? '', rival: b.ad_archive_id, ...(view ? { view } : {}) })}`;
     try { await navigator.clipboard.writeText(link); setShared('copied'); } catch { setShared(link); }
   }
 

@@ -45,6 +45,24 @@ export type AiSpent = {today: number; total: number; dailyCap: number; totalCap:
 export type AiEstimate = {model: string; cached: number; missing: number; setCached: boolean; estimate: number; spent: AiSpent};
 export type AiRun = {model: string; cost: number; spent: AiSpent; ads: Record<string, AdReading>; summary: SetReading};
 
+/**
+ * Team views: the same pair read for what one team works with. "general" is the reading above; "ads"
+ * (ทีมยิงแอด) reads only caption, headline, content style and cover, the topics the ad team asked for
+ * (feedback, 28 Oct). Each view is its own prompt and cache; the summary keeps the general shape.
+ */
+export const TEAM_VIEWS = ['general', 'ads'] as const;
+export type TeamView = (typeof TEAM_VIEWS)[number];
+export const TEAM_VIEW_LABEL: Record<TeamView, string> = {general: 'ทั่วไป', ads: 'ทีมยิงแอด'};
+export const ADS_DIMS = ['caption', 'headline', 'content', 'cover'] as const;
+export type AdsDim = (typeof ADS_DIMS)[number];
+export const ADS_DIM_LABEL: Record<AdsDim, string> = {caption: 'แคปชั่น', headline: 'ข้อความพาดหัว', content: 'แนวคอนเทนต์', cover: 'ภาพหน้าปก / คำในปก'};
+export const ADS_DIM_HINT: Record<AdsDim, string> = {
+  caption: 'เปิดด้วยอะไร ยาวแค่ไหน โทนไหน ปิดท้ายชวนทำอะไร', headline: 'พาดหัวจาก Meta หรือตัวหนังสือใหญ่บนภาพ',
+  content: 'แอดเล่าแบบไหน', cover: 'ในภาพปกมีอะไร และคำบนปก',
+};
+export type AdsReading = Record<AdsDim, AiCell>;
+export type AdsRun = {view: 'ads'; model: string; cost: number; spent: AiSpent; ads: Record<string, AdsReading>; summary: SetReading};
+
 export const adRefId = (ref: AdRef) => ref.kind === 'own' ? `own:${ref.account}:${ref.ad}` : `rival:${ref.dataset}:${ref.ad}`;
 
 /** Model output → whole numbers 0–10 (null stays null: nothing to judge). */
@@ -64,16 +82,21 @@ const record = (value: unknown): Record<string, unknown> | null =>
  * Model reply → AdReading, or null when a part is missing or of the wrong kind. The provider only
  * promises JSON, not this shape, so nothing is cached or shown until it passes. Spacing in source is forgiven.
  */
+function readCell(raw: unknown): AiCell | null {
+  const cell = record(raw);
+  const said = typeof cell?.source === 'string' ? cell.source.replace(/\s/g, '') : null;
+  const source = AI_SOURCES.find(name => name.replace(/\s/g, '') === said);
+  return cell && isText(cell.value) && isText(cell.quote) && source ? {value: cell.value, source, quote: cell.quote} : null;
+}
+
 export function readAdReading(raw: unknown): AdReading | null {
   const reading = record(raw);
   if (!reading) return null;
   const cells = {} as Record<AiDim, AiCell>;
   for (const dim of AI_DIMS) {
-    const cell = record(reading[dim]);
-    const said = typeof cell?.source === 'string' ? cell.source.replace(/\s/g, '') : null;
-    const source = AI_SOURCES.find(name => name.replace(/\s/g, '') === said);
-    if (!cell || !isText(cell.value) || !isText(cell.quote) || !source) return null;
-    cells[dim] = {value: cell.value, source, quote: cell.quote};
+    const cell = readCell(reading[dim]);
+    if (!cell) return null;
+    cells[dim] = cell;
   }
   const claims = record(reading.claims), scores = record(reading.scores);
   if (!claims || !Array.isArray(claims.items) || !isText(claims.quote) || !scores || !isText(reading.fix)) return null;
@@ -88,6 +111,19 @@ export function readAdReading(raw: unknown): AdReading | null {
     if (!cell || !isText(cell.why) || !(cell.score === null || typeof cell.score === 'number')) return null;
   }
   return {...cells, claims: {items, quote: claims.quote}, scores: cleanScores(scores as Partial<Record<ScoreDim, ScoreCell>>), fix: reading.fix};
+}
+
+/** Model reply → the ad team's four topics, or null when one is missing or malformed. */
+export function readAdsReading(raw: unknown): AdsReading | null {
+  const reading = record(raw);
+  if (!reading) return null;
+  const cells = {} as AdsReading;
+  for (const dim of ADS_DIMS) {
+    const cell = readCell(reading[dim]);
+    if (!cell) return null;
+    cells[dim] = cell;
+  }
+  return cells;
 }
 
 /** Model reply → SetReading, or null when malformed. Evidence keeps only indexes of ads in this set. */

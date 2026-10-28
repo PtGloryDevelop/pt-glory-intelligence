@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import type { CompanyAd } from '@/lib/owned-ads/source-rows';
-import { AI_DIM_HINT, AI_DIM_LABEL, HOOK_REWRITE_BELOW, SCORE_DIMS, SCORE_HINT, SCORE_LABEL, SCORE_LEVELS, adRefId, biggestGap, fdaWatch, scoreLead, scoreLevel, scoreTotal, type AdReading, type AdRef, type AiEstimate, type AiCell, type AiDim, type AiRun, type ScoreCell, type ScoreDim } from '@/lib/ai/compare-shared';
+import { useSearchParams } from 'next/navigation';
+import { AdsTeamCompare } from './ads-team-compare';
+import { TEAM_VIEWS, TEAM_VIEW_LABEL, type TeamView, AI_DIM_HINT, AI_DIM_LABEL, HOOK_REWRITE_BELOW, SCORE_DIMS, SCORE_HINT, SCORE_LABEL, SCORE_LEVELS, adRefId, biggestGap, fdaWatch, scoreLead, scoreLevel, scoreTotal, type AdReading, type AdRef, type AiEstimate, type AiCell, type AiDim, type AiRun, type ScoreCell, type ScoreDim } from '@/lib/ai/compare-shared';
 import { ownedName, type Rival } from './selection';
 import { ownedStatus, thaiCodes } from '@/lib/ad-labels';
 import styles from './comparison.module.css';
@@ -10,15 +12,15 @@ import { UsageBars } from '@/components/UsageBars';
 
 export type CompareAd = { kind: 'own'; ad: CompanyAd & { delivery_days?: number | null } } | { kind: 'rival'; ad: Rival };
 
-const refOf = (item: CompareAd): AdRef => item.kind === 'own'
+export const refOf = (item: CompareAd): AdRef => item.kind === 'own'
   ? { kind: 'own', account: item.ad.account_id, ad: item.ad.ad_id }
   : { kind: 'rival', dataset: item.ad.dataset_id ?? '', ad: item.ad.ad_archive_id };
 export const compareId = (item: CompareAd) => adRefId(refOf(item));
-const nameOf = (item: CompareAd) => item.kind === 'own' ? ownedName(item.ad) : item.ad.page_name ?? item.ad.page_id;
+export const nameOf = (item: CompareAd) => item.kind === 'own' ? ownedName(item.ad) : item.ad.page_name ?? item.ad.page_id;
 const days = (from: string, to: string) => Math.round((Date.parse(to) - Date.parse(from)) / 864e5);
 
-async function post<T>(ads: AdRef[], dryRun: boolean): Promise<T> {
-  const response = await fetch('/api/compare/ai', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ads, dryRun }) });
+export async function post<T>(ads: AdRef[], dryRun: boolean, view: TeamView = 'general'): Promise<T> {
+  const response = await fetch('/api/compare/ai', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ads, dryRun, view }) });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.error ?? 'วิเคราะห์ไม่สำเร็จ');
   return data as T;
@@ -34,10 +36,39 @@ async function post<T>(ads: AdRef[], dryRun: boolean): Promise<T> {
  * and three hooks to test. The evidence stays one click away. "Age" is our own
  * data, never AI; scores are AI's judgement of the creative, not results.
  */
-export function AiCompare({ ads, ourThrough, onCopyLink, linkLabel }: {
-  ads: CompareAd[]; ourThrough: string | null;
-  onCopyLink: () => void; linkLabel: string;
-}) {
+type CompareProps = { ads: CompareAd[]; ourThrough: string | null; onCopyLink: () => void; linkLabel: string };
+const VIEW_KEY = 'compare-team-view';
+
+/**
+ * The AI panel in a team view. A shared link names its view (?view=ads); without one, this device's last
+ * choice applies after the first render. The general panel only asks for a free estimate before that,
+ * and its answer lands on an unmounted panel, so switching never pays for the general reading.
+ */
+export function AiCompare(props: CompareProps) {
+  const asked = useSearchParams().get('view');
+  const fromUrl = TEAM_VIEWS.find(name => name === asked);
+  const [view, setView] = useState<TeamView>(fromUrl ?? 'general');
+  useEffect(() => {
+    if (fromUrl) return;
+    let saved: TeamView | undefined;
+    try { saved = TEAM_VIEWS.find(name => name === localStorage.getItem(VIEW_KEY)); } catch { /* nothing remembered */ }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- a preference only this device holds, read after hydration
+    if (saved) setView(saved);
+  }, [fromUrl]);
+  const pick = (next: TeamView) => {
+    setView(next);
+    try { localStorage.setItem(VIEW_KEY, next); } catch { /* the choice just is not remembered */ }
+    const url = new URL(window.location.href);
+    if (next === 'general') url.searchParams.delete('view'); else url.searchParams.set('view', next);
+    window.history.replaceState(null, '', url.pathname + url.search);
+  };
+  const viewSwitch = <div className={styles.viewSeg} role="group" aria-label="มุมมองของทีม" data-testid="compare-team-view">
+    {TEAM_VIEWS.map(name => <button key={name} type="button" aria-pressed={view === name} onClick={() => pick(name)}>{TEAM_VIEW_LABEL[name]}</button>)}
+  </div>;
+  return view === 'ads' ? <AdsTeamCompare {...props} viewSwitch={viewSwitch} /> : <GeneralCompare {...props} viewSwitch={viewSwitch} />;
+}
+
+function GeneralCompare({ ads, ourThrough, onCopyLink, linkLabel, viewSwitch }: CompareProps & { viewSwitch: ReactNode }) {
   // The table's evidence quotes: one switch for all of them instead of a toggle in every cell.
   const [quotes, setQuotes] = useState(false);
   const refs = ads.map(refOf);
@@ -129,6 +160,7 @@ export function AiCompare({ ads, ourThrough, onCopyLink, linkLabel }: {
   return <section className={`${styles.panel} ${styles.aiPanel}`} aria-labelledby="compare-ai-heading" data-testid="compare-ai">
     <div className={styles.aiHeadRow}>
       <h2 id="compare-ai-heading">AI สรุปคู่นี้ <span className={styles.aiBadge}>AI ตีความ</span></h2>
+      {viewSwitch}
       <span className={styles.muted}>อ่านจากภาพและข้อความ · ไม่รู้งบหรือยอดขายของคู่แข่ง</span>
     </div>
 
@@ -265,7 +297,7 @@ function RowHead({ label, hint }: { label: string; hint: string }) {
 }
 
 /** A plain word match, not AI: words in a suggestion that often break FDA rules. */
-function Watch({ text }: { text: string }) {
+export function Watch({ text }: { text: string }) {
   const words = fdaWatch(text);
   return words.length ? <span className={styles.watch} data-testid="compare-ai-watch">⚠ มีคำที่มักผิดเกณฑ์ อย.: {words.join(' · ')}</span> : null;
 }
