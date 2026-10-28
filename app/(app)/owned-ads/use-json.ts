@@ -1,15 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /** One quiet retry: a read that timed out on a cold database cache usually succeeds once the cache is warm. */
 const RETRY_AFTER = 1500;
 
-/** GET JSON for a URL (null = nothing to load). Keeps the last good data while a new URL loads; errors belong to the URL that failed. */
-export function useJson<T>(url: string | null, retry = 0): { data: T | null; error: string | null; loading: boolean } {
-  const [state, setState] = useState<{ url: string; data: T | null; error: string | null } | null>(null);
+/** GET JSON for a URL (null = nothing to load). Keeps the last good data while a new URL loads; errors belong to the URL that failed.
+ * `initial` is the same URL already read by the server with the page: its first fetch is skipped, later ones are not. */
+export function useJson<T>(url: string | null, retry = 0, initial?: { url: string; data: T }): { data: T | null; error: string | null; loading: boolean } {
+  const [state, setState] = useState<{ url: string; data: T | null; error: string | null } | null>(initial ? { ...initial, error: null } : null);
+  const skipFetch = useRef(initial?.url ?? null);
   useEffect(() => {
     if (!url) return;
+    if (skipFetch.current === url && retry === 0) { skipFetch.current = null; return; }
+    skipFetch.current = null;
     const controller = new AbortController();
     const load = async (attempt: number): Promise<void> => {
       try {

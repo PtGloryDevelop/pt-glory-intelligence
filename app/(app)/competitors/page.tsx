@@ -15,6 +15,7 @@ import {DEFAULT_SORT,fromQuery,toQuery} from '@/lib/explorer/filters';
 import {CatalogLibrary} from './catalog-library';
 import {RivalBoard} from './rival-board';
 import {getRivalBoard} from '@/lib/rivals/board';
+import {readStrips} from '@/lib/rivals/strips-read';
 import {Icon} from '@/components/shell/icons';
 import styles from './competitors.module.css';
 export const dynamic='force-dynamic';
@@ -54,10 +55,13 @@ export default async function AdLibrary({searchParams}:{searchParams:Promise<Rec
  const selected=dataset?datasets.find(row=>row.dataset_id===dataset):undefined;
  let page:React.ReactNode;
  if(board){
+  // Both ad strips come with the page too, read exactly as the board would ask for them.
+  const initialBoard=await boardRead;
+  const strips=initialBoard?await readStrips(initialBoard,one('unit')??''):undefined;
   page=<>
    <PageHeader title="ติดตามคู่แข่ง" description="คู่แข่งของแต่ละยูนิตจากคำค้นของยูนิต · ทีมยืนยันเพจที่ใช่ แล้วเลือกเพจที่ต้องการเก็บแอดใหม่"
     actions={<div className={styles.headActions}><Link className={styles.manage} href="/pages?scope=all" data-testid="competitor-all-pages"><Icon name="building"/>สำรวจเพจ</Link><CollectLaunchButton className={styles.manage}/></div>}/>
-   <RivalBoard initial={await boardRead??undefined}/>
+   <RivalBoard initial={initialBoard??undefined} strips={strips}/>
   </>;
  }else if(selected){
   const [quality,first]=await Promise.all([qualityRead!,firstRead]);

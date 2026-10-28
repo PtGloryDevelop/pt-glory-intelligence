@@ -11,15 +11,16 @@ import {UnitRail} from '../owned-ads/unit-rail';
 import {useJson} from '../owned-ads/use-json';
 import {useCollectLauncher} from '../collect/collect-launcher';
 import {OfferCompare} from './offer-compare';
+import {stripPages,stripUrl,type Strip} from '@/lib/rivals/strips';
 import styles from './rival-board.module.css';
 
 const REL:Record<Relation,string>={direct:'คู่แข่งตรง',substitute:'สินค้าทดแทน',unrelated:'ไม่เกี่ยว'};
 const thaiDate=(value:string|null)=>value?new Date(value).toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'numeric',timeZone:'Asia/Bangkok'}):'—';
 const n=(value:number)=>value.toLocaleString('th-TH');
-type Strip='new'|'age';
+export type StripSeed=Partial<Record<Strip,{url:string;data:CatalogPage}>>;
 
 /** Competitor ads first (new this week, running longest), then the pages that collide with each unit. */
-export function RivalBoard({initial}:{initial?:Board}){
+export function RivalBoard({initial,strips}:{initial?:Board;strips?:StripSeed}){
   const params=useSearchParams(),pathname=usePathname();
   const unitId=params.get('unit')??'';
   // The page reads the board with its HTML; the first fetch is skipped only when that read arrived.
@@ -49,9 +50,10 @@ export function RivalBoard({initial}:{initial?:Board}){
   // Scope: one unit, or every unit that has keywords. Units without keywords show the "add keywords" start instead.
   const bare=board?.unitsWithoutKeywords.find(unit=>unit.id===unitId)??null;
   const scope=(board?.units??[]).filter(unit=>!unitId||unit.id===unitId);
-  const pageIds=[...new Set(scope.flatMap(unit=>unit.pages.map(page=>page.page_id)))].slice(0,60).join(',');
-  const fresh=useJson<CatalogPage>(board&&pageIds&&!bare?`/api/catalog/ads?pages=${pageIds}&period=week&sort=new&limit=${more.new?24:4}`:null,collected);
-  const long=useJson<CatalogPage>(board&&pageIds&&!bare?`/api/catalog/ads?pages=${pageIds}&active=active&sort=age&limit=${more.age?24:4}`:null,collected);
+  const pageIds=board?stripPages(board,unitId):'';
+  // The page reads both strips with its HTML for the view it opened on; any other view is fetched here.
+  const fresh=useJson<CatalogPage>(pageIds?stripUrl('new',pageIds,more.new?24:4):null,collected,strips?.new);
+  const long=useJson<CatalogPage>(pageIds?stripUrl('age',pageIds,more.age?24:4):null,collected,strips?.age);
 
   function pick(id:string){
     const next=new URLSearchParams(params);if(id)next.set('unit',id);else next.delete('unit');
