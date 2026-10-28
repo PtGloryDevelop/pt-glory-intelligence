@@ -18,7 +18,8 @@ export async function GET(
     if (!isAdArchiveId(adArchiveId)) return badRequest("ad id must be numeric");
     if (datasetId !== null && !isUuid(datasetId)) return badRequest("datasetId must be a UUID");
 
-    const detail = await getAdDetail(adArchiveId, datasetId);
+    // Independent reads, so the drawer waits for the slower one rather than both in turn.
+    const [detail, history] = await Promise.all([getAdDetail(adArchiveId, datasetId), getObservationHistory(adArchiveId)]);
     // Asking for an ad in a dataset it does not belong to is a wrong request,
     // not one to guess at. Falling back to master state here would quietly show
     // latest values under a snapshot heading.
@@ -32,7 +33,7 @@ export async function GET(
       },
       // The drawer's history carries collection_method. Labelled here so the
       // JSON body itself never names a collector, whoever is reading.
-      history: labelProvenanceRows(await getObservationHistory(adArchiveId)),
+      history: labelProvenanceRows(history),
     };
   });
 }

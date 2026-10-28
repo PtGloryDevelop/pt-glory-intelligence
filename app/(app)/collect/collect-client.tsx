@@ -34,6 +34,8 @@ type Category = { id: string; name: string };
 
 const FALLBACK_ERROR = "ไม่สามารถเริ่มเก็บข้อมูลได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง";
 const normalName = (value: string) => value.trim().replace(/\s+/g, " ").toLowerCase();
+/** The select's "type a new name" entry; category ids are UUIDs, so it never collides. */
+const NEW_CATEGORY = "new";
 
 /**
  * `page` is the collect screen itself. `panel` is the same form opened beside
@@ -65,7 +67,14 @@ export function CollectClient(
   const [activeStatus, setActiveStatus] = useState<"active" | "all">("active");
   const [maxRecords, setMaxRecords] = useState(String(Math.min(300, settings.maxRecordsPerRun ?? 300)));
   const [categoryList, setCategoryList] = useState(categories);
-  const [categoryName, setCategoryName] = useState(initialCategory ?? lastUsed?.name ?? "");
+  // A select, not a datalist: a datalist only offers names matching what is already in the box,
+  // so a prefilled category hid every other one. A prefill naming no category starts a new one.
+  const prefilled = initialCategory === undefined ? lastUsed
+    : categories.find((category) => normalName(category.name) === normalName(initialCategory)) ?? null;
+  const [categoryChoice, setCategoryChoice] = useState(prefilled?.id ?? (initialCategory ? NEW_CATEGORY : ""));
+  const [newCategory, setNewCategory] = useState(prefilled ? "" : initialCategory ?? "");
+  const categoryName = categoryChoice === NEW_CATEGORY ? newCategory
+    : categoryList.find((category) => category.id === categoryChoice)?.name ?? "";
   const [datasetName, setDatasetName] = useState("");
   const [touchedName, setTouchedName] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
@@ -97,8 +106,9 @@ export function CollectClient(
   // A typed name either is an existing category or becomes a new one on submit.
   const matched = categoryList.find((category) => normalName(category.name) === normalName(categoryName)) ?? null;
   const categoryHint = categoryName.trim() === "" ? null
-    : matched ? (matched.id === lastUsed?.id ? "หมวดที่ใช้ล่าสุด · พิมพ์ชื่ออื่นเพื่อเปลี่ยน" : null)
-      : `จะสร้างหมวดหมู่ใหม่ “${categoryName.trim().replace(/\s+/g, " ")}” ให้ตอนกดค้น`;
+    : categoryChoice === NEW_CATEGORY
+      ? (matched ? `มีหมวด “${matched.name}” อยู่แล้ว · จะใช้หมวดเดิม` : `จะสร้างหมวดหมู่ใหม่ “${categoryName.trim().replace(/\s+/g, " ")}” ให้ตอนกดค้น`)
+      : matched?.id === lastUsed?.id ? "หมวดที่ใช้ล่าสุด · เลือกหมวดอื่นได้จากรายการ" : null;
 
   const cap = settings.maxRecordsPerRun;
   const records = Number(maxRecords);
@@ -106,7 +116,7 @@ export function CollectClient(
     country === "" ? "กรุณาเลือกประเทศ"
       : !Number.isInteger(records) || records < 1 ? "จำนวนสูงสุดต้องเป็นจำนวนเต็มตั้งแต่ 1"
         : cap !== null && records > cap ? `จำนวนสูงสุดต้องไม่เกิน ${cap}`
-          : nameValue.trim() === "" && keyword.trim() !== "" ? "กรุณาตั้งชื่อรอบข้อมูล"
+          : nameValue.trim() === "" && keyword.trim() !== "" ? "กรุณาตั้งชื่อเรียกการค้นครั้งนี้"
             : null;
   const invalid =
     keyword.trim() === "" ? "กรุณาระบุคำค้น"
@@ -257,18 +267,26 @@ export function CollectClient(
 
         <div className={styles.field}>
           <label htmlFor="category">หมวดหมู่</label>
-          <input
-            id="category" data-testid="category-input" list="category-options" value={categoryName}
-            maxLength={MAX_CATEGORY_NAME} autoComplete="off"
-            placeholder="เลือกหมวดที่มี หรือพิมพ์ชื่อใหม่ เช่น วิตามินผิว"
-            onChange={(event) => setCategoryName(event.target.value)}
+          <select
+            id="category" data-testid="category-select" value={categoryChoice}
+            onChange={(event) => setCategoryChoice(event.target.value)}
             aria-describedby="category-hint"
-          />
-          <datalist id="category-options">
-            {categoryList.map((category) => <option key={category.id} value={category.name} />)}
-          </datalist>
+          >
+            <option value="" disabled>เลือกหมวดหมู่…</option>
+            {categoryList.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+            <option value={NEW_CATEGORY}>+ สร้างหมวดใหม่…</option>
+          </select>
+          {categoryChoice === NEW_CATEGORY && (
+            <input
+              data-testid="category-input" value={newCategory} aria-label="ชื่อหมวดหมู่ใหม่"
+              maxLength={MAX_CATEGORY_NAME} autoComplete="off" autoFocus={!initialCategory}
+              placeholder="ชื่อหมวดใหม่ เช่น คู่แข่ง U9 วิตามินผิว"
+              onChange={(event) => setNewCategory(event.target.value)}
+              aria-describedby="category-hint"
+            />
+          )}
           <span id="category-hint" className={styles.hint} role="status" data-testid="category-hint">
-            {categoryHint ?? "เลือกจากหมวดที่มี หรือพิมพ์ชื่อใหม่ได้เลย ระบบสร้างให้ตอนกดค้น"}
+            {categoryHint ?? "เลือกหมวดที่มี หรือเลือก “สร้างหมวดใหม่” แล้วพิมพ์ชื่อ ระบบสร้างให้ตอนกดค้น"}
           </span>
         </div>
 
@@ -320,12 +338,16 @@ export function CollectClient(
             </div>
 
             <div className={styles.field}>
-              <label htmlFor="dataset-name">ชื่อรอบข้อมูล</label>
+              <label htmlFor="dataset-name">ชื่อเรียกการค้นครั้งนี้</label>
               <input
                 id="dataset-name" data-testid="dataset-name" value={nameValue} maxLength={200}
+                placeholder="ระบบตั้งให้เมื่อพิมพ์คำค้น เช่น วิตามินซี · ไทย · 28 ต.ค. 2569"
                 onChange={(event) => { setTouchedName(true); setDatasetName(event.target.value); }}
+                aria-describedby="dataset-name-hint"
               />
-              <span className={styles.hint}>แก้ไขได้ · ตั้งให้อัตโนมัติจากคำค้นและประเทศ</span>
+              <span id="dataset-name-hint" className={styles.hint}>
+                ใช้หาการค้นครั้งนี้ย้อนหลัง ในตัวกรอง “รอบที่เก็บ” ของหน้าส่องแอด และในรายการรอบเก็บข้อมูลล่าสุด · ตั้งให้จากคำค้น ประเทศ และวันที่ แก้ได้
+              </span>
             </div>
           </div>
         </details>

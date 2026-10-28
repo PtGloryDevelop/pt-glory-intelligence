@@ -1,7 +1,8 @@
 import {isOwnedPerformanceDate, parseOwnedPerformanceQuery, type OwnedPerformanceData, type OwnedPerformancePeriod, type OwnedPerformanceSort, type OwnedPerformanceSummary} from '../owned-ads/performance.ts';
 
-/** Rolling days, or "month": from the 1st of the latest month with data. Every window ends on the latest finished day with data. */
-export const REVIEW_WINDOWS=[3,7,14,30,'month'] as const;
+/** Rolling days, or "month": from the 1st of the latest month with data. Every window ends on the latest finished day with data.
+ * "today" is the one exception: the Bangkok calendar day so far, read as unfinished and never compared. */
+export const REVIEW_WINDOWS=['today',3,7,14,30,'month'] as const;
 export type ReviewWindow=typeof REVIEW_WINDOWS[number];
 /** `unit` narrows both sides of the overview to one of our units and the rivals the team matched to it. */
 export type ReviewOptions={window:ReviewWindow;sort:OwnedPerformanceSort;period:OwnedPerformancePeriod|null;unit:string|null};
@@ -18,8 +19,9 @@ export function parseReviewOptions(params:URLSearchParams):ReviewOptions{
   return {window:parsed,sort:query.sort,period:query.period==='custom'?{from:query.from,to:query.to}:null,unit};
 }
 
-/** End on the latest imported date before today. Never compare an unfinished day. */
-export function latestReviewPeriod(coverage:OwnedPerformancePeriod,days:number|'month',now=new Date()):OwnedPerformancePeriod{
+/** End on the latest imported date before today. Never compare an unfinished day; "today" asks for it by name. */
+export function latestReviewPeriod(coverage:OwnedPerformancePeriod,days:number|'month'|'today',now=new Date()):OwnedPerformancePeriod{
+  if(days==='today'){const today=new Date(now.getTime()+7*3600000).toISOString().slice(0,10);return {from:today,to:today};}
   const yesterday=new Date(now.getTime()+7*3600000-86400000).toISOString().slice(0,10);
   const to=coverage.to<yesterday?coverage.to:yesterday;
   const from=days==='month'?`${to.slice(0,7)}-01`:new Date(Date.parse(to)-(days-1)*86400000).toISOString().slice(0,10);

@@ -52,3 +52,11 @@ test('a unit narrows the overview only when it is a unit id, once',()=>{
   assert.throws(()=>parseReviewOptions(new URLSearchParams('unit=U24')));
   assert.throws(()=>parseReviewOptions(new URLSearchParams(`unit=${id}&unit=${id}`)));
 });
+
+test('today is the Bangkok calendar day so far, even before its data is imported',()=>{
+  // 23:30 UTC on the 27th is already the 28th in Bangkok.
+  const now=new Date('2026-10-27T23:30:00Z');
+  assert.deepEqual(latestReviewPeriod({from:'2026-09-22',to:'2026-10-28'},'today',now),{from:'2026-10-28',to:'2026-10-28'});
+  assert.deepEqual(latestReviewPeriod({from:'2026-09-22',to:'2026-10-27'},'today',now),{from:'2026-10-28',to:'2026-10-28'});
+  assert.equal(parseReviewOptions(new URLSearchParams('window=today')).window,'today');
+});

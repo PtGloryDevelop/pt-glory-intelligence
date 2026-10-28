@@ -12,6 +12,15 @@ export type AdLibrarySearch = {
   activeStatus: "active" | "all";
 };
 
+/**
+ * One ad's own page in the Ad Library. It keeps playing the creative long after
+ * the CDN links we collected have expired, so it is where a video is watched.
+ * Built from the numeric archive id only; anything else yields no link.
+ */
+export function adLibraryAdUrl(adArchiveId: string): string | null {
+  return /^\d{1,32}$/.test(adArchiveId) ? `https://www.facebook.com/ads/library/?id=${adArchiveId}` : null;
+}
+
 export function buildAdLibraryUrl({ country, query, activeStatus }: AdLibrarySearch): string {
   if (!/^[A-Z]{2}$/.test(country)) throw new Error(`country must be an ISO 3166-1 alpha-2 code: ${country}`);
   if (activeStatus !== "active" && activeStatus !== "all") {

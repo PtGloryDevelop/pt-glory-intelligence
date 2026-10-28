@@ -57,7 +57,9 @@ export async function getDashboard(actor:Actor,options:ReviewOptions={window:7,s
     if(latest.error)throw latest.error;
     const coverage=latest.data?.daily_from&&latest.data?.daily_to?{from:latest.data.daily_from,to:latest.data.daily_to}:null;
     const period=options.period??(coverage?latestReviewPeriod(coverage,options.window):null);
-    const params=new URLSearchParams({sort:options.sort,compare:'1',...(period?{period:'custom',from:period.from,to:period.to}:{period:'7d'}),...(options.unit?{unit:options.unit}:{})});
+    // Part of today against all of yesterday reads as a fall, so today is shown without a previous window.
+    const unfinished=!options.period&&options.window==='today';
+    const params=new URLSearchParams({sort:options.sort,compare:unfinished?'0':'1',...(period?{period:'custom',from:period.from,to:period.to}:{period:'7d'}),...(options.unit?{unit:options.unit}:{})});
     const result=await getOwnedPerformance(params,latest.data?.id);
     output.review=result;
     const currency=result.summary.find(item=>item.currency==='THB')?.currency??result.summary[0]?.currency;

@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
-import { getDatasetAds, getDatasetFacets, type ExplorerFilters } from "@/lib/read/queries";
+import type { ExplorerFilters } from "@/lib/read/queries";
+import { datasetAdsPage } from "@/lib/read/dataset-ads";
 import { badRequest, readRoute } from "@/lib/read/guard";
-import { signArchivedPreviews } from "@/lib/media/presentation";
 import {
   activeFilter, boolFilter, dateFilter, filterValue, intFilter, isUuid,
   pageOffset, pageSize, searchValue, sortKey,
@@ -88,22 +88,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       offset,
     };
 
-    const { rows, total } = await getDatasetAds(id, filters);
-
-    // One signing round trip for the page. The URL is short-lived; the object
-    // it points at is the durable part.
-    const signed = await signArchivedPreviews(rows);
-
-    return {
-      rows: rows.map(({ total_count, ...row }) => {
-        void total_count;
-        return { ...row, archive_url: row.archive_path ? signed.get(row.archive_path) ?? null : null };
-      }),
-      total,
-      limit,
-      offset,
-      sort: sort.value,
-      facets: query.get("facets") === "1" ? await getDatasetFacets(id) : undefined,
-    };
+    const { rows, total, facets } = await datasetAdsPage(id, filters, query.get("facets") === "1");
+    return { rows, total, limit, offset, sort: sort.value, facets };
   });
 }

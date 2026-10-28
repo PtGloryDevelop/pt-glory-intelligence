@@ -10,6 +10,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { ErrorState } from "@/components/states/ErrorState";
 import { LoadingSkeleton } from "@/components/states/LoadingSkeleton";
 import { ctaLabel, platformLabel } from "@/lib/ad-labels";
+import { adLibraryAdUrl } from "@/lib/collect/url";
 import styles from "./AdDrawer.module.css";
 
 /**
@@ -33,8 +34,17 @@ type Detail = {
   title: string | null; body_text: string | null; caption: string | null;
   link_url: string | null; link_description: string | null; collation_count: number | null;
   media: Media;
-  archive_url?: string | null; archive_status?: string | null;
+  archive_url?: string | null; archive_path?: string | null; archive_status?: string | null;
   observed_at: string | null;
+};
+
+/**
+ * The card the reader clicked, already on screen: shown at once while the full
+ * record loads. It is the same pinned observation the drawer asks for (catalog
+ * rows are verified against it), so nothing shown changes when the rest arrives.
+ */
+export type DrawerPreview = Pick<Detail, "ad_archive_id" | "page_name" | "is_active" | "display_format" | "title" | "body_text" | "archive_status"> & {
+  media: unknown; archive_url: string | null; archive_path: string | null;
 };
 
 type History = {
@@ -43,10 +53,11 @@ type History = {
   publisher_platform: string[] | null; cta_type: string | null; collation_count: number | null;
 };
 
-export function AdDrawer({ adArchiveId, datasetId, onClose, compareHref, canAnalyze=false, docked=false }: {
+export function AdDrawer({ adArchiveId, datasetId, onClose, compareHref, canAnalyze=false, docked=false, preview }: {
   adArchiveId: string; datasetId: string | null; onClose: () => void; compareHref?:string; canAnalyze?:boolean;
   /** UI v3: an inspector docked beside the grid instead of a modal over it (wide screens only). */
   docked?: boolean;
+  preview?: DrawerPreview;
 }) {
   const [state, setState] = useState<
     { status: "loading" } | { status: "missing" } | { status: "ready"; detail: Detail; history: History[] }
@@ -83,8 +94,13 @@ export function AdDrawer({ adArchiveId, datasetId, onClose, compareHref, canAnal
     };
   }, [docked]);
 
-  const detail = state.status === "ready" ? state.detail : null;
-  const title = detail?.page_name ?? "รายละเอียดโฆษณา";
+  const card = preview?.ad_archive_id === adArchiveId ? preview : null;
+  // Each read signs a fresh storage URL; keeping the card's URL for the same object spares a second download.
+  const detail = state.status !== "ready" ? null
+    : card?.archive_url && card.archive_path && card.archive_path === state.detail.archive_path
+      ? { ...state.detail, archive_url: card.archive_url } : state.detail;
+  const heading = detail ?? card;
+  const title = heading?.page_name ?? "รายละเอียดโฆษณา";
   useEffect(()=>{
     if(!canAnalyze||compareHref||datasetId||!detail?.observed_at)return;
     const controller=new AbortController();
@@ -103,10 +119,10 @@ export function AdDrawer({ adArchiveId, datasetId, onClose, compareHref, canAnal
             <div className={styles.headerTop}>
               {/* The page leads. The 16-digit archive id is metadata and sits
                   with the other facts, not in the title position. */}
-              <span className={styles.pageName} data-testid="drawer-page-name" title={detail?.page_name ?? undefined}>
-                {detail?.page_name ?? "รายละเอียดโฆษณา"}
+              <span className={styles.pageName} data-testid="drawer-page-name" title={heading?.page_name ?? undefined}>
+                {heading?.page_name ?? "รายละเอียดโฆษณา"}
               </span>
-              {detail ? <StatusBadge isActive={detail.is_active} /> : null}
+              {heading ? <StatusBadge isActive={heading.is_active} /> : null}
             </div>
             {detail ? (
               <p className={styles.contextLine} data-testid="drawer-context" data-context={detail.context}>
@@ -125,7 +141,18 @@ export function AdDrawer({ adArchiveId, datasetId, onClose, compareHref, canAnal
         </header>
 
         <div className={styles.body}>
-          {state.status === "loading" ? <LoadingSkeleton rows={5} /> : null}
+          {state.status === "loading" && card ? (
+            <div className={styles.reading} data-testid="drawer-preview">
+              <section className={styles.creativeSection}>
+                <AdCreative detail={{ ...card, media: card.media as Media }} />
+              </section>
+              <div className={styles.detailSections}>
+                <CopySection title={card.title} body={card.body_text} caption={null} />
+                <LoadingSkeleton rows={4} />
+              </div>
+            </div>
+          ) : null}
+          {state.status === "loading" && !card ? <LoadingSkeleton rows={5} /> : null}
           {state.status === "missing" ? (
             <ErrorState
               testId="drawer-not-found"
@@ -133,7 +160,7 @@ export function AdDrawer({ adArchiveId, datasetId, onClose, compareHref, canAnal
               detail="ระบบไม่แสดงค่าล่าสุดแทน เพราะจะทำให้อ่านผิดว่าเป็นข้อมูลของรอบนั้น"
             />
           ) : null}
-          {state.status === "ready" ? <Body detail={state.detail} history={state.history} /> : null}
+          {state.status === "ready" && detail ? <Body detail={detail} history={state.history} /> : null}
         </div>
         {comparison&&state.status==='ready'?<footer className={styles.actions}><span>เลือกแอดนี้ แล้วหาแอดของเราที่ขายสินค้าคล้ายกันมาเทียบ</span><Link href={comparison}>เทียบกับแอดของเรา →</Link></footer>:null}
     </>
@@ -166,18 +193,8 @@ function Body({ detail, history }: { detail: Detail; history: History[] }) {
       <div className={styles.detailSections}>
 
       {/* Copy first after the creative: it is what an ad actually says. */}
-      {detail.body_text || detail.title || detail.caption ? (
-        <section className={styles.section}>
-          <h3 className={styles.sectionTitle}>ข้อความโฆษณา</h3>
-          {detail.title ? <p className={styles.copyTitle}>{detail.title}</p> : null}
-          {detail.body_text ? (
-            <p className={styles.copy} data-testid="drawer-copy">{detail.body_text}</p>
-          ) : (
-            <p className={styles.copy}>—</p>
-          )}
-          {detail.caption ? <p className={styles.copyCaption}>{detail.caption}</p> : null}
-        </section>
-      ) : null}
+      <CopySection title={detail.title} body={detail.body_text} caption={detail.caption} />
+
 
       {detail.cta_type || detail.cta_text || detail.link_url || detail.link_description ? (
         <section className={styles.section}>
@@ -243,6 +260,21 @@ function Body({ detail, history }: { detail: Detail; history: History[] }) {
   );
 }
 
+function CopySection({ title, body, caption }: { title: string | null; body: string | null; caption: string | null }) {
+  if (!body && !title && !caption) return null;
+  // Headline and caption are named: most ads that open a chat carry no headline field, and that absence is worth saying.
+  return (
+    <section className={styles.section}>
+      <h3 className={styles.sectionTitle}>คำพาดหัว</h3>
+      {title ? <p className={styles.copyTitle} data-testid="drawer-headline">{title}</p>
+        : <p className={styles.copyCaption} data-testid="drawer-headline">แอดนี้ไม่มีพาดหัวจาก Meta · คำบนภาพหรือวิดีโอไม่นับเป็นพาดหัว</p>}
+      <h3 className={`${styles.sectionTitle} ${styles.sectionTitleNext}`}>แคปชั่น</h3>
+      {body ? <p className={styles.copy} data-testid="drawer-copy">{body}</p> : <p className={styles.copy}>—</p>}
+      {caption ? <p className={styles.copyCaption}>{caption}</p> : null}
+    </section>
+  );
+}
+
 /** A fact with its label. `—` when absent; never hidden silently. */
 function Fact({ label, value, testId }: { label: string; value: unknown; testId?: string }) {
   const text =
@@ -285,12 +317,13 @@ function destinationLabel(url: string): string {
  * distinct — an archived poster is never reported as "no media" merely because
  * the original CDN link has expired.
  */
-export function AdCreative({ detail }: { detail: Pick<Detail, 'display_format' | 'media' | 'archive_url' | 'archive_status'> }) {
+export function AdCreative({ detail }: { detail: Pick<Detail, 'display_format' | 'media' | 'archive_url' | 'archive_status'> & { ad_archive_id?: string } }) {
   const [sourceBroken, setSourceBroken] = useState(false);
   const [imageBroken, setImageBroken] = useState(false);
   const identity = formatIdentity(detail.display_format);
   const isVideo = identity?.isVideo ?? false;
   const formatLabel = identity?.label ?? null;
+  const libraryUrl = detail.ad_archive_id ? adLibraryAdUrl(detail.ad_archive_id) : null;
 
   const resolved = resolveMedia(detail.display_format, detail.media, {
     archivePath: null,
@@ -315,6 +348,7 @@ export function AdCreative({ detail }: { detail: Pick<Detail, 'display_format' |
           <p className={styles.placeholder} data-testid="media-unavailable" data-media-state="expired">
             <MediaGlyph />
             สื่อต้นทางหมดอายุ · ไม่มีสำเนาที่เก็บไว้สำหรับโฆษณานี้
+            {libraryUrl ? <a className={styles.watchLink} href={libraryUrl} target="_blank" rel="noopener noreferrer">ดูแอดนี้ใน Meta Ad Library ↗</a> : null}
           </p>
         </div>
         {formatLabel ? <p className={styles.mediaNote}>รูปแบบ: {formatLabel}</p> : null}
@@ -359,6 +393,15 @@ export function AdCreative({ detail }: { detail: Pick<Detail, 'display_format' |
           />
           <span className={styles.formatTag}><VideoGlyph /> Video</span>
         </div>
+        {/* With preload="none" an expired source is only found out on play, so the way round it is offered up front. */}
+        {libraryUrl ? (
+          <p className={styles.mediaNote}>
+            ลิงก์วิดีโอจาก Facebook หมดอายุในไม่กี่วันหลังเก็บ
+            <a className={styles.watchLink} href={libraryUrl} target="_blank" rel="noopener noreferrer" data-testid="media-watch-library">
+              ดูวิดีโอใน Meta Ad Library ↗
+            </a>
+          </p>
+        ) : null}
       </>
     );
   }
@@ -387,6 +430,12 @@ export function AdCreative({ detail }: { detail: Pick<Detail, 'display_format' |
         // poster, not the video, so historical playback was never promised.
         <p className={styles.mediaNote} data-testid="media-unavailable">
           วิดีโอต้นทางไม่พร้อมใช้งาน · แสดงภาพตัวอย่างที่เก็บไว้แทน
+          {/* The Ad Library page still plays it; our own link is built from the numeric id, never from collected data. */}
+          {libraryUrl ? (
+            <a className={styles.watchLink} href={libraryUrl} target="_blank" rel="noopener noreferrer" data-testid="media-watch-library">
+              ดูวิดีโอใน Meta Ad Library ↗
+            </a>
+          ) : null}
         </p>
       ) : null}
     </>

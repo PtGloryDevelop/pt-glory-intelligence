@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { AdDrawer } from "@/components/AdDrawer";
+import { AdDrawer, type DrawerPreview } from "@/components/AdDrawer";
 import { AdCard, type AdCardData } from "@/components/AdCard";
 import { AdThumb } from "@/components/AdThumb";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -21,17 +21,25 @@ import styles from "./explorer.module.css";
 type Row = AdCardData & {
   cta_text: string | null; page_id: string; page_categories: string[] | null;
   first_seen_at: string; last_seen_at: string; media: Media;
-  archive_url?: string | null; archive_status?: string | null;
+  archive_url?: string | null; archive_path?: string | null; archive_status?: string | null;
 };
 type Facet = { facet: string; value: string; label: string; n: number };
 type Coverage = { field: string; present_count: number; total_count: number };
 
 const PAGE_SIZE = 30;
+export const EXPLORER_PAGE_SIZE = PAGE_SIZE;
 
 /** Unknown is a state of its own, so it is always on the menu. */
 const ACTIVE_OPTIONS: [string, string][] = [
   ["active", "กำลังแสดง"], ["inactive", "ไม่แสดงแล้ว"], ["unknown", "ไม่ทราบ"],
 ];
+
+/** The clicked row as the drawer's instant preview; rows here belong to this dataset's run, as the drawer's do. */
+const previewOf = (row: Row | undefined): DrawerPreview | undefined => row && {
+  ad_archive_id: row.ad_archive_id, page_name: row.page_name, is_active: row.is_active, display_format: row.display_format,
+  title: row.title, body_text: row.body_text, media: row.media,
+  archive_url: row.archive_url ?? null, archive_path: row.archive_path ?? null, archive_status: row.archive_status ?? null,
+};
 
 /** `—` is the honest rendering of a field the collector never provided. */
 export function dash(value: unknown): string {
@@ -40,13 +48,15 @@ export function dash(value: unknown): string {
   return String(value);
 }
 
-export function Explorer({ datasetId, coverage = [], preserveDatasetInUrl = false, simple = false, canAnalyze=false }: {
+export function Explorer({ datasetId, coverage = [], preserveDatasetInUrl = false, simple = false, canAnalyze=false, seed }: {
   datasetId: string;
   canAnalyze?:boolean;
   simple?: boolean;
   preserveDatasetInUrl?: boolean;
   /** Dataset quality rows, used to say how readable a presence filter is. */
   coverage?: Coverage[];
+  /** The page the server already read for the view under `key`, so it arrives with the HTML instead of after it. */
+  seed?: { key: string; rows: unknown[]; total: number; facets: Facet[] };
 }) {
   // The URL is the state. A research view someone shares, reloads or navigates
   // back to must be the same view.
@@ -59,13 +69,20 @@ export function Explorer({ datasetId, coverage = [], preserveDatasetInUrl = fals
   const [offset, setOffset] = useState(initial.offset);
   const [view, setView] = useState<"grid" | "table">("grid");
   const [advancedOpen, setAdvancedOpen] = useState(false);
-  const [facets, setFacets] = useState<Facet[]>([]);
+  // A seed counts only for the view it was read for; any other view fetches as usual.
+  const initialKey = toQuery(initial.filters, initial.sort, initial.offset).toString();
+  const seeded = seed?.key === initialKey ? seed : null;
+  const [facets, setFacets] = useState<Facet[]>(seeded?.facets ?? []);
   const [selected, setSelected] = useState<string | null>(null);
   const [comparison, setComparison] = useState<Row[]>([]);
   const [comparing, setComparing] = useState(false);
   const [failure, setFailure] = useState<{ request: string; message: string } | null>(null);
   const [retry, setRetry] = useState(0);
-  const [result, setResult] = useState<{ key: string; rows: Row[]; total: number } | null>(null);
+  const [result, setResult] = useState<{ key: string; rows: Row[]; total: number } | null>(
+    seeded ? { key: seeded.key, rows: seeded.rows as Row[], total: seeded.total } : null,
+  );
+  // Skips the first fetch only; coming back to this view later reads it again.
+  const skipFetch = useRef(seeded ? `${datasetId}:${seeded.key}:0` : null);
 
   const query = toQuery(filters, sort, offset);
   const key = query.toString();
@@ -95,6 +112,8 @@ export function Explorer({ datasetId, coverage = [], preserveDatasetInUrl = fals
   }, [key, datasetId, preserveDatasetInUrl]);
 
   useEffect(() => {
+    if (skipFetch.current === requestKey) { skipFetch.current = null; return; }
+    skipFetch.current = null;
     let live = true;
     const request = new URLSearchParams(key);
     request.set("limit", String(PAGE_SIZE));
@@ -387,7 +406,8 @@ export function Explorer({ datasetId, coverage = [], preserveDatasetInUrl = fals
       </div>
 
       {selected ? (
-        <AdDrawer adArchiveId={selected} datasetId={datasetId} canAnalyze={canAnalyze} onClose={() => setSelected(null)} />
+        <AdDrawer adArchiveId={selected} datasetId={datasetId} canAnalyze={canAnalyze} onClose={() => setSelected(null)}
+          preview={previewOf(rows.find((row) => row.ad_archive_id === selected))} />
       ) : null}
     </section>
   );

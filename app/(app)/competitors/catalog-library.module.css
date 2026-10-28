@@ -24,6 +24,9 @@
 .inspectorEmpty { position: sticky; top: 16px; display: grid; place-items: center; min-height: 320px; margin: 0; padding: 24px; border: 1px dashed var(--line-strong); border-radius: var(--radius); color: var(--muted); font-size: var(--fs-meta); text-align: center; }
 .empty { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 20px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
 .empty p { margin: 0; color: var(--muted); }
+.emptyText { display: grid; gap: 4px; flex: 1 1 280px; min-width: 0; }
+.emptyText strong { overflow-wrap: anywhere; }
+.emptyPrimary { padding: 8px 14px; border: 0; border-radius: var(--radius-sm); background: var(--brand-ink); color: #ffffff; font: inherit; font-weight: 600; cursor: pointer; }
 .note { margin: 0; color: var(--muted); font-size: var(--fs-meta); }
 .problem { display: flex; align-items: center; gap: 12px; margin: 0; padding: 10px 14px; border-radius: var(--radius-sm); background: var(--danger-surface); color: var(--danger); font-size: var(--fs-meta); }
 

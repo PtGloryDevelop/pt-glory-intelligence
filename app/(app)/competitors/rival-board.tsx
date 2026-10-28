@@ -151,6 +151,6 @@ export function RivalBoard(){
       </>}
       <p className={styles.foot}>Ads Library ไม่มีข้อมูลค่าแอดของคู่แข่ง และไม่มียอดขาย · “ใหม่” คือระบบเพิ่งเห็นครั้งแรก · เพจไม่เท่ากับแบรนด์ · ระบบเก็บแอดใหม่อยู่ {n(board.tracked)} เพจ</p>
     </div>
-    {selected?<AdDrawer adArchiveId={selected.ad_archive_id} datasetId={selected.dataset_id} onClose={()=>setSelected(null)} compareHref={board.canEdit?`/compare/ads?${new URLSearchParams({dataset:selected.dataset_id,rival:selected.ad_archive_id,returnTo:'/competitors'})}`:undefined}/>:null}
+    {selected?<AdDrawer preview={selected} adArchiveId={selected.ad_archive_id} datasetId={selected.dataset_id} onClose={()=>setSelected(null)} compareHref={board.canEdit?`/compare/ads?${new URLSearchParams({dataset:selected.dataset_id,rival:selected.ad_archive_id,returnTo:'/competitors'})}`:undefined}/>:null}
   </div>;
 }

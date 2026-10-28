@@ -44,7 +44,7 @@ export function CatalogLibrary({canAnalyze,keywords,datasets}:{canAnalyze:boolea
  const [error,setError]=useState(''),[refresh,setRefresh]=useState(0),[picked,setPicked]=useState<CatalogAdRow|null>(null);
  const wide=useWide();
  // Ads collected from the side panel show up here without a reload.
- const collected=useCollectLauncher()?.version??0;
+ const launcher=useCollectLauncher(),collected=launcher?.version??0;
  const params=new URLSearchParams({search:query,limit:String(PAGE),offset:String(offset)});
  if(period)params.set('period',period);if(active)params.set('active',active);if(format)params.set('format',format);if(sort)params.set('sort',sort);
  const request=params.toString(),loading=result?.key!==request;
@@ -83,7 +83,7 @@ export function CatalogLibrary({canAnalyze,keywords,datasets}:{canAnalyze:boolea
  const tools=<div className={styles.tools}>
   <form className={styles.search} role="search" onSubmit={event=>{event.preventDefault();browse({search:String(new FormData(event.currentTarget).get('search')??'').trim(),offset:''});}}>
    <Icon name="search" size={15}/>
-   <input key={query} name="search" type="search" data-testid="catalog-search" maxLength={160} placeholder="ชื่อสินค้า ข้อเสนอ ข้อความ หรือเพจ" aria-label="ค้นแอดคู่แข่ง" defaultValue={query}/>
+   <input key={query} name="search" type="search" data-testid="catalog-search" maxLength={160} placeholder="ค้นในคลัง: ชื่อสินค้า ข้อความ หรือชื่อเพจ" aria-label="ค้นแอดคู่แข่งในคลังของทีม" defaultValue={query}/>
    {query?<button type="button" className={styles.clearSearch} aria-label="ล้างคำค้น" onClick={()=>browse({search:'',offset:''})}>×</button>:null}
   </form>
   <label className={styles.popup}><span>เรียง</span><select aria-label="เรียงแอด" value={sort} onChange={event=>browse({sort:event.target.value,offset:''})}>{SORTS.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
@@ -111,11 +111,17 @@ export function CatalogLibrary({canAnalyze,keywords,datasets}:{canAnalyze:boolea
      <AdCard tile ad={group[0]} selected={selected?.ad_archive_id===group[0].ad_archive_id} onOpen={()=>setPicked(group[0])}/>
      {group.length>1?<span className={styles.repeatBadge} title={`แอดข้อความเดียวกันจากเพจเดียวกัน ${group.length} ตัว: ${group.map(ad=>ad.ad_archive_id).join(', ')}`} data-testid="catalog-repeat">{group.length} เวอร์ชัน</span>:null}
     </div>)}</div>
-    {!loading&&result?.total===0?<div className={styles.empty}><p>ยังไม่มีแอดที่ตรงกับตัวกรอง</p><button type="button" onClick={()=>browse({search:'',active:'',period:'',format:'',offset:''})}>ดูทั้งคลัง</button>{canAnalyze?<Link href="/collect">ค้นและเก็บแอดเพิ่ม →</Link>:null}</div>:null}
+    {/* The search reads only what the team has collected, so an unknown page is "not collected yet", not "does not exist". */}
+    {!loading&&result?.total===0&&query?<div className={styles.empty} data-testid="catalog-empty-search">
+     <div className={styles.emptyText}><strong>ไม่พบ “{query}” ในคลังของทีม</strong><p>ช่องนี้ค้นเฉพาะแอดที่ทีมเก็บไว้แล้ว ยังไม่ได้ค้นใน Facebook · เพจหรือสินค้าที่ยังไม่เคยเก็บจะยังไม่ขึ้นที่นี่</p></div>
+     {launcher?<button type="button" className={styles.emptyPrimary} data-testid="catalog-collect-search" onClick={()=>launcher.open({keywords:[query.slice(0,100)],title:'เก็บแอดจาก Ad Library ด้วยคำนี้'})}>เก็บแอดด้วยคำนี้ →</button>:<p>ให้ทีมที่มีสิทธิ์เก็บแอดค้นคำนี้เพิ่ม</p>}
+     {active||period||format?<button type="button" onClick={()=>browse({active:'',period:'',format:'',offset:''})}>ล้างตัวกรองอื่น</button>:null}
+    </div>:null}
+    {!loading&&result?.total===0&&!query?<div className={styles.empty}><p>ยังไม่มีแอดที่ตรงกับตัวกรอง</p><button type="button" onClick={()=>browse({search:'',active:'',period:'',format:'',offset:''})}>ดูทั้งคลัง</button>{canAnalyze?<Link href="/collect">ค้นและเก็บแอดเพิ่ม →</Link>:null}</div>:null}
     {!loading&&result&&result.total>0&&result.rows.length===0?<div className={styles.empty}><p>หน้านี้ไม่มีแอด</p><button type="button" onClick={()=>browse({offset:''})}>กลับหน้าแรก</button></div>:null}
    </section>
    {wide?<div className={styles.inspector}>{selected
-    ?<AdDrawer key={`${selected.dataset_id}:${selected.ad_archive_id}`} docked adArchiveId={selected.ad_archive_id} datasetId={selected.dataset_id} onClose={()=>setPicked(null)} compareHref={compareHref(selected)} canAnalyze={canAnalyze}/>
+    ?<AdDrawer key={`${selected.dataset_id}:${selected.ad_archive_id}`} docked preview={selected} adArchiveId={selected.ad_archive_id} datasetId={selected.dataset_id} onClose={()=>setPicked(null)} compareHref={compareHref(selected)} canAnalyze={canAnalyze}/>
     :<p className={styles.inspectorEmpty}>{loading?'กำลังเปิด…':'เลือกแอดเพื่อดูรายละเอียด'}</p>}</div>:null}
   </div>
 
@@ -128,6 +134,6 @@ export function CatalogLibrary({canAnalyze,keywords,datasets}:{canAnalyze:boolea
    </span>
    <span>สถานะตามครั้งที่เก็บ · “เพิ่งพบ” คือวันที่ระบบพบครั้งแรก · Ad Library ไม่มีงบโฆษณาและไม่มียอดขายของคู่แข่ง</span>
   </footer>
-  {!wide&&selected?<AdDrawer adArchiveId={selected.ad_archive_id} datasetId={selected.dataset_id} onClose={()=>setPicked(null)} compareHref={compareHref(selected)} canAnalyze={canAnalyze}/>:null}
+  {!wide&&selected?<AdDrawer preview={selected} adArchiveId={selected.ad_archive_id} datasetId={selected.dataset_id} onClose={()=>setPicked(null)} compareHref={compareHref(selected)} canAnalyze={canAnalyze}/>:null}
  </div>;
 }

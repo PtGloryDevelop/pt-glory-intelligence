@@ -16,7 +16,7 @@
 .placeholderIcon { opacity:.5; }
 .formatTag, .reuse { position:absolute; bottom:12px; display:inline-flex; align-items:center; gap:6px; padding:5px 9px; border:1px solid var(--line); border-radius:6px; font-size:var(--fs-eyebrow); font-weight:500; line-height:1.5; background:rgba(255,255,255,.94); color:var(--ink); }
 .formatTag { left:12px; }
-.reuse { right:12px; }
+.reuse { right:12px; border-color:var(--brand-ink); background:var(--brand-ink); color:#ffffff; font-weight:700; }
 .body { display:flex; flex:1; flex-direction:column; gap:12px; padding:16px; min-width:0; }
 .title { font-size:var(--fs-title-sm); font-weight:600; display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 .copy { margin:0; font-size:var(--fs-meta); line-height:1.75; color:var(--ink-soft); display:-webkit-box; -webkit-line-clamp:3; line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; min-height:5.25em; }
@@ -45,7 +45,8 @@
 .tileFrame .placeholder { padding: 12px; font-size: var(--fs-label); }
 .tileFormat, .tileReuse { position: absolute; top: 8px; display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: var(--radius-pill); background: rgba(255, 255, 255, 0.92); color: var(--ink-soft); font-size: var(--fs-eyebrow); font-weight: 600; }
 .tileFormat { left: 8px; }
-.tileReuse { right: 8px; }
+/* Reuse is the signal a researcher scans for, so it is filled, not another grey label. */
+.tileReuse { right: 8px; padding: 2px 9px; background: var(--brand-ink); color: #ffffff; font-weight: 700; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25); }
 .tileName { display: block; min-width: 0; text-align: center; line-height: 1.6; }
 .tileName > span { display: inline; padding: 1px 6px; border-radius: 5px; font-size: var(--fs-label); font-weight: 600; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
 .tile[data-selected] .tileName > span { background: var(--brand-ink); color: #ffffff; }
