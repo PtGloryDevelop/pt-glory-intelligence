@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { countryLabel, suggestedDatasetName, type CollectorFormSettings } from "@/lib/collect/form";
@@ -37,6 +37,12 @@ const FALLBACK_ERROR = "ไม่สามารถเริ่มเก็บ�
 const normalName = (value: string) => value.trim().replace(/\s+/g, " ").toLowerCase();
 /** The select's "type a new name" entry; category ids are UUIDs, so it never collides. */
 const NEW_CATEGORY = "new";
+/** The unit select's "general market research" entry; unit ids are UUIDs, so it never collides. */
+const NO_UNIT = "none";
+/** Shared with ส่องแอด's unit picker: the unit last chosen in this browser. */
+const UNIT_KEY = "ptg:rival-unit";
+const noSubscription = () => () => {};
+const readSavedUnit = () => { try { return window.localStorage.getItem(UNIT_KEY) ?? ""; } catch { return ""; } };
 
 /** What the form says after taking a link apart, so the reader sees how it will search. */
 function linkNoteFor(search: AdLibrarySearch, known: boolean, fallbackCountry: string): string {
@@ -91,9 +97,19 @@ export function CollectClient(
   // A category named after a unit ("U9", "คู่แข่ง U9") opened from that unit means the unit.
   const unitNamed = (name: string) => units.find((unit) =>
     normalName(name) === normalName(unit.name) || normalName(name) === normalName(`คู่แข่ง ${unit.name}`));
-  const [unitChoice, setUnitChoice] = useState(
+  // "" = not chosen yet (the form asks), NO_UNIT = chosen to be general market research.
+  const [picked, setUnitChoice] = useState(
     (initialCategory !== undefined ? unitNamed(initialCategory)?.id : units.find((unit) => unit.id === recent[0]?.unitId)?.id) ?? "");
+  // Otherwise the unit last chosen here or in ส่องแอด (it lives in this browser, so the server renders none).
+  const saved = useSyncExternalStore(noSubscription, readSavedUnit, () => "");
+  const unitChoice = picked || (initialCategory === undefined && units.some((item) => item.id === saved) ? saved : "");
   const unit = units.find((item) => item.id === unitChoice) ?? null;
+  function chooseUnit(value: string) {
+    setUnitChoice(value);
+    try { if (value !== NO_UNIT) window.localStorage.setItem(UNIT_KEY, value); } catch { /* just not remembered */ }
+  }
+  // The category belongs to general research only; a unit files the round under its own name.
+  const showCategory = units.length === 0 || unitChoice === NO_UNIT;
   // A pasted page link asks for that page's ads; its name is looked up so the round can carry it.
   const [pageLink, setPageLink] = useState<{ id: string; name: string | null } | null>(
     initialSearch?.pageId ? { id: initialSearch.pageId, name: null } : null);
@@ -164,6 +180,7 @@ export function CollectClient(
   const invalid =
     label === "" ? "กรุณาระบุคำค้น หรือวางลิงก์"
       : label.length > 100 ? "คำค้นยาวเกินไป"
+        : units.length > 0 && unitChoice === "" ? "กรุณาเลือกยูนิต หรือเลือก “ไม่ระบุยูนิต”"
         : categoryName.trim() === "" ? "กรุณาระบุหมวดหมู่"
           : categoryName.trim().length > MAX_CATEGORY_NAME ? `ชื่อหมวดหมู่ยาวเกิน ${MAX_CATEGORY_NAME} ตัวอักษร`
             : advancedInvalid;
@@ -330,19 +347,21 @@ export function CollectClient(
         {units.length > 0 && (
           <div className={styles.field}>
             <label htmlFor="unit">เป็นคู่แข่งของยูนิต</label>
-            <select id="unit" data-testid="unit-select" value={unitChoice} onChange={(event) => setUnitChoice(event.target.value)} aria-describedby="unit-hint">
-              <option value="">ไม่ระบุยูนิต (สำรวจตลาดทั่วไป)</option>
+            <select id="unit" data-testid="unit-select" value={unitChoice} onChange={(event) => chooseUnit(event.target.value)} aria-describedby="unit-hint">
+              <option value="" disabled>เลือกยูนิต…</option>
               {units.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+              <option value={NO_UNIT}>ไม่ระบุยูนิต (สำรวจตลาดทั่วไป)</option>
             </select>
             <span id="unit-hint" className={unit ? styles.unitHint : styles.hint} role="status" data-testid="unit-hint">
-              {!unit ? "เลือกยูนิตแล้ว เพจที่ได้จะขึ้นในติดตามคู่แข่งของยูนิตนั้น"
+              {unitChoice === NO_UNIT ? "สำรวจตลาด: แอดเก็บเข้าคลังตามหมวดด้านล่าง ไม่ผูกกับยูนิตไหน"
+                : !unit ? "เลือกยูนิตที่จะหาคู่แข่งให้ · เก็บเสร็จแล้วเพจที่ได้จะขึ้นในติดตามคู่แข่งของยูนิตนั้น"
                 : adopts ? `เก็บเสร็จแล้ว เพจที่ได้จะเป็นคู่แข่งของ ${unit.name} ทันที ไม่ต้องไปยืนยันอีก`
                   : `เก็บเสร็จแล้ว เลือกเพจที่ใช่ในหน้าผลลัพธ์ · คำค้นนี้จะถูกเพิ่มให้ ${unit.name}`}
             </span>
           </div>
         )}
 
-        {!unit && <div className={styles.field}>
+        {showCategory && <div className={styles.field}>
           <label htmlFor="category">หมวดหมู่</label>
           <select
             id="category" data-testid="category-select" value={categoryChoice}
@@ -435,7 +454,7 @@ export function CollectClient(
             {busyWith ? <> · <Link href={`/collect/${busyWith}`} data-testid="collect-busy-link">ดูรอบที่กำลังเก็บอยู่</Link></> : null}
           </p>
         )}
-        {invalid && keyword !== "" && (
+        {invalid && label !== "" && (
           <p className={styles.hint} data-testid="collect-invalid">{invalid}</p>
         )}
 
