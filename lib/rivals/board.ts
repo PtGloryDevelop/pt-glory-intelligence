@@ -34,30 +34,53 @@ async function pagePictures(db:Awaited<ReturnType<typeof dbUser>>,pageIds:string
 export type SearchPage=RivalPage&{picture:string|null;relations:Record<string,Relation>};
 export type SearchPages={units:{id:string;name:string}[];pages:SearchPage[]};
 
-/**
- * The pages behind a ส่องแอด search, with what the team already decided about each for every unit, so a
- * rival can be confirmed where it was found. Same matching as a unit keyword (copy or page name, 60 pages).
- */
-export async function getSearchPages(query:string):Promise<SearchPages>{
+/** Every unit a rival can be for: the owned-ads units, plus a unit that so far only has keywords. Analysts only. */
+export async function listRivalUnits():Promise<{id:string;name:string}[]>{
   const db=await dbUser();
-  const [units,matched,relations,keywordUnits]=await Promise.all([
-    ownedUnits(),
-    db.rpc('rival_keyword_pages',{p_keywords:[query]}),
-    db.from('rival_page_units').select('page_id,unit_id,relation'),
-    db.from('unit_keywords').select('unit_id,unit_name'),
-  ]);
-  if(matched.error||relations.error)throw new Error('Search pages unavailable');
-  const pages=matched.data as RivalPage[];
-  const pictures=await pagePictures(db,pages.map(page=>page.page_id));
-  const decided=new Map<string,Record<string,Relation>>();
-  for(const row of relations.data??[])decided.set(row.page_id,{...decided.get(row.page_id),[row.unit_id]:row.relation as Relation});
-  // Units come from the owned-ads totals; a unit that only has keywords so far is still offered.
+  const [units,keywordUnits]=await Promise.all([ownedUnits(),db.from('unit_keywords').select('unit_id,unit_name')]);
   const all=new Map(units.map(unit=>[unit.id,unit.name]));
   for(const row of keywordUnits.data??[])if(!all.has(row.unit_id))all.set(row.unit_id,row.unit_name as string);
-  return {
-    units:[...all].map(([id,name])=>({id,name})).sort((a,b)=>a.name.localeCompare(b.name,'th',{numeric:true})),
-    pages:pages.map(page=>({...page,picture:pictures.get(page.page_id)??null,relations:decided.get(page.page_id)??{}})),
-  };
+  return [...all].map(([id,name])=>({id,name})).sort((a,b)=>a.name.localeCompare(b.name,'th',{numeric:true}));
+}
+
+/** Where the pages come from: a ส่องแอด search, one pasted page link, or one finished round's dataset. */
+export type PageSource={query:string}|{pageId:string}|{datasetId:string};
+
+/**
+ * Pages with what the team already decided about each for every unit, so a rival is confirmed where it was
+ * found. A search matches like a unit keyword (copy or page name, 60 pages); a page or a round reads by id.
+ */
+export async function getSearchPages(source:PageSource):Promise<SearchPages>{
+  const db=await dbUser();
+  const [units,matched,relations]=await Promise.all([
+    listRivalUnits(),
+    pagesFor(db,source),
+    db.from('rival_page_units').select('page_id,unit_id,relation'),
+  ]);
+  if(relations.error)throw new Error('Search pages unavailable');
+  const pictures=await pagePictures(db,matched.map(page=>page.page_id));
+  const decided=new Map<string,Record<string,Relation>>();
+  for(const row of relations.data??[])decided.set(row.page_id,{...decided.get(row.page_id),[row.unit_id]:row.relation as Relation});
+  return {units,pages:matched.map(page=>({...page,picture:pictures.get(page.page_id)??null,relations:decided.get(page.page_id)??{}}))};
+}
+
+async function pagesFor(db:Awaited<ReturnType<typeof dbUser>>,source:PageSource):Promise<RivalPage[]>{
+  if('query' in source){
+    const {data,error}=await db.rpc('rival_keyword_pages',{p_keywords:[source.query]});
+    if(error)throw new Error('Search pages unavailable');
+    return data as RivalPage[];
+  }
+  let ids=['pageId' in source?source.pageId:''];
+  if('datasetId' in source){
+    const {data,error}=await db.from('dataset_ads').select('ads!inner(pages!inner(page_id))').eq('dataset_id',source.datasetId).limit(2000);
+    if(error)throw new Error('Round pages unavailable');
+    const rows=(data??[]) as unknown as {ads:{pages:{page_id:string}}}[];
+    ids=[...new Set(rows.map(row=>row.ads.pages.page_id))].slice(0,200);
+  }
+  if(!ids.length||!ids[0])return [];
+  const {data,error}=await db.rpc('rival_pages_by_id',{p_page_ids:ids});
+  if(error)throw new Error('Pages unavailable');
+  return data as RivalPage[];
 }
 
 /** Suggestions come from keyword matches on collected ad copy; relations and tracking are team decisions. */

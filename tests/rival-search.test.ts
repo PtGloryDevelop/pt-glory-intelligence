@@ -42,3 +42,20 @@ test("the board no longer offers a page-tracking button nothing reads", () => {
   // Pages set aside can be taken back from the board.
   assert.match(ui, /hiddenPages\.map/);
 });
+
+test("only a page link or an exact phrase makes a round's pages the unit's rivals by themselves", async () => {
+  const { adoptsPages } = await import("../lib/collect/rivals.ts");
+  assert.equal(adoptsPages({ keyword: "โซโนเรีย", page_id: "1275030369034605" }), true);
+  assert.equal(adoptsPages({ keyword: '"Velxis"' }), true);
+  assert.equal(adoptsPages({ keyword: "เบาหวาน" }), false, "a loose word waits for ใช่ / ไม่ใช่");
+  assert.equal(adoptsPages({}), false);
+});
+
+test("adoption never overrides the team and never blocks the round", () => {
+  const rivals = read("lib/collect/rivals.ts");
+  assert.match(rivals, /on conflict \(page_id, unit_id\) do nothing/);
+  const machine = read("lib/collect/machine.ts");
+  // It runs in the post-import media step, inside its own try, before the media enqueue.
+  assert.match(machine, /try \{\s*await withTransaction\(\(client\) => adoptRivals\(/);
+  assert.match(machine, /rival adoption failed/);
+});

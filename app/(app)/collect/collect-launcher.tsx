@@ -27,8 +27,8 @@ export const useCollectLauncher = () => useContext(LauncherContext);
  * not stop anything: the form stays mounted and keeps following the run.
  */
 export function CollectLauncherProvider(
-  { requestKey, categories, settings, recent, children }:
-  { requestKey: string; categories: Category[]; settings: CollectorFormSettings; recent: CollectionDto[]; children: ReactNode },
+  { requestKey, categories, units, settings, recent, children }:
+  { requestKey: string; categories: Category[]; units: Category[]; settings: CollectorFormSettings; recent: CollectionDto[]; children: ReactNode },
 ) {
   const [prefill, setPrefill] = useState<CollectPrefill | null>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -67,7 +67,7 @@ export function CollectLauncherProvider(
         {prefill && (
           <CollectClient
             key={JSON.stringify(prefill)} mode="panel"
-            requestKey={requestKey} categories={categories} settings={settings} recent={recent}
+            requestKey={requestKey} categories={categories} units={units} settings={settings} recent={recent}
             initialKeyword={prefill.keywords?.[0] ?? ""} keywordChoices={prefill.keywords ?? []}
             initialSearch={prefill.search} initialCategory={prefill.category} onFinished={finished}
           />

@@ -146,8 +146,24 @@ test("only collection concepts are read from a request body", () => {
   assert.deepEqual(parsed.value, {
     keyword: "วิตามิน", country: "TH", activeStatus: "all", maxRecords: 300,
     categoryId: "33333333-3333-4333-8333-333333333333", datasetName: "Campaign A",
-    requestKey: "key-1",
+    requestKey: "key-1", pageId: null, unitId: null, unitName: null,
   });
+});
+
+test("a page round and a unit are read, and only in their own shape", () => {
+  const base = {
+    keyword: "โซโนเรีย", country: "TH", activeStatus: "active", maxRecords: 300,
+    categoryId: "33333333-3333-4333-8333-333333333333", requestKey: "key-1",
+  };
+  const unitId = "0b1c2d3e-4f50-4617-8899-aabbccddeeff";
+  const parsed = parseStartInput({ ...base, pageId: "1275030369034605", unitId, unitName: "U18" });
+  assert.ok(parsed.ok);
+  assert.equal(parsed.value.pageId, "1275030369034605");
+  assert.equal(parsed.value.unitId, unitId);
+  assert.equal(parsed.value.unitName, "U18");
+  assert.equal(parseStartInput({ ...base, pageId: "../12" }).ok, false, "a page id is digits only");
+  assert.equal(parseStartInput({ ...base, unitId }).ok, false, "a unit is its id and its name together");
+  assert.equal(parseStartInput({ ...base, unitId: "U18", unitName: "U18" }).ok, false, "a unit id is a uuid");
 });
 
 test("a request missing what a collection needs is refused before it costs anything", () => {

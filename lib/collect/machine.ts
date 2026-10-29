@@ -15,6 +15,7 @@ import {
 } from "./provider.ts";
 import { findCommittedRun as findCommittedRunWithClient } from "./adoption.ts";
 import { findOriginalStart, identityConflict } from "./reconcile.ts";
+import { adoptRivals } from "./rivals.ts";
 
 export { RECONCILE_SKEW_SECONDS } from "./reconcile.ts";
 export { identityConflict } from "./reconcile.ts";
@@ -1150,6 +1151,16 @@ async function enqueueMedia(requestId: string, request: RequestRow): Promise<Adv
     // Succeeded with no canonical run is the zero-result case: nothing to queue.
     await markMediaSettled(requestId);
     return { requestId, action: "media_enqueued", from: "succeeded", to: "succeeded", detail: "no canonical run" };
+  }
+  // The unit's rivals come with the round. Idempotent, so a media retry repeats it harmlessly, and a failure
+  // here never holds up the media or touches the import.
+  const runId = request.collection_run_id;
+  try {
+    await withTransaction((client) => adoptRivals(client, {
+      id: requestId, requestedBy: request.requested_by, runId, params: request.params,
+    }));
+  } catch (error) {
+    console.error("rival adoption failed", { requestId, error: error instanceof Error ? error.name : "unknown" });
   }
   let queued: number;
   try {

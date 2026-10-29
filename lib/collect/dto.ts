@@ -93,7 +93,7 @@ export const statusLabel = (status: ProductStatus): string => LABELS[status];
 /** The exact key set of a user-facing collection, in every state. */
 export const COLLECTION_DTO_KEYS = [
   "id", "requestedBy", "status", "statusLabel", "requiresAdmin",
-  "keyword", "country", "activeStatus", "maxRecords",
+  "keyword", "country", "activeStatus", "maxRecords", "pageId", "unitId", "unitName",
   "categoryId", "datasetName", "sourceUrl",
   "itemCount", "result", "stopReason", "datasetId", "collectionRunId",
   "createdAt", "startedAt", "finishedAt", "updatedAt",
@@ -109,6 +109,11 @@ export type CollectionDto = {
   country: string | null;
   activeStatus: string | null;
   maxRecords: number | null;
+  /** A page round: the one page whose ads were asked for. `keyword` is then only its label. */
+  pageId: string | null;
+  /** The unit these rivals were collected for, if one was chosen. */
+  unitId: string | null;
+  unitName: string | null;
   categoryId: string;
   datasetName: string | null;
   /** PT Glory's own Ad Library search URL. Never a provider's URL. */
@@ -138,6 +143,9 @@ export function toCollectionDto(row: CollectionRequestRow): CollectionDto {
     country: text(params.country),
     activeStatus: text(params.active_status),
     maxRecords: typeof params.max_records === "number" ? params.max_records : null,
+    pageId: text(params.page_id),
+    unitId: text(params.unit_id),
+    unitName: text(params.unit_name),
     categoryId: row.category_id,
     datasetName: row.dataset_name,
     sourceUrl: row.source_url,
@@ -163,6 +171,9 @@ export type StartInput = {
   categoryId: string;
   datasetName: string | null;
   requestKey: string;
+  pageId: string | null;
+  unitId: string | null;
+  unitName: string | null;
 };
 
 export type ParsedStart =
@@ -200,10 +211,20 @@ export function parseStartInput(body: unknown): ParsedStart {
     return { ok: false, message: "maxRecords must be a positive whole number" };
   }
   const datasetName = text(input.datasetName);
+  const pageId = text(input.pageId);
+  if (pageId !== null && !/^\d{1,32}$/.test(pageId)) return { ok: false, message: "pageId must be numeric" };
+  // A unit is an id and its name together, or neither.
+  const unitId = text(input.unitId);
+  const unitName = text(input.unitName);
+  if ((unitId === null) !== (unitName === null)) return { ok: false, message: "unit needs both id and name" };
+  if (unitId !== null && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(unitId)) {
+    return { ok: false, message: "unitId must be a unit id" };
+  }
+  if (unitName !== null && unitName.length > 120) return { ok: false, message: "unit name is too long" };
 
   return {
     ok: true,
-    value: { keyword, country, activeStatus, maxRecords, categoryId, datasetName, requestKey },
+    value: { keyword, country, activeStatus, maxRecords, categoryId, datasetName, requestKey, pageId, unitId, unitName },
   };
 }
 

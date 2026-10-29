@@ -14,7 +14,7 @@ import {isUuid} from '@/lib/read/request';
 import {DEFAULT_SORT,fromQuery,toQuery} from '@/lib/explorer/filters';
 import {CatalogLibrary} from './catalog-library';
 import {RivalBoard} from './rival-board';
-import {getRivalBoard} from '@/lib/rivals/board';
+import {getRivalBoard,listRivalUnits} from '@/lib/rivals/board';
 import {readStrips} from '@/lib/rivals/strips-read';
 import {Icon} from '@/components/shell/icons';
 import styles from './competitors.module.css';
@@ -47,7 +47,7 @@ export default async function AdLibrary({searchParams}:{searchParams:Promise<Rec
  const qualityRead=round?getDatasetQuality(round):null;
  qualityRead?.catch(()=>{}); // awaited below only when the round exists; that await still throws
  const firstRead=round&&unfiltered?datasetAdsPage(round,{sort:DEFAULT_SORT,limit:EXPLORER_PAGE_SIZE,offset:0},true).catch(()=>null):null;
- const launcherRead=canAnalyze?Promise.all([listCategories(),collectorFormSettings(),listCollections(1)]):null;
+ const launcherRead=canAnalyze?Promise.all([listCategories(),collectorFormSettings(),listCollections(1),listRivalUnits().catch(()=>[])]):null;
  launcherRead?.catch(()=>{});
  // The rival board comes with the page too; if it fails here, the board asks again itself and shows its own error.
  const boardRead=board?getRivalBoard(actor).catch(()=>null):null;
@@ -78,6 +78,6 @@ export default async function AdLibrary({searchParams}:{searchParams:Promise<Rec
  }
  if(!canAnalyze)return page;
  // Collecting happens beside the board: the same form as /collect, with its own server-made key.
- const [categories,settings,recent]=await launcherRead!;
- return <CollectLauncherProvider requestKey={randomUUID()} categories={categories} settings={settings} recent={recent}>{page}</CollectLauncherProvider>;
+ const [categories,settings,recent,units]=await launcherRead!;
+ return <CollectLauncherProvider requestKey={randomUUID()} categories={categories} units={units} settings={settings} recent={recent}>{page}</CollectLauncherProvider>;
 }

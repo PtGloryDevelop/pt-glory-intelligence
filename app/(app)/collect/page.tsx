@@ -7,6 +7,7 @@ import { listCollections } from "@/lib/collect/read";
 import { collectorFormSettings } from "@/lib/collect/form-settings";
 import { PageHeader } from "@/components/shell/PageHeader";
 import { CollectClient } from "./collect-client";
+import { listRivalUnits } from "@/lib/rivals/board";
 
 export const dynamic = "force-dynamic";
 
@@ -29,10 +30,12 @@ export default async function CollectPage() {
   // not a hidden button.
   if (!satisfies(actor.role, "analyst")) forbidden();
 
-  const [categories, settings, recent] = await Promise.all([
+  // A failed unit read leaves the form as it was: categories only.
+  const [categories, settings, recent, units] = await Promise.all([
     listCategories(),
     collectorFormSettings(),
     listCollections(10),
+    listRivalUnits().catch(() => []),
   ]);
 
   return (
@@ -45,6 +48,7 @@ export default async function CollectPage() {
       <CollectClient
         requestKey={randomUUID()}
         categories={categories}
+        units={units}
         settings={settings}
         recent={recent}
       />

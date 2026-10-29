@@ -27,3 +27,9 @@
 .choices { display:flex; flex-wrap:wrap; gap:6px; }
 .choices button { min-height:32px; padding:4px 12px; border:1px solid var(--line); border-radius:var(--radius-pill); background:var(--surface); color:inherit; font:inherit; font-size:var(--fs-meta); cursor:pointer; }
 .choices button[aria-pressed="true"] { border-color:var(--brand-ink); background:var(--brand-tint); color:var(--brand-ink); }
+/* A pasted page link stands in for the words: the page, and a way back to typing. */
+.pageLink { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-radius: var(--radius-sm); background: var(--brand-tint); }
+.pageLink > span { display: grid; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+.pageLink button { flex: none; min-height: 32px; padding: 0 12px; font-size: var(--fs-label); }
+/* What choosing the unit will do, said in the ok colour. */
+.unitHint { color: var(--ok-ink); font-size: var(--fs-label); font-weight: 600; }

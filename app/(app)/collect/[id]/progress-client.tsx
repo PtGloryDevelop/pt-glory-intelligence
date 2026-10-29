@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { pickRivalsHref } from "@/lib/collect/url";
+import { SearchPages } from "../../competitors/search-pages";
 import type { CollectionDto } from "@/lib/collect/dto";
 import { thaiDateTime } from "@/lib/format/date";
 import { CollectedPreview } from "./collected-preview";
@@ -138,10 +138,15 @@ export function CollectProgress({ initial, onRestart, onSettled }: {
                 </p>
               )}
               {collection.datasetId && <CollectedPreview datasetId={collection.datasetId} />}
-              {pickRivalsHref(collection.keyword) && (
-                <Link className={styles.open} href={pickRivalsHref(collection.keyword)!} data-testid="pick-rivals">
-                  เลือกคู่แข่งจากผลนี้ →
-                </Link>
+              {/* The round's pages, answered here: already the unit's rivals (a page link or an exact phrase),
+                  or ใช่ / ไม่ใช่ for the round's unit, or for a unit picked now. */}
+              {collection.datasetId && (
+                <SearchPages
+                  from={{ dataset: collection.datasetId }}
+                  unit={collection.unitId && collection.unitName ? { id: collection.unitId, name: collection.unitName } : undefined}
+                  waitForAdoption={Boolean(collection.unitId) && (Boolean(collection.pageId) || /^".+"$/.test(collection.keyword ?? ""))}
+                  title={(count) => collection.unitName ? `เพจในรอบนี้ · คู่แข่งของ ${collection.unitName}` : `เพจในรอบนี้ · ${count.toLocaleString("th-TH")} เพจ`}
+                />
               )}
               {collection.datasetId && (
                 <Link className={styles.open} href={`/competitors?dataset=${collection.datasetId}`} data-testid="open-dataset">

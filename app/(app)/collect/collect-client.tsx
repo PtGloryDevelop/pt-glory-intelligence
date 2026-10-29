@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { countryLabel, suggestedDatasetName, type CollectorFormSettings } from "@/lib/collect/form";
@@ -40,7 +40,8 @@ const NEW_CATEGORY = "new";
 
 /** What the form says after taking a link apart, so the reader sees how it will search. */
 function linkNoteFor(search: AdLibrarySearch, known: boolean, fallbackCountry: string): string {
-  return `ดึงจากลิงก์ Ads Library แล้ว · ${search.query.startsWith('"') ? "ค้นตรงวลี" : "ค้นคำสำคัญ"} · ${search.activeStatus === "all" ? "ทุกสถานะ" : "กำลังแสดง"}`
+  const kind = search.pageId ? "ลิงก์หน้าเพจ" : search.query.startsWith('"') ? "ค้นตรงวลี" : "ค้นคำสำคัญ";
+  return `ดึงจากลิงก์ Ads Library แล้ว · ${kind} · ${search.activeStatus === "all" ? "ทุกสถานะ" : "กำลังแสดง"}`
     + (known ? "" : ` · ประเทศ ${search.country} ยังไม่เปิดให้เก็บ จึงใช้ ${countryLabel(fallbackCountry)}`);
 }
 
@@ -50,10 +51,12 @@ function linkNoteFor(search: AdLibrarySearch, known: boolean, fallbackCountry: s
  * both show the progress and the first ads in place of the form once it starts.
  */
 export function CollectClient(
-  { requestKey, categories, settings, recent, mode = "page", initialKeyword = "", initialSearch, initialCategory, keywordChoices = [], onFinished }:
+  { requestKey, categories, units = [], settings, recent, mode = "page", initialKeyword = "", initialSearch, initialCategory, keywordChoices = [], onFinished }:
   {
     requestKey: string;
     categories: Category[];
+    /** Our units. Choosing one makes the round's pages its rivals; the category then follows the unit's name. */
+    units?: Category[];
     settings: CollectorFormSettings;
     recent: CollectionDto[];
     mode?: "page" | "panel";
@@ -83,8 +86,17 @@ export function CollectClient(
     : categories.find((category) => normalName(category.name) === normalName(initialCategory)) ?? null;
   const [categoryChoice, setCategoryChoice] = useState(prefilled?.id ?? (initialCategory ? NEW_CATEGORY : ""));
   const [newCategory, setNewCategory] = useState(prefilled ? "" : initialCategory ?? "");
-  const categoryName = categoryChoice === NEW_CATEGORY ? newCategory
+  const chosenCategory = categoryChoice === NEW_CATEGORY ? newCategory
     : categoryList.find((category) => category.id === categoryChoice)?.name ?? "";
+  // A category named after a unit ("U9", "คู่แข่ง U9") opened from that unit means the unit.
+  const unitNamed = (name: string) => units.find((unit) =>
+    normalName(name) === normalName(unit.name) || normalName(name) === normalName(`คู่แข่ง ${unit.name}`));
+  const [unitChoice, setUnitChoice] = useState(
+    (initialCategory !== undefined ? unitNamed(initialCategory)?.id : units.find((unit) => unit.id === recent[0]?.unitId)?.id) ?? "");
+  const unit = units.find((item) => item.id === unitChoice) ?? null;
+  // A pasted page link asks for that page's ads; its name is looked up so the round can carry it.
+  const [pageLink, setPageLink] = useState<{ id: string; name: string | null } | null>(
+    initialSearch?.pageId ? { id: initialSearch.pageId, name: null } : null);
   const [datasetName, setDatasetName] = useState("");
   const [touchedName, setTouchedName] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
@@ -98,7 +110,8 @@ export function CollectClient(
   function fromLink(text: string): boolean {
     if (!/^\s*https?:\/\//i.test(text)) return false;
     const search = parseAdLibraryUrl(text);
-    if (!search) { setLinkNote("ลิงก์นี้ใช้ไม่ได้ · รองรับเฉพาะลิงก์ค้นด้วยคำค้นจาก Ads Library (ไม่ใช่ลิงก์หน้าเพจ)"); return true; }
+    if (!search) { setLinkNote("ลิงก์นี้ใช้ไม่ได้ · รองรับลิงก์ผลค้นและลิงก์หน้าเพจจาก Ads Library"); return true; }
+    setPageLink(search.pageId ? { id: search.pageId, name: null } : null);
     setKeyword(search.query);
     setActiveStatus(search.activeStatus);
     const known = settings.countries.includes(search.country);
@@ -107,13 +120,32 @@ export function CollectClient(
     return true;
   }
 
+  const pageId = pageLink?.id ?? null;
+  useEffect(() => {
+    if (!pageId) return;
+    const controller = new AbortController();
+    fetch(`/api/rivals/search?page=${pageId}`, { cache: "no-store", signal: controller.signal })
+      .then((response) => response.ok ? response.json() : null)
+      .then((body: { pages?: { page_name: string | null }[] } | null) => {
+        const name = body?.pages?.[0]?.page_name ?? null;
+        if (name) setPageLink((current) => current?.id === pageId ? { id: pageId, name } : current);
+      }).catch(() => { /* the page is named by its number until it is collected */ });
+    return () => controller.abort();
+  }, [pageId]);
+  // What the round is called by: a page round by its page, a word round by its words.
+  const label = pageLink ? (pageLink.name ?? `เพจ ${pageLink.id}`).slice(0, 100) : keyword.trim();
+  // Pages from a page link or an exact phrase become the unit's rivals by themselves (lib/collect/rivals.ts).
+  const adopts = pageLink !== null || /^".+"$/.test(keyword.trim());
+
   // The suggestion follows what has been typed until somebody edits it, and
   // then it is theirs.
-  const suggestion = keyword.trim() === "" || country === ""
+  const suggestion = label === "" || country === ""
     ? ""
-    : suggestedDatasetName(keyword, country);
+    : suggestedDatasetName(label, country);
   const nameValue = touchedName ? datasetName : suggestion;
 
+  // A unit files the round under a category of the unit's own name, made on submit if it is new.
+  const categoryName = unit ? unit.name : chosenCategory;
   // A typed name either is an existing category or becomes a new one on submit.
   const matched = categoryList.find((category) => normalName(category.name) === normalName(categoryName)) ?? null;
   const categoryHint = categoryName.trim() === "" ? null
@@ -127,11 +159,11 @@ export function CollectClient(
     country === "" ? "กรุณาเลือกประเทศ"
       : !Number.isInteger(records) || records < 1 ? "จำนวนสูงสุดต้องเป็นจำนวนเต็มตั้งแต่ 1"
         : cap !== null && records > cap ? `จำนวนสูงสุดต้องไม่เกิน ${cap}`
-          : nameValue.trim() === "" && keyword.trim() !== "" ? "กรุณาตั้งชื่อเรียกการค้นครั้งนี้"
+          : nameValue.trim() === "" && label !== "" ? "กรุณาตั้งชื่อเรียกการค้นครั้งนี้"
             : null;
   const invalid =
-    keyword.trim() === "" ? "กรุณาระบุคำค้น"
-      : keyword.trim().length > 100 ? "คำค้นยาวเกินไป"
+    label === "" ? "กรุณาระบุคำค้น หรือวางลิงก์"
+      : label.length > 100 ? "คำค้นยาวเกินไป"
         : categoryName.trim() === "" ? "กรุณาระบุหมวดหมู่"
           : categoryName.trim().length > MAX_CATEGORY_NAME ? `ชื่อหมวดหมู่ยาวเกิน ${MAX_CATEGORY_NAME} ตัวอักษร`
             : advancedInvalid;
@@ -171,7 +203,9 @@ export function CollectClient(
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          keyword: keyword.trim(),
+          keyword: label,
+          ...(pageLink ? { pageId: pageLink.id } : {}),
+          ...(unit ? { unitId: unit.id, unitName: unit.name } : {}),
           country,
           activeStatus,
           maxRecords: records,
@@ -262,14 +296,20 @@ export function CollectClient(
       <form className={styles.form} onSubmit={submit} data-testid="collect-form">
         {mode === "page" && <UsageBars show={["collect"]} />}
         <div className={styles.field}>
-          <label htmlFor="keyword">คำค้น</label>
-          <input
+          <label htmlFor="keyword">ค้นด้วย</label>
+          {pageLink ? (
+            <div className={styles.pageLink} data-testid="collect-page-link">
+              <span><b>ลิงก์หน้าเพจ · {pageLink.name ?? `เลขเพจ ${pageLink.id}`}</b>
+                <span className={styles.hint}>จะเก็บแอดทั้งหมดของเพจนี้</span></span>
+              <button type="button" onClick={() => { setPageLink(null); setLinkNote(null); }}>ใช้คำค้นแทน</button>
+            </div>
+          ) : <input
             id="keyword" data-testid="keyword" value={keyword} maxLength={100}
             onChange={(event) => { if (!fromLink(event.target.value)) { setKeyword(event.target.value); setLinkNote(null); } }}
             onPaste={(event) => { if (fromLink(event.clipboardData.getData("text"))) event.preventDefault(); }}
             placeholder="เช่น วิตามินซี หรือวางลิงก์จาก Ads Library"
             aria-describedby="keyword-hint"
-          />
+          />}
           {keywordChoices.length > 0 && (
             <div className={styles.choices} role="group" aria-label="คำค้นของยูนิตนี้">
               {keywordChoices.map((choice) => (
@@ -283,11 +323,26 @@ export function CollectClient(
             </div>
           )}
           <span id="keyword-hint" className={styles.hint} role="status">
-            {linkNote ?? <>ใส่ในเครื่องหมายคำพูด เช่น <code>&quot;natto prime&quot;</code> เพื่อค้นตรงวลี · หรือวางลิงก์ค้นหาจาก Ads Library ระบบจะเติมคำค้น ประเทศ และสถานะให้</>}
+            {linkNote ?? <>วางลิงก์หน้าเพจหรือลิงก์ผลค้นจาก Ads Library · หรือพิมพ์คำ ใส่ในเครื่องหมายคำพูด เช่น <code>&quot;natto prime&quot;</code> เพื่อค้นตรงวลี</>}
           </span>
         </div>
 
-        <div className={styles.field}>
+        {units.length > 0 && (
+          <div className={styles.field}>
+            <label htmlFor="unit">เป็นคู่แข่งของยูนิต</label>
+            <select id="unit" data-testid="unit-select" value={unitChoice} onChange={(event) => setUnitChoice(event.target.value)} aria-describedby="unit-hint">
+              <option value="">ไม่ระบุยูนิต (สำรวจตลาดทั่วไป)</option>
+              {units.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+            </select>
+            <span id="unit-hint" className={unit ? styles.unitHint : styles.hint} role="status" data-testid="unit-hint">
+              {!unit ? "เลือกยูนิตแล้ว เพจที่ได้จะขึ้นในติดตามคู่แข่งของยูนิตนั้น"
+                : adopts ? `เก็บเสร็จแล้ว เพจที่ได้จะเป็นคู่แข่งของ ${unit.name} ทันที ไม่ต้องไปยืนยันอีก`
+                  : `เก็บเสร็จแล้ว เลือกเพจที่ใช่ในหน้าผลลัพธ์ · คำค้นนี้จะถูกเพิ่มให้ ${unit.name}`}
+            </span>
+          </div>
+        )}
+
+        {!unit && <div className={styles.field}>
           <label htmlFor="category">หมวดหมู่</label>
           <select
             id="category" data-testid="category-select" value={categoryChoice}
@@ -310,7 +365,7 @@ export function CollectClient(
           <span id="category-hint" className={styles.hint} role="status" data-testid="category-hint">
             {categoryHint ?? "เลือกหมวดที่มี หรือเลือก “สร้างหมวดใหม่” แล้วพิมพ์ชื่อ ระบบสร้างให้ตอนกดค้น"}
           </span>
-        </div>
+        </div>}
 
         <details
           className={styles.advanced} data-testid="collect-advanced"

@@ -44,6 +44,8 @@ export function CatalogLibrary({canAnalyze,keywords,datasets}:{canAnalyze:boolea
  const active=status.ok?status.value??'':'',offset=pageOffset(navigation.get('offset'));
  const format=FORMATS.some(([value])=>value===navigation.get('format'))?navigation.get('format')!:'';
  const sort=SORTS.some(([value])=>value===navigation.get('sort'))?navigation.get('sort')!:'';
+ // A pasted page link shows that one page's ads (and lets it be collected); `page` in the address keeps it.
+ const pageFilter=/^\d{1,32}$/.test(navigation.get('page')??'')?navigation.get('page')!:'';
  const [result,setResult]=useState<{key:string;rows:CatalogAdRow[];total:number;lastCollectedAt:string|null}|null>(null);
  const [error,setError]=useState(''),[refresh,setRefresh]=useState(0),[picked,setPicked]=useState<CatalogAdRow|null>(null);
  const wide=useWide();
@@ -54,6 +56,7 @@ export function CatalogLibrary({canAnalyze,keywords,datasets}:{canAnalyze:boolea
  const launcher=useCollectLauncher(),collected=launcher?.version??0;
  const params=new URLSearchParams({search:query,limit:String(PAGE),offset:String(offset)});
  if(period)params.set('period',period);if(active)params.set('active',active);if(format)params.set('format',format);if(sort)params.set('sort',sort);
+ if(pageFilter)params.set('pages',pageFilter);
  const request=params.toString(),loading=result?.key!==request;
  const returnParams=new URLSearchParams(params);returnParams.delete('limit');returnParams.set('view','all');
  if(!query)returnParams.delete('search');if(!offset)returnParams.delete('offset');
@@ -67,10 +70,12 @@ export function CatalogLibrary({canAnalyze,keywords,datasets}:{canAnalyze:boolea
  function search(text:string){
   setLinkProblem('');
   // Links run long; only a plain search keeps the 160-character cap the API reads.
-  if(!isLink(text)){setLink(null);browse({search:text.slice(0,160),offset:''});return;}
+  if(!isLink(text)){setLink(null);browse({search:text.slice(0,160),page:'',offset:''});return;}
   const parsed=parseAdLibraryUrl(text);
-  if(!parsed){setLinkProblem('ลิงก์นี้ใช้ไม่ได้ · รองรับเฉพาะลิงก์ค้นด้วยคำค้นจาก Ads Library (ไม่ใช่ลิงก์หน้าเพจ)');return;}
-  setLink(parsed);browse({search:unquoted(parsed.query),offset:''});
+  if(!parsed){setLinkProblem('ลิงก์นี้ใช้ไม่ได้ · รองรับลิงก์ผลค้นและลิงก์หน้าเพจจาก Ads Library');return;}
+  setLink(parsed);
+  if(parsed.pageId){browse({search:'',page:parsed.pageId,offset:''});return;}
+  browse({search:unquoted(parsed.query),page:'',offset:''});
  }
  function browse(changes:Record<string,string>){
   const location=new URL(window.location.href);
@@ -110,7 +115,7 @@ export function CatalogLibrary({canAnalyze,keywords,datasets}:{canAnalyze:boolea
   <div className={styles.scope} role="toolbar" aria-label="ตัวกรองแอดคู่แข่ง">
    {keywords.length?<div className={styles.chips}><span className={styles.scopeLabel}>ใส่คำค้นของยูนิต</span>{keywords.map(word=>word===query
     ?<button key={word} type="button" className={styles.chip} disabled title="อยู่ในช่องค้นหาแล้ว">✓ {word}</button>
-    :<button key={word} type="button" className={styles.chip} onClick={()=>browse({search:word,offset:''})}>+ {word}</button>)}</div>:null}
+    :<button key={word} type="button" className={styles.chip} onClick={()=>browse({search:word,page:'',offset:''})}>+ {word}</button>)}</div>:null}
    <div className={styles.popups}>
     <label className={styles.popup}><span>สถานะ</span><select aria-label="สถานะแอดคู่แข่ง" value={active} onChange={event=>browse({active:event.target.value,offset:''})}><option value="">ทุกสถานะ</option><option value="active">กำลังแสดง</option><option value="inactive">หยุดแล้ว</option><option value="unknown">ไม่ทราบ</option></select></label>
     <label className={styles.popup}><span>ช่วงที่พบ</span><select aria-label="ช่วงที่พบ" value={period} onChange={event=>browse({period:event.target.value,offset:''})}><option value="">ทั้งหมด</option><option value="week">เพิ่งพบใน 7 วัน</option></select></label>
@@ -120,8 +125,16 @@ export function CatalogLibrary({canAnalyze,keywords,datasets}:{canAnalyze:boolea
   </div>
 
   {linkProblem?<p className={styles.problem} role="alert" data-testid="catalog-link-problem">{linkProblem}</p>:null}
+  {pageFilter?<section className={styles.empty} data-testid="catalog-page-link">
+   <div className={styles.emptyText}><strong>จากลิงก์หน้าเพจใน Ads Library</strong>
+    <p>{!loading&&result?.total===0?'ยังไม่มีแอดของเพจนี้ในคลัง · กดเก็บแอดของเพจนี้ได้เลย':'แอดของเพจนี้ที่มีในคลัง · เก็บใหม่เพื่อได้แอดล่าสุด'}</p></div>
+   {launcher?<button type="button" className={styles.emptyPrimary} data-testid="catalog-collect-page"
+    onClick={()=>launcher.open({search:link?.pageId===pageFilter?link:{query:'',country:'TH',activeStatus:'active',pageId:pageFilter},title:'เก็บแอดของเพจนี้'})}>เก็บแอดใหม่ของเพจนี้ →</button>:null}
+   <button type="button" onClick={()=>browse({page:'',offset:''})}>ดูทั้งคลัง</button>
+  </section>:null}
+  {canAnalyze&&pageFilter?<SearchPages key={collected} from={{page:pageFilter}} title={()=>'เพจจากลิงก์'}/>:null}
   {/* A search is where rivals are found, so it is where they are confirmed. */}
-  {canAnalyze&&query.length>=2&&query.length<=60?<SearchPages key={collected} query={query}/>:null}
+  {canAnalyze&&query.length>=2&&query.length<=60?<SearchPages key={collected} from={{q:query}} title={count=>`เพจในผลค้น “${query}” · ${count.toLocaleString('th-TH')} เพจ`}/>:null}
   {error?<p className={styles.problem} role="alert">{error} <button type="button" onClick={()=>setRefresh(value=>value+1)}>ลองอีกครั้ง</button></p>:null}
   <div className={styles.split} data-inspector={wide||undefined}>
    <section className={styles.results} aria-label="แอดคู่แข่ง">

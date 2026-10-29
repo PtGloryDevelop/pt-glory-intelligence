@@ -448,7 +448,12 @@ test("a pasted Ad Library link fills the form, and rebuilds to the same search",
   const back = new URL(buildAdLibraryUrl(parseAdLibraryUrl(exact)!));
   assert.deepEqual([...back.searchParams].sort(), [...new URL(exact).searchParams].sort());
   assert.deepEqual(parseAdLibraryUrl("https://www.facebook.com/ads/library/?active_status=active&country=TH&q=zenova%20oil&search_type=keyword_unordered"), { query: "zenova oil", country: "TH", activeStatus: "active" });
-  assert.equal(parseAdLibraryUrl("https://www.facebook.com/ads/library/?country=TH&view_all_page_id=123&search_type=page"), null, "page links cannot be represented");
+  // A page's "see all ads" link is that page, and rebuilds to the same page search.
+  const page = "https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=TH&is_targeted_country=false&media_type=all&search_type=page&sort_data[direction]=desc&sort_data[mode]=total_impressions&view_all_page_id=1275030369034605";
+  assert.deepEqual(parseAdLibraryUrl(page), { query: "", country: "TH", activeStatus: "active", pageId: "1275030369034605" });
+  assert.deepEqual([...new URL(buildAdLibraryUrl(parseAdLibraryUrl(page)!)).searchParams].sort(), [...new URL(page).searchParams].sort());
+  assert.equal(parseAdLibraryUrl("https://www.facebook.com/ads/library/?country=TH&view_all_page_id=12a&search_type=page"), null, "a page id is digits only");
+  assert.throws(() => buildAdLibraryUrl({ country: "TH", query: "", activeStatus: "active", pageId: "1&q=x" }));
   assert.equal(parseAdLibraryUrl("https://evil.example/ads/library/?q=x&country=TH"), null);
   assert.equal(parseAdLibraryUrl("kivari"), null);
 });

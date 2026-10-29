@@ -46,6 +46,11 @@ export type AdmissionInput = {
   categoryId: string;
   /** A label for the result. Omitted means "name it for me", not "leave it unnamed". */
   datasetName: string | null;
+  /** A page round: every ad of this page instead of a word search; `keyword` is then only its label. */
+  pageId?: string | null;
+  /** The unit the rivals are for. The pages of the result become its rivals (lib/collect/rivals.ts). */
+  unitId?: string | null;
+  unitName?: string | null;
 };
 
 export type AdmissionRefusal = "not_configured" | "budget_reached" | "busy" | "invalid_request";
@@ -196,6 +201,7 @@ async function admitInTransaction(
   const reservedUsd = microsToUsd(assessment.runCeilingMicros);
   const sourceUrl = buildAdLibraryUrl({
     country: input.country, query: normalizeKeyword(input.keyword), activeStatus: input.activeStatus,
+    ...(input.pageId ? { pageId: input.pageId } : {}),
   });
   const params = canonicalParams(input);
   const datasetName = input.datasetName?.trim() || autoDatasetName(params.keyword, input.country, now);
@@ -249,6 +255,9 @@ function canonicalParams(input: AdmissionInput) {
     country: input.country,
     active_status: input.activeStatus,
     max_records: input.maxRecords,
+    // Only present when asked for, so a word search keeps exactly the shape it always had.
+    ...(input.pageId ? { page_id: input.pageId } : {}),
+    ...(input.unitId && input.unitName ? { unit_id: input.unitId, unit_name: input.unitName.trim() } : {}),
   };
 }
 
@@ -267,7 +276,9 @@ function sameCollection(
   return storedParams.keyword === wanted.keyword
     && storedParams.country === wanted.country
     && storedParams.active_status === wanted.active_status
-    && storedParams.max_records === wanted.max_records;
+    && storedParams.max_records === wanted.max_records
+    && (storedParams.page_id ?? null) === (wanted.page_id ?? null)
+    && (storedParams.unit_id ?? null) === (wanted.unit_id ?? null);
 }
 
 /** What the server can judge about the request before it costs anything. */
@@ -284,5 +295,7 @@ function validate(
   if (input.maxRecords > ABSOLUTE_MAX_RECORDS) return `maxRecords exceeds ${ABSOLUTE_MAX_RECORDS}`;
   if (input.datasetName !== null && input.datasetName.trim().length > 200) return "dataset name is too long";
   if (input.requestKey.trim() === "") return "requestKey is required";
+  if (input.pageId && !/^\d{1,32}$/.test(input.pageId)) return "pageId must be numeric";
+  if (Boolean(input.unitId) !== Boolean(input.unitName)) return "unit needs both id and name";
   return null;
 }
