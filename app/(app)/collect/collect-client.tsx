@@ -39,6 +39,8 @@ const normalName = (value: string) => value.trim().replace(/\s+/g, " ").toLowerC
 const NEW_CATEGORY = "new";
 /** The unit select's "general market research" entry; unit ids are UUIDs, so it never collides. */
 const NO_UNIT = "none";
+/** The category every general-research round is filed under, made on first use. */
+const MARKET_RESEARCH = "สำรวจตลาด";
 /** Shared with ส่องแอด's unit picker: the unit last chosen in this browser. */
 const UNIT_KEY = "ptg:rival-unit";
 const noSubscription = () => () => {};
@@ -111,8 +113,9 @@ export function CollectClient(
     setUnitChoice(value);
     try { if (value !== NO_UNIT) window.localStorage.setItem(UNIT_KEY, value); } catch { /* just not remembered */ }
   }
-  // The category belongs to general research only; a unit files the round under its own name.
-  const showCategory = units.length === 0 || unitChoice === NO_UNIT;
+  // Nobody picks a category any more: a unit's round goes under the unit's, general research under
+  // MARKET_RESEARCH. The field is left only for a site with no units at all.
+  const showCategory = units.length === 0;
   // A pasted page link asks for that page's ads; its name is looked up so the round can carry it.
   const [pageLink, setPageLink] = useState<{ id: string; name: string | null } | null>(
     initialSearch?.pageId ? { id: initialSearch.pageId, name: null } : null);
@@ -166,7 +169,7 @@ export function CollectClient(
   // A unit files the round under its category: the one already named for it ("U18" or "คู่แข่ง U18"),
   // else one of the unit's own name, made on submit.
   const unitCategory = unit ? categoryList.find((category) => unitNamed(category.name)?.id === unit.id) ?? null : null;
-  const categoryName = unit ? unitCategory?.name ?? unit.name : chosenCategory;
+  const categoryName = unit ? unitCategory?.name ?? unit.name : unitChoice === NO_UNIT ? MARKET_RESEARCH : chosenCategory;
   // A typed name either is an existing category or becomes a new one on submit.
   const matched = categoryList.find((category) => normalName(category.name) === normalName(categoryName)) ?? null;
   const categoryHint = categoryName.trim() === "" ? null
@@ -358,7 +361,7 @@ export function CollectClient(
               <option value={NO_UNIT}>ไม่ระบุยูนิต (สำรวจตลาดทั่วไป)</option>
             </select>
             <span id="unit-hint" className={unit ? styles.unitHint : styles.hint} role="status" data-testid="unit-hint">
-              {unitChoice === NO_UNIT ? "สำรวจตลาด: แอดเก็บเข้าคลังตามหมวดด้านล่าง ไม่ผูกกับยูนิตไหน"
+              {unitChoice === NO_UNIT ? "สำรวจตลาด: แอดเก็บเข้าคลัง ไม่ผูกกับยูนิตไหน · ค้นดูได้ในส่องแอด"
                 : !unit ? "เลือกยูนิตที่จะหาคู่แข่งให้ · เก็บเสร็จแล้วเพจที่ได้จะขึ้นในติดตามคู่แข่งของยูนิตนั้น"
                 : adopts ? `เก็บเสร็จแล้ว เพจที่ได้จะเป็นคู่แข่งของ ${unit.name} ทันที ไม่ต้องไปยืนยันอีก`
                   : `เก็บเสร็จแล้ว เลือกเพจที่ใช่ในหน้าผลลัพธ์ · คำค้นนี้จะถูกเพิ่มให้ ${unit.name}`}
