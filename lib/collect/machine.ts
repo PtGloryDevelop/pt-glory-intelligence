@@ -44,6 +44,12 @@ export { identityConflict } from "./reconcile.ts";
 /** Back-off for the next bounded check. Engineering parameters, not prices. */
 export const FIRST_CHECK_SECONDS = 20;
 export const MAX_CHECK_SECONDS = 300;
+/**
+ * A run the provider has just answered for is looked at again on a steady short beat instead of the back-off.
+ * Asking about a run costs nothing, and the doubling wait (20 s, then 60 s) meant a run done at 30 s sat
+ * unnoticed until 60 s. A provider that did not answer still backs off.
+ */
+export const RUNNING_CHECK_SECONDS = 10;
 
 /**
  * Run memory for a start.
@@ -429,7 +435,8 @@ async function finish(
   },
 ): Promise<AdvanceOutcome> {
   const terminal = outcome.status === "failed" || outcome.status === "succeeded";
-  const nextCheck = terminal || outcome.status === "settling" ? null : backoffSeconds(request.attempt);
+  const nextCheck = terminal || outcome.status === "settling" ? null
+    : outcome.status === "running" && outcome.run ? RUNNING_CHECK_SECONDS : backoffSeconds(request.attempt);
   const detail = outcome.detail ? scrubProviderMessage(outcome.detail) : null;
 
   await withTransaction(async (client) => {

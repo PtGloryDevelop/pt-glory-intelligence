@@ -9,6 +9,7 @@ import type { Freshness } from "../../lib/shell/freshness.ts";
 import { activeHref } from "./active.ts";
 import { Icon } from "./icons.tsx";
 import { Tile } from "./Tile.tsx";
+import { CollectionNote, useCollectionWatcher } from "./CollectionWatcher.tsx";
 import styles from "./AppShell.module.css";
 
 /** Open to every role, so it needs no permission and lives here rather than in the menu model. */
@@ -45,6 +46,8 @@ export function AppShell(
   const fresh = [chips?.owned, chips?.rivals].filter(chip => chip != null);
   const stale = fresh.some(chip => chip.stale);
   const waiting = chips?.pendingAccess ?? 0;
+  // Viewers cannot collect, so their pages never ask about collections.
+  const collecting = useCollectionWatcher(role !== "viewer");
 
   // "auto" lets the width decide; a click pins the opposite of what is on screen.
   const [state, setState] = useState<"auto" | "expanded" | "rail">("auto");
@@ -100,6 +103,7 @@ export function AppShell(
         </nav>
 
         <div className={styles.footer}>
+          <CollectionNote {...collecting} />
           {/* How fresh both sides are, as one box that turns amber when either is late and opens the details. */}
           {fresh.length ? <Link href={SETTINGS.href} className={styles.status} data-stale={stale || undefined} data-testid="shell-freshness">
             <span className={styles.statusHead}>{stale ? <><Icon name="alert" size={13} />ข้อมูลไม่อัปเดต</> : "สถานะข้อมูล"}</span>
@@ -129,10 +133,13 @@ export function AppShell(
             <Image className={styles.logo} src="/logo/pt-mark.png" alt="" width={28} height={28} />
             <span className={styles.lockup}>PT Glory</span>
           </Link>
-          <Link href={SETTINGS.href} className={styles.settingsButton} aria-label={SETTINGS.label} aria-current={active === SETTINGS.href ? "page" : undefined}>
-            <Icon name="settings" size={20} />
-            {waiting ? <span className={styles.waitingDot} aria-label={`คำขอใช้งานรออนุมัติ ${waiting}`} /> : null}
-          </Link>
+          <div className={styles.topActions}>
+            <CollectionNote {...collecting} compact />
+            <Link href={SETTINGS.href} className={styles.settingsButton} aria-label={SETTINGS.label} aria-current={active === SETTINGS.href ? "page" : undefined}>
+              <Icon name="settings" size={20} />
+              {waiting ? <span className={styles.waitingDot} aria-label={`คำขอใช้งานรออนุมัติ ${waiting}`} /> : null}
+            </Link>
+          </div>
         </header>
         <main
           id="workspace-content"

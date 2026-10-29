@@ -1,0 +1,25 @@
+/* A running collection in the sidebar: a pink note with a turning ring, opening its progress page.
+   When it ends the note turns green (or amber) until it is opened or closed. The box is a size container so
+   the folded rail keeps only the ring and the first line, whatever folded it. */
+.slot { container-type: inline-size; }
+.note { display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 9px; background: var(--brand-tint); color: var(--accent-blue-ink); font-size: var(--fs-eyebrow); line-height: 1.45; text-decoration: none; }
+a.note:hover { color: var(--accent-blue-ink); text-decoration: none; background: var(--brand-tint-strong); }
+.note[data-state="ok"] { background: var(--ok-tint); color: var(--ok-ink); }
+.note[data-state="warn"] { background: var(--warn-tint); color: var(--warn-ink); }
+.text { display: grid; min-width: 0; flex: 1; color: inherit; text-decoration: none; }
+.text:hover { color: inherit; text-decoration: none; }
+.text b { font-weight: 600; }
+.text span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: 0.85; }
+.spinner { flex: none; width: 13px; height: 13px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: turn 0.9s linear infinite; }
+.close { flex: none; display: grid; place-items: center; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: inherit; font-size: var(--fs-body); line-height: 1; }
+.close:hover { background: rgb(0 0 0 / 0.06); }
+@keyframes turn { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation: none; border-right-color: currentColor; opacity: 0.6; } }
+
+@container (max-width: 120px) {
+  .note { flex-direction: column; gap: 4px; padding: 7px 4px; text-align: center; }
+  .text span, .close { display: none; }
+}
+
+/* The phone's top bar: a pill with the ring and one short line. */
+.note[data-compact] { padding: 6px 10px; border-radius: var(--radius-pill); white-space: nowrap; }

@@ -26,7 +26,7 @@ const SETTLED = new Set(["succeeded", "failed", "needs_admin"]);
 /** What each state means for what the reader should do next. */
 const GUIDANCE: Record<string, string> = {
   queued: "คำขอเข้าคิวแล้ว ระบบจะเริ่มเก็บข้อมูลให้เอง",
-  collecting: "กำลังเก็บข้อมูลอยู่ ปิดหน้านี้ได้ งานจะทำต่อจนเสร็จ",
+  collecting: "กำลังเก็บข้อมูลอยู่ ไปใช้หน้าอื่นได้เลย งานจะเดินต่อตราบที่ยังเปิดเว็บนี้ไว้ เสร็จแล้วจะแจ้งที่แถบด้านซ้าย",
   checking: "กำลังตรวจสอบว่าข้อมูลครบแล้วหรือยัง",
   processing: "กำลังบันทึกข้อมูลเข้าระบบ",
   needs_admin: "รอบนี้ต้องให้ผู้ดูแลระบบตรวจสอบก่อน ระบบแจ้งให้แล้ว",

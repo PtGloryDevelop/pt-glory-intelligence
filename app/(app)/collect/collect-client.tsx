@@ -12,6 +12,7 @@ import { MAX_CATEGORY_NAME } from "@/lib/categories/name";
 import { CollectProgress } from "./[id]/progress-client";
 import styles from "./collect.module.css";
 import { UsageBars } from "@/components/UsageBars";
+import { COLLECTION_STARTED } from "@/components/shell/CollectionWatcher";
 
 /**
  * The collection form.
@@ -80,6 +81,8 @@ export function CollectClient(
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  // Refused as busy: the person's own round that holds the slot, when it is theirs to open.
+  const [busyWith, setBusyWith] = useState<string | null>(null);
   const [linkNote, setLinkNote] = useState<string | null>(null);
 
   /** A pasted Ad Library link fills keyword, country and status; anything else is typed as usual. */
@@ -151,6 +154,7 @@ export function CollectClient(
     if (submitting || invalid) return;
     setSubmitting(true);
     setProblem(null);
+    setBusyWith(null);
 
     try {
       const categoryId = await resolveCategory();
@@ -178,14 +182,24 @@ export function CollectClient(
         setRestarting(false);
         // The collection's own address, so a refresh still shows it; nothing is reloaded.
         if (mode === "page") window.history.replaceState(null, "", `/collect/${payload.id}`);
+        // The shell keeps it moving from any page, so the person can go on working.
+        window.dispatchEvent(new CustomEvent(COLLECTION_STARTED));
         return;
       }
       setProblem(typeof payload?.message === "string" ? payload.message : FALLBACK_ERROR);
+      if (payload?.error === "busy") void findBusy();
     } catch {
       setProblem(FALLBACK_ERROR);
     } finally {
       setSubmitting(false);
     }
+  }
+
+  async function findBusy() {
+    const response = await fetch("/api/collections", { cache: "no-store" }).catch(() => null);
+    const body = response?.ok ? await response.json().catch(() => null) as { collections: CollectionDto[] } | null : null;
+    const running = body?.collections.find((item) => !["succeeded", "failed", "needs_admin"].includes(item.status));
+    setBusyWith(running?.id ?? null);
   }
 
   if (!settings.enabled) {
@@ -353,7 +367,10 @@ export function CollectClient(
         </details>
 
         {problem && (
-          <p className={styles.problem} role="alert" data-testid="collect-problem">{problem}</p>
+          <p className={styles.problem} role="alert" data-testid="collect-problem">
+            {problem}
+            {busyWith ? <> · <Link href={`/collect/${busyWith}`} data-testid="collect-busy-link">ดูรอบที่กำลังเก็บอยู่</Link></> : null}
+          </p>
         )}
         {invalid && keyword !== "" && (
           <p className={styles.hint} data-testid="collect-invalid">{invalid}</p>

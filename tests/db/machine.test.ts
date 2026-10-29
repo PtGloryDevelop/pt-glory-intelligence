@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 import type pg from "pg";
 import { connect, createAuthUser } from "./helpers.ts";
 import {
-  FIRST_CHECK_SECONDS, MAX_CHECK_SECONDS, RUN_MEMORY_MBYTES, advance, backoffSeconds,
+  FIRST_CHECK_SECONDS, MAX_CHECK_SECONDS, RUN_MEMORY_MBYTES, RUNNING_CHECK_SECONDS, advance, backoffSeconds,
 } from "../../lib/collect/machine.ts";
 import { createMockProvider, mockRun, type MockProvider, type MockScript } from "../../lib/collect/mock.ts";
 import { closePool } from "../../lib/db/privileged.ts";
@@ -242,6 +242,15 @@ test("a running request is polled, never restarted", { skip }, async (t) => {
     assert.equal(state.status, "running");
     assert.ok(state.next_check_at, "and it is scheduled to be looked at again");
     assert.equal(mock.startCount, 0);
+  });
+
+  await t.test("a run that answered is looked at again on the short beat, however many checks came before", async () => {
+    const { id, runId } = await running({ attempt: 6 });
+    const mock = provider({ run: mockRun({ runId, status: "RUNNING", finishedAt: null }) });
+    const before = Date.now();
+    assert.equal((await advance(id, { provider: mock, worker: "w1" })).action, "still_running");
+    const wait = (Date.parse((await stateOf(client, id)).next_check_at!) - before) / 1000;
+    assert.ok(wait <= RUNNING_CHECK_SECONDS + 2 && wait >= RUNNING_CHECK_SECONDS - 2, `next check in ${wait}s, not the back-off`);
   });
 
   await t.test("a successful run moves to settling, never straight to importing", async () => {

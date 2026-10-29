@@ -64,7 +64,8 @@ test("the collection screens speak only to the product's own API", () => {
   // The form posts to the one admission entrance, after creating a new category
   // name through the categories API when needed; the progress view only reads.
   assert.match(collectClient, /fetch\("\/api\/collections"/);
-  assert.deepEqual([...collectClient.matchAll(/fetch\("([^"]+)"/g)].map((found) => found[1]).sort(), ["/api/categories", "/api/collections"]);
+  // A busy refusal also reads /api/collections, to link the round holding the slot; still the same two endpoints.
+  assert.deepEqual([...new Set([...collectClient.matchAll(/fetch\("([^"]+)"/g)].map((found) => found[1]))].sort(), ["/api/categories", "/api/collections"]);
   assert.equal(collectClient.match(/method: "POST"/g)?.length, 2);
   assert.match(progressClient, /fetch\(`\/api\/collections\/\$\{collection\.id\}`/);
   assert.doesNotMatch(progressClient, /method: "POST"/);

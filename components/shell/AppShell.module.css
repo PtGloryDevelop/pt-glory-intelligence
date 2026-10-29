@@ -77,3 +77,4 @@
 .waiting + .role { margin-left: 6px; }
 .settingsButton { position: relative; }
 .waitingDot { position: absolute; top: 4px; right: 4px; width: 9px; height: 9px; border-radius: 50%; background: var(--danger); box-shadow: 0 0 0 2px var(--chrome-bar); }
+.topActions { display: flex; align-items: center; gap: 8px; min-width: 0; }
