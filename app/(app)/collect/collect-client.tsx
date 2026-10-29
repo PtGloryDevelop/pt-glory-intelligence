@@ -7,7 +7,7 @@ import { countryLabel, suggestedDatasetName, type CollectorFormSettings } from "
 import type { CollectionDto } from "@/lib/collect/dto";
 import { ErrorState } from "@/components/states/ErrorState";
 import { thaiDateTime } from "@/lib/format/date";
-import { parseAdLibraryUrl } from "@/lib/collect/url";
+import { parseAdLibraryUrl, type AdLibrarySearch } from "@/lib/collect/url";
 import { MAX_CATEGORY_NAME } from "@/lib/categories/name";
 import { CollectProgress } from "./[id]/progress-client";
 import styles from "./collect.module.css";
@@ -38,13 +38,19 @@ const normalName = (value: string) => value.trim().replace(/\s+/g, " ").toLowerC
 /** The select's "type a new name" entry; category ids are UUIDs, so it never collides. */
 const NEW_CATEGORY = "new";
 
+/** What the form says after taking a link apart, so the reader sees how it will search. */
+function linkNoteFor(search: AdLibrarySearch, known: boolean, fallbackCountry: string): string {
+  return `ดึงจากลิงก์ Ads Library แล้ว · ${search.query.startsWith('"') ? "ค้นตรงวลี" : "ค้นคำสำคัญ"} · ${search.activeStatus === "all" ? "ทุกสถานะ" : "กำลังแสดง"}`
+    + (known ? "" : ` · ประเทศ ${search.country} ยังไม่เปิดให้เก็บ จึงใช้ ${countryLabel(fallbackCountry)}`);
+}
+
 /**
  * `page` is the collect screen itself. `panel` is the same form opened beside
  * another screen (the competitor board), prefilled from where it was opened;
  * both show the progress and the first ads in place of the form once it starts.
  */
 export function CollectClient(
-  { requestKey, categories, settings, recent, mode = "page", initialKeyword = "", initialCategory, keywordChoices = [], onFinished }:
+  { requestKey, categories, settings, recent, mode = "page", initialKeyword = "", initialSearch, initialCategory, keywordChoices = [], onFinished }:
   {
     requestKey: string;
     categories: Category[];
@@ -52,6 +58,8 @@ export function CollectClient(
     recent: CollectionDto[];
     mode?: "page" | "panel";
     initialKeyword?: string;
+    /** A link taken apart where the form was opened from: it fills keyword, country and status like a paste. */
+    initialSearch?: AdLibrarySearch;
     initialCategory?: string;
     keywordChoices?: string[];
     onFinished?: (collection: CollectionDto) => void;
@@ -63,9 +71,10 @@ export function CollectClient(
   const lastUsed = categories.find((category) => category.id === recent[0]?.categoryId) ?? null;
   const [started, setStarted] = useState<{ key: string; collection: CollectionDto } | null>(null);
   const [restarting, setRestarting] = useState(false);
-  const [keyword, setKeyword] = useState(initialKeyword);
-  const [country, setCountry] = useState(settings.countries[0] ?? "");
-  const [activeStatus, setActiveStatus] = useState<"active" | "all">("active");
+  const knownCountry = initialSearch !== undefined && settings.countries.includes(initialSearch.country);
+  const [keyword, setKeyword] = useState(initialSearch?.query ?? initialKeyword);
+  const [country, setCountry] = useState(knownCountry ? initialSearch!.country : settings.countries[0] ?? "");
+  const [activeStatus, setActiveStatus] = useState<"active" | "all">(initialSearch?.activeStatus ?? "active");
   const [maxRecords, setMaxRecords] = useState(String(Math.min(300, settings.maxRecordsPerRun ?? 300)));
   const [categoryList, setCategoryList] = useState(categories);
   // A select, not a datalist: a datalist only offers names matching what is already in the box,
@@ -83,7 +92,7 @@ export function CollectClient(
   const [problem, setProblem] = useState<string | null>(null);
   // Refused as busy: the person's own round that holds the slot, when it is theirs to open.
   const [busyWith, setBusyWith] = useState<string | null>(null);
-  const [linkNote, setLinkNote] = useState<string | null>(null);
+  const [linkNote, setLinkNote] = useState<string | null>(initialSearch ? linkNoteFor(initialSearch, knownCountry, country) : null);
 
   /** A pasted Ad Library link fills keyword, country and status; anything else is typed as usual. */
   function fromLink(text: string): boolean {
@@ -94,8 +103,7 @@ export function CollectClient(
     setActiveStatus(search.activeStatus);
     const known = settings.countries.includes(search.country);
     if (known) setCountry(search.country);
-    setLinkNote(`ดึงจากลิงก์ Ads Library แล้ว · ${search.query.startsWith('"') ? "ค้นตรงวลี" : "ค้นคำสำคัญ"} · ${search.activeStatus === "all" ? "ทุกสถานะ" : "กำลังแสดง"}`
-      + (known ? "" : ` · ประเทศ ${search.country} ยังไม่เปิดให้เก็บ จึงใช้ ${countryLabel(country)}`));
+    setLinkNote(linkNoteFor(search, known, country));
     return true;
   }
 

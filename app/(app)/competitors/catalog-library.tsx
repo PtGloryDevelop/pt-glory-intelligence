@@ -9,12 +9,15 @@ import {Icon} from '@/components/shell/icons';
 import type {CatalogAdRow} from '@/lib/read/catalog';
 import {activeFilter,filterValue,pageOffset} from '@/lib/read/request';
 import {useCollectLauncher} from '../collect/collect-launcher';
+import {parseAdLibraryUrl,type AdLibrarySearch} from '@/lib/collect/url';
 import styles from './catalog-library.module.css';
 
 const SORTS=[['','ล่าสุดที่เก็บ'],['new','เพิ่งพบ'],['age','ยิงนานที่สุด']] as const;
 // The formats the collected ads actually carry (display_format), most common first.
 const FORMATS=[['','ทุกรูปแบบ'],['VIDEO','วิดีโอ'],['IMAGE','ภาพ'],['MULTI_IMAGES','หลายภาพ'],['DPA','แคตตาล็อกสินค้า (DPA)'],['DCO','ครีเอทีฟผสม (DCO)'],['CAROUSEL','ภาพสไลด์']] as const;
 const PAGE=24;
+const unquoted=(query:string)=>query.replace(/^"+|"+$/g,'');
+const isLink=(text:string)=>/^https?:\/\//i.test(text);
 
 // ponytail: groups repeats within the 24 rows on screen (same page + same copy); a library-wide grouped query is the upgrade if repeats span pages.
 const copyKey=(ad:CatalogAdRow)=>`${ad.page_id}|${(ad.title||'').trim()}|${(ad.body_text||'').replace(/\s+/g,' ').trim().slice(0,240)}`;
@@ -43,6 +46,9 @@ export function CatalogLibrary({canAnalyze,keywords,datasets}:{canAnalyze:boolea
  const [result,setResult]=useState<{key:string;rows:CatalogAdRow[];total:number;lastCollectedAt:string|null}|null>(null);
  const [error,setError]=useState(''),[refresh,setRefresh]=useState(0),[picked,setPicked]=useState<CatalogAdRow|null>(null);
  const wide=useWide();
+ // A pasted Ad Library link searches the library by its words and keeps the whole search for "เก็บแอดด้วยคำนี้".
+ const [link,setLink]=useState<AdLibrarySearch|null>(null),[linkProblem,setLinkProblem]=useState('');
+ const linked=link&&unquoted(link.query)===query?link:null;
  // Ads collected from the side panel show up here without a reload.
  const launcher=useCollectLauncher(),collected=launcher?.version??0;
  const params=new URLSearchParams({search:query,limit:String(PAGE),offset:String(offset)});
@@ -57,6 +63,14 @@ export function CatalogLibrary({canAnalyze,keywords,datasets}:{canAnalyze:boolea
  const selected=picked&&rows.some(ad=>ad.ad_archive_id===picked.ad_archive_id&&ad.dataset_id===picked.dataset_id)?picked:wide?groups[0]?.[0]??null:null;
  const compareHref=(ad:CatalogAdRow)=>canAnalyze?`/compare/ads?${new URLSearchParams({dataset:ad.dataset_id,rival:ad.ad_archive_id,returnTo})}`:undefined;
 
+ function search(text:string){
+  setLinkProblem('');
+  // Links run long; only a plain search keeps the 160-character cap the API reads.
+  if(!isLink(text)){setLink(null);browse({search:text.slice(0,160),offset:''});return;}
+  const parsed=parseAdLibraryUrl(text);
+  if(!parsed){setLinkProblem('ลิงก์นี้ใช้ไม่ได้ · รองรับเฉพาะลิงก์ค้นด้วยคำค้นจาก Ads Library (ไม่ใช่ลิงก์หน้าเพจ)');return;}
+  setLink(parsed);browse({search:unquoted(parsed.query),offset:''});
+ }
  function browse(changes:Record<string,string>){
   const location=new URL(window.location.href);
   for(const [key,value]of Object.entries(changes)){
@@ -81,9 +95,10 @@ export function CatalogLibrary({canAnalyze,keywords,datasets}:{canAnalyze:boolea
  },[request,refresh,collected,query,period,active,format,sort,offset]);
 
  const tools=<div className={styles.tools}>
-  <form className={styles.search} role="search" onSubmit={event=>{event.preventDefault();browse({search:String(new FormData(event.currentTarget).get('search')??'').trim(),offset:''});}}>
+  <form className={styles.search} role="search" onSubmit={event=>{event.preventDefault();search(String(new FormData(event.currentTarget).get('search')??'').trim());}}>
    <Icon name="search" size={15}/>
-   <input key={query} name="search" type="search" data-testid="catalog-search" maxLength={160} placeholder="ค้นในคลัง: ชื่อสินค้า ข้อความ หรือชื่อเพจ" aria-label="ค้นแอดคู่แข่งในคลังของทีม" defaultValue={query}/>
+   <input key={query} name="search" type="search" data-testid="catalog-search" maxLength={2000} placeholder="ค้นในคลัง: ชื่อสินค้า ข้อความ หรือชื่อเพจ" aria-label="ค้นแอดคู่แข่งในคลังของทีม" defaultValue={query}
+    onPaste={event=>{const text=event.clipboardData.getData('text').trim();if(isLink(text)){event.preventDefault();search(text);}}}/>
    {query?<button type="button" className={styles.clearSearch} aria-label="ล้างคำค้น" onClick={()=>browse({search:'',offset:''})}>×</button>:null}
   </form>
   <label className={styles.popup}><span>เรียง</span><select aria-label="เรียงแอด" value={sort} onChange={event=>browse({sort:event.target.value,offset:''})}>{SORTS.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
@@ -103,6 +118,7 @@ export function CatalogLibrary({canAnalyze,keywords,datasets}:{canAnalyze:boolea
    </div>
   </div>
 
+  {linkProblem?<p className={styles.problem} role="alert" data-testid="catalog-link-problem">{linkProblem}</p>:null}
   {error?<p className={styles.problem} role="alert">{error} <button type="button" onClick={()=>setRefresh(value=>value+1)}>ลองอีกครั้ง</button></p>:null}
   <div className={styles.split} data-inspector={wide||undefined}>
    <section className={styles.results} aria-label="แอดคู่แข่ง">
@@ -113,8 +129,11 @@ export function CatalogLibrary({canAnalyze,keywords,datasets}:{canAnalyze:boolea
     </div>)}</div>
     {/* The search reads only what the team has collected, so an unknown page is "not collected yet", not "does not exist". */}
     {!loading&&result?.total===0&&query?<div className={styles.empty} data-testid="catalog-empty-search">
-     <div className={styles.emptyText}><strong>ไม่พบ “{query}” ในคลังของทีม</strong><p>ช่องนี้ค้นเฉพาะแอดที่ทีมเก็บไว้แล้ว ยังไม่ได้ค้นใน Facebook · เพจหรือสินค้าที่ยังไม่เคยเก็บจะยังไม่ขึ้นที่นี่</p></div>
-     {launcher?<button type="button" className={styles.emptyPrimary} data-testid="catalog-collect-search" onClick={()=>launcher.open({keywords:[query.slice(0,100)],title:'เก็บแอดจาก Ad Library ด้วยคำนี้'})}>เก็บแอดด้วยคำนี้ →</button>:<p>ให้ทีมที่มีสิทธิ์เก็บแอดค้นคำนี้เพิ่ม</p>}
+     <div className={styles.emptyText}><strong>ไม่พบ “{query}” ในคลังของทีม</strong><p>{linked?`ค้นจากลิงก์ Ads Library · ${linked.query.startsWith('"')?'ค้นตรงวลี':'ค้นคำสำคัญ'} · `:null}ช่องนี้ค้นเฉพาะแอดที่ทีมเก็บไว้แล้ว ยังไม่ได้ค้นใน Facebook · เพจหรือสินค้าที่ยังไม่เคยเก็บจะยังไม่ขึ้นที่นี่</p></div>
+     {launcher?<button type="button" className={styles.emptyPrimary} data-testid="catalog-collect-search" onClick={()=>launcher.open(linked
+      ?{search:linked,keywords:[linked.query],title:'เก็บแอดจาก Ad Library ตามลิงก์นี้'}
+      // The library matched this text as written, so Meta is asked for the same phrase rather than its loose word match.
+      :{keywords:[query.startsWith('"')?query.slice(0,100):`"${query.slice(0,98)}"`],title:'เก็บแอดจาก Ad Library ด้วยคำนี้'})}>เก็บแอดด้วยคำนี้ →</button>:<p>ให้ทีมที่มีสิทธิ์เก็บแอดค้นคำนี้เพิ่ม</p>}
      {active||period||format?<button type="button" onClick={()=>browse({active:'',period:'',format:'',offset:''})}>ล้างตัวกรองอื่น</button>:null}
     </div>:null}
     {!loading&&result?.total===0&&!query?<div className={styles.empty}><p>ยังไม่มีแอดที่ตรงกับตัวกรอง</p><button type="button" onClick={()=>browse({search:'',active:'',period:'',format:'',offset:''})}>ดูทั้งคลัง</button>{canAnalyze?<Link href="/collect">ค้นและเก็บแอดเพิ่ม →</Link>:null}</div>:null}

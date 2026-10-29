@@ -3,11 +3,13 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { CollectorFormSettings } from "@/lib/collect/form";
 import type { CollectionDto } from "@/lib/collect/dto";
+import type { AdLibrarySearch } from "@/lib/collect/url";
 import { CollectClient } from "./collect-client";
 import styles from "./collect-launcher.module.css";
 
 type Category = { id: string; name: string };
-export type CollectPrefill = { keywords?: string[]; category?: string; title?: string };
+/** `search` is a whole Ad Library search (a pasted link): keyword, country and status together. */
+export type CollectPrefill = { keywords?: string[]; category?: string; title?: string; search?: AdLibrarySearch };
 type Launcher = { open: (prefill?: CollectPrefill) => void; version: number };
 
 const LauncherContext = createContext<Launcher | null>(null);
@@ -67,7 +69,7 @@ export function CollectLauncherProvider(
             key={JSON.stringify(prefill)} mode="panel"
             requestKey={requestKey} categories={categories} settings={settings} recent={recent}
             initialKeyword={prefill.keywords?.[0] ?? ""} keywordChoices={prefill.keywords ?? []}
-            initialCategory={prefill.category} onFinished={finished}
+            initialSearch={prefill.search} initialCategory={prefill.category} onFinished={finished}
           />
         )}
       </dialog>
