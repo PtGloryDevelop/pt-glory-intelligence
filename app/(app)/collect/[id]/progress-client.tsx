@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { pickRivalsHref } from "@/lib/collect/url";
 import type { CollectionDto } from "@/lib/collect/dto";
 import { thaiDateTime } from "@/lib/format/date";
 import { CollectedPreview } from "./collected-preview";
@@ -137,6 +138,11 @@ export function CollectProgress({ initial, onRestart, onSettled }: {
                 </p>
               )}
               {collection.datasetId && <CollectedPreview datasetId={collection.datasetId} />}
+              {pickRivalsHref(collection.keyword) && (
+                <Link className={styles.open} href={pickRivalsHref(collection.keyword)!} data-testid="pick-rivals">
+                  เลือกคู่แข่งจากผลนี้ →
+                </Link>
+              )}
               {collection.datasetId && (
                 <Link className={styles.open} href={`/competitors?dataset=${collection.datasetId}`} data-testid="open-dataset">
                   ดูทั้งหมดในคลังคู่แข่ง →

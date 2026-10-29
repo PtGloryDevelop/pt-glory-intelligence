@@ -58,3 +58,12 @@ export function parseAdLibraryUrl(text: string): AdLibrarySearch | null {
     activeStatus: url.searchParams.get("active_status") === "all" ? "all" : "active",
   };
 }
+
+/**
+ * Where a finished round's rivals are picked: ส่องแอด searching the round's words, where each page found is
+ * answered ใช่ / ไม่ใช่ for a unit. Null when the words cannot be a search there (2–60 characters).
+ */
+export function pickRivalsHref(keyword: string | null): string | null {
+  const word = (keyword ?? "").replace(/^"+|"+$/g, "").trim();
+  return word.length >= 2 && word.length <= 60 ? `/competitors?${new URLSearchParams({ view: "all", search: word })}` : null;
+}

@@ -7,7 +7,8 @@ import {getUnitSummary} from '../owned-ads/unit-summary.ts';
 export type Relation='direct'|'substitute'|'unrelated';
 export type RivalPage={page_id:string;page_name:string|null;matched_ads:number;new_matched_7d:number;ads_total:number;active_ads:number;longest_days:number|null;last_seen_at:string|null;sample:string|null};
 export type RivalRow=RivalPage&{relation:Relation|null;tracked:boolean;picture?:string|null};
-export type RivalUnit={id:string;name:string;keywords:{id:string;keyword:string}[];pages:RivalRow[];hidden:number};
+/** `hiddenPages` are the pages the team said are not this unit's rivals, so they can be taken back. */
+export type RivalUnit={id:string;name:string;keywords:{id:string;keyword:string}[];pages:RivalRow[];hidden:number;hiddenPages:{page_id:string;page_name:string|null}[]};
 export type RivalBoard={units:RivalUnit[];unitsWithoutKeywords:{id:string;name:string}[];tracked:number;canEdit:boolean;lastCollectedAt:string|null;newThisWeek:number};
 
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -21,6 +22,44 @@ async function ownedUnits():Promise<{id:string;name:string}[]>{
   return [...seen].map(([id,name])=>({id,name})).sort((a,b)=>a.name.localeCompare(b.name,'th',{numeric:true}));
 }
 
+/** Archived page pictures, signed for an hour. A missing picture keeps the letter avatar. */
+async function pagePictures(db:Awaited<ReturnType<typeof dbUser>>,pageIds:string[]):Promise<Map<string,string|null>>{
+  if(!pageIds.length)return new Map();
+  const pictures=await db.from('page_pictures').select('page_id,storage_path').eq('status','archived').in('page_id',pageIds);
+  const paths=(pictures.data??[]).filter(row=>row.storage_path);
+  const signed=paths.length?await supabaseArchiveStore().getPresentationUrls(paths.map(row=>row.storage_path as string)).catch(()=>new Map<string,string>()):new Map<string,string>();
+  return new Map(paths.map(row=>[row.page_id as string,signed.get(row.storage_path as string)??null]));
+}
+
+export type SearchPage=RivalPage&{picture:string|null;relations:Record<string,Relation>};
+export type SearchPages={units:{id:string;name:string}[];pages:SearchPage[]};
+
+/**
+ * The pages behind a ส่องแอด search, with what the team already decided about each for every unit, so a
+ * rival can be confirmed where it was found. Same matching as a unit keyword (copy or page name, 60 pages).
+ */
+export async function getSearchPages(query:string):Promise<SearchPages>{
+  const db=await dbUser();
+  const [units,matched,relations,keywordUnits]=await Promise.all([
+    ownedUnits(),
+    db.rpc('rival_keyword_pages',{p_keywords:[query]}),
+    db.from('rival_page_units').select('page_id,unit_id,relation'),
+    db.from('unit_keywords').select('unit_id,unit_name'),
+  ]);
+  if(matched.error||relations.error)throw new Error('Search pages unavailable');
+  const pages=matched.data as RivalPage[];
+  const pictures=await pagePictures(db,pages.map(page=>page.page_id));
+  const decided=new Map<string,Record<string,Relation>>();
+  for(const row of relations.data??[])decided.set(row.page_id,{...decided.get(row.page_id),[row.unit_id]:row.relation as Relation});
+  // Units come from the owned-ads totals; a unit that only has keywords so far is still offered.
+  const all=new Map(units.map(unit=>[unit.id,unit.name]));
+  for(const row of keywordUnits.data??[])if(!all.has(row.unit_id))all.set(row.unit_id,row.unit_name as string);
+  return {
+    units:[...all].map(([id,name])=>({id,name})).sort((a,b)=>a.name.localeCompare(b.name,'th',{numeric:true})),
+    pages:pages.map(page=>({...page,picture:pictures.get(page.page_id)??null,relations:decided.get(page.page_id)??{}})),
+  };
+}
+
 /** Suggestions come from keyword matches on collected ad copy; relations and tracking are team decisions. */
 export async function getRivalBoard(actor:Actor,{withUnits=true}:{withUnits?:boolean}={}):Promise<RivalBoard>{
   const db=await dbUser();
@@ -30,7 +69,7 @@ export async function getRivalBoard(actor:Actor,{withUnits=true}:{withUnits?:boo
   const unitsRead=canEdit&&withUnits?ownedUnits():Promise.resolve([]);
   const [keywords,relations,tracked,collected]=await Promise.all([
     db.from('unit_keywords').select('id,unit_id,unit_name,keyword').order('created_at'),
-    db.from('rival_page_units').select('page_id,unit_id,relation'),
+    db.from('rival_page_units').select('page_id,unit_id,unit_name,relation'),
     db.from('rival_tracked_pages').select('page_id'),
     db.rpc('dataset_list').select('collected_at').order('collected_at',{ascending:false}).limit(1),
   ]);
@@ -42,27 +81,38 @@ export async function getRivalBoard(actor:Actor,{withUnits=true}:{withUnits?:boo
     const entry=byUnit.get(row.unit_id)??{name:row.unit_name as string,keywords:[] as {id:string;keyword:string}[]};
     entry.keywords.push({id:row.id,keyword:row.keyword});byUnit.set(row.unit_id,entry);
   }
-  const groups=await Promise.all([...byUnit].map(async([id,entry]):Promise<RivalUnit>=>{
+  // A unit the team gave rivals from a search, with no keyword of its own, is on the board too.
+  for(const row of relations.data??[])if(!byUnit.has(row.unit_id))byUnit.set(row.unit_id,{name:row.unit_name as string,keywords:[]});
+  const matchedByUnit=new Map(await Promise.all([...byUnit].map(async([id,entry])=>{
+    if(!entry.keywords.length)return [id,[] as RivalPage[]] as const;
     const {data,error}=await db.rpc('rival_keyword_pages',{p_keywords:entry.keywords.map(k=>k.keyword)});
     if(error)throw new Error('Rival suggestions unavailable');
-    const rows=(data as RivalPage[]).map(page=>({...page,relation:relationOf.get(`${page.page_id}:${id}`)??null,tracked:trackedSet.has(page.page_id)}));
+    return [id,data as RivalPage[]] as const;
+  })));
+  // Pages the team decided on stay whether or not a keyword still finds them: read those by id, once for every unit.
+  const decided=(relations.data??[]).filter(row=>!(matchedByUnit.get(row.unit_id)??[]).some(page=>page.page_id===row.page_id));
+  const decidedIds=[...new Set(decided.map(row=>row.page_id as string))].slice(0,200);
+  const byId=new Map<string,RivalPage>();
+  if(decidedIds.length){
+    // Without them the board is what it was before (keyword matches only), not an error page.
+    const {data,error}=await db.rpc('rival_pages_by_id',{p_page_ids:decidedIds});
+    if(error)console.error('Rival pages by id unavailable',error.code);
+    else for(const page of data as RivalPage[])byId.set(page.page_id,page);
+  }
+  const groups=[...byUnit].map(([id,entry]):RivalUnit=>{
+    const extra=decided.filter(row=>row.unit_id===id).flatMap(row=>byId.get(row.page_id)??[]);
+    const rows=[...matchedByUnit.get(id)??[],...extra].map(page=>({...page,relation:relationOf.get(`${page.page_id}:${id}`)??null,tracked:trackedSet.has(page.page_id)}));
     const visible=rows.filter(row=>row.relation!=='unrelated');
     // Confirmed first, then by matched ads.
     visible.sort((a,b)=>Number(Boolean(b.relation))-Number(Boolean(a.relation))||b.matched_ads-a.matched_ads);
-    return {id,name:entry.name,keywords:entry.keywords,pages:visible,hidden:rows.length-visible.length};
-  }));
+    const hiddenPages=rows.filter(row=>row.relation==='unrelated').map(row=>({page_id:row.page_id,page_name:row.page_name}));
+    return {id,name:entry.name,keywords:entry.keywords,pages:visible,hidden:hiddenPages.length,hiddenPages};
+  });
   const units=await unitsRead;
   for(const unit of groups)unit.name=units.find(owned=>owned.id===unit.id)?.name??unit.name;
   groups.sort((a,b)=>a.name.localeCompare(b.name,'th',{numeric:true}));
-  // Archived page pictures, signed for an hour. A missing picture keeps the letter avatar.
-  const pageIds=[...new Set(groups.flatMap(unit=>unit.pages.map(page=>page.page_id)))];
-  if(pageIds.length){
-    const pictures=await db.from('page_pictures').select('page_id,storage_path').eq('status','archived').in('page_id',pageIds);
-    const paths=(pictures.data??[]).filter(row=>row.storage_path);
-    const signed=paths.length?await supabaseArchiveStore().getPresentationUrls(paths.map(row=>row.storage_path as string)).catch(()=>new Map<string,string>()):new Map<string,string>();
-    const byPage=new Map(paths.map(row=>[row.page_id as string,signed.get(row.storage_path as string)??null]));
-    for(const unit of groups)for(const page of unit.pages)page.picture=byPage.get(page.page_id)??null;
-  }
+  const byPage=await pagePictures(db,[...new Set(groups.flatMap(unit=>unit.pages.map(page=>page.page_id)))]);
+  for(const unit of groups)for(const page of unit.pages)page.picture=byPage.get(page.page_id)??null;
   // A page can collide with several units; count each page's new ads once.
   const newByPage=new Map(groups.flatMap(unit=>unit.pages.map(page=>[page.page_id,page.new_matched_7d] as const)));
   const lastCollectedAt=(collected.data as {collected_at:string}[]|null)?.[0]?.collected_at??null;

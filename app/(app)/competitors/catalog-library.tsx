@@ -10,6 +10,7 @@ import type {CatalogAdRow} from '@/lib/read/catalog';
 import {activeFilter,filterValue,pageOffset} from '@/lib/read/request';
 import {useCollectLauncher} from '../collect/collect-launcher';
 import {parseAdLibraryUrl,type AdLibrarySearch} from '@/lib/collect/url';
+import {SearchPages} from './search-pages';
 import styles from './catalog-library.module.css';
 
 const SORTS=[['','ล่าสุดที่เก็บ'],['new','เพิ่งพบ'],['age','ยิงนานที่สุด']] as const;
@@ -119,6 +120,8 @@ export function CatalogLibrary({canAnalyze,keywords,datasets}:{canAnalyze:boolea
   </div>
 
   {linkProblem?<p className={styles.problem} role="alert" data-testid="catalog-link-problem">{linkProblem}</p>:null}
+  {/* A search is where rivals are found, so it is where they are confirmed. */}
+  {canAnalyze&&query.length>=2&&query.length<=60?<SearchPages key={collected} query={query}/>:null}
   {error?<p className={styles.problem} role="alert">{error} <button type="button" onClick={()=>setRefresh(value=>value+1)}>ลองอีกครั้ง</button></p>:null}
   <div className={styles.split} data-inspector={wide||undefined}>
    <section className={styles.results} aria-label="แอดคู่แข่ง">

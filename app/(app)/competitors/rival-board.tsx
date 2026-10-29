@@ -32,6 +32,7 @@ export function RivalBoard({initial,strips}:{initial?:Board;strips?:StripSeed}){
   const [notice,setNotice]=useState<string|null>(null);
   const [draft,setDraft]=useState<Record<string,string>>({});
   const [more,setMore]=useState<Record<Strip,boolean>>({new:false,age:false});
+  const [showHidden,setShowHidden]=useState<string|null>(null);
   const [selected,setSelected]=useState<CatalogAdRow|null>(null);
   // Collecting opens beside the board; `version` moves when new ads have landed, and the board reloads.
   const launcher=useCollectLauncher();
@@ -104,8 +105,7 @@ export function RivalBoard({initial,strips}:{initial?:Board;strips?:StripSeed}){
           // eslint-disable-next-line @next/next/no-img-element -- signed storage URL, no loader
           ?<img className={styles.avatar} src={page.picture} alt="" width={32} height={32} loading="lazy"/>
           :<span className={styles.avatar} aria-hidden>{(page.page_name??'?').slice(0,1)}</span>}
-        <div className={styles.pageText}><Link href={`/pages/${encodeURIComponent(page.page_id)}?scope=all`} className={styles.name} title={page.sample??undefined}>{page.page_name??page.page_id}</Link>
-          {page.tracked?<span className={`${styles.chip} ${styles.trackedChip}`}>เก็บแอดใหม่อยู่</span>:null}</div>
+        <div className={styles.pageText}><Link href={`/pages/${encodeURIComponent(page.page_id)}?scope=all`} className={styles.name} title={page.sample??undefined}>{page.page_name??page.page_id}</Link></div>
       </div></td>
       <td className={styles.r}><b>{n(page.new_matched_7d)}</b></td>
       <td className={styles.r}>{n(page.active_ads)}</td>
@@ -114,7 +114,6 @@ export function RivalBoard({initial,strips}:{initial?:Board;strips?:StripSeed}){
         <td>{page.relation?<span className={styles.relDone}><span className={`${styles.chip} ${styles.confirmed}`}>{REL[page.relation]} ✓</span><button type="button" className={styles.ghost} disabled={busy===key} onClick={()=>act(key,{action:'relation',unit_id:unit.id,unit_name:unit.name,page_id:page.page_id,relation:null},'ล้างผลตรวจแล้ว')}>เปลี่ยน</button></span>
           :<div className={styles.rel} role="group" aria-label={`ตรวจว่า ${page.page_name??page.page_id} เป็นอะไรกับ ${unit.name}`}>{(['direct','substitute','unrelated'] as Relation[]).map(value=><button type="button" key={value} disabled={busy===key}
             onClick={()=>act(key,{action:'relation',unit_id:unit.id,unit_name:unit.name,page_id:page.page_id,relation:value},value==='unrelated'?`ซ่อน ${page.page_name??'เพจ'} จาก ${unit.name} แล้ว`:`ตั้งเป็น${REL[value]}ของ ${unit.name} แล้ว`)}>{REL[value]}</button>)}</div>}</td>
-        <td><button type="button" className={page.tracked?styles.on:styles.btn} disabled={busy===`t:${page.page_id}`} onClick={()=>act(`t:${page.page_id}`,{action:'track',page_id:page.page_id,tracked:!page.tracked},page.tracked?'หยุดเก็บแอดใหม่ของเพจนี้แล้ว':'เพิ่มเพจนี้ในรายการเก็บแอดใหม่แล้ว')} title={page.tracked?'กดเพื่อหยุดเก็บ':'ให้ระบบเก็บแอดใหม่ของเพจนี้ทุกรอบ'}>{page.tracked?'✓ เก็บอยู่':'เก็บแอดใหม่'}</button></td>
       </>:<td>{page.relation?REL[page.relation]:'ยังไม่ได้ตรวจ'}</td>}
     </tr>;
   }
@@ -130,10 +129,16 @@ export function RivalBoard({initial,strips}:{initial?:Board;strips?:StripSeed}){
       {launcher&&unit.keywords.length?<button type="button" className={styles.collect} data-testid={`rival-collect-${unit.id}`}
         onClick={()=>launcher.open({keywords:unit.keywords.map(k=>k.keyword),category:unit.name,title:`เก็บแอดคู่แข่งใหม่ให้ ${unit.name}`})}>เก็บแอดใหม่จากคำค้นเหล่านี้</button>:null}</div>
     {unit.pages.length?<div className={styles.tableWrap}><table className={styles.table}>
-      <thead><tr><th>เพจ</th><th className={styles.r}>แอดใหม่ 7 วัน</th><th className={styles.r}>กำลังแสดง</th><th className={styles.r}>ยิงนานสุด</th>{board.canEdit?<><th>เพจนี้คือ</th><th><span className={styles.srOnly}>เก็บแอดใหม่</span></th></>:<th>สถานะ</th>}</tr></thead>
+      <thead><tr><th>เพจ</th><th className={styles.r}>แอดใหม่ 7 วัน</th><th className={styles.r}>กำลังแสดง</th><th className={styles.r}>ยิงนานสุด</th>{board.canEdit?<><th>เพจนี้คือ</th></>:<th>สถานะ</th>}</tr></thead>
       <tbody>{unit.pages.map(page=>row(unit,page))}</tbody>
-    </table></div>:<p className={styles.empty}>ยังไม่พบเพจที่ตรงคำค้นของยูนิตนี้ในข้อมูลที่เก็บไว้ · ลองเพิ่มคำค้นที่ลูกค้าใช้</p>}
-    {unit.hidden?<p className={styles.hidden}>ซ่อนไว้ {n(unit.hidden)} เพจที่ทีมตั้งว่าไม่เกี่ยวกับ {unit.name} · เปิดดูได้จากหน้าเพจคู่แข่ง</p>:null}
+    </table></div>:<p className={styles.empty}>ยังไม่มีเพจคู่แข่งของ {unit.name} · ค้นชื่อแบรนด์หรือคำที่ลูกค้าใช้ใน <Link href="/competitors?view=all">ส่องแอด</Link> แล้วกด “ใช่ คู่แข่ง” ที่เพจ · ถ้ายังไม่มีแอดในคลัง กด “เก็บแอดด้วยคำนี้” ที่นั่นได้เลย</p>}
+    {unit.hidden?<div className={styles.hidden}>
+      <p>ซ่อนไว้ {n(unit.hidden)} เพจที่ทีมตั้งว่าไม่เกี่ยวกับ {unit.name} · <button type="button" className={styles.ghost} onClick={()=>setShowHidden(current=>current===unit.id?null:unit.id)} data-testid={`rival-hidden-${unit.id}`}>{showHidden===unit.id?'ซ่อนรายการ':'ดู / เอากลับ'}</button></p>
+      {showHidden===unit.id?<ul className={styles.hiddenList}>{unit.hiddenPages.map(page=><li key={page.page_id}>
+        <Link href={`/pages/${encodeURIComponent(page.page_id)}?scope=all`}>{page.page_name??page.page_id}</Link>
+        {board.canEdit?<button type="button" className={styles.ghost} disabled={busy===`${unit.id}:${page.page_id}`} onClick={()=>act(`${unit.id}:${page.page_id}`,{action:'relation',unit_id:unit.id,unit_name:unit.name,page_id:page.page_id,relation:null},`เอา ${page.page_name??'เพจ'} กลับมาให้ตรวจแล้ว`)}>เอากลับ</button>:null}
+      </li>)}</ul>:null}
+    </div>:null}
   </section>;
 
   return <div className={styles.layout} data-testid="rival-board">
@@ -141,7 +146,7 @@ export function RivalBoard({initial,strips}:{initial?:Board;strips?:StripSeed}){
     <div className={styles.stack}>
       {notice?<p className={styles.notice} role="status">{notice}</p>:null}
       {bare?<section className={styles.panel}><div className={styles.start}><h2>ใส่คำค้นให้ {bare.name}</h2>
-        <p>ใส่คำที่ลูกค้าใช้หาสินค้าของยูนิตนี้ 3–5 คำ ระบบจะหาเพจคู่แข่งจากแอดที่เก็บไว้ แล้วให้ทีมตรวจว่าเป็นคู่แข่งจริงไหม</p>
+        <p>ใส่คำที่ลูกค้าใช้หาสินค้าของยูนิตนี้ 3–5 คำ ระบบจะหาเพจคู่แข่งจากแอดที่เก็บไว้ แล้วให้ทีมตรวจว่าเป็นคู่แข่งจริงไหม · หรือค้นชื่อแบรนด์คู่แข่งใน <Link href="/competitors?view=all">ส่องแอด</Link> แล้วกด “ใช่ คู่แข่ง” ที่เพจได้เลย</p>
         <form className={styles.firstKw} onSubmit={event=>{event.preventDefault();addKeyword(bare);}}>
           <input aria-label={`คำค้นแรกของ ${bare.name}`} value={draft[bare.id]??''} maxLength={60} placeholder="เช่น ผงผัก, ดีท็อกซ์, ไขมันในเลือด" onChange={event=>setDraft(value=>({...value,[bare.id]:event.target.value}))}/>
           <button type="submit" disabled={(draft[bare.id]??'').trim().length<2||busy===`kw:${bare.id}`}>เพิ่มคำค้น</button>
@@ -169,7 +174,7 @@ export function RivalBoard({initial,strips}:{initial?:Board;strips?:StripSeed}){
           </table></div>
         </section>}
       </>}
-      <p className={styles.foot}>Ads Library ไม่มีข้อมูลค่าแอดของคู่แข่ง และไม่มียอดขาย · “ใหม่” คือระบบเพิ่งเห็นครั้งแรก · เพจไม่เท่ากับแบรนด์ · ระบบเก็บแอดใหม่อยู่ {n(board.tracked)} เพจ</p>
+      <p className={styles.foot}>Ads Library ไม่มีข้อมูลค่าแอดของคู่แข่ง และไม่มียอดขาย · “ใหม่” คือระบบเพิ่งเห็นครั้งแรก · เพจไม่เท่ากับแบรนด์</p>
     </div>
     {selected?<AdDrawer preview={selected} adArchiveId={selected.ad_archive_id} datasetId={selected.dataset_id} onClose={()=>setSelected(null)} compareHref={board.canEdit?`/compare/ads?${new URLSearchParams({dataset:selected.dataset_id,rival:selected.ad_archive_id,returnTo:'/competitors'})}`:undefined}/>:null}
   </div>;

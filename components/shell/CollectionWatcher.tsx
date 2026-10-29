@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { CollectionDto } from "../../lib/collect/dto.ts";
+import { pickRivalsHref } from "../../lib/collect/url.ts";
 import styles from "./CollectionWatcher.module.css";
 
 /** The page a running collection is advanced from fires this right after it starts one. */
@@ -91,9 +92,11 @@ function noteFor({ active, done, dismiss, compact = false }: ReturnType<typeof u
   }
   if (!done) return null;
   const ok = done.status === "succeeded";
+  // A finished round opens where its rivals are picked; anything else opens the round itself.
+  const pick = ok ? pickRivalsHref(done.keyword) : null;
   return <span className={styles.note} data-compact={compact || undefined} data-state={ok ? "ok" : "warn"} data-testid="shell-collected">
-    <Link href={`/collect/${done.id}`} className={styles.text} onClick={dismiss}>
-      <b>{ok ? "เก็บแอดเสร็จแล้ว" : done.status === "needs_admin" ? "รอบเก็บแอดรอผู้ดูแลตรวจ" : "เก็บแอดไม่สำเร็จ"}</b>
+    <Link href={pick ?? `/collect/${done.id}`} className={styles.text} onClick={dismiss}>
+      <b>{ok ? (pick ? "เก็บแอดเสร็จ · เลือกคู่แข่ง" : "เก็บแอดเสร็จแล้ว") : done.status === "needs_admin" ? "รอบเก็บแอดรอผู้ดูแลตรวจ" : "เก็บแอดไม่สำเร็จ"}</b>
       {compact ? null : <span>{name(done)}{ok && done.itemCount != null ? ` · ${done.itemCount.toLocaleString("th-TH")} แอด` : ""}</span>}
     </Link>
     <button type="button" className={styles.close} onClick={dismiss} aria-label="ปิดข้อความ">×</button>

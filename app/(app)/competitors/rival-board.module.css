@@ -41,18 +41,20 @@
 .chip { padding: 1px 8px; border: 1px solid var(--line); border-radius: var(--radius-pill); font-size: var(--fs-eyebrow); white-space: nowrap; }
 .suggested { border-style: dashed; border-color: var(--warn-ink); color: var(--warn-ink); }
 .confirmed { border-color: transparent; background: var(--ok-tint); color: var(--ok-ink); }
-.trackedChip { border-color: transparent; background: var(--brand-tint-strong); color: var(--accent-blue-ink); }
 /* The team's verdict as a segmented control. */
 .rel { display: inline-flex; flex-wrap: nowrap; padding: 2px; border-radius: 8px; background: var(--row-hover); }
 .rel button { min-height: 26px; padding: 0 10px; border: 0; border-radius: 6px; background: transparent; color: var(--ink); font-size: var(--fs-label); white-space: nowrap; }
 .rel button:hover:not(:disabled) { background: var(--surface); box-shadow: 0 1px 2px rgba(27, 31, 39, 0.14); }
 .relDone { display: inline-flex; align-items: center; gap: 6px; }
-.btn, .on, .ghost { min-height: 28px; padding: 0 12px; font-size: var(--fs-label); white-space: nowrap; }
+.btn, .ghost { min-height: 28px; padding: 0 12px; font-size: var(--fs-label); white-space: nowrap; }
 .btn { border-color: var(--line-strong); border-radius: 7px; }
-.on { border-color: transparent; border-radius: 7px; background: var(--brand-tint-strong); color: var(--accent-blue-ink); font-weight: 600; }
 .ghost { padding-inline: 4px; border-color: transparent; background: transparent; color: var(--brand-ink); }
 .empty, .hidden { margin: 0; padding: 12px 18px; color: var(--muted); font-size: var(--fs-meta); }
 .hidden { border-top: 1px solid var(--line); }
+.hidden p { margin: 0; }
+/* Pages the team set aside, each with its way back. */
+.hiddenList { display: grid; gap: 4px; margin: 8px 0 0; padding: 0; list-style: none; }
+.hiddenList li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 0; }
 .start { display: grid; gap: 8px; padding: 16px 18px; }
 .start h2 { margin: 0; font-size: var(--fs-title-sm); }
 .start p { margin: 0; color: var(--muted); font-size: var(--fs-meta); }
