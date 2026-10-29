@@ -94,9 +94,12 @@ export function CollectClient(
   const [newCategory, setNewCategory] = useState(prefilled ? "" : initialCategory ?? "");
   const chosenCategory = categoryChoice === NEW_CATEGORY ? newCategory
     : categoryList.find((category) => category.id === categoryChoice)?.name ?? "";
-  // A category named after a unit ("U9", "คู่แข่ง U9") opened from that unit means the unit.
-  const unitNamed = (name: string) => units.find((unit) =>
-    normalName(name) === normalName(unit.name) || normalName(name) === normalName(`คู่แข่ง ${unit.name}`));
+  // A category named after a unit ("U9", "คู่แข่ง U9", "คู่แข่ง U24 Zenova Oil") means that unit. The space
+  // after the unit's name keeps "คู่แข่ง U13 …" from matching U1.
+  const unitNamed = (name: string) => units.find((unit) => {
+    const wanted = normalName(name), own = normalName(unit.name);
+    return wanted === own || wanted === `คู่แข่ง ${own}` || wanted.startsWith(`คู่แข่ง ${own} `);
+  });
   // "" = not chosen yet (the form asks), NO_UNIT = chosen to be general market research.
   const [picked, setUnitChoice] = useState(
     (initialCategory !== undefined ? unitNamed(initialCategory)?.id : units.find((unit) => unit.id === recent[0]?.unitId)?.id) ?? "");
@@ -160,8 +163,10 @@ export function CollectClient(
     : suggestedDatasetName(label, country);
   const nameValue = touchedName ? datasetName : suggestion;
 
-  // A unit files the round under a category of the unit's own name, made on submit if it is new.
-  const categoryName = unit ? unit.name : chosenCategory;
+  // A unit files the round under its category: the one already named for it ("U18" or "คู่แข่ง U18"),
+  // else one of the unit's own name, made on submit.
+  const unitCategory = unit ? categoryList.find((category) => unitNamed(category.name)?.id === unit.id) ?? null : null;
+  const categoryName = unit ? unitCategory?.name ?? unit.name : chosenCategory;
   // A typed name either is an existing category or becomes a new one on submit.
   const matched = categoryList.find((category) => normalName(category.name) === normalName(categoryName)) ?? null;
   const categoryHint = categoryName.trim() === "" ? null
