@@ -17,7 +17,8 @@ function openHref(round: RoundRow): string {
   const params = new URLSearchParams();
   if (own?.kind === 'own') { params.set('account', own.account); params.set('owned', own.ad); }
   if (rival?.kind === 'rival') { params.set('dataset', rival.dataset); params.set('rival', rival.ad); }
-  if (round.view === 'ads') params.set('view', 'ads');
+  // Rounds live in the ทีมการตลาด tab.
+  params.set('view', 'marketing');
   params.set('round', round.id);
   return `/compare/ads?${params}`;
 }

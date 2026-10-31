@@ -48,3 +48,13 @@ test("rounds are for analysts, and the tables are not public", () => {
   assert.doesNotMatch(up, /for delete/, "a round is kept: nobody deletes from the API");
   assert.match(read("supabase/migrations/0077_compare_rounds.down.sql"), /drop table if exists public\.compare_messages;\s*drop table if exists public\.compare_rounds;/);
 });
+
+test("the talk is the ทีมการตลาด tab, and a round link opens it", () => {
+  const panel = read("app/(app)/compare/ads/ai-compare.tsx");
+  assert.match(panel, /marketing: 'ทีมการตลาด'/);
+  assert.match(panel, /search\.get\('round'\) \? 'marketing'/, "a link naming a round opens the talk");
+  assert.match(panel, /if \(view === 'marketing'\) return <RoundChat/);
+  assert.match(read("app/(app)/compare/rounds/page.tsx"), /params\.set\('view', 'marketing'\)/);
+  // A round started here names itself in the address without reloading over its own talk.
+  assert.match(read("app/(app)/compare/ads/round-chat.tsx"), /shownId === asked\) return;/);
+});

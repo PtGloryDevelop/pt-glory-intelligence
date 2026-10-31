@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { adRefId, type AdRef, type TeamView } from '@/lib/ai/compare-shared';
 import type { NoteDraft, NoteItem } from '@/lib/ai/rounds-shared';
@@ -41,7 +41,7 @@ function markRound(id: string | null) {
  * leans on and is marked as AI interpretation; the facts it may use are the ones the comparison shows.
  * "บันทึกสรุปรอบนี้" has AI draft the round's note, which the team edits before keeping it.
  */
-export function RoundChat({ ads, view, unitName }: { ads: AdRef[]; view: TeamView; unitName: string | null }) {
+export function RoundChat({ ads, view, unitName, viewSwitch }: { ads: AdRef[]; view: TeamView; unitName: string | null; viewSwitch?: ReactNode }) {
   const key = ads.map(adRefId).join('|');
   const asked = useSearchParams().get('round');
   const [round, setRound] = useState<Round | null>(null);
@@ -50,13 +50,13 @@ export function RoundChat({ ads, view, unitName }: { ads: AdRef[]; view: TeamVie
   const [busy, setBusy] = useState<'ask' | 'draft' | 'save' | null>(null);
   const [error, setError] = useState('');
   const [draft, setDraft] = useState<Draft | null>(null);
-  const opened = useRef<string | null>(null);
   const end = useRef<HTMLDivElement>(null);
 
-  // A round named in the address is opened once, if it is about this pair.
+  // A round named in the address is opened, if it is about this pair and not already the one on screen
+  // (a round started here names itself in the address; it is not reloaded over its own talk).
+  const shownId = round?.id ?? null;
   useEffect(() => {
-    if (!asked || !UUID.test(asked) || opened.current === asked) return;
-    opened.current = asked;
+    if (!asked || !UUID.test(asked) || shownId === asked) return;
     let live = true;
     call<{ round: Round }>(`/api/compare/rounds/${asked}`).then(({ round: found }) => {
       if (!live) return;
@@ -64,7 +64,7 @@ export function RoundChat({ ads, view, unitName }: { ads: AdRef[]; view: TeamVie
       setRound(found); setMessages(found.messages);
     }).catch(() => { if (live) markRound(null); });
     return () => { live = false; };
-  }, [asked, key]);
+  }, [asked, key, shownId]);
 
   // Another pair is another round.
   const current = round && round.adKey === key ? round : null;
@@ -141,6 +141,7 @@ export function RoundChat({ ads, view, unitName }: { ads: AdRef[]; view: TeamVie
           <span className={styles.muted}>เริ่มถามแล้วระบบจะบันทึกเป็นรอบใหม่ให้ทีมเห็นในประวัติ</span>
         </>}
       </div>
+      {viewSwitch}
       <div className={styles.barActions}>
         <Link href="/compare/rounds" data-testid="round-history">ประวัติทุกรอบ</Link>
         <button type="button" className={styles.primary} disabled={busy !== null} onClick={() => void startNote()} data-testid="round-note-start">

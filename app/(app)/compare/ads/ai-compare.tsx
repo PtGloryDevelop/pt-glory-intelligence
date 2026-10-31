@@ -39,6 +39,10 @@ export async function post<T>(ads: AdRef[], dryRun: boolean, view: TeamView = 'g
  */
 type CompareProps = { ads: CompareAd[]; ourThrough: string | null; onCopyLink: () => void; linkLabel: string; unitName?: string | null };
 const VIEW_KEY = 'compare-team-view';
+/** The panel's tabs: the two AI readings, and ทีมการตลาด, which talks to AI about the pair (compare rounds). */
+type PanelView = TeamView | 'marketing';
+const PANEL_VIEWS: readonly PanelView[] = [...TEAM_VIEWS, 'marketing'];
+const PANEL_LABEL: Record<PanelView, string> = { ...TEAM_VIEW_LABEL, marketing: 'ทีมการตลาด' };
 
 /**
  * The AI panel in a team view. A shared link names its view (?view=ads); without one, this device's last
@@ -46,17 +50,19 @@ const VIEW_KEY = 'compare-team-view';
  * and its answer lands on an unmounted panel, so switching never pays for the general reading.
  */
 export function AiCompare(props: CompareProps) {
-  const asked = useSearchParams().get('view');
-  const fromUrl = TEAM_VIEWS.find(name => name === asked);
-  const [view, setView] = useState<TeamView>(fromUrl ?? 'general');
+  const search = useSearchParams();
+  const asked = search.get('view');
+  // A link to a round opens the talk it belongs to.
+  const fromUrl = PANEL_VIEWS.find(name => name === asked) ?? (search.get('round') ? 'marketing' : undefined);
+  const [view, setView] = useState<PanelView>(fromUrl ?? 'general');
   useEffect(() => {
     if (fromUrl) return;
-    let saved: TeamView | undefined;
-    try { saved = TEAM_VIEWS.find(name => name === localStorage.getItem(VIEW_KEY)); } catch { /* nothing remembered */ }
+    let saved: PanelView | undefined;
+    try { saved = PANEL_VIEWS.find(name => name === localStorage.getItem(VIEW_KEY)); } catch { /* nothing remembered */ }
     // eslint-disable-next-line react-hooks/set-state-in-effect -- a preference only this device holds, read after hydration
     if (saved) setView(saved);
   }, [fromUrl]);
-  const pick = (next: TeamView) => {
+  const pick = (next: PanelView) => {
     setView(next);
     try { localStorage.setItem(VIEW_KEY, next); } catch { /* the choice just is not remembered */ }
     const url = new URL(window.location.href);
@@ -64,13 +70,11 @@ export function AiCompare(props: CompareProps) {
     window.history.replaceState(null, '', url.pathname + url.search);
   };
   const viewSwitch = <div className={styles.viewSeg} role="group" aria-label="มุมมองของทีม" data-testid="compare-team-view">
-    {TEAM_VIEWS.map(name => <button key={name} type="button" aria-pressed={view === name} onClick={() => pick(name)}>{TEAM_VIEW_LABEL[name]}</button>)}
+    {PANEL_VIEWS.map(name => <button key={name} type="button" aria-pressed={view === name} onClick={() => pick(name)}>{PANEL_LABEL[name]}</button>)}
   </div>;
-  // The talk follows the reading on screen: it asks AI about the same pair, in the same team view.
-  return <>
-    {view === 'ads' ? <AdsTeamCompare {...props} viewSwitch={viewSwitch} /> : <GeneralCompare {...props} viewSwitch={viewSwitch} />}
-    <RoundChat ads={props.ads.map(refOf)} view={view} unitName={props.unitName ?? null} />
-  </>;
+  // ทีมการตลาด talks about the pair from its general reading (team feedback, 31 Oct: a view of its own).
+  if (view === 'marketing') return <RoundChat ads={props.ads.map(refOf)} view="general" unitName={props.unitName ?? null} viewSwitch={viewSwitch} />;
+  return view === 'ads' ? <AdsTeamCompare {...props} viewSwitch={viewSwitch} /> : <GeneralCompare {...props} viewSwitch={viewSwitch} />;
 }
 
 function GeneralCompare({ ads, ourThrough, onCopyLink, linkLabel, viewSwitch }: CompareProps & { viewSwitch: ReactNode }) {
