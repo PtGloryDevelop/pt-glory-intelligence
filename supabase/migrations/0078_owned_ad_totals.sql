@@ -6,11 +6,13 @@
 -- statement timeout (57014) whenever the page opened. The grouping does not change once a snapshot is
 -- published, so it is done once, when the sync is marked complete, and stored.
 --
--- owned_performance_page now answers from the stored totals when the read is the whole window with no unit
--- or page filter (the slow case); every other read goes to the unchanged body, renamed
+-- owned_performance_page now answers from the stored totals when the period covers the whole window (all
+-- days, this month, a window reaching back past the first day: the daily rows read are the same) with no
+-- unit or page filter, the slow case; every other read goes to the unchanged body, renamed
 -- owned_performance_page_live. A missing build (an old snapshot, a failed build) also goes there: slower,
 -- never different. Before this migration was applied, both paths were run side by side on the pilot data
--- and returned identical JSON.
+-- and returned identical JSON. (Our ads by creative, owned_media_page, was tried the same way and was not
+-- faster: its time goes to grouping ads into creatives, not to the daily rows. It is left as it is.)
 
 create table public.owned_library_window (
   sync_id uuid primary key references public.owned_library_syncs(id) on delete cascade,
@@ -67,7 +69,11 @@ begin
     select c.* from candidates c where exists(select 1 from candidates e
       where e.account_id=c.account_id and e.ad_id=c.ad_id and e.currency=c.currency and e.spend>0)
   )
-  insert into public.owned_library_ad_totals
+  insert into public.owned_library_ad_totals (sync_id, account_id, ad_id, currency, ad_name, page_id, page_name,
+    unit_ids, unit_names, spend, impressions, clicks, conversations, purchases, purchase_value, video_3s, thruplays,
+    roas, cost_per_conversation, hook_rate, delivery_first, delivery_last, delivery_days, daily_text,
+    n_rows, n_spend, n_conversations, n_purchases, n_purchase_value, n_impressions, n_video_views, n_roas, n_hook,
+    s_spend, s_conversations, s_purchases, s_purchase_value, s_impressions, s_video_views)
   select p_sync, account_id, ad_id, currency,
     (array_agg(ad_name order by insight_date desc))[1],
     (array_agg(page_id order by insight_date desc))[1],
@@ -153,10 +159,11 @@ begin
     or p_page is null or p_page<0 or p_page>100000 then
     raise exception 'Invalid performance filters' using errcode='22023';
   end if;
-  -- Stored totals answer only the whole window of a published snapshot, unfiltered by unit or page.
+  -- Stored totals answer only a period covering a published snapshot's whole window, unfiltered by unit or
+  -- page. Every daily row lies in daily_from..daily_to, so any covering period reads exactly those rows.
   select w.daily_text_changing into v_changing from public.owned_library_window w
     join public.owned_library_syncs s on s.id=w.sync_id
-    where w.sync_id=p_sync and w.from_date=p_from and w.to_date=p_to
+    where w.sync_id=p_sync and p_from<=w.from_date and p_to>=w.to_date
       and s.status='completed' and s.daily_ready and s.daily_from=w.from_date and s.daily_to=w.to_date;
   if not found or p_unit<>'' or p_page_id<>'' or (p_search<>'' and v_changing>0) then
     return public.owned_performance_page_live(p_sync,p_from,p_to,p_unit,p_page_id,p_search,p_sort,p_status,p_page);

@@ -6,13 +6,15 @@ import { readFileSync } from "node:fs";
  * 0078 — the compare page's whole-window read of our ads timed out (57014, 31 Oct): 11,459 ads and 89,745
  * daily rows regrouped on every read. The grouping is now stored once per sync. Before the migration was
  * applied, the stored and live paths returned identical JSON on the pilot data for 17 filter sets (every sort,
- * status, search and page) and for searches on an ad with daily rows but no inventory row.
+ * status, search and page), for periods covering the window (this month, wider) and for searches on an ad with
+ * daily rows but no inventory row.
  */
 const up = readFileSync("supabase/migrations/0078_owned_ad_totals.sql", "utf8");
 const down = readFileSync("supabase/migrations/0078_owned_ad_totals.down.sql", "utf8");
 
-test("stored totals answer only the whole window of a published snapshot, unfiltered by unit or page", () => {
-  assert.match(up, /where w\.sync_id=p_sync and w\.from_date=p_from and w\.to_date=p_to\s+and s\.status='completed' and s\.daily_ready and s\.daily_from=w\.from_date and s\.daily_to=w\.to_date/);
+test("stored totals answer only a period covering a published snapshot's window, unfiltered by unit or page", () => {
+  // A covering period (all days, this month) reads exactly the window's daily rows.
+  assert.match(up, /where w\.sync_id=p_sync and p_from<=w\.from_date and p_to>=w\.to_date\s+and s\.status='completed' and s\.daily_ready and s\.daily_from=w\.from_date and s\.daily_to=w\.to_date/);
   assert.match(up, /if not found or p_unit<>'' or p_page_id<>'' or \(p_search<>'' and v_changing>0\) then\s+return public\.owned_performance_page_live\(/);
 });
 
