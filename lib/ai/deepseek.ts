@@ -40,7 +40,7 @@ export function estimateUsd(input: number, output: number) {
   return (input * miss + output * out) / 1e6;
 }
 
-export type Message = {role: 'system' | 'user'; content: string | ({type: 'text'; text: string} | {type: 'image_url'; image_url: {url: string; detail: 'low'}})[]};
+export type Message = {role: 'system' | 'user' | 'assistant'; content: string | ({type: 'text'; text: string} | {type: 'image_url'; image_url: {url: string; detail: 'low'}})[]};
 
 /** One JSON-mode call. DeepSeek only guarantees the reply parses as JSON; the caller checks its shape. */
 export async function callDeepSeek(messages: Message[], maxTokens: number): Promise<{result: unknown; input: number; output: number; usd: number}> {

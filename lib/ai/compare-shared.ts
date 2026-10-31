@@ -43,7 +43,9 @@ export type SetReading = {diffs: {text: string; ads: number[]}[]; ideas: {text: 
 export type AdRef = {kind: 'own'; account: string; ad: string} | {kind: 'rival'; dataset: string; ad: string};
 export type AiSpent = {today: number; total: number; dailyCap: number; totalCap: number};
 export type AiEstimate = {model: string; cached: number; missing: number; setCached: boolean; estimate: number; spent: AiSpent};
-export type AiRun = {model: string; cost: number; spent: AiSpent; ads: Record<string, AdReading>; summary: SetReading};
+/** What the model was told about each ad, in the order it was shown (the index answers cite). */
+export type AdContext = {id: string; ref: AdRef; side: string; label: string; facts: string};
+export type AiRun = {model: string; cost: number; spent: AiSpent; ads: Record<string, AdReading>; summary: SetReading; context?: AdContext[]};
 
 /**
  * Team views: the same pair read for what one team works with. "general" is the reading above; "ads"
@@ -61,7 +63,7 @@ export const ADS_DIM_HINT: Record<AdsDim, string> = {
   content: 'แอดเล่าแบบไหน', cover: 'ในภาพปกมีอะไร และคำบนปก',
 };
 export type AdsReading = Record<AdsDim, AiCell>;
-export type AdsRun = {view: 'ads'; model: string; cost: number; spent: AiSpent; ads: Record<string, AdsReading>; summary: SetReading};
+export type AdsRun = {view: 'ads'; model: string; cost: number; spent: AiSpent; ads: Record<string, AdsReading>; summary: SetReading; context?: AdContext[]};
 
 export const adRefId = (ref: AdRef) => ref.kind === 'own' ? `own:${ref.account}:${ref.ad}` : `rival:${ref.dataset}:${ref.ad}`;
 

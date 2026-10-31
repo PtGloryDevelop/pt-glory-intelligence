@@ -225,13 +225,27 @@ const VIEWS: Record<TeamView, ViewSpec> = {
 async function spent(db: Awaited<ReturnType<typeof dbUser>>) {
   // ponytail: sums every row in JS; fine for thousands of calls, move to SQL if the table grows large.
   // DeepSeek rows only: the caps and the credit bar track the DeepSeek balance; older OpenAI rows were another account.
-  const {data, error} = await db.from('ai_analyses').select('usd,created_at').like('model', 'deepseek%');
-  if (error) throw new AiError('อ่านค่าใช้จ่าย AI ไม่สำเร็จ', 503);
+  // Readings and the compare-round talk (questions, note drafts) share one budget.
+  const [readings, talk] = await Promise.all([
+    db.from('ai_analyses').select('usd,created_at').like('model', 'deepseek%'),
+    db.from('compare_messages').select('usd,created_at').like('model', 'deepseek%'),
+  ]);
+  if (readings.error) throw new AiError('อ่านค่าใช้จ่าย AI ไม่สำเร็จ', 503);
+  // Before migration 0077 there is no talk to count, and nothing can be added to it either.
+  if (talk.error) console.error('Compare talk cost unreadable', talk.error.code);
   const dayStart = new Date(Date.now() + 7 * 3600e3); dayStart.setUTCHours(0, 0, 0, 0);
   const since = dayStart.getTime() - 7 * 3600e3; // Bangkok midnight
   let total = 0, today = 0;
-  for (const row of data ?? []) { const usd = Number(row.usd); total += usd; if (Date.parse(row.created_at) >= since) today += usd; }
+  for (const row of [...readings.data ?? [], ...talk.data ?? []]) { const usd = Number(row.usd); total += usd; if (Date.parse(row.created_at) >= since) today += usd; }
   return {today, total, dailyCap: DAILY_CAP, totalCap: TOTAL_CAP};
+}
+
+/** Refuses a call that would pass the daily or total AI cap; returns what has been spent. */
+export async function withinBudget(estimate: number) {
+  const budget = await spent(await dbUser());
+  if (estimate > 0 && (budget.today + estimate > DAILY_CAP || budget.total + estimate > TOTAL_CAP))
+    throw new AiError(`เกินเพดานค่าใช้จ่าย AI (วันนี้ ${budget.today.toFixed(3)}/${DAILY_CAP} USD · รวม ${budget.total.toFixed(3)}/${TOTAL_CAP} USD)`, 429);
+  return budget;
 }
 
 /** dryRun: what is cached, what a run would cost, and what has been spent. Never calls DeepSeek. */
@@ -278,7 +292,8 @@ export async function runComparison(refs: AdRef[], dryRun: boolean, view: TeamVi
     hit.set(setKey, summary);
     await save(setKey, 'set', {...call, result: summary});
   }
-  const run = {model: MODEL, cost, spent: {...budget, today: budget.today + cost, total: budget.total + cost}, summary: hit.get(setKey) as SetReading};
+  const context = ads.map(ad => ({id: adRefId(ad.ref), ref: ad.ref, side: ad.side, label: ad.label, facts: ad.facts}));
+  const run = {model: MODEL, cost, spent: {...budget, today: budget.today + cost, total: budget.total + cost}, summary: hit.get(setKey) as SetReading, context};
   return view === 'ads'
     ? {...run, view, ads: Object.fromEntries(ads.map((ad, index) => [adRefId(ad.ref), hit.get(keys[index]) as AdsReading]))}
     : {...run, ads: Object.fromEntries(ads.map((ad, index) => [adRefId(ad.ref), hit.get(keys[index]) as AdReading]))};

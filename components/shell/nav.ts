@@ -26,7 +26,7 @@ export const NAV: NavSection[] = [
     { label: "ติดตามคู่แข่ง", icon: "swords", href: "/competitors", tone: "rival", also: ["/pages"], tab: true },
     // The Command Center is this page's quick-rankings tab now; its old URL redirects here.
     { label: "ผลแอดเรา", icon: "chart", href: "/owned-ads/performance", tone: "ours", minRole: "analyst", also: ["/command-center"], tab: true },
-    { label: "เทียบ", icon: "compare", href: "/compare/ads", tone: "compare", minRole: "analyst", tab: true },
+    { label: "เทียบ", icon: "compare", href: "/compare/ads", tone: "compare", minRole: "analyst", also: ["/compare/rounds"], tab: true },
   ] },
   { heading: "อัปเดตข้อมูล", items: [
     { label: "ค้นแอดคู่แข่งใหม่", icon: "collect", href: "/collect", tone: "rival", minRole: "analyst", hint: "เก็บแอดจาก Meta Ad Library ตามคำค้น" },

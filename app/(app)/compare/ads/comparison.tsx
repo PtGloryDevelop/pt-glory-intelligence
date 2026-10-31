@@ -319,7 +319,7 @@ export function AdComparison({ datasets, seed, initialOwned, initialPeriod, init
 
     {a && b ? <>
       {outsideUnit ? <p className={styles.aiWarn}>เพจนี้ยังไม่อยู่ในรายชื่อคู่แข่งของ {unitPages?.unitName} · ใช้ผลนี้ดูวิธีเล่าได้ แต่ข้อเสนอและราคาอาจเทียบกันไม่ได้</p> : null}
-      <AiCompare ads={[{ kind: 'own', ad: a }, { kind: 'rival', ad: b }]} ourThrough={period?.date_end ?? null}
+      <AiCompare ads={[{ kind: 'own', ad: a }, { kind: 'rival', ad: b }]} ourThrough={period?.date_end ?? null} unitName={unitName ?? null}
         onCopyLink={() => void copyLink()} linkLabel={shared === 'copied' ? 'คัดลอกลิงก์แล้ว' : 'คัดลอกลิงก์ส่งทีม'} />
       {shared && shared !== 'copied' ? <p className={styles.muted}>คัดลอกอัตโนมัติไม่ได้ · คัดลอกเอง: <span className={styles.shareLink}>{shared}</span></p> : null}
     </> : null}

@@ -1,0 +1,18 @@
+/* ประวัติการเทียบแอด: filters, then one row per round. */
+.page { display: grid; gap: 16px; min-width: 0; }
+.back { font-size: var(--fs-meta); font-weight: 600; }
+.filters { display: flex; align-items: center; gap: 10px 16px; flex-wrap: wrap; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); font-size: var(--fs-label); }
+.filters label { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); }
+.filters select { min-width: 160px; }
+.filters button { min-height: 34px; padding: 0 14px; font-size: var(--fs-label); }
+.check { color: var(--ink) !important; }
+.tableBox { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+.table { width: 100%; border-collapse: collapse; font-size: var(--fs-meta); }
+.table th { padding: 10px 14px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: var(--fs-label); font-weight: 600; text-align: left; white-space: nowrap; }
+.table td { padding: 12px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.table tr:last-child td { border-bottom: 0; }
+.table td > b, .table td > span { display: block; }
+.r { text-align: right !important; }
+.muted { color: var(--muted); font-size: var(--fs-label); }
+.unit { justify-self: start; width: fit-content; margin-top: 4px; padding: 1px 9px; border-radius: var(--radius-pill); background: var(--brand-tint-strong); color: var(--accent-blue-ink); font-size: var(--fs-eyebrow); font-weight: 600; }
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

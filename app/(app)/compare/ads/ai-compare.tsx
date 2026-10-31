@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 
 import type { CompanyAd } from '@/lib/owned-ads/source-rows';
 import { useSearchParams } from 'next/navigation';
 import { AdsTeamCompare } from './ads-team-compare';
+import { RoundChat } from './round-chat';
 import { TEAM_VIEWS, TEAM_VIEW_LABEL, type TeamView, AI_DIM_HINT, AI_DIM_LABEL, HOOK_REWRITE_BELOW, SCORE_DIMS, SCORE_HINT, SCORE_LABEL, SCORE_LEVELS, adRefId, biggestGap, fdaWatch, scoreLead, scoreLevel, scoreTotal, type AdReading, type AdRef, type AiEstimate, type AiCell, type AiDim, type AiRun, type ScoreCell, type ScoreDim } from '@/lib/ai/compare-shared';
 import { ownedName, type Rival } from './selection';
 import { ownedStatus, thaiCodes } from '@/lib/ad-labels';
@@ -36,7 +37,7 @@ export async function post<T>(ads: AdRef[], dryRun: boolean, view: TeamView = 'g
  * and three hooks to test. The evidence stays one click away. "Age" is our own
  * data, never AI; scores are AI's judgement of the creative, not results.
  */
-type CompareProps = { ads: CompareAd[]; ourThrough: string | null; onCopyLink: () => void; linkLabel: string };
+type CompareProps = { ads: CompareAd[]; ourThrough: string | null; onCopyLink: () => void; linkLabel: string; unitName?: string | null };
 const VIEW_KEY = 'compare-team-view';
 
 /**
@@ -65,7 +66,11 @@ export function AiCompare(props: CompareProps) {
   const viewSwitch = <div className={styles.viewSeg} role="group" aria-label="มุมมองของทีม" data-testid="compare-team-view">
     {TEAM_VIEWS.map(name => <button key={name} type="button" aria-pressed={view === name} onClick={() => pick(name)}>{TEAM_VIEW_LABEL[name]}</button>)}
   </div>;
-  return view === 'ads' ? <AdsTeamCompare {...props} viewSwitch={viewSwitch} /> : <GeneralCompare {...props} viewSwitch={viewSwitch} />;
+  // The talk follows the reading on screen: it asks AI about the same pair, in the same team view.
+  return <>
+    {view === 'ads' ? <AdsTeamCompare {...props} viewSwitch={viewSwitch} /> : <GeneralCompare {...props} viewSwitch={viewSwitch} />}
+    <RoundChat ads={props.ads.map(refOf)} view={view} unitName={props.unitName ?? null} />
+  </>;
 }
 
 function GeneralCompare({ ads, ourThrough, onCopyLink, linkLabel, viewSwitch }: CompareProps & { viewSwitch: ReactNode }) {
