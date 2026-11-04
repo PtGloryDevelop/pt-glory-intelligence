@@ -57,5 +57,5 @@ test("a failed library read says why in the log instead of a silent 503", () => 
   const route = readFileSync(join("app", "api", "owned-ads", "performance", "route.ts"), "utf8");
   assert.match(route, /console\.error\("Owned performance unavailable", \{ code: cause\?\.code/);
   const read = readFileSync(join("lib", "owned-ads", "performance-read.ts"), "utf8");
-  assert.match(read, /throw new Error\("Owned daily performance unavailable", \{ cause: current\.error \?\? prior\?\.error \}\)/);
+  assert.match(read, /throw new Error\("Owned daily performance unavailable", \{ cause: result\.error \}\)/);
 });

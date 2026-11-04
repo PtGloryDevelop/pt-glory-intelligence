@@ -3,6 +3,7 @@ import {dbUser} from '../db/user.ts';
 import {satisfies,type Role} from '../auth/role-model.ts';
 import {ownedLate,rivalsLate} from './stale.ts';
 import {pendingAccessCount} from '../auth/access-requests.ts';
+import {readLatestRound} from '../read/latest-round.ts';
 
 export type FreshnessChip={label:string;stale:boolean};
 /** `pendingAccess`: sign-up requests waiting for an admin; null for everyone else. */
@@ -21,9 +22,8 @@ export async function getFreshness(role:Role,now=Date.now()):Promise<Freshness>{
     return {label:through?`แอดเรา ข้อมูลถึง ${bangkok(`${through}T12:00:00+07:00`,false)}`:`แอดเรา นำเข้า ${bangkok(data.finished_at as string)}`,stale:through?ownedLate(through,now):false};
   };
   const rivals=async():Promise<FreshnessChip|null>=>{
-    const {data,error}=await db.rpc('dataset_list').select('collected_at').order('collected_at',{ascending:false}).limit(1);
-    const latest=(data as {collected_at:string}[]|null)?.[0]?.collected_at;
-    if(error||!latest)return null;
+    const latest=(await readLatestRound(db)).lastCollectedAt;
+    if(!latest)return null;
     return {label:`คู่แข่ง เก็บล่าสุด ${bangkok(latest)}`,stale:rivalsLate(latest,now)};
   };
   const [o,r,p]=await Promise.all([owned().catch(()=>null),rivals().catch(()=>null),pendingAccessCount(role).catch(()=>null)]);

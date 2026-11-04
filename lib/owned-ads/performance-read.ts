@@ -1,10 +1,17 @@
 import "server-only";
 import { dbUser } from "../db/user.ts";
 import { cachedOwnedImage } from "./media-cache.ts";
+import { shortCache } from "../read/short-cache.ts";
 import {
   ownedSortArg, parseOwnedPerformanceQuery, ownedPerformancePeriod, previousOwnedPerformancePeriod, OwnedPerformanceQueryError, OWNED_MEDIA_KEY,
   type OwnedMediaMembers, type OwnedPerformanceData, type OwnedPerformancePeriod,
 } from "./performance.ts";
+
+type OwnedPerformancePage = Pick<OwnedPerformanceData, "filters" | "summary" | "rows" | "total">;
+// A page of one snapshot takes about 2 s the first time and only changes when names are patched in, so it is kept for half
+// an hour, like the command center. Shared across callers is safe: only analyst/admin reach this (every caller checks) and owned data is role-scoped, not per-user.
+// Image links expire, so they are added on every answer, never kept.
+const pages = shortCache<OwnedPerformancePage>(30 * 60_000, 100);
 
 /** JWT/RLS read only. Reused by the API and exact-snapshot comparison; no source/provider calls. */
 export async function getOwnedPerformance(params: URLSearchParams, snapshotId?: string): Promise<OwnedPerformanceData> {
@@ -31,20 +38,24 @@ export async function getOwnedPerformance(params: URLSearchParams, snapshotId?: 
   };
   if (!output.ready) return output;
   const previous = query.compare ? previousOwnedPerformancePeriod(period) : undefined;
-  const read = (dates: OwnedPerformancePeriod, page: number) => db.rpc(query.media ? "owned_media_page" : "owned_performance_page", {
-    p_sync: stored!.id, p_from: dates.from, p_to: dates.to, p_unit: query.unit, p_page_id: query.pageId,
-    p_search: query.q, p_sort: ownedSortArg(query), p_status: query.status, p_page: page,
-  });
+  const read = (dates: OwnedPerformancePeriod, page: number) => {
+    const name = query.media ? "owned_media_page" : "owned_performance_page";
+    const args = {
+      p_sync: stored!.id, p_from: dates.from, p_to: dates.to, p_unit: query.unit, p_page_id: query.pageId,
+      p_search: query.q, p_sort: ownedSortArg(query), p_status: query.status, p_page: page,
+    };
+    return pages(`${name}:${JSON.stringify(args)}`, async () => {
+      const result = await db.rpc(name, args);
+      if (result.error) throw new Error("Owned daily performance unavailable", { cause: result.error });
+      return result.data as OwnedPerformancePage;
+    });
+  };
   const [current, prior] = await Promise.all([read(period, query.page), previous ? read(previous, 0) : Promise.resolve(null)]);
-  if (current.error || prior?.error) throw new Error("Owned daily performance unavailable", { cause: current.error ?? prior?.error });
-  const lastPage = Math.max(0, Math.ceil(current.data.total / output.pageSize) - 1);
-  if (query.page > lastPage) {
-    const corrected = await read(period, lastPage);
-    if (corrected.error) throw new Error("Owned daily performance unavailable", { cause: corrected.error });
-    Object.assign(output, corrected.data, { page: lastPage });
-  } else Object.assign(output, current.data);
+  const lastPage = Math.max(0, Math.ceil(current.total / output.pageSize) - 1);
+  if (query.page > lastPage) Object.assign(output, await read(period, lastPage), { page: lastPage });
+  else Object.assign(output, current);
   output.rows = output.rows.map(row => ({ ...row, creative_url: cachedOwnedImage(row) ?? null }));
-  if (previous && prior) output.previous = { period: previous, summary: prior.data.summary };
+  if (previous && prior) output.previous = { period: previous, summary: prior.summary };
   return output;
 }
 

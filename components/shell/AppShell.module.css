@@ -78,3 +78,8 @@
 .settingsButton { position: relative; }
 .waitingDot { position: absolute; top: 4px; right: 4px; width: 9px; height: 9px; border-radius: 50%; background: var(--danger); box-shadow: 0 0 0 2px var(--chrome-bar); }
 .topActions { display: flex; align-items: center; gap: 8px; min-width: 0; }
+
+.item, .tab { position: relative; }
+.pending { position: absolute; top: 6px; right: 6px; width: 10px; height: 10px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: nav-pending 0.9s linear infinite; }
+@keyframes nav-pending { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .pending { animation: none; border-right-color: currentColor; opacity: 0.6; } }

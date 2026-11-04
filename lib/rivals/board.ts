@@ -3,6 +3,8 @@ import {dbUser} from '../db/user.ts';
 import {satisfies,type Actor} from '../auth/role-model.ts';
 import {supabaseArchiveStore} from '../media/store-supabase.ts';
 import {getUnitSummary} from '../owned-ads/unit-summary.ts';
+import {readLatestRound} from '../read/latest-round.ts';
+import {shortCache} from '../read/short-cache.ts';
 
 export type Relation='direct'|'substitute'|'unrelated';
 export type RivalPage={page_id:string;page_name:string|null;matched_ads:number;new_matched_7d:number;ads_total:number;active_ads:number;longest_days:number|null;last_seen_at:string|null;sample:string|null};
@@ -12,6 +14,10 @@ export type RivalUnit={id:string;name:string;keywords:{id:string;keyword:string}
 export type RivalBoard={units:RivalUnit[];unitsWithoutKeywords:{id:string;name:string}[];tracked:number;canEdit:boolean;lastCollectedAt:string|null;newThisWeek:number};
 
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+// Matching a unit's keywords reads the text of every ad, about 300 ms a unit, and the answer only moves with a new
+// round. Every role reads the same ads, so it is kept per round and keywords for half an hour.
+const keywordPages=shortCache<RivalPage[]>(30*60_000,100);
 
 /** Our units (analysts only: owned data). Names follow the latest import; viewers see units that already have keywords.
  * Read through the unit totals, which are kept per import: grouping a month of daily rows here took most of this board's time. */
@@ -94,7 +100,8 @@ export async function getRivalBoard(actor:Actor,{withUnits=true}:{withUnits?:boo
     db.from('unit_keywords').select('id,unit_id,unit_name,keyword').order('created_at'),
     db.from('rival_page_units').select('page_id,unit_id,unit_name,relation'),
     db.from('rival_tracked_pages').select('page_id'),
-    db.rpc('dataset_list').select('collected_at').order('collected_at',{ascending:false}).limit(1),
+    // The board stays up without the collection time, as it always has.
+    readLatestRound(db).catch(()=>({lastCollectedAt:null,stamp:'unknown'})),
   ]);
   if(keywords.error||relations.error||tracked.error)throw new Error('Rival board unavailable');
   const trackedSet=new Set((tracked.data??[]).map(row=>row.page_id as string));
@@ -108,9 +115,12 @@ export async function getRivalBoard(actor:Actor,{withUnits=true}:{withUnits?:boo
   for(const row of relations.data??[])if(!byUnit.has(row.unit_id))byUnit.set(row.unit_id,{name:row.unit_name as string,keywords:[]});
   const matchedByUnit=new Map(await Promise.all([...byUnit].map(async([id,entry])=>{
     if(!entry.keywords.length)return [id,[] as RivalPage[]] as const;
-    const {data,error}=await db.rpc('rival_keyword_pages',{p_keywords:entry.keywords.map(k=>k.keyword)});
-    if(error)throw new Error('Rival suggestions unavailable');
-    return [id,data as RivalPage[]] as const;
+    const words=entry.keywords.map(k=>k.keyword);
+    return [id,await keywordPages(`${collected.stamp}:${JSON.stringify([...words].sort())}`,async()=>{
+      const {data,error}=await db.rpc('rival_keyword_pages',{p_keywords:words});
+      if(error)throw new Error('Rival suggestions unavailable');
+      return data as RivalPage[];
+    })] as const;
   })));
   // Pages the team decided on stay whether or not a keyword still finds them: read those by id, once for every unit.
   const decided=(relations.data??[]).filter(row=>!(matchedByUnit.get(row.unit_id)??[]).some(page=>page.page_id===row.page_id));
@@ -138,8 +148,7 @@ export async function getRivalBoard(actor:Actor,{withUnits=true}:{withUnits?:boo
   for(const unit of groups)for(const page of unit.pages)page.picture=byPage.get(page.page_id)??null;
   // A page can collide with several units; count each page's new ads once.
   const newByPage=new Map(groups.flatMap(unit=>unit.pages.map(page=>[page.page_id,page.new_matched_7d] as const)));
-  const lastCollectedAt=(collected.data as {collected_at:string}[]|null)?.[0]?.collected_at??null;
-  return {units:groups,unitsWithoutKeywords:units.filter(unit=>!byUnit.has(unit.id)),tracked:trackedSet.size,canEdit,lastCollectedAt,
+  return {units:groups,unitsWithoutKeywords:units.filter(unit=>!byUnit.has(unit.id)),tracked:trackedSet.size,canEdit,lastCollectedAt:collected.lastCollectedAt,
     newThisWeek:[...newByPage.values()].reduce((sum,value)=>sum+value,0)};
 }
 

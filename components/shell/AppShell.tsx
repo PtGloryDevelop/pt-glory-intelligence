@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import Image from "next/image";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { NavItem, NavSection } from "./nav.ts";
 import type { Freshness } from "../../lib/shell/freshness.ts";
 import { activeHref } from "./active.ts";
@@ -14,6 +14,12 @@ import styles from "./AppShell.module.css";
 
 /** Open to every role, so it needs no permission and lives here rather than in the menu model. */
 const SETTINGS = { label: "ตั้งค่า", href: "/settings" } as const;
+
+/** Answers a click at once: a page can take seconds on the server, and until now nothing moved while it did. */
+function NavPending() {
+  const { pending } = useLinkStatus();
+  return pending ? <span className={styles.pending} aria-hidden data-testid="nav-pending" /> : null;
+}
 
 /**
  * Sidebar + main column for every authenticated page (UI v3, macOS).
@@ -35,8 +41,12 @@ export function AppShell(
   const pathname = usePathname();
   const search = useSearchParams();
   // The layout renders once; re-read the status lines on every navigation so a collection shows up without a reload.
+  // The page it rendered for already has them, so that one is not read twice.
   const [liveFreshness, setLiveFreshness] = useState<Freshness | undefined>(undefined);
+  const freshFor = useRef(pathname);
   useEffect(() => {
+    if (freshFor.current === pathname) return;
+    freshFor.current = pathname;
     let live = true;
     fetch("/api/shell/freshness").then(response => response.ok ? response.json() : null)
       .then((data: Freshness | null) => { if (live && data) setLiveFreshness(data); }).catch(() => {});
@@ -76,6 +86,7 @@ export function AppShell(
     >
       <Tile icon={item.icon} tone={item.tone} />
       <span className={styles.label}>{item.label}</span>
+      <NavPending />
     </Link>
   );
 
@@ -121,6 +132,7 @@ export function AppShell(
           >
             <Tile icon="settings" tone="neutral" />
             <span className={styles.label}>{SETTINGS.label}</span>
+            <NavPending />
             {waiting ? <span className={styles.waiting} title="คำขอใช้งานรออนุมัติ" data-testid="shell-access-waiting">{waiting}</span> : null}
             <span className={styles.role} data-testid="shell-role">สิทธิ์ {role}</span>
           </Link>
@@ -155,6 +167,7 @@ export function AppShell(
             <Link key={item.href} href={item.href} className={styles.tab} aria-current={active === item.href ? "page" : undefined}>
               <Icon name={item.icon} size={24} />
               <span>{item.label}</span>
+              <NavPending />
             </Link>
           ))}
         </nav>

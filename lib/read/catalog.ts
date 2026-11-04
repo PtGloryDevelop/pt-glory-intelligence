@@ -1,7 +1,9 @@
 import { dbUser } from '../db/user.ts';
 import { type ExplorerRow } from './queries.ts';
 import { signArchivedPreviews } from '../media/presentation.ts';
-import { catalogObservationMatches, catalogSearchFilter, catalogSource, type CatalogAdRow, type CatalogMembership, type CatalogObservation } from './catalog-model.ts';
+import { readLatestRound } from './latest-round.ts';
+import { shortCache } from './short-cache.ts';
+import { catalogObservationMatches, catalogPageKey, catalogSearchFilter, catalogSource, type CatalogAdRow, type CatalogMembership, type CatalogObservation } from './catalog-model.ts';
 
 export type { CatalogAdRow } from './catalog-model.ts';
 export type CatalogOptions = { search?: string | null; active?: string | null; format?: string | null; adArchiveId?: string | null; firstSeenSince?:string; limit?: number; offset?: number;
@@ -68,6 +70,15 @@ async function pinSources(
  * the entire catalog to either Node or the browser. No new SQL or paid call. */
 export async function getCatalogAds(options: CatalogOptions = {}): Promise<CatalogPage> {
   const db = await dbUser();
+  const latest = await readLatestRound(db);
+  return catalogPages(catalogPageKey(latest.stamp, options), () => readCatalogAds(db, options, latest.lastCollectedAt));
+}
+
+// A page of ads takes about a second and every role reads the same catalog, so it is kept per round for half an
+// hour: active states only change with a new round, and the signed picture links last an hour.
+const catalogPages = shortCache<CatalogPage>(30 * 60_000, 100);
+
+async function readCatalogAds(db: Awaited<ReturnType<typeof dbUser>>, options: CatalogOptions, lastCollectedAt: string | null): Promise<CatalogPage> {
   const limit = Math.min(Math.max(Math.trunc(options.limit ?? 24), 1), 24);
   const offset = Math.min(Math.max(Math.trunc(options.offset ?? 0), 0), 100_000);
   let query = db.rpc('trend_evidence', {
@@ -86,11 +97,7 @@ export async function getCatalogAds(options: CatalogOptions = {}): Promise<Catal
   else if (options.active === 'inactive') query = query.eq('is_active', false);
   else if (options.active === 'unknown') query = query.is('is_active', null);
   if (options.format) query = query.eq('display_format', options.format);
-  const [page, latest] = await Promise.all([
-    query.range(offset, offset + limit - 1),
-    db.rpc('dataset_list').select('collected_at').order('collected_at', { ascending: false }).limit(1),
-  ]);
-  let result = page;
+  let result = await query.range(offset, offset + limit - 1);
   // PostgREST answers an offset beyond the last match with 416 and discards
   // its count. A one-row read recovers the same filtered denominator, so a
   // saved page URL can remain empty without pretending the catalog is empty.
@@ -100,11 +107,9 @@ export async function getCatalogAds(options: CatalogOptions = {}): Promise<Catal
     result = { ...first, data: [] };
   }
   if (result.error) throw result.error;
-  if (latest.error) throw latest.error;
   if (result.count === null) throw new Error('Catalog count unavailable');
-  const latestRows = (latest.data ?? []) as { collected_at: string }[];
   return {
     rows: await pinSources(db, (result.data ?? []) as ExplorerRow[]),
-    total: result.count ?? 0, limit, offset, lastCollectedAt: latestRows[0]?.collected_at ?? null,
+    total: result.count ?? 0, limit, offset, lastCollectedAt,
   };
 }

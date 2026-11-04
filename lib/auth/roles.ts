@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { dbUser } from "../db/user.ts";
 import { AuthorizationError, isRole, satisfies, type Actor, type Role } from "./role-model.ts";
@@ -5,8 +6,11 @@ import { AuthorizationError, isRole, satisfies, type Actor, type Role } from "./
 export { ROLES, AuthorizationError, isRole, satisfies } from "./role-model.ts";
 export type { Actor, Role } from "./role-model.ts";
 
-/** Current actor, or null when nobody is signed in or the account has no role yet. */
-export async function getActor(): Promise<Actor | null> {
+/**
+ * Current actor, or null when nobody is signed in or the account has no role yet.
+ * Asked once per page render: the layout and the page both need it, and each ask is two network reads.
+ */
+export const getActor = cache(async (): Promise<Actor | null> => {
   const supabase = await dbUser();
   const { data } = await supabase.auth.getUser();
   const user = data.user;
@@ -19,7 +23,7 @@ export async function getActor(): Promise<Actor | null> {
     .maybeSingle();
 
   return isRole(row?.role) ? { userId: user.id, role: row.role } : null;
-}
+});
 
 /**
  * Throws before any privileged work happens. Import routes must call this

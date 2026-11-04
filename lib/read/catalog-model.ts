@@ -15,6 +15,14 @@ export type CatalogObservation = Pick<ExplorerRow, 'is_active'|'display_format'|
   id: number; observed_at: string;
 };
 
+/**
+ * What identifies a kept page of the catalog. "New this week" arrives as a time to the millisecond, so only its
+ * hour counts: otherwise no two views would ever share an answer.
+ */
+export function catalogPageKey(stamp: string, options: { firstSeenSince?: string }): string {
+  return `${stamp}:${JSON.stringify({ ...options, firstSeenSince: options.firstSeenSince?.slice(0, 13) })}`;
+}
+
 /** A concurrent import must not pair old copy/media with a newer run link. */
 export function catalogObservationMatches(row: ExplorerRow, observation: CatalogObservation): boolean {
   return ['is_active', 'display_format', 'cta_type', 'cta_text', 'title', 'body_text'].every(key =>
