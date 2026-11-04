@@ -21,6 +21,42 @@ test('comparison links validate identifiers and replace only their own side', ()
   assert.equal(parseComparisonSelection({ account: ['act_123'], owned: '456' }).owned, '');
 });
 
+test('the rival picker narrows the unit to one page and a media type, and clearing asks for all of it again', async () => {
+  const { rivalPickerUrl } = await import('../app/(app)/compare/ads/selection.ts');
+  const read = (changes: Partial<Parameters<typeof rivalPickerUrl>[0]>) => {
+    const url = new URL(rivalPickerUrl({ dataset: '', pageIds: ['11', '22'], pageId: '', sort: 'age', media: '', search: '', offset: 0, ...changes }), 'https://pt-glory.invalid');
+    return { path: url.pathname, ...Object.fromEntries(url.searchParams) };
+  };
+  const all = { path: '/api/catalog/ads', search: '', limit: '24', offset: '0', sort: 'age', pages: '11,22' };
+  assert.deepEqual(read({}), all);
+  assert.deepEqual(read({ pageId: '22', media: 'video', sort: 'new', search: 'ครีม', offset: 24 }),
+    { ...all, pages: '22', media: 'video', sort: 'new', search: 'ครีม', offset: '24' });
+  assert.deepEqual(read({ pageId: '', media: '' }), all);
+  assert.equal(new URL(rivalPickerUrl({ dataset: '', pageIds: Array.from({ length: 70 }, (_, index) => String(index)), pageId: '', sort: 'age', media: '', search: '', offset: 0 }), 'https://pt-glory.invalid').searchParams.get('pages')?.split(',').length, 60, 'the API takes 60 pages');
+  // "ดูทุกหมวด": no unit, so no page list; a page left over cannot narrow it.
+  assert.equal('pages' in read({ pageIds: null, pageId: '22' }), false);
+});
+
+test('a single round asks what the media holds, since its read only knows exact formats', async () => {
+  const { rivalPickerUrl } = await import('../app/(app)/compare/ads/selection.ts');
+  const read = (media: 'image' | 'video' | 'other' | '') => {
+    const url = new URL(rivalPickerUrl({ dataset: 'abc', pageIds: null, pageId: '', sort: 'age', media, search: 'x', offset: 0 }), 'https://pt-glory.invalid');
+    assert.equal(url.pathname, '/api/datasets/abc/ads');
+    assert.equal(url.searchParams.get('search'), 'x');
+    return [url.searchParams.get('hasImage'), url.searchParams.get('hasVideo')];
+  };
+  assert.deepEqual(read(''), [null, null]);
+  assert.deepEqual(read('image'), ['true', null]);
+  assert.deepEqual(read('video'), [null, 'true']);
+  assert.deepEqual(read('other'), ['false', 'false']);
+});
+
+test('the page list reads by name, and a page without a name still has something to pick', async () => {
+  const { rivalPageOptions } = await import('../app/(app)/compare/ads/selection.ts');
+  assert.deepEqual(rivalPageOptions([{ page_id: '3', page_name: 'ครีมข' }, { page_id: '1', page_name: null }, { page_id: '2', page_name: 'ครีมก' }]),
+    [{ id: '1', name: '1' }, { id: '2', name: 'ครีมก' }, { id: '3', name: 'ครีมข' }]);
+});
+
 test('comparison selections are stored per user', () => {
   const user = '22222222-2222-4222-8222-222222222222';
   assert.equal(comparisonSelectionKey(''), null);
@@ -44,6 +80,8 @@ test('codes on the compare screen read in Thai, and unknown codes are kept', asy
   assert.equal(ctaLabel(null, null), 'ไม่มีปุ่ม');
   assert.equal(ownedStatus('ADSET_PAUSED'), 'หยุดชุดแอด');
   assert.equal(formatLabel('MULTI_IMAGES'), 'ภาพหลายรูป');
+  assert.equal(formatLabel('MULTI_VIDEOS'), 'วิดีโอหลายคลิป');
+  assert.equal(formatLabel('MULTI_MEDIAS'), 'ภาพและวิดีโอ');
   assert.equal(formatLabel('SOMETHING_NEW'), 'SOMETHING_NEW');
   assert.equal(platformLabel(['FACEBOOK', 'AUDIENCE_NETWORK']), 'Facebook · Audience Network');
 });

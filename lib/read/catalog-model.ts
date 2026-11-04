@@ -1,4 +1,4 @@
-import { searchValue } from './request.ts';
+import { searchValue, type CatalogMedia } from './request.ts';
 import type { ExplorerRow } from './queries.ts';
 import { isDeepStrictEqual } from 'node:util';
 
@@ -39,6 +39,19 @@ export function catalogSearchFilter(raw: string | null | undefined): string | nu
   const literal = value.replace(/\\/g, '\\\\').replace(/[%_]/g, '\\$&');
   const pattern = JSON.stringify(`%${literal}%`);
   return ['body_text', 'title', 'page_name', 'ad_archive_id'].map(field => `${field}.ilike.${pattern}`).join(',');
+}
+
+// The display_format values collected ads carry. MULTI_MEDIAS holds both pictures and video, so it answers to both.
+// CAROUSEL, DPA and DCO keep their media in mixed cards, so they (with PAGE_LIKE, TEXT and no format) are "other".
+const IMAGE_FORMATS = ['IMAGE', 'MULTI_IMAGES', 'MULTI_MEDIAS'];
+const VIDEO_FORMATS = ['VIDEO', 'MULTI_VIDEOS', 'MULTI_MEDIAS'];
+
+/** One PostgREST `or` group for the picture/video filter; every ad falls under at least one word. */
+export function catalogMediaFilter(media: CatalogMedia | null | undefined): string | null {
+  if (media === 'image') return `display_format.in.(${IMAGE_FORMATS})`;
+  if (media === 'video') return `display_format.in.(${VIDEO_FORMATS})`;
+  if (media === 'other') return `display_format.is.null,display_format.not.in.(${[...new Set([...IMAGE_FORMATS, ...VIDEO_FORMATS])]})`;
+  return null;
 }
 
 /** Never pair latest copy with an older dataset merely because it contains the

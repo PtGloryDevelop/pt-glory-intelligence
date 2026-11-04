@@ -70,6 +70,15 @@ export function pageList(raw: string | null): { ok: true; value: string[] | null
   return { ok: true, value: ids };
 }
 
+const MEDIA_VALUES = ["image", "video", "other"] as const;
+export type CatalogMedia = (typeof MEDIA_VALUES)[number];
+
+/** `?media=` accepts three words. A filter the server cannot read must not widen the list. */
+export function mediaFilter(raw: string | null): { ok: true; value: CatalogMedia | null } | { ok: false } {
+  if (raw === null) return { ok: true, value: null };
+  return (MEDIA_VALUES as readonly string[]).includes(raw) ? { ok: true, value: raw as CatalogMedia } : { ok: false };
+}
+
 const ACTIVE_VALUES = ["active", "inactive", "unknown"] as const;
 
 /** `?active=` accepts three words. Anything else is a bad request, not "any". */

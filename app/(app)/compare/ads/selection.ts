@@ -9,6 +9,33 @@ export type Rival = Omit<ExplorerRow, 'total_count'> & {
   collected_at?: string;
 };
 
+export type RivalMedia = '' | 'image' | 'video' | 'other';
+/** Sorted by name: someone opening this list is looking for a page they know. */
+export function rivalPageOptions(pages: { page_id: string; page_name: string | null }[]): { id: string; name: string }[] {
+  return pages.map(page => ({ id: page.page_id, name: page.page_name?.trim() || page.page_id }))
+    .sort((a, b) => a.name.localeCompare(b.name, 'th', { numeric: true }));
+}
+
+/**
+ * The read behind the rival picker. The catalog groups formats on the server; a single round's read
+ * only answers exact formats, so there the same words ask what the ad's media actually holds.
+ */
+export function rivalPickerUrl({ dataset, pageIds, pageId, sort, media, search, offset }: {
+  dataset: string; pageIds: string[] | null; pageId: string; sort: 'age' | 'new'; media: RivalMedia; search: string; offset: number;
+}): string {
+  const params = new URLSearchParams({ search, limit: '24', offset: String(offset) });
+  if (dataset) {
+    if (media === 'image') params.set('hasImage', 'true');
+    if (media === 'video') params.set('hasVideo', 'true');
+    if (media === 'other') { params.set('hasImage', 'false'); params.set('hasVideo', 'false'); }
+    return `/api/datasets/${dataset}/ads?${params}`;
+  }
+  params.set('sort', sort);
+  if (pageIds?.length) params.set('pages', pageId || pageIds.slice(0, 60).join(','));
+  if (media) params.set('media', media);
+  return `/api/catalog/ads?${params}`;
+}
+
 /** Return only to evidence screens; a pasted link cannot become an external redirect. */
 export function comparisonReturnHref(value: unknown): string {
   if (typeof value !== 'string' || value.length > 2048 || !value.startsWith('/') || value.startsWith('//')) return '/';

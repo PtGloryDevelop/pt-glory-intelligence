@@ -7,7 +7,7 @@ import type { OwnedPerformanceData, OwnedPerformanceRow } from '@/lib/owned-ads/
 import type { CommandAd } from '@/lib/owned-ads/command-center';
 import { summarizeOwnedReport } from '@/lib/owned-ads/model';
 import { resolveMedia } from '@/lib/media/resolve';
-import { ownedName, rivalCopy, type Rival } from './selection';
+import { ownedName, rivalCopy, rivalPickerUrl, type Rival, type RivalMedia } from './selection';
 import { formatLabel } from '@/lib/ad-labels';
 import styles from './comparison.module.css';
 
@@ -156,7 +156,7 @@ type RivalPickerProps = {
   onPick: (ad: Rival) => void;
   datasets: Dataset[];
   /** Competitor pages of our ad's unit, when we know them: shown first. */
-  match: { unitName: string; pageIds: string[] } | null;
+  match: { unitName: string; pageIds: string[]; pages: { id: string; name: string }[] } | null;
   selected: string | null;
 };
 
@@ -164,11 +164,15 @@ export function RivalPicker({ open, onClose, ...props }: RivalPickerProps & { op
   return <Panel open={open} onClose={onClose} title="เลือกแอดคู่แข่ง" note="จำนวนวันที่ยิงบอกได้ว่าแอดไหนน่าจะได้ผล · คู่แข่งไม่มีข้อมูลงบหรือยอดขาย"><RivalPickerBody {...props} /></Panel>;
 }
 
+const MEDIA_CHOICES: [RivalMedia, string][] = [['', 'ทุกแบบ'], ['image', 'รูปภาพ'], ['video', 'วิดีโอ'], ['other', 'สไลด์และแบบอื่น']];
+
 function RivalPickerBody({ onPick, datasets, match, selected }: RivalPickerProps) {
 
   const [onlyMatch, setOnlyMatch] = useState(true);
   const [sort, setSort] = useState<'age' | 'new'>('age');
   const [dataset, setDataset] = useState('');
+  const [media, setMedia] = useState<RivalMedia>('');
+  const [pageId, setPageId] = useState('');
   const [search, setSearch] = useState('');
   const [query, setQuery] = useState('');
   const [offset, setOffset] = useState(0);
@@ -176,9 +180,9 @@ function RivalPickerBody({ onPick, datasets, match, selected }: RivalPickerProps
   const [problem, setProblem] = useState('');
 
   const useMatch = Boolean(match?.pageIds.length && onlyMatch && !dataset);
-  const params = new URLSearchParams({ search: query, limit: '24', offset: String(offset) });
-  if (!dataset) { params.set('sort', sort); if (useMatch) params.set('pages', match!.pageIds.slice(0, 60).join(',')); }
-  const url = (dataset ? `/api/datasets/${dataset}/ads?` : '/api/catalog/ads?') + params;
+  const url = rivalPickerUrl({ dataset, pageIds: useMatch ? match!.pageIds : null, pageId, sort, media, search: query, offset });
+  const filtered = Boolean(media || (useMatch && pageId));
+  function clearFilters() { setMedia(''); setPageId(''); setOffset(0); }
 
   useEffect(() => {
 
@@ -202,12 +206,16 @@ function RivalPickerBody({ onPick, datasets, match, selected }: RivalPickerProps
     <div className={styles.pickerTools}>
       {match?.pageIds.length && !dataset ? <p className={onlyMatch ? styles.matchOn : styles.matchOff}>
         {onlyMatch ? `แสดงคู่แข่งของ ${match.unitName} ก่อน (${number(match.pageIds.length)} เพจ)` : 'กำลังแสดงคู่แข่งทุกหมวด'}
-        <button type="button" onClick={() => { setOnlyMatch(value => !value); setOffset(0); }}>{onlyMatch ? 'ดูทุกหมวด' : `เฉพาะคู่แข่งของ ${match.unitName}`}</button>
+        <button type="button" onClick={() => { setOnlyMatch(value => !value); setPageId(''); setOffset(0); }}>{onlyMatch ? 'ดูทุกหมวด' : `เฉพาะคู่แข่งของ ${match.unitName}`}</button>
       </p> : null}
       {!dataset ? <div className={styles.chips} role="group" aria-label="เรียงตาม">
         <button type="button" aria-pressed={sort === 'age'} onClick={() => { setSort('age'); setOffset(0); }}>ยิงนานสุด</button>
         <button type="button" aria-pressed={sort === 'new'} onClick={() => { setSort('new'); setOffset(0); }}>เจอใหม่ล่าสุด</button>
       </div> : null}
+      <div className={styles.chips} role="group" aria-label="ประเภทสื่อ">
+        {MEDIA_CHOICES.map(([value, label]) => <button type="button" key={value || 'all'} aria-pressed={media === value} onClick={() => { setMedia(value); setOffset(0); }}>{label}</button>)}
+      </div>
+      {useMatch ? <label>เพจคู่แข่ง<select value={pageId} data-testid="rival-page-filter" onChange={event => { setPageId(event.target.value); setOffset(0); }}><option value="">ทุกเพจของ {match!.unitName} ({number(match!.pages.length)} เพจ)</option>{match!.pages.map(page => <option key={page.id} value={page.id}>{page.name}</option>)}</select></label> : null}
       <form className={styles.search} onSubmit={event => { event.preventDefault(); setQuery(search.trim()); setOffset(0); }}>
         <label htmlFor="picker-rival-search">ค้นหาแอดคู่แข่ง<input id="picker-rival-search" type="search" value={search} maxLength={160} onChange={event => setSearch(event.target.value)} placeholder="ชื่อสินค้า ชื่อเพจ หรือข้อความในแอด" /></label>
         <button type="submit">ค้นหา</button>
@@ -217,7 +225,7 @@ function RivalPickerBody({ onPick, datasets, match, selected }: RivalPickerProps
       </details>
     </div>
     {problem ? <p role="alert">{problem}</p> : loading ? <p role="status" className={styles.loading}>กำลังเปิดแอดคู่แข่ง…</p> : <>
-      <p className={styles.resultCount}>พบ {number(result?.total ?? 0)} แอด</p>
+      <p className={styles.resultCount}>พบ {number(result?.total ?? 0)} แอด{filtered ? <button type="button" className={styles.clearFilters} onClick={clearFilters} data-testid="rival-clear-filters">ล้างตัวกรอง</button> : null}</p>
       {/* Rows like our side: the page in full, days running first, and one plain "เลือก". */}
       <div className={styles.pickList}>{rows.map(ad => {
         const copy = rivalCopy(ad.title || ad.body_text);
@@ -232,7 +240,7 @@ function RivalPickerBody({ onPick, datasets, match, selected }: RivalPickerProps
           <span className={styles.pickAction}>{selected === ad.ad_archive_id ? 'เลือกอยู่' : 'เลือก'}</span>
         </button>;
       })}</div>
-      {!rows.length ? <p className={styles.empty}>{useMatch ? `ยังไม่พบแอดจากคู่แข่งของ ${match!.unitName} · กด “ดูทุกหมวด”` : 'ไม่พบแอดคู่แข่ง ลองค้นด้วยคำอื่น'}</p> : null}
+      {!rows.length ? <p className={styles.empty}>{filtered ? 'ไม่พบแอดตามตัวกรองนี้ · กด “ล้างตัวกรอง” เพื่อดูทั้งหมด' : useMatch ? `ยังไม่พบแอดจากคู่แข่งของ ${match!.unitName} · กด “ดูทุกหมวด”` : 'ไม่พบแอดคู่แข่ง ลองค้นด้วยคำอื่น'}</p> : null}
       {(result?.total ?? 0) > 24 ? <div className={styles.pager}><button type="button" disabled={offset === 0} onClick={() => setOffset(value => Math.max(0, value - 24))}>ก่อนหน้า</button><span>หน้า {number(offset / 24 + 1)} / {number(Math.ceil((result?.total ?? 0) / 24))}</span><button type="button" disabled={offset + 24 >= (result?.total ?? 0)} onClick={() => setOffset(value => value + 24)}>ถัดไป</button></div> : null}
     </>}
   </>;
