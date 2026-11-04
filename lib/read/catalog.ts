@@ -3,11 +3,13 @@ import { type ExplorerRow } from './queries.ts';
 import { signArchivedPreviews } from '../media/presentation.ts';
 import { readLatestRound } from './latest-round.ts';
 import { shortCache } from './short-cache.ts';
-import { catalogObservationMatches, catalogPageKey, catalogSearchFilter, catalogSource, type CatalogAdRow, type CatalogMembership, type CatalogObservation } from './catalog-model.ts';
+import type { CatalogMedia } from './request.ts';
+import { catalogMediaFilter, catalogObservationMatches, catalogPageKey, catalogSearchFilter, catalogSource, type CatalogAdRow, type CatalogMembership, type CatalogObservation } from './catalog-model.ts';
 
 export type { CatalogAdRow } from './catalog-model.ts';
 export type CatalogOptions = { search?: string | null; active?: string | null; format?: string | null; adArchiveId?: string | null; firstSeenSince?:string; limit?: number; offset?: number;
   /** Only these competitor pages (one unit's board). */ pageIds?: string[] | null;
+  /** Pictures, video or the other formats; `format` is one exact value. */ media?: CatalogMedia | null;
   /** new = first seen, newest first; age = running longest first; default = last seen. */ sort?: 'new' | 'age' | null };
 export type CatalogPage = { rows: CatalogAdRow[]; total: number; limit: number; offset: number; lastCollectedAt: string | null };
 type ScopeRow = { ad_ref: string; observation_id: number; collection_run_id: string; collected_at: string };
@@ -97,6 +99,8 @@ async function readCatalogAds(db: Awaited<ReturnType<typeof dbUser>>, options: C
   else if (options.active === 'inactive') query = query.eq('is_active', false);
   else if (options.active === 'unknown') query = query.is('is_active', null);
   if (options.format) query = query.eq('display_format', options.format);
+  const media = catalogMediaFilter(options.media);
+  if (media) query = query.or(media);
   let result = await query.range(offset, offset + limit - 1);
   // PostgREST answers an offset beyond the last match with 416 and discards
   // its count. A one-row read recovers the same filtered denominator, so a

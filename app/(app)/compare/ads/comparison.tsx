@@ -13,7 +13,7 @@ import type { CommandAd, CommandCenterData } from '@/lib/owned-ads/command-cente
 import type { RivalBoard } from '@/lib/rivals/board';
 import type { CatalogPage } from '@/lib/read/catalog';
 import { summarizeOwnedReport } from '@/lib/owned-ads/model';
-import { comparisonSelectionKey, mergeComparisonSelection, ownedName, parseComparisonSelection, rivalCopy, rivalFromDetail, type ComparisonSelection, type Rival } from './selection';
+import { comparisonSelectionKey, mergeComparisonSelection, ownedName, parseComparisonSelection, rivalCopy, rivalFromDetail, rivalPageOptions, type ComparisonSelection, type Rival } from './selection';
 import { AiCompare } from './ai-compare';
 import { OwnedPicker, RivalPicker, creativeKey, ownKey, rivalImage, type OwnedChoice } from './pickers';
 import { ctaLabel, formatLabel, ownedStatus, platformLabel } from '@/lib/ad-labels';
@@ -189,7 +189,7 @@ export function AdComparison({ datasets, seed, initialOwned, initialPeriod, init
   // Competitor pages of our unit (from the team's unit keywords), and the unit of a competitor page.
   const unitPages = useMemo(() => {
     const unit = board?.units.find(item => unitId && item.id === unitId) ?? null;
-    return unit ? { unitName: unit.name, pageIds: unit.pages.map(page => page.page_id) } : null;
+    return unit ? { unitName: unit.name, pageIds: unit.pages.map(page => page.page_id), pages: rivalPageOptions(unit.pages) } : null;
   }, [board, unitId]);
   const rivalUnit = useMemo(() => b ? board?.units.find(unit => unit.pages.some(page => page.page_id === b.page_id)) ?? null : null, [board, b]);
 
