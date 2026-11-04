@@ -1,7 +1,15 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { catalogObservationMatches, catalogSearchFilter, catalogSource, type CatalogMembership, type CatalogObservation } from '../lib/read/catalog-model.ts';
+import { catalogObservationMatches, catalogPageKey, catalogSearchFilter, catalogSource, type CatalogMembership, type CatalogObservation } from '../lib/read/catalog-model.ts';
 import type { ExplorerRow } from '../lib/read/queries.ts';
+
+test('views of new-this-week within the hour share a kept page; other hours, rounds and filters do not', () => {
+  const at = (firstSeenSince: string, stamp = '16:t', limit = 6) => catalogPageKey(stamp, { firstSeenSince, limit } as { firstSeenSince: string });
+  assert.equal(at('2026-10-28T10:15:01.123Z'), at('2026-10-28T10:59:44.900Z'));
+  assert.notEqual(at('2026-10-28T10:59:44.900Z'), at('2026-10-28T11:00:00.000Z'));
+  assert.notEqual(at('2026-10-28T10:15:01.123Z'), at('2026-10-28T10:15:01.123Z', '17:t'));
+  assert.notEqual(at('2026-10-28T10:15:01.123Z'), at('2026-10-28T10:15:01.123Z', '16:t', 4));
+});
 
 test('catalog search keeps PostgREST punctuation and SQL wildcards literal', () => {
   assert.equal(catalogSearchFilter('  '), null);
