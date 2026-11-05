@@ -4,10 +4,10 @@ import { catalogMediaFilter, catalogObservationMatches, catalogPageKey, catalogS
 import type { ExplorerRow } from '../lib/read/queries.ts';
 import { mediaFilter } from '../lib/read/request.ts';
 
-test('views of new-this-week within the hour share a kept page; other hours, rounds and filters do not', () => {
+test('views of new-this-week within the day share a kept page; other days, rounds and filters do not', () => {
   const at = (firstSeenSince: string, stamp = '16:t', limit = 6) => catalogPageKey(stamp, { firstSeenSince, limit } as { firstSeenSince: string });
   assert.equal(at('2026-10-28T10:15:01.123Z'), at('2026-10-28T10:59:44.900Z'));
-  assert.notEqual(at('2026-10-28T10:59:44.900Z'), at('2026-10-28T11:00:00.000Z'));
+  assert.notEqual(at('2026-10-28T23:59:59.900Z'), at('2026-10-29T00:00:00.000Z'));
   assert.notEqual(at('2026-10-28T10:15:01.123Z'), at('2026-10-28T10:15:01.123Z', '17:t'));
   assert.notEqual(at('2026-10-28T10:15:01.123Z'), at('2026-10-28T10:15:01.123Z', '16:t', 4));
 });

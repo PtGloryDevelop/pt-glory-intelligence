@@ -1,5 +1,6 @@
 import "server-only";
 import { dbUser } from "../db/user.ts";
+import { sharedCache } from "../read/shared-cache.ts";
 import { combineUnits, ownedPerformancePeriod, parseOwnedPerformanceQuery, previousCoverage, previousOwnedPerformancePeriod, type AllUnitsTotals, type OwnedPerformancePeriod, type OwnedPerformanceSummary, type PreviousCoverage } from "./performance.ts";
 
 export type UnitTotals = Pick<OwnedPerformanceSummary, "ad_count" | "spend" | "conversations" | "purchase_value" | "roas" | "cost_per_conversation">;
@@ -18,8 +19,7 @@ const totals = (row: RpcRow | undefined): UnitTotals | null => row ? {
 
 // Cached per snapshot+period: the daily data changes once per import. Shared across callers is safe:
 // only analyst/admin reach this (ownedReportRoute) and owned data is role-scoped, not per-user.
-const cache = new Map<string, { until: number; value: UnitSummary }>();
-const TTL = 30 * 60_000;
+const summaries = sharedCache<UnitSummary>("owned-unit-summary", 30 * 60);
 
 /** Same window as the ads list (period/from/to): one snapshot lookup + one grouped read per period (migration 0054). */
 export async function getUnitSummary(input: URLSearchParams, currency = "THB"): Promise<UnitSummary> {
@@ -34,9 +34,7 @@ export async function getUnitSummary(input: URLSearchParams, currency = "THB"): 
   const empty: UnitSummary = { period, previous, compare, currency, all: { current: null, previous: null }, units: [], unassigned: { spend: null, share: null, totals: null } };
   if (!latest.data?.daily_ready) return empty;
   const key = `${latest.data.id}:${period.from}:${period.to}:${currency}`;
-  const hit = cache.get(key);
-  if (hit && hit.until > Date.now()) return hit.value;
-
+  return summaries(key, async () => {
   const read = (dates: OwnedPerformancePeriod) => db.rpc("owned_performance_units", { p_sync: latest.data!.id, p_from: dates.from, p_to: dates.to });
   // A previous window only partly imported is not read: its smaller total would show as growth.
   const [now, before] = await Promise.all([read(period), compare.state === "full" ? read(previous) : null]);
@@ -54,7 +52,6 @@ export async function getUnitSummary(input: URLSearchParams, currency = "THB"): 
     ...empty, units, all,
     unassigned: { spend: none?.spend ?? 0, share: none?.spend != null && sum ? none.spend / sum * 100 : null, totals: none },
   };
-  if (cache.size > 50) cache.clear();
-  cache.set(key, { until: Date.now() + TTL, value });
   return value;
+  });
 }

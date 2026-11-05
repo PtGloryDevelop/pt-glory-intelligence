@@ -1,17 +1,16 @@
 import "server-only";
 import { dbUser } from "../db/user.ts";
 import { cachedOwnedImage } from "./media-cache.ts";
-import { shortCache } from "../read/short-cache.ts";
+import { sharedCache } from "../read/shared-cache.ts";
 import {
   ownedSortArg, parseOwnedPerformanceQuery, ownedPerformancePeriod, previousOwnedPerformancePeriod, OwnedPerformanceQueryError, OWNED_MEDIA_KEY,
   type OwnedMediaMembers, type OwnedPerformanceData, type OwnedPerformancePeriod,
 } from "./performance.ts";
 
 type OwnedPerformancePage = Pick<OwnedPerformanceData, "filters" | "summary" | "rows" | "total">;
-// A page of one snapshot takes about 2 s the first time and only changes when names are patched in, so it is kept for half
-// an hour, like the command center. Shared across callers is safe: only analyst/admin reach this (every caller checks) and owned data is role-scoped, not per-user.
+// A page of one snapshot takes about 2 s the first time and only changes when names are patched in, so it is kept. Shared across callers is safe: only analyst/admin reach this (every caller checks) and owned data is role-scoped, not per-user.
 // Image links expire, so they are added on every answer, never kept.
-const pages = shortCache<OwnedPerformancePage>(30 * 60_000, 100);
+const pages = sharedCache<OwnedPerformancePage>("owned-performance-pages", 30 * 60);
 
 /** JWT/RLS read only. Reused by the API and exact-snapshot comparison; no source/provider calls. */
 export async function getOwnedPerformance(params: URLSearchParams, snapshotId?: string): Promise<OwnedPerformanceData> {
