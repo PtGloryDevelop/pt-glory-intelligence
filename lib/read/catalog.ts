@@ -3,6 +3,7 @@ import { type ExplorerRow } from './queries.ts';
 import { signArchivedPreviews } from '../media/presentation.ts';
 import { readLatestRound } from './latest-round.ts';
 import { shortCache } from './short-cache.ts';
+import { sharedCache } from './shared-cache.ts';
 import type { CatalogMedia } from './request.ts';
 import { catalogMediaFilter, catalogObservationMatches, catalogPageKey, catalogSearchFilter, catalogSource, type CatalogAdRow, type CatalogMembership, type CatalogObservation } from './catalog-model.ts';
 
@@ -37,11 +38,10 @@ async function pinSources(
   const membershipQuery = db.from('dataset_ads')
     .select('ad_ref,dataset_id,dataset:datasets!inner(id,name,collection_run_id,run:collection_runs!inner(collected_at))')
     .in('ad_ref', refs).in('dataset.collection_run_id', runs);
-  const [memberships, times, signed] = await Promise.all([
+  const [memberships, times] = await Promise.all([
     membershipQuery,
     db.from('ad_observations').select('id,observed_at,is_active,display_format,publisher_platform,cta_type,cta_text,title,body_text,media')
       .in('id', observations.map(row => row.observation_id)),
-    signArchivedPreviews(rows),
   ]);
   if (memberships.error) throw memberships.error;
   if (times.error) throw times.error;
@@ -61,7 +61,7 @@ async function pinSources(
       ...row, dataset_id: source.dataset_id, dataset_name: source.dataset.name,
       collection_run_id: observation.collection_run_id, collected_at: source.dataset.run.collected_at,
       observed_at: recorded.observed_at,
-      archive_url: row.archive_path ? signed.get(row.archive_path) ?? null : null,
+      archive_url: null,
     };
   });
 }
@@ -73,12 +73,15 @@ async function pinSources(
 export async function getCatalogAds(options: CatalogOptions = {}): Promise<CatalogPage> {
   const db = await dbUser();
   const latest = await readLatestRound(db);
-  return catalogPages(catalogPageKey(latest.stamp, options), () => readCatalogAds(db, options, latest.lastCollectedAt));
+  const page = await catalogPages(catalogPageKey(latest.stamp, options), () => readCatalogAds(db, options, latest.lastCollectedAt));
+  const links = await pictureLinks(JSON.stringify(page.rows.map(row => row.archive_path)), () => signArchivedPreviews(page.rows));
+  return { ...page, rows: page.rows.map(row => ({ ...row, archive_url: row.archive_path ? links.get(row.archive_path) ?? null : null })) };
 }
 
-// A page of ads takes about a second and every role reads the same catalog, so it is kept per round for half an
-// hour: active states only change with a new round, and the signed picture links last an hour.
-const catalogPages = shortCache<CatalogPage>(30 * 60_000, 100);
+// A page of ads takes about a second and every role reads the same catalog, so it is kept per round: active states
+// only change with a new round. Picture links expire after an hour, so they are added on every answer, never shared.
+const catalogPages = sharedCache<CatalogPage>('catalog-pages', 30 * 60);
+const pictureLinks = shortCache<Map<string, string>>(30 * 60_000, 100);
 
 async function readCatalogAds(db: Awaited<ReturnType<typeof dbUser>>, options: CatalogOptions, lastCollectedAt: string | null): Promise<CatalogPage> {
   const limit = Math.min(Math.max(Math.trunc(options.limit ?? 24), 1), 24);

@@ -1,6 +1,7 @@
 import "server-only";
 import { dbUser } from "../db/user.ts";
 import { cachedOwnedImage } from "./media-cache.ts";
+import { sharedCache } from "../read/shared-cache.ts";
 import { ownedPerformancePeriod, parseOwnedPerformanceQuery, type OwnedPerformancePeriod } from "./performance.ts";
 import type { CommandAd, CommandCenterData } from "./command-center.ts";
 
@@ -10,8 +11,7 @@ export type CommandCenterResult = CommandCenterData & { period: OwnedPerformance
 // The numbers change only when a new daily import lands, so they are kept per snapshot+filters. Shared across callers
 // is safe: only analyst/admin reach this (ownedReportRoute) and owned data is role-scoped, not per-user.
 // Image links expire, so they are added on every answer, never kept.
-const cache = new Map<string, { until: number; value: CommandCenterData }>();
-const TTL = 30 * 60_000;
+const centers = sharedCache<CommandCenterData>("owned-command-center", 30 * 60);
 
 /** JWT/RLS read on the latest completed daily snapshot; same validation as the ads list. Null when daily data is not ready. */
 export async function getCommandCenter(input: URLSearchParams): Promise<CommandCenterResult | null> {
@@ -25,15 +25,11 @@ export async function getCommandCenter(input: URLSearchParams): Promise<CommandC
   const coverage = latest.data.daily_from && latest.data.daily_to ? { from: latest.data.daily_from, to: latest.data.daily_to } : null;
   const period = ownedPerformancePeriod(query, coverage);
   const key = `${latest.data.id}:${period.from}:${period.to}:${query.unit}:${query.pageId}`;
-  const hit = cache.get(key);
-  let data = hit && hit.until > Date.now() ? hit.value : null;
-  if (!data) {
-    const result = await db.rpc("owned_command_center", { p_sync: latest.data.id, p_from: period.from, p_to: period.to, p_unit: query.unit, p_page_id: query.pageId });
+  const data = await centers(key, async () => {
+    const result = await db.rpc("owned_command_center", { p_sync: latest.data!.id, p_from: period.from, p_to: period.to, p_unit: query.unit, p_page_id: query.pageId });
     if (result.error) throw new Error("Command center unavailable");
-    data = result.data as CommandCenterData;
-    if (cache.size > 100) cache.clear();
-    cache.set(key, { until: Date.now() + TTL, value: data });
-  }
+    return result.data as CommandCenterData;
+  });
   const output = { ...data, period };
   for (const list of LISTS) output[list] = data[list].map((ad: CommandAd) => ({ ...ad, creative_url: cachedOwnedImage(ad) ?? null }));
   return output;

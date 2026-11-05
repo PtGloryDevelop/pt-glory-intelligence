@@ -4,7 +4,7 @@ import {satisfies,type Actor} from '../auth/role-model.ts';
 import {supabaseArchiveStore} from '../media/store-supabase.ts';
 import {getUnitSummary} from '../owned-ads/unit-summary.ts';
 import {readLatestRound} from '../read/latest-round.ts';
-import {shortCache} from '../read/short-cache.ts';
+import {sharedCache} from '../read/shared-cache.ts';
 
 export type Relation='direct'|'substitute'|'unrelated';
 export type RivalPage={page_id:string;page_name:string|null;matched_ads:number;new_matched_7d:number;ads_total:number;active_ads:number;longest_days:number|null;last_seen_at:string|null;sample:string|null};
@@ -16,8 +16,8 @@ export type RivalBoard={units:RivalUnit[];unitsWithoutKeywords:{id:string;name:s
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 // Matching a unit's keywords reads the text of every ad, about 300 ms a unit, and the answer only moves with a new
-// round. Every role reads the same ads, so it is kept per round and keywords for half an hour.
-const keywordPages=shortCache<RivalPage[]>(30*60_000,100);
+// round. Every role reads the same ads, so it is kept per round and keywords.
+const keywordPages=sharedCache<RivalPage[]>('rival-keyword-pages',30*60);
 
 /** Our units (analysts only: owned data). Names follow the latest import; viewers see units that already have keywords.
  * Read through the unit totals, which are kept per import: grouping a month of daily rows here took most of this board's time. */
