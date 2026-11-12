@@ -6,8 +6,9 @@ import {createClient} from '@supabase/supabase-js';
 import {ownedPageName} from '../lib/owned-ads/page-names.ts';
 import {sourceEnv} from './owned-source.mjs';
 
-// Same local source bridge as the owned-media worker. No source or Meta writes.
-export async function readOwnedPageNames() {
+// Same local source bridge as the owned-media worker. No source, Meta or Pancake writes.
+// `decrypt` replaces the source's own token decryption (tests); by default it is loaded from the source checkout.
+export async function readOwnedPageNames({decrypt}={}) {
  const sourcePath=process.env.OWNED_MANAGEMENT_PROJECT_PATH;
  const email=process.env.OWNED_MANAGEMENT_AUTHORIZED_EMAIL;
  if(!sourcePath||!email)throw Error('Source configuration unavailable');
@@ -27,6 +28,16 @@ export async function readOwnedPageNames() {
   ids.add(page.page_id);const name=ownedPageName(page.page_id,page.page_name);if(name)names.set(page.page_id,name);
  }
  if(ids.size>500)throw Error('Page-name read exceeds local bridge limit');
+ // The source's stored tokens (Meta, Pancake) share its encryption key; the decryption is loaded once, when needed.
+ let decryptor=decrypt;
+ const decryptWith=async ciphertext=>{
+  if(!decryptor){
+   const keyEnv=process.env.OWNED_MANAGEMENT_TOKEN_ENV_PATH?parseEnv(await readFile(process.env.OWNED_MANAGEMENT_TOKEN_ENV_PATH,'utf8')):env;
+   process.env.TOKEN_ENCRYPTION_KEY=keyEnv.TOKEN_ENCRYPTION_KEY;
+   decryptor=(await import(pathToFileURL(resolve(sourcePath,'src/lib/secret-crypto.ts')).href)).decryptToken;
+  }
+  return decryptor(ciphertext);
+ };
  let token;
  const tokenFile=process.env.OWNED_MANAGEMENT_ACCESS_TOKEN_FILE??resolve(sourcePath,'Token Facebook.txt');
  try{
@@ -36,9 +47,7 @@ export async function readOwnedPageNames() {
  if(!token){
   const connection=await db.from('meta_connections').select('token_ciphertext').eq('id',config.data.primary_connection_id).eq('status','active').single();
   if(connection.error)throw Error('Source connection unavailable');
-  const keyEnv=process.env.OWNED_MANAGEMENT_TOKEN_ENV_PATH?parseEnv(await readFile(process.env.OWNED_MANAGEMENT_TOKEN_ENV_PATH,'utf8')):env;
-  process.env.TOKEN_ENCRYPTION_KEY=keyEnv.TOKEN_ENCRYPTION_KEY;
-  const {decryptToken}=await import(pathToFileURL(resolve(sourcePath,'src/lib/secret-crypto.ts')).href);token=decryptToken(connection.data.token_ciphertext);
+  token=await decryptWith(connection.data.token_ciphertext);
  }
  const failures={};const missing=[...ids].filter(id=>!names.has(id));
  const read=async id=>{
@@ -51,5 +60,25 @@ export async function readOwnedPageNames() {
   }catch{failures.network=(failures.network??0)+1;}
  };
  for(let offset=0;offset<missing.length;offset+=4)await Promise.all(missing.slice(offset,offset+4).map(read));
- return {names,report:{pages:ids.size,named:names.size,unresolved:ids.size-names.size,failures}};
+ // Pancake carries our Pages' chats and orders, so it knows them by name, including Pages the System User
+ // was never given (Graph code 10). It fills only what the directory and Meta left unnamed, and only Pages of
+ // the selected accounts: Meta is the Page's own record when it answers. Optional, like every name here.
+ let pancake={named:0};
+ if(names.size<ids.size){
+  try{
+   const connection=await db.from('report_pancake_connection').select('token_ciphertext').eq('singleton',true).maybeSingle();
+   if(connection.error||!connection.data?.token_ciphertext)throw Error('Pancake connection unavailable');
+   const url=new URL('https://pages.fm/api/v1/pages');url.searchParams.set('fields','activated{id,name}');
+   url.searchParams.set('access_token',await decryptWith(String(connection.data.token_ciphertext)));
+   const response=await fetch(url,{headers:{Accept:'application/json'},redirect:'error',signal:AbortSignal.timeout(15000)});
+   const body=await response.json();
+   const pages=Array.isArray(body.activated)?body.activated:Array.isArray(body.categorized?.activated)?body.categorized.activated:Array.isArray(body.pages)?body.pages:null;
+   if(!response.ok||!pages||pages.length>3000)throw Error('Pancake pages unavailable');
+   for(const page of pages){
+    const id=String(page?.id??'');const name=ownedPageName(id,page?.name);
+    if(ids.has(id)&&!names.has(id)&&name){names.set(id,name);pancake.named++;}
+   }
+  }catch{pancake={error:'unavailable'};}
+ }
+ return {names,report:{pages:ids.size,named:names.size,unresolved:ids.size-names.size,failures,pancake}};
 }
