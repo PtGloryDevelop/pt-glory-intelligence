@@ -11,7 +11,7 @@ An analyst submits a valid search, immediately receives their own durable queued
 - Existing `collection_requests`: owner, request key, params, category, created_at/id ordering, status, start marker, lease, reservation and cost evidence.
 - Existing `app_settings`: enabled, maximum concurrent collections, monthly budget, per-run ceiling, billing window, provider build and timeout.
 - Account GET `/v2/users/me/limits` verified on 2026-11-12: maximum five Actor jobs, 16 GiB memory. The application's provider start uses 512 MiB. Runtime slots are bounded by both the configured positive limit and five; production configuration becomes five.
-- No changes to ad fields, provenance, normalization, datasets, AI, observations or metrics.
+- No changes to ad fields, provenance, normalization, datasets, AI, observations or metrics. Shared Thai date presentation explicitly uses `Asia/Bangkok` so server UTC and browser locale cannot produce different collection timestamps during hydration.
 
 ## Rules and architecture
 
@@ -50,5 +50,6 @@ No new tables, statuses or columns. Old workers encountering an unreserved queue
 ## Verification evidence
 
 - Focused real PostgreSQL 17.11: 119 passed, no skipped tests; mock provider only. Includes eight users, dispatch races, FIFO, budget, uncertain starts, admin-setting serialization and eight simulated scheduler minutes using the actual route SQL.
-- Browser regression `scripts/check-collection-queue.mjs`: actual authenticated form, two successive queued submissions, fresh server request keys, waiting guidance and anonymous redirect. Collection/category writes are intercepted; no paid test run.
-- Typecheck, privileged-import gate and production build passed. Broad unit run: 682/688 passed; six existing failures remain in unchanged destructive-script/migration baseline checks, reproduced before this feature. No database migration or collector normalization changes.
+- Browser regression `scripts/check-collection-queue.mjs`: actual authenticated form, successive queued submissions, fresh server request keys from inline and standalone screens, waiting guidance and anonymous redirect. Collection/category writes and one progress status are browser fixtures; no paid test run.
+- Timezone regression compares UTC, Bangkok and New York renderers, including a date boundary; invalid/absent dates remain unknown.
+- Typecheck, privileged-import gate and production build passed. Broad unit run retains six existing failures in unchanged destructive-script/migration baseline checks, reproduced before this feature. No database migration or collector normalization changes.

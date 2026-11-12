@@ -9,9 +9,10 @@
  * already uses.
  */
 
-const DATE = new Intl.DateTimeFormat("th-TH", { day: "numeric", month: "short", year: "numeric" });
+// Explicit company timezone keeps server-rendered text identical to browser hydration.
+const DATE = new Intl.DateTimeFormat("th-TH", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Bangkok" });
 const DATE_TIME = new Intl.DateTimeFormat("th-TH", {
-  day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
+  day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok",
 });
 
 function parse(value: string | Date | null | undefined): Date | null {

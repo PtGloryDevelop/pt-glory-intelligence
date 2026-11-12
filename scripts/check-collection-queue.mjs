@@ -52,6 +52,7 @@ try{
   // Present one stored completed round as queued in browser responses only, to exercise the standalone screen.
   await context.route('**/collect/'+storedId+'*',async route=>{
     const response=await route.fetch();
+    if(!route.request().headers().rsc)return route.fulfill({response});
     const body=(await response.text()).replaceAll('"status":"succeeded"','"status":"queued"')
       .replaceAll('"statusLabel":"เสร็จสิ้น"','"statusLabel":"รอคิวเก็บข้อมูล"');
     await route.fulfill({response,body});
@@ -59,8 +60,16 @@ try{
   const page=await context.newPage();
   const errors=[];page.on('pageerror',error=>errors.push(error.message));
   await page.goto(origin+'/collect',{waitUntil:'domcontentloaded',timeout:60000});
-  const submit=async keyword=>{
+  const ready=async()=>{
     await expect(page.getByTestId('collect-form')).toBeVisible({timeout:45000});
+    // SSR markup can precede hydration on a cold deployment. Wait for this form's actual submit listener.
+    await page.waitForFunction(()=>{
+      const form=document.querySelector('[data-testid="collect-form"]');
+      return form&&Object.entries(form).some(([key,value])=>key.startsWith('__reactProps$')&&typeof value?.onSubmit==='function');
+    });
+  };
+  const submit=async keyword=>{
+    await ready();
     await page.getByTestId('keyword').fill(keyword);
     if(await page.getByTestId('unit-select').count()){
       const value=await page.getByTestId('unit-select').locator('option').evaluateAll(options=>options.find(o=>o.value&&!o.disabled)?.value);
@@ -73,19 +82,24 @@ try{
     await expect(page.getByTestId('collect-progress')).toHaveAttribute('data-status','queued');
     await expect(page.getByText(/รอรอบเก็บข้อมูลว่างและงบประมาณพร้อม/)).toBeVisible();
     await expect(page.getByTestId('collect-again')).toBeVisible();
+    console.log('PASS queued browser submission '+submissions.length);
   };
   await submit('queue browser fixture one');
   await page.screenshot({path:'test-artifacts/collection-queue-progress.png',fullPage:true});
   await page.getByTestId('collect-again').click();
-  await submit('queue browser fixture two');
-  assert.equal(submissions.length,2);
-  assert.notEqual(submissions[0].requestKey,submissions[1].requestKey,'A new round must receive a fresh server key');
+  await ready();
+  const cachedFormKey=/requestKey\\?"\s*:\s*\\?"([a-f0-9-]{36})/.exec(await page.content())?.[1];
+  assert.ok(cachedFormKey,'The rendered form must carry its server key');
   fixtures.set(storedId,{...[...fixtures.values()][0],id:storedId});
   await page.getByTestId('recent-'+storedId).click();
   await expect(page.getByTestId('collect-progress')).toHaveAttribute('data-status','queued');
   await page.getByTestId('collect-again').click();
   await submit('queue browser standalone fixture');
-  assert.notEqual(submissions[1].requestKey,submissions[2].requestKey,'Standalone progress must also fetch a fresh form key');
+  assert.notEqual(cachedFormKey,submissions[1].requestKey,'Standalone progress must fetch a fresh form key');
+  await page.getByTestId('collect-again').click();
+  await submit('queue browser fixture three');
+  assert.equal(submissions.length,3);
+  assert.notEqual(submissions[1].requestKey,submissions[2].requestKey,'Inline progress must fetch a fresh form key');
   assert.deepEqual(errors,[]);
   const anon=await browser.newContext();await anon.addCookies(bypass);
   const guest=await anon.newPage();await guest.goto(origin+'/collect',{waitUntil:'domcontentloaded'});
