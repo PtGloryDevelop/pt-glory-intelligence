@@ -51,7 +51,8 @@ export default async function AdLibrary({searchParams}:{searchParams:Promise<Rec
  launcherRead?.catch(()=>{});
  // The rival board comes with the page too; if it fails here, the board asks again itself and shows its own error.
  const boardRead=board?getRivalBoard(actor).catch(()=>null):null;
- const datasets=(await listDatasets()).sort((a,b)=>b.collected_at.localeCompare(a.collected_at));
+ // Only the library/round view uses datasets. Their per-round counts must not block the rival board.
+ const datasets=board?[]:(await listDatasets()).sort((a,b)=>b.collected_at.localeCompare(a.collected_at));
  const selected=dataset?datasets.find(row=>row.dataset_id===dataset):undefined;
  let page:React.ReactNode;
  if(board){
