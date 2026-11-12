@@ -56,14 +56,28 @@ async function dueWork(): Promise<SchedulerConfig> {
       return { work: null, actor: text("collector.actor"), actorBuild: text("collector.actor_build") ?? "" };
     }
 
+    // Age due actions fairly: strict active-first priority can starve all
+    // other work when polling is due more often than the scheduler runs.
+    // Pick the FIFO queue head independently of its due time, so later queued
+    // requests cannot crowd out other work while the head waits for a retry.
     const { rows } = await client.query<AdvanceWorkItem>(
-      `select r.id,
-              case when ${ADVANCE_DUE} then 'advance' else 'cost' end as kind
+      `select r.id, work.kind
          from public.collection_requests r
-        where ${ADVANCE_DUE} or ${COST_DUE}
-        order by case when ${ADVANCE_DUE} then 0 else 1 end, r.created_at asc, r.id
+        cross join lateral (
+          values ('advance', coalesce(r.next_check_at, r.created_at), case when r.status = 'queued' then 2 else 0 end),
+                 ('cost', r.cost_next_check_at, 1)
+        ) work(kind, due_at, priority)
+        where (work.kind = 'advance' and (${ADVANCE_DUE})
+               and (r.status <> 'queued' or r.id = (
+                 select q.id from public.collection_requests q
+                  where q.status = 'queued' and q.requires_admin = false
+                  order by q.created_at asc, q.id
+                  limit 1
+               )))
+           or (work.kind = 'cost' and (${COST_DUE}))
+        order by work.due_at asc, work.priority asc, r.created_at asc, r.id
         limit 1
-        for update skip locked`,
+        for update of r skip locked`,
     );
     return {
       // `tick_batch` enables scheduling, but one HTTP tick owns one row only.

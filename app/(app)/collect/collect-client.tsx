@@ -283,7 +283,9 @@ export function CollectClient(
   // address; the panel asks its host page to render again, keeping what was typed.
   function restart() {
     setRestarting(true);
-    if (mode === "page") router.push("/collect");
+    // A cached router entry can carry the previous submission key. A new document requests a fresh server key.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- Intentionally bypass the cached server-generated request key.
+    if (mode === "page") window.location.assign("/collect");
     else router.refresh();
   }
 

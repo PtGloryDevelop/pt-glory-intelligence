@@ -23,6 +23,12 @@ const skip = process.env.DATABASE_URL ? false : "DATABASE_URL not set";
 const SOURCE_URL = "https://www.facebook.com/ads/library/?q=test";
 
 const SETTINGS: Record<string, unknown> = {
+  "collector.enabled": true,
+  "collector.monthly_budget_usd": 10,
+  "collector.max_charge_per_run_usd": 0.5,
+  "collector.billing_cycle_anchor": "2020-01-01",
+  "collector.billing_cycle_length_months": 1,
+  "collector.max_concurrent": 5,
   "collector.actor_build": "2.7.25",
   "collector.run_timeout_minutes": 10,
   "collector.lease_seconds": 120,
@@ -127,6 +133,7 @@ test("the machine moves one step at a time", { skip }, async (t) => {
     await closePool();
   });
   await setSettings(client);
+  t.beforeEach(async () => { await client.query("delete from public.collection_requests"); });
 
   await t.test("queued becomes running, and the provider's own start time is kept", async () => {
     const id = await queuedRequest(client, base);
@@ -202,7 +209,7 @@ test("the machine moves one step at a time", { skip }, async (t) => {
     const id = await queuedRequest(client, base);
     const mock = provider();
     const outcome = await advance(id, { provider: mock, worker: "w1" });
-    assert.equal(outcome.action, "not_configured");
+    assert.equal(outcome.action, "queue_waiting");
     assert.equal(mock.startCount, 0);
     const state = await stateOf(client, id);
     assert.equal(state.status, "queued");
@@ -579,6 +586,7 @@ test("two workers on one request produce one start", { skip }, async (t) => {
 
   await t.test("a queued request claimed twice at once starts once, ten rounds over", async () => {
     for (let round = 0; round < 10; round += 1) {
+      await client.query("delete from public.collection_requests");
       const id = await queuedRequest(client, base);
       // One provider instance, so both workers share the start counter.
       const mock = provider({ start: { outcome: "started", run: mockRun({ runId: `RUN-${round}` }) } });

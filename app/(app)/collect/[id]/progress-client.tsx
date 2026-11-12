@@ -12,10 +12,9 @@ import styles from "./progress.module.css";
  * Progress, read from the product's own endpoint and nothing else.
  *
  * The page polls `GET /api/collections/:id`, which the server also uses to nudge
- * the work along by one bounded step. That is the whole mechanism: no state
- * machine in the browser, no provider, and no way for a refresh to start a
- * second collection — the nudge behind that endpoint cannot claim a request
- * that has never been started.
+ * active work along by one bounded step. The machine-only scheduler also
+ * dispatches queued requests and advances work after this page closes. The
+ * browser only reads progress; a refresh never submits a second collection.
  *
  * Polling stops when the collection reaches a state that will not change by
  * itself: finished, failed, or waiting for a person.
@@ -26,8 +25,8 @@ const SETTLED = new Set(["succeeded", "failed", "needs_admin"]);
 
 /** What each state means for what the reader should do next. */
 const GUIDANCE: Record<string, string> = {
-  queued: "คำขอเข้าคิวแล้ว ระบบจะเริ่มเก็บข้อมูลให้เอง",
-  collecting: "กำลังเก็บข้อมูลอยู่ ไปใช้หน้าอื่นได้เลย งานจะเดินต่อตราบที่ยังเปิดเว็บนี้ไว้ เสร็จแล้วจะแจ้งที่แถบด้านซ้าย",
+  queued: "คำขอเข้าคิวแล้ว รอรอบเก็บข้อมูลว่างและงบประมาณพร้อม ระบบจะเริ่มให้อัตโนมัติ ปิดเว็บได้ งานจะทำต่อเอง",
+  collecting: "กำลังเก็บข้อมูลอยู่ ไปใช้หน้าอื่นหรือปิดเว็บได้ งานจะทำต่อเอง กลับมาดูความคืบหน้าได้จากรอบเก็บข้อมูลล่าสุด",
   checking: "กำลังตรวจสอบว่าข้อมูลครบแล้วหรือยัง",
   processing: "กำลังบันทึกข้อมูลเข้าระบบ",
   needs_admin: "รอบนี้ต้องให้ผู้ดูแลระบบตรวจสอบก่อน ระบบแจ้งให้แล้ว",
@@ -163,12 +162,17 @@ export function CollectProgress({ initial, onRestart, onSettled }: {
           <p>{GUIDANCE.failed}</p>
           {onRestart
             ? <button type="button" className={styles.open} onClick={onRestart} data-testid="retry-collect">ลองใหม่</button>
-            : <Link className={styles.open} href="/collect" data-testid="retry-collect">ลองใหม่</Link>}
+            // eslint-disable-next-line @next/next/no-html-link-for-pages -- A new submission must fetch a fresh server request key.
+            : <a className={styles.open} href="/collect" data-testid="retry-collect">ลองใหม่</a>}
         </section>
       )}
 
-      {onRestart && settled && collection.status !== "failed" && (
+      {onRestart && (settled || collection.status === "queued" || collection.status === "collecting") && collection.status !== "failed" && (
         <button type="button" className={styles.again} onClick={onRestart} data-testid="collect-again">+ เก็บรอบใหม่</button>
+      )}
+      {!onRestart && (collection.status === "queued" || collection.status === "collecting") && (
+        // eslint-disable-next-line @next/next/no-html-link-for-pages -- Bypass a cached form's previous server request key.
+        <a className={styles.again} href="/collect" data-testid="collect-again">+ เก็บรอบใหม่</a>
       )}
 
       {collection.requiresAdmin && (

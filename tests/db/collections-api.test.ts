@@ -34,6 +34,8 @@ const SETTINGS: Record<string, unknown> = {
   "collector.max_concurrent": 5,
   "collector.actor_build": "2.7.25",
   "collector.countries": ["TH"],
+  "collector.run_timeout_minutes": 10,
+  "collector.lease_seconds": 120,
 };
 
 async function setSettings(client: pg.Client, overrides: Record<string, unknown> = {}) {
@@ -136,9 +138,9 @@ test("a collection is created by admission and nothing else", { skip }, async (t
 
     const { rows } = await client.query<{
       requested_by: string; status: string; start_attempted_at: string | null;
-      provider_run_id: string | null; cost_status: string; dataset_name: string;
+      provider_run_id: string | null; cost_status: string; cost_reserved_usd: string | null; dataset_name: string;
     }>(
-      `select requested_by, status, start_attempted_at, provider_run_id, cost_status, dataset_name
+      `select requested_by, status, start_attempted_at, provider_run_id, cost_status, cost_reserved_usd, dataset_name
          from public.collection_requests where id = $1`,
       [admitted.requestId],
     );
@@ -147,7 +149,9 @@ test("a collection is created by admission and nothing else", { skip }, async (t
     assert.equal(row.status, "queued");
     assert.equal(row.start_attempted_at, null, "no provider was contacted by the request itself");
     assert.equal(row.provider_run_id, null);
-    assert.equal(row.cost_status, "reserved", "the ceiling is held before anything runs");
+    assert.equal(row.cost_status, "reserved");
+    assert.equal(row.cost_reserved_usd, null, "a queued request holds no money");
+    assert.equal(admitted.reservedUsd, null);
     assert.equal(row.dataset_name, "วิตามินสลายไขมัน · TH · 2026-09-11", "named once, at admission");
   });
 
@@ -209,7 +213,7 @@ test("a collection is created by admission and nothing else", { skip }, async (t
   await client.query("delete from public.collection_requests");
   });
 
-  await t.test("a full budget refuses without saying how full", async () => {
+  await t.test("a full budget accepts a durable unreserved queue entry", async () => {
     await setSettings(client, { "collector.monthly_budget_usd": 0.1 });
     await client.query(
       `insert into public.collection_requests
@@ -220,25 +224,26 @@ test("a collection is created by admission and nothing else", { skip }, async (t
         base.categoryId],
     );
     const { admitted } = await startFromBody(validBody(base.categoryId), base.analystId);
-    assert.ok(admitted && !admitted.ok);
-    assert.equal(admitted.refusal, "budget_reached");
-    const response = refusalResponse(admitted.refusal);
-    assert.equal(response.status, 409);
-    assert.doesNotMatch(response.message, /0\.1|20|usd|\$/i);
+    assert.ok(admitted?.ok);
+    assert.equal(admitted.reservedUsd, null);
+    assert.equal(toCollectionDto(await viewRow(client, admitted.requestId)).status, "queued");
     await client.query("delete from public.collection_requests");
     await setSettings(client);
   await client.query("delete from public.collection_requests");
   });
 
-  await t.test("a busy collector refuses without naming the request holding the slot", async () => {
+  await t.test("a full execution slot accepts an independent queued request", async () => {
     await setSettings(client, { "collector.max_concurrent": 1 });
     const { admitted: first } = await startFromBody(validBody(base.categoryId), base.analystId);
     assert.ok(first?.ok);
+    await client.query("update public.collection_requests set status='running',provider_run_id=$2,start_attempted_at=now() where id=$1", [first.requestId, `RUN-${randomUUID()}`]);
     const { admitted: second } = await startFromBody(validBody(base.categoryId), base.analystId);
-    assert.ok(second && !second.ok);
-    assert.equal(second.refusal, "busy");
-    assert.equal(refusalResponse(second.refusal).status, 409);
-    assert.ok(!refusalResponse(second.refusal).message.includes(first.requestId));
+    assert.ok(second?.ok);
+    assert.notEqual(second.requestId, first.requestId);
+    assert.equal(second.reservedUsd, null);
+    const dto = toCollectionDto(await viewRow(client, second.requestId));
+    assert.equal(dto.status, "queued");
+    assert.ok(!JSON.stringify(dto).includes(first.requestId));
     await client.query("delete from public.collection_requests");
     await setSettings(client);
   await client.query("delete from public.collection_requests");
@@ -440,16 +445,17 @@ test("the admin surfaces belong to admins", { skip }, async (t) => {
 
   await t.test("usage reports holds as holds, and says when a figure is unsettled", async () => {
     const usage = await readCollectorUsage(actor(base.adminId, "admin"));
-    assert.equal(usage.heldReservationUsd, "0.500000", "the admitted ceiling is held");
+    assert.equal(usage.heldReservationUsd, "0.000000", "an unstarted queue entry holds no money");
+    assert.equal(usage.counts.held, 0, "pending null reservations are not counted as monetary holds");
     assert.equal(usage.finalizedActualCostUsd, "0.000000", "and nothing is reported as spent");
     assert.equal(usage.monthlyBudgetUsd, "20.000000");
-    assert.equal(usage.availableUsd, "19.500000");
+    assert.equal(usage.availableUsd, "20.000000");
     assert.equal(usage.containsProvisional, false);
     assert.ok(usage.window);
 
     await client.query(
       `update public.collection_requests
-          set cost_status = 'provisional', cost_provisional_usd = 0.099800,
+          set cost_status = 'provisional', cost_reserved_usd = 0.500000, cost_provisional_usd = 0.099800,
               cost_provisional_observed_at = now(), started_at = now()
         where id = $1`, [requestId],
     );
@@ -619,6 +625,7 @@ test("reading a collection can never start one", { skip }, async (t) => {
   });
   await setSettings(client, { "collector.run_timeout_minutes": 10, "collector.lease_seconds": 120 });
   await client.query("delete from public.collection_requests");
+  t.beforeEach(async () => { await client.query("delete from public.collection_requests"); });
 
   await t.test("a queued request is read, and stays exactly as it was", async () => {
     const { admitted } = await startFromBody(validBody(base.categoryId), base.analystId);

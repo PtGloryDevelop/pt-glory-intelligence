@@ -3,19 +3,18 @@ import { withTransaction } from "../db/privileged.ts";
 import { buildAdLibraryUrl } from "./url.ts";
 import { ABSOLUTE_MAX_RECORDS } from "./limits.ts";
 import {
-  CONCURRENCY_SLOT_STATES, assessBudget, microsToUsd,
+  assessBudget,
   type CollectorSettings, type RequestAccounting,
 } from "./budget.ts";
+import {ADMISSION_LOCK_NAMESPACE} from './queue.ts';
+export {ADMISSION_LOCK_NAMESPACE} from './queue.ts';
 
 /**
  * Admission (C07): the only way a collection request comes into existence.
  *
- * Everything that decides whether a collection may start — the settings, the
- * budget, the concurrency limit, the ceiling — is read and judged inside ONE
- * transaction that holds an advisory lock. Evaluating the budget in one
- * transaction and inserting the reservation in another would let two requests
- * see the same remaining budget and both be admitted; that is the race this
- * whole module exists to remove.
+ * Validates configuration and the request, then records a durable queue entry
+ * under the shared collector lock. Waiting requests reserve no money or worker
+ * slot. Dispatch takes the same lock to reserve budget and mark a single start.
  *
  * It ends with a `queued` row and nothing else. No provider is contacted here:
  * starting the run belongs to the state machine, and this file deliberately
@@ -30,8 +29,6 @@ import {
  * database agrees on it. It contains no user text: a key built from a keyword
  * could be made to collide, or to miss, by whoever typed the keyword.
  */
-export const ADMISSION_LOCK_NAMESPACE = "pt_glory.collector.admission";
-
 export { ABSOLUTE_MAX_RECORDS } from "./limits.ts";
 
 export type AdmissionInput = {
@@ -61,8 +58,8 @@ export type AdmissionResult =
       requestId: string;
       /** True when this key had already been admitted: the same request, not a second one. */
       reused: boolean;
-      /** The reservation held for this request, as exact USD text. */
-      reservedUsd: string;
+      /** Exact USD text for an existing hold; null while waiting without a reservation. */
+      reservedUsd: string | null;
     }
   | {
       ok: false;
@@ -121,7 +118,7 @@ async function admitInTransaction(
       ok: true,
       requestId: row.id,
       reused: true,
-      reservedUsd: row.cost_reserved_usd ?? "0.000000",
+      reservedUsd: row.cost_reserved_usd,
     };
   }
 
@@ -181,24 +178,21 @@ async function admitInTransaction(
       where (cost_status <> 'final' and reservation_released_at is null)
          or cost_status = 'final'`,
   );
-  const live = await client.query<{ status: string }>(
-    "select status from public.collection_requests where status = any($1::text[])",
-    [[...CONCURRENCY_SLOT_STATES]],
-  );
-
-  // 6. One judgement, from the frozen arithmetic. Nothing is recomputed here.
+  // Validate the financial configuration, but a queue submission neither occupies a slot nor reserves money.
+  // Availability is checked again, atomically, when the dispatcher actually starts this request.
   const assessment = assessBudget({
     settings: budgetSettings,
     requests: accounting.rows,
-    liveRequests: live.rows,
+    liveRequests: [],
     maxConcurrent: read("max_concurrent"),
     now,
   });
-  if (!assessment.ok) return { ok: false, refusal: assessment.refusal, detail: assessment.detail };
+  if (!assessment.ok && assessment.refusal === 'not_configured') {
+    return { ok: false, refusal: assessment.refusal, detail: assessment.detail };
+  }
 
-  // 7. The reservation is the authorized ceiling, and it is written in the same
-  //    transaction that decided it.
-  const reservedUsd = microsToUsd(assessment.runCeilingMicros);
+  // 7. Dispatch will reserve an authorized ceiling in its own atomic start decision.
+  const reservedUsd = null;
   const sourceUrl = buildAdLibraryUrl({
     country: input.country, query: normalizeKeyword(input.keyword), activeStatus: input.activeStatus,
     ...(input.pageId ? { pageId: input.pageId } : {}),

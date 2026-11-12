@@ -16,6 +16,7 @@ import {
 import { findCommittedRun as findCommittedRunWithClient } from "./adoption.ts";
 import { findOriginalStart, identityConflict } from "./reconcile.ts";
 import { adoptRivals } from "./rivals.ts";
+import {ADMISSION_LOCK_NAMESPACE,QUEUE_RECHECK_SECONDS,reserveQueueStart} from './queue.ts';
 
 export { RECONCILE_SKEW_SECONDS } from "./reconcile.ts";
 export { identityConflict } from "./reconcile.ts";
@@ -71,6 +72,7 @@ export const RUN_MEMORY_MBYTES = 512;
 export const ITEM_PAGE_SIZE = 1_000;
 
 export type AdvanceAction =
+  | "queue_waiting"
   | "not_claimed"
   | "not_configured"
   | "start_attempted"
@@ -165,7 +167,7 @@ export async function advance(
   const allowStart = deps.allowStart !== false;
 
   // 1. Claim. One worker at a time, decided by the database.
-  const claim = await withTransaction(async (client) => claimRequest(client, requestId, worker, allowStart));
+  const claim = await withTransaction(async (client) => claimRequest(client, requestId, worker, allowStart, deps.now ?? new Date()));
   if (!claim) return { requestId, action: "not_claimed", from: null, to: null };
   const { request, settings, markedForStart } = claim;
 
@@ -196,7 +198,11 @@ async function claimRequest(
   requestId: string,
   worker: string,
   allowStart: boolean,
+  now: Date,
 ) {
+  // Every dispatcher uses this lock before taking a request row lock. Budget reservation, the slot
+  // count and the committed start marker are one atomic decision, even across server instances.
+  if(allowStart)await client.query('select pg_advisory_xact_lock(hashtext($1)::bigint)',[ADMISSION_LOCK_NAMESPACE]);
   const settings = await readSettings(client);
   const claimed = await client.query<RequestRow>(
     `update public.collection_requests
@@ -234,6 +240,17 @@ async function claimRequest(
   const request = claimed.rows[0];
 
   if (request.status === "queued") {
+    const reservation=await reserveQueueStart(client,requestId,now);
+    if(!reservation.ok){
+      await client.query(
+        `update public.collection_requests
+            set lease_owner=null,lease_expires_at=null,
+                next_check_at=now()+make_interval(secs=>$2),updated_at=now()
+          where id=$1`,[requestId,QUEUE_RECHECK_SECONDS],
+      );
+      return {request,settings,markedForStart:false,claimAction:'queue_waiting' as const,claimedTo:'queued'};
+    }
+    request.cost_reserved_usd=reservation.reservedUsd;
     // The one and only automatic attempt, committed before the provider is
     // called so a lost response still leaves evidence behind.
     const marked = await client.query(
@@ -243,7 +260,7 @@ async function claimRequest(
       [requestId],
     );
     if (marked.rowCount === 1) {
-      await audit(client, request.requested_by, "collection.start_attempted", requestId, {});
+      await audit(client, request.requested_by, "collection.start_attempted", requestId, {reserved_usd:reservation.reservedUsd});
       return { request, settings, markedForStart: true, claimAction: "start_attempted" as const, claimedTo: "starting" };
     }
     // Somebody else marked it first; nothing to do this tick.

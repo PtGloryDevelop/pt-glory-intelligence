@@ -108,7 +108,7 @@ async function seedRequest(client: pg.Client, userId: string, categoryId: string
   );
 }
 
-test("admission judges settings, budget and concurrency in one place", { skip }, async (t) => {
+test("admission validates settings and persists unreserved queued requests", { skip }, async (t) => {
   const client = await connect();
   const base = await fixtures(client);
   const restoreSettings = await snapshotSettings(client);
@@ -145,13 +145,13 @@ test("admission judges settings, budget and concurrency in one place", { skip },
     }
   });
 
-  await t.test("an empty ledger admits at the configured per-run ceiling", async () => {
+  await t.test("an empty ledger admits without a monetary hold", async () => {
     await reset(client);
     await setSettings(client);
     const result = await admitCollection(request(base), { now: NOW });
     assert.ok(result.ok);
     assert.equal(result.reused, false);
-    assert.equal(result.reservedUsd, "0.500000", "the per-run ceiling, since the budget is larger");
+    assert.equal(result.reservedUsd, null, "money is reserved only at dispatch");
 
     const { rows } = await client.query<{ status: string; cost_status: string; cost_reserved_usd: string; source_url: string }>(
       "select status, cost_status, cost_reserved_usd, source_url from public.collection_requests",
@@ -159,14 +159,14 @@ test("admission judges settings, budget and concurrency in one place", { skip },
     assert.equal(rows.length, 1);
     assert.equal(rows[0].status, "queued");
     assert.equal(rows[0].cost_status, "reserved");
-    assert.equal(rows[0].cost_reserved_usd, "0.500000");
+    assert.equal(rows[0].cost_reserved_usd, null);
     assert.match(rows[0].source_url, /^https:\/\/www\.facebook\.com\/ads\/library\//);
 
     const audit = await client.query("select 1 from public.audit_logs where action = 'collection.start'");
     assert.ok((audit.rowCount ?? 0) >= 1, "the admission is audited");
   });
 
-  await t.test("a settled cost in this cycle reduces what is left", async () => {
+  await t.test("a settled cost in this cycle does not hold money for waiting work", async () => {
     await reset(client);
     await setSettings(client);
     await seedRequest(client, base.userId, base.categoryId, {
@@ -176,10 +176,10 @@ test("admission judges settings, budget and concurrency in one place", { skip },
     });
     const result = await admitCollection(request(base), { now: NOW });
     assert.ok(result.ok);
-    assert.equal(result.reservedUsd, "0.200000", "remaining budget, below the per-run ceiling");
+    assert.equal(result.reservedUsd, null, "settled spend does not reserve waiting work");
   });
 
-  await t.test("a settled cost that started in the previous cycle does not", async () => {
+  await t.test("a previous-cycle settled cost still permits unreserved admission", async () => {
     await reset(client);
     await setSettings(client);
     await seedRequest(client, base.userId, base.categoryId, {
@@ -190,10 +190,10 @@ test("admission judges settings, budget and concurrency in one place", { skip },
     });
     const result = await admitCollection(request(base), { now: NOW });
     assert.ok(result.ok);
-    assert.equal(result.reservedUsd, "0.500000");
+    assert.equal(result.reservedUsd, null);
   });
 
-  await t.test("an older reservation still held is still counted", async () => {
+  await t.test("an older unknown reservation does not prevent queue admission", async () => {
     await reset(client);
     await setSettings(client);
     await seedRequest(client, base.userId, base.categoryId, {
@@ -204,10 +204,10 @@ test("admission judges settings, budget and concurrency in one place", { skip },
     });
     const result = await admitCollection(request(base), { now: NOW });
     assert.ok(result.ok);
-    assert.equal(result.reservedUsd, "0.200000", "an unknown start keeps holding across cycles");
+    assert.equal(result.reservedUsd, null, "unknown historical costs are checked at dispatch");
   });
 
-  await t.test("a released reservation frees its budget again", async () => {
+  await t.test("a released reservation permits queue admission without a new hold", async () => {
     await reset(client);
     await setSettings(client);
     await seedRequest(client, base.userId, base.categoryId, {
@@ -219,10 +219,10 @@ test("admission judges settings, budget and concurrency in one place", { skip },
     });
     const result = await admitCollection(request(base), { now: NOW });
     assert.ok(result.ok);
-    assert.equal(result.reservedUsd, "0.500000");
+    assert.equal(result.reservedUsd, null);
   });
 
-  await t.test("the exact budget boundary is refused, and one unit below is admitted", async () => {
+  await t.test("both an exhausted budget and one micro-dollar left accept waiting requests", async () => {
     await reset(client);
     await setSettings(client);
     await seedRequest(client, base.userId, base.categoryId, {
@@ -230,8 +230,8 @@ test("admission judges settings, budget and concurrency in one place", { skip },
       cost_status: "final", cost_final_usd: "10.000000", started_at: "2026-09-10T00:00:00Z",
     });
     const spent = await admitCollection(request(base), { now: NOW });
-    assert.equal(spent.ok, false);
-    if (!spent.ok) assert.equal(spent.refusal, "budget_reached");
+    assert.ok(spent.ok);
+    assert.equal(spent.reservedUsd, null);
 
     await reset(client);
     await seedRequest(client, base.userId, base.categoryId, {
@@ -240,18 +240,18 @@ test("admission judges settings, budget and concurrency in one place", { skip },
     });
     const sliver = await admitCollection(request(base), { now: NOW });
     assert.ok(sliver.ok);
-    assert.equal(sliver.reservedUsd, "0.000001");
+    assert.equal(sliver.reservedUsd, null);
   });
 
-  await t.test("a live request fills the configured slot", async () => {
+  await t.test("a live request does not prevent durable queue admission", async () => {
     await reset(client);
     await setSettings(client);
     await seedRequest(client, base.userId, base.categoryId, {
       status: "running", provider_run_id: randomUUID(), started_at: NOW.toISOString(),
     });
     const busy = await admitCollection(request(base), { now: NOW });
-    assert.equal(busy.ok, false);
-    if (!busy.ok) assert.equal(busy.refusal, "busy");
+    assert.ok(busy.ok);
+    assert.equal(busy.reservedUsd, null);
 
     // The limit is a setting, not a constant.
     await setSettings(client, { "collector.max_concurrent": 2 });
@@ -509,7 +509,7 @@ test("admission judges settings, budget and concurrency in one place", { skip },
   });
 });
 
-test("two admissions at the same time cannot both win", { skip }, async (t) => {
+test("concurrent submissions queue independently while duplicate keys remain idempotent", { skip }, async (t) => {
   const client = await connect();
   const base = await fixtures(client);
   const restoreSettings = await snapshotSettings(client);
@@ -520,7 +520,7 @@ test("two admissions at the same time cannot both win", { skip }, async (t) => {
     await closePool();
   });
 
-  await t.test("a budget with room for one admits exactly one, ten times over", async () => {
+  await t.test("a budget with room for one admits both without holding money, ten times over", async () => {
     for (let round = 0; round < 10; round += 1) {
       await reset(client);
       // Room for exactly one run at the per-run ceiling.
@@ -532,18 +532,18 @@ test("two admissions at the same time cannot both win", { skip }, async (t) => {
       ]);
       const admitted = [a, b].filter((r) => r.ok);
       const refused = [a, b].filter((r) => !r.ok);
-      assert.equal(admitted.length, 1, `round ${round}: exactly one admitted`);
-      assert.equal(refused.length, 1, `round ${round}: exactly one refused`);
-      assert.equal(refused[0].ok === false && refused[0].refusal, "budget_reached", `round ${round}`);
+      assert.equal(admitted.length, 2, `round ${round}: both requests queued`);
+      assert.equal(refused.length, 0, `round ${round}: no budget refusal at admission`);
+      for (const result of admitted) if (result.ok) assert.equal(result.reservedUsd, null);
 
       const { rows } = await client.query<{ n: string }>(
         "select count(*)::text as n from public.collection_requests",
       );
-      assert.equal(rows[0].n, "1", `round ${round}: only one reservation persists`);
+      assert.equal(rows[0].n, "2", `round ${round}: two durable queue entries`);
     }
   });
 
-  await t.test("one slot admits exactly one, ten times over", async () => {
+  await t.test("one execution slot still admits both requests, ten times over", async () => {
     for (let round = 0; round < 10; round += 1) {
       await reset(client);
       await setSettings(client, { "collector.max_concurrent": 1 });
@@ -554,13 +554,13 @@ test("two admissions at the same time cannot both win", { skip }, async (t) => {
       ]);
       const admitted = [a, b].filter((r) => r.ok);
       const refused = [a, b].filter((r) => !r.ok);
-      assert.equal(admitted.length, 1, `round ${round}: exactly one admitted`);
-      assert.equal(refused[0].ok === false && refused[0].refusal, "busy", `round ${round}`);
+      assert.equal(admitted.length, 2, `round ${round}: both queued`);
+      assert.equal(refused.length, 0, `round ${round}: no busy refusal at admission`);
 
       const { rows } = await client.query<{ n: string }>(
         "select count(*)::text as n from public.collection_requests",
       );
-      assert.equal(rows[0].n, "1", `round ${round}: never two queued rows`);
+      assert.equal(rows[0].n, "2", `round ${round}: both queued rows persist`);
     }
   });
 

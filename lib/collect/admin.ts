@@ -6,6 +6,7 @@ import {
 } from "./budget.ts";
 import { ABSOLUTE_MAX_RECORDS } from "./admission.ts";
 import { MAX_BYTES } from "../collector/contract.ts";
+import {ADMISSION_LOCK_NAMESPACE} from './queue.ts';
 
 /**
  * Admin-only collector surfaces (C13): diagnostics, usage and settings.
@@ -134,7 +135,7 @@ export async function readCollectorUsage(actor: Actor | null): Promise<Collector
           continue;
         }
         held += heldMicros;
-        counts.held += 1;
+        if (heldMicros > 0n) counts.held += 1;
         if (request.cost_status === "provisional") {
           counts.provisional += 1;
           containsProvisional = true;
@@ -361,6 +362,8 @@ export async function updateCollectorSettings(
 
   return withTransaction(async (client) => {
     const changed: string[] = [];
+    // Settings changes serialize with the reservation/start decision. A dispatch sees one complete policy.
+    await client.query('select pg_advisory_xact_lock(hashtext($1)::bigint)',[ADMISSION_LOCK_NAMESPACE]);
     for (const [key, value] of entries) {
       const settingKey = `collector.${key}`;
       const { rows } = await client.query<{ value: unknown }>(
