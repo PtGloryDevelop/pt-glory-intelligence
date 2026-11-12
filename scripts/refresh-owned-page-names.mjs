@@ -23,6 +23,9 @@ try{
   from jsonb_to_recordset($2::jsonb) n(id text,name text)
   where a.sync_id=$1 and a.data->>'page_id'=n.id and (a.page_name is distinct from n.name or a.data->>'page_name' is distinct from n.name)`,[snapshot.id,mappings]);
  if(daily.rowCount||ads.rowCount)await db.query("insert into audit_logs(actor,action,entity_type,entity_id,after) values($1,'owned_library.page_names_refreshed','owned_library_sync',$2,$3::jsonb)",[actor,snapshot.id,JSON.stringify({...report,dailyRows:daily.rowCount,adRows:ads.rowCount})]);
+ // The whole-window totals (0078) carry each ad's page name as it was when they were built: build them again,
+ // or the all-days view keeps the old name while every other view shows the new one.
+ if(daily.rowCount||ads.rowCount)await db.query("select public.owned_build_ad_totals($1) where to_regprocedure('public.owned_build_ad_totals(uuid)') is not null",[snapshot.id]);
  await db.query('commit');console.log(JSON.stringify({...report,dailyRowsUpdated:daily.rowCount,adRowsUpdated:ads.rowCount}));
 }catch(error){if(connected)await db.query('rollback').catch(()=>{});console.error('Owned page-name refresh failed',error.constructor.name);process.exitCode=1}
 finally{if(locked)await db.query("select pg_advisory_unlock(hashtext('owned_library_sync'))").catch(()=>{});await db.end()}

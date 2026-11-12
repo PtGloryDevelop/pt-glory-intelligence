@@ -69,3 +69,11 @@ test('Page lookup stays in selected source scope, validates returned identity an
   }
  }
 });
+
+test('a name refresh rebuilds the whole-window totals, so the all-days view shows the new names too',()=>{
+ const refresh=readFileSync('scripts/refresh-owned-page-names.mjs','utf8');
+ // Only when names changed, and only where 0078 exists; inside the refresh's own transaction, before commit.
+ const rebuild=refresh.indexOf("select public.owned_build_ad_totals($1) where to_regprocedure('public.owned_build_ad_totals(uuid)') is not null");
+ assert.ok(rebuild>0);assert.ok(rebuild<refresh.indexOf("await db.query('commit')"));
+ assert.match(refresh.slice(rebuild-80,rebuild),/if\(daily\.rowCount\|\|ads\.rowCount\)/);
+});
