@@ -53,3 +53,7 @@ No new tables, statuses or columns. Old workers encountering an unreserved queue
 - Browser regression `scripts/check-collection-queue.mjs`: actual authenticated form, successive queued submissions, fresh server request keys from inline and standalone screens, waiting guidance and anonymous redirect. Collection/category writes and one progress status are browser fixtures; no paid test run.
 - Timezone regression compares UTC, Bangkok and New York renderers, including a date boundary; invalid/absent dates remain unknown.
 - Typecheck, privileged-import gate and production build passed. Broad unit run retains six existing failures in unchanged destructive-script/migration baseline checks, reproduced before this feature. No database migration or collector normalization changes.
+
+## Release result
+
+Released 2026-11-12: application `445dbab`, deployment `dpl_GHgX7RpDcLoYkyrnUZqE8eStp4XT`. Production concurrency changed from one to five through the audited admin API after promotion; monthly budget remains USD 5, per-run ceiling USD 1, record cap 500. Staged and production browser proofs passed all three submission/navigation paths with no browser exceptions and no paid test runs. Scoped post-release server error scan returned zero records. Broad unit result: 684 passed, six known baseline failures; focused PostgreSQL result: 119 passed. Gate: PASS WITH NON-BLOCKING BASELINE NOTES. Previous production code `461395d` remains the rollback target, subject to the pause/review procedure above.
