@@ -1,0 +1,24 @@
+# The video reader on the VPS that already runs deploy/owned-sync. From the repository root:
+#   docker compose -f deploy/video-reader/docker-compose.yml up -d --build
+# It reads the same deploy/owned-sync/.env (DATABASE_URL, NEXT_PUBLIC_SUPABASE_URL,
+# SUPABASE_SERVICE_ROLE_KEY), so no key is copied a second time. Step by step: deploy/video-reader/README.md
+services:
+  video-reader:
+    build:
+      context: ../..
+      dockerfile: deploy/video-reader/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ../owned-sync/.env
+    environment:
+      TZ: Asia/Bangkok
+      VIDEO_READER_INTERVAL_MINUTES: "${VIDEO_READER_INTERVAL_MINUTES:-10}"
+      VIDEO_READER_BATCH: "${VIDEO_READER_BATCH:-30}"
+    # Leaves room for the owned-ads sync on the same 4 cores; a clip is downloaded, cut and deleted.
+    cpus: 2.0
+    mem_limit: 1g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

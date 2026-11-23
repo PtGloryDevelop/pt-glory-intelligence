@@ -65,6 +65,33 @@ export function supabaseArchiveStore(): ArchiveStore {
  * Creates the private bucket if it is absent. Idempotent, and safe to call at
  * the start of an archival run rather than as a manual deployment step.
  */
+/**
+ * The video reader's files: frames (JPEG) and audio (MP3) of rival video ads. Its own private bucket,
+ * so the preview bucket keeps accepting images only. Paths are `video/<observation>/…`.
+ */
+export const VIDEO_BUCKET = "pt-glory-video-readings";
+
+export async function ensureVideoBucket(): Promise<void> {
+  const client = serviceClient();
+  const { data } = await client.storage.getBucket(VIDEO_BUCKET);
+  if (data) return;
+  const { error } = await client.storage.createBucket(VIDEO_BUCKET, {
+    public: false,
+    fileSizeLimit: 10 * 1024 * 1024,
+    allowedMimeTypes: ["image/jpeg", "audio/mpeg"],
+  });
+  if (error && !/already exists/i.test(error.message)) throw error;
+}
+
+/** Uploads to the video bucket; the same path is overwritten, so a rerun converges. */
+export function videoUploader(): (path: string, bytes: Buffer, mimeType: string) => Promise<void> {
+  const client = serviceClient();
+  return async (path, bytes, mimeType) => {
+    const { error } = await client.storage.from(VIDEO_BUCKET).upload(path, bytes, { contentType: mimeType, upsert: true });
+    if (error) throw error;
+  };
+}
+
 export async function ensurePreviewBucket(): Promise<void> {
   const client = serviceClient();
   const { data } = await client.storage.getBucket(PREVIEW_BUCKET);

@@ -3,6 +3,7 @@ import { commitImport } from "@/lib/import/commit";
 import { previewImport } from "@/lib/import/preview";
 import { readUpload } from "@/lib/import/upload";
 import { enqueueRun } from "@/lib/media/archive";
+import { enqueueVideoReadings } from "@/lib/media/video-queue";
 import { isUuid } from "@/lib/read/request";
 import { requireRole } from "@/lib/auth/roles";
 import { AuthorizationError } from "@/lib/auth/role-model";
@@ -60,6 +61,12 @@ export async function POST(request: NextRequest) {
       // The dataset is already valid and usable. Failing to write the queue is
       // worth logging and retrying later, not worth failing the import over.
       console.error("archive enqueue failed", { collectionRunId: result.collectionRunId }, error);
+    }
+    try {
+      // An imported file's links are often already dead; those rows are recorded as expired at once.
+      await enqueueVideoReadings(result.collectionRunId);
+    } catch (error) {
+      console.error("video enqueue failed", { collectionRunId: result.collectionRunId }, error);
     }
 
     return NextResponse.json({ ...result, archiveQueued });

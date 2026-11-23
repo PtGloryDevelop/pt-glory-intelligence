@@ -8,6 +8,7 @@ import {
 import { analyzeImport } from "../import/analyze.ts";
 import { commitImport } from "../import/commit.ts";
 import { enqueueRun } from "../media/archive.ts";
+import { enqueueVideoReadings } from "../media/video-queue.ts";
 import { pagePicturesFromItems, recordPagePictures } from "../media/page-pictures.ts";
 import {
   canonicalInstant, scrubProviderMessage,
@@ -1194,6 +1195,9 @@ async function enqueueMedia(requestId: string, request: RequestRow): Promise<Adv
   let queued: number;
   try {
     queued = (await enqueueRun(request.collection_run_id)).queued;
+    // The run's video ads too, while their links live (32-108 h). Idempotent like the previews, so a
+    // failure here retries this whole step.
+    await enqueueVideoReadings(request.collection_run_id);
   } catch (error) {
     // The import stands. Only this step is retried.
     const detail = scrubProviderMessage(error instanceof Error ? error.message : String(error));
