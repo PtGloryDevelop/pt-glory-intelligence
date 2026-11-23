@@ -65,8 +65,15 @@ export async function readVideo(claim: ClaimedReading, deps: ReaderDeps): Promis
     const frames: Frame[] = [];
     for (const [index, atS] of frameTimes(probe.durationS).entries()) {
       const local = join(dir, `frame-${index}.jpg`);
-      await deps.cutFrame(clip, atS, local);
-      frames.push({ t_ms: atS * 1000, ...await store(local, paths.frame(index), "image/jpeg") });
+      try {
+        await deps.cutFrame(clip, atS, local);
+      } catch (error) {
+        // One frame ffmpeg cannot cut (a seek past the video's end) is left out; without the first
+        // frame the clip is not read, and a storage failure below still fails the whole clip.
+        if (index === 0) throw error;
+        continue;
+      }
+      frames.push({ t_ms: atS * 1000, ...await store(local, paths.frame(frames.length), "image/jpeg") });
     }
 
     let audio: StoredFile | null = null, hook: StoredFile | null = null;

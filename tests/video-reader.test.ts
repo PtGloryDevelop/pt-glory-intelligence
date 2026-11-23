@@ -47,6 +47,10 @@ test("frames: the hook at 0, 1 and 3 s, the rest spread to the end of the first 
     assert.deepEqual(times, [...times].sort((a, b) => a - b), "in time order");
     assert.equal(new Set(times).size, times.length, "no repeats");
   }
+  // A container can outlast its video stream: the last frame keeps a second of margin (23 Nov 2026).
+  assert.equal(frameTimes(48.018).at(-1), 47);
+  assert.equal(frameTimes(119.002).at(-1), 118);
+  assert.equal(frameTimes(25.267).at(-1), 24);
   assert.equal(readWindow(330), 120);
   assert.equal(readWindow(48), 48);
 });
@@ -113,6 +117,19 @@ test("a silent clip is ready with frames only; a file with no video stream is no
   const noVideo = fakes({ probe: async () => ({ durationS: 20, hasVideo: false, hasAudio: true }) });
   assert.deepEqual(await readVideo(claim, noVideo.deps), { status: "no_video", reason: "no_video_stream" });
   assert.equal(noVideo.stored.size, 0);
+});
+
+test("a frame ffmpeg cannot cut is left out, and the stored frames stay numbered in order", async () => {
+  const { deps, stored } = fakes({ cutFrame: async (_file, atS) => { if (atS === 36) throw new Error("nothing written"); } });
+  const result = await readVideo(claim, deps);
+  assert.equal(result.status, "ready");
+  if (result.status !== "ready") return;
+  assert.deepEqual(result.frames.map((frame) => frame.t_ms), [0, 1000, 3000, 5000, 15000, 26000, 47000]);
+  assert.deepEqual(result.frames.map((frame) => frame.path).at(-1), "video/2189/frame-6.jpg");
+  assert.equal([...stored.keys()].filter((path) => path.includes("frame-")).length, 7);
+  // Without the first frame the clip is not read.
+  const noFirst = fakes({ cutFrame: async (_file, atS) => { if (atS === 0) throw new Error("nothing written"); } });
+  assert.equal((await readVideo(claim, noFirst.deps)).status, "retry");
 });
 
 test("a dead link, a missing link and a broken cut: nothing stored, the temp dir still cleaned", async () => {

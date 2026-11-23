@@ -44,15 +44,17 @@ export function selectVideo(displayFormat: string | null, media: unknown): Video
 export const readWindow = (durationS: number) => Math.max(0, Math.min(durationS, VIDEO_WINDOW_S));
 
 /**
- * Seconds to keep as frames: 0, 1 and 3 for the hook, then the rest spread evenly from 0:05 to the
- * last second of the read window (where the call to action usually is), at most eight in all, in
- * time order. A clip under five seconds keeps what its length allows, and always the first frame.
+ * Seconds to keep as frames: 0, 1 and 3 for the hook, then the rest spread evenly from 0:05 to one
+ * second before the end of the read window (where the call to action usually is), at most eight in
+ * all, in time order. The second of margin matters: a container's duration can outlast its video
+ * stream, and a seek past the last frame writes nothing (seen on 23 Nov 2026 with 48.018 s and
+ * 119.002 s clips). A clip under five seconds keeps what its length allows, and always the first frame.
  */
 export function frameTimes(durationS: number): number[] {
   const window = readWindow(durationS);
   const hook = HOOK_FRAMES.filter((t) => t === 0 || t < window);
   const rest = MAX_FRAMES - hook.length;
-  const last = Math.max(HOOK_S, Math.ceil(window) - 1);
+  const last = Math.max(HOOK_S, Math.floor(window - 1));
   const spread = window > HOOK_S
     ? Array.from({ length: rest }, (_, i) => Math.floor(HOOK_S + (i * (last - HOOK_S)) / (rest - 1)))
     : [];
