@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { requireRole } from "@/lib/auth/roles";
 import { AuthorizationError } from "@/lib/auth/role-model";
 import { drainArchiveQueue } from "@/lib/media/archive";
-import { archiveHealth } from "@/lib/media/health";
+import { archiveHealth, videoReadingHealth, videoReadingWarnings } from "@/lib/media/health";
 import { ensurePreviewBucket, supabaseArchiveStore } from "@/lib/media/store-supabase";
 import { isUuid } from "@/lib/read/request";
 
@@ -56,7 +56,10 @@ export async function POST(request: NextRequest) {
   }
 }
 
-/** Queue health. Analyst or above — it is operational, not public. */
+/**
+ * Queue health of the preview archive, with the video reading queue under `video`.
+ * Analyst or above — it is operational, not public.
+ */
 export async function GET() {
   try {
     await requireRole("analyst");
@@ -68,7 +71,8 @@ export async function GET() {
   }
 
   try {
-    return NextResponse.json(await archiveHealth());
+    const [archive, video] = await Promise.all([archiveHealth(), videoReadingHealth()]);
+    return NextResponse.json({ ...archive, video: { ...video, warnings: videoReadingWarnings(video) } });
   } catch (error) {
     console.error("archive health failed", error);
     return NextResponse.json({ error: "archive health failed" }, { status: 500 });

@@ -44,4 +44,19 @@ docker compose -f deploy/video-reader/docker-compose.yml down   # หยุด
 
 ถ้าสถานะ `expired` เกิน 5% ในหนึ่งวัน แปลว่าแกะไม่ทัน ให้เพิ่ม `VIDEO_READER_BATCH` หรือลด `VIDEO_READER_INTERVAL_MINUTES`
 
+## เช็กสุขภาพคิว (อ่านอย่างเดียว)
+
+ดูจากเครื่องที่มี `.env.local` ได้ ไม่ต้องเข้า VPS:
+
+```bash
+node --env-file-if-exists=.env.local --conditions=react-server --experimental-strip-types scripts/archive-health.mjs
+```
+
+ตาราง `video readings` บอกจำนวนตามสถานะ แล้วขึ้น `WARNING` เมื่อ:
+- มีคลิป `pending` ที่ไม่มีใครหยิบเกิน 30 นาที → ตัวแกะบน VPS น่าจะไม่ได้ทำงาน ให้ดู `logs`
+- มีคลิป `pending` ที่ลิงก์จะหมดอายุใน 24 ชั่วโมง
+- คลิปที่จบใน 24 ชั่วโมงล่าสุด เป็น `expired` เกิน 5%
+
+ตัวเลขเดียวกันอยู่ใน `GET /api/media/archive` (analyst ขึ้นไป) ใต้ `video`
+
 log ไม่มีลิงก์วิดีโอ มีแค่เลข observation ขนาดไฟล์ และเวลาที่ใช้

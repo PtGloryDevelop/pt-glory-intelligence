@@ -155,6 +155,18 @@ node --env-file-if-exists=.env.local --conditions=react-server \
 **สัญญาณว่า scheduler ตาย:** `lastAttemptAt` เก่ากว่า ~15 นาที ขณะที่ `pending > 0`
 · หรือ `expiringWithin24h > 0` แล้วไม่ลดลง
 
+**คิวแกะคลิป (`ad_video_readings`, ตัวแกะบน VPS ใน `deploy/video-reader`)** อยู่ใต้ `video` ของ API
+และเป็นตารางที่สองของ CLI:
+
+| ฟิลด์ | อ่านยังไง |
+| --- | --- |
+| `pending` / `ready` / `noVideo` / `expired` / `tooLarge` / `failed` | จำนวนตามสถานะ |
+| `waitingOver30m` | **pending ที่ไม่มีใครหยิบ (หรือลองใหม่) เกิน 30 นาที** มากกว่า 0 = ตัวแกะไม่ได้ทำงาน |
+| `earliestExpiry` / `expiringWithin24h` | เส้นตายที่ใกล้ที่สุดของคลิปที่ยังรอ |
+| `lastAttemptAt` | ครั้งล่าสุดที่ตัวแกะหยิบคลิป |
+| `stoppedLast24h` / `expiredLast24h` | คลิปที่จบใน 24 ชม. และในนั้นหมดอายุกี่คลิป เกิน 5% = แกะไม่ทัน |
+| `warnings` | (API เท่านั้น) ประโยคที่ต้องทำต่อ เรียงจากเรื่องหนักสุด ว่าง = ปกติ |
+
 ตรวจตัวตารางเวลาเองได้ที่:
 
 ```sql
