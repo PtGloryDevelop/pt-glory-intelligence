@@ -5,7 +5,7 @@ import type { CompanyAd } from '@/lib/owned-ads/source-rows';
 import { useSearchParams } from 'next/navigation';
 import { AdsTeamCompare } from './ads-team-compare';
 import { RoundChat } from './round-chat';
-import { TEAM_VIEWS, TEAM_VIEW_LABEL, type TeamView, AI_DIM_HINT, AI_DIM_LABEL, HOOK_REWRITE_BELOW, SCORE_DIMS, SCORE_HINT, SCORE_LABEL, SCORE_LEVELS, adRefId, biggestGap, fdaWatch, scoreLead, scoreLevel, scoreTotal, type AdReading, type AdRef, type AiEstimate, type AiCell, type AiDim, type AiRun, type ScoreCell, type ScoreDim } from '@/lib/ai/compare-shared';
+import { TEAM_VIEWS, TEAM_VIEW_LABEL, type TeamView, AI_DIM_HINT, AI_DIM_LABEL, HOOK_REWRITE_BELOW, SCORE_DIMS, SCORE_HINT, SCORE_LABEL, SCORE_LEVELS, adRefId, biggestGap, fdaWatch, scoreLead, scoreLevel, scoreTotal, videoCoverage, videoLabel, type AdReading, type AdRef, type AiEstimate, type AiCell, type AiDim, type AiRun, type ScoreCell, type ScoreDim } from '@/lib/ai/compare-shared';
 import { ownedName, type Rival } from './selection';
 import { ownedStatus, thaiCodes } from '@/lib/ad-labels';
 import styles from './comparison.module.css';
@@ -125,6 +125,9 @@ function GeneralCompare({ ads, ourThrough, onCopyLink, linkLabel, viewSwitch }: 
   const result = run?.key === key ? run.data : null;
   const failure = error?.key === key ? error.message : estimate.key === key && estimate.error ? estimate.error : null;
   const readingOf = (item: CompareAd): AdReading | undefined => result?.ads[adRefId(refOf(item))];
+  // What AI saw of each clip, from the server's record of the reading (spec 2026-11-23).
+  const clipOf = (item: CompareAd) => result?.context?.find(context => context.id === adRefId(refOf(item)))?.video;
+  const coverage = videoCoverage(result?.context);
   const risky = ads.flatMap(item => item.kind === 'own'
     ? (readingOf(item)?.claims.items ?? []).filter(claim => claim.risky).map(claim => ({ text: claim.text, name: nameOf(item) }))
     : []);
@@ -170,21 +173,22 @@ function GeneralCompare({ ads, ourThrough, onCopyLink, linkLabel, viewSwitch }: 
     <div className={styles.aiHeadRow}>
       <h2 id="compare-ai-heading">AI สรุปคู่นี้ <span className={styles.aiBadge}>AI ตีความ</span></h2>
       {viewSwitch}
-      <span className={styles.muted}>อ่านจากภาพและข้อความ · ไม่รู้งบหรือยอดขายของคู่แข่ง</span>
+      <span className={styles.muted}>อ่านจากภาพ ข้อความ และคลิปที่แกะได้ · ไม่รู้งบหรือยอดขายของคู่แข่ง</span>
     </div>
 
     {staleRivals.length ? <p className={styles.aiWarn}>ข้อมูลคู่แข่งเก่ากว่าข้อมูลแอดเราเกิน 14 วัน คู่แข่งอาจเปลี่ยนข้อเสนอไปแล้ว</p> : null}
+    {coverage ? <ClipCoverage watched={coverage.watched} videos={coverage.videos} /> : null}
 
     {!result ? <div className={styles.aiPending} role="status" data-testid="compare-ai-pending">
       {failure ? <><span>{failure}</span><button type="button" onClick={() => { tried.current = null; void analyze(); }} disabled={busy}>ลองอีกครั้ง</button></>
-        : <span>{busy ? 'AI กำลังอ่านภาพและข้อความของทั้งสองฝั่ง…' : 'กำลังเตรียมสรุป…'}</span>}
+        : <span>{busy ? 'AI กำลังอ่านภาพ ข้อความ และคลิปของทั้งสองฝั่ง…' : 'กำลังเตรียมสรุป…'}</span>}
     </div> : <div className={styles.aiSummary} data-testid="compare-ai-summary">
       {/* Wide: what AI read on the left, what to do on the right. Narrow: one column, in reading order (see the CSS). */}
       <div className={styles.aiMain}>
       <div className={styles.score} data-testid="compare-ai-score">
         <div className={styles.scoreHead}>
           <h3>คะแนนครีเอทีฟ</h3>
-          <span className={styles.muted}>AI ให้คะแนนแบบเข้มงวด จากภาพและข้อความ · เป็นความเห็นของ AI ไม่ใช่ผลขายจริง ดูคู่กับตัวเลขด้านบน</span>
+          <span className={styles.muted}>AI ให้คะแนนแบบเข้มงวด จากภาพ ข้อความ และคลิปที่แกะได้ · เป็นความเห็นของ AI ไม่ใช่ผลขายจริง ดูคู่กับตัวเลขด้านบน</span>
         </div>
         {ownReading && rivalReading ? <p className={styles.scoreLead} data-testid="compare-ai-score-lead">{scoreLead(ownReading.scores, rivalReading.scores)}</p> : null}
         <p className={styles.scoreScale}>อ่านคะแนน (เต็ม 10): {SCORE_LEVELS.map(([from, to, word]) => `${from}–${to} ${word}`).join(' · ')}</p>
@@ -193,6 +197,7 @@ function GeneralCompare({ ads, ourThrough, onCopyLink, linkLabel, viewSwitch }: 
           {ads.map(item => <span key={compareId(item)} className={styles.scoreWho}>
             <span className={item.kind === 'own' ? styles.kindOurs : styles.kindRival}>{item.kind === 'own' ? 'แอดเรา' : 'คู่แข่ง'}</span>
             <strong>{totalText(readingOf(item))}</strong>
+            <ClipNote video={clipOf(item)} />
           </span>)}
           {SCORE_DIMS.map(dim => <ScoreRow key={dim} dim={dim} gap={gap?.dim === dim} cells={ads.map(item => ({ id: compareId(item), own: item.kind === 'own', cell: readingOf(item)?.scores[dim] }))} />)}
         </div>
@@ -244,6 +249,7 @@ function GeneralCompare({ ads, ourThrough, onCopyLink, linkLabel, viewSwitch }: 
         <thead><tr><th scope="col" className={styles.aiDim}><span className={styles.srOnly}>หัวข้อ</span></th>{ads.map(item => <th scope="col" key={adRefId(refOf(item))}>
           <span className={item.kind === 'own' ? styles.kindOurs : styles.kindRival}>{item.kind === 'own' ? 'แอดเรา' : 'คู่แข่ง'}</span>
           <strong className={styles.aiName}>{nameOf(item)}</strong>
+          <ClipNote video={clipOf(item)} />
         </th>)}</tr></thead>
         <tbody>
           {DETAIL_DIMS.map(dim => {
@@ -300,6 +306,17 @@ function GeneralCompare({ ads, ourThrough, onCopyLink, linkLabel, viewSwitch }: 
 const absent = (cell: AiCell) => cell.source === 'ไม่พบ' && (!cell.value.trim() || /^(ไม่พบ|ไม่มี)/.test(cell.value.trim()));
 
 const DETAIL_DIMS: AiDim[] = ['hook', 'offer', 'angle', 'pain', 'proof', 'format'];
+
+/** Under an ad: watched the clip, or saw the cover only, and why. In words, the tone only repeats them. */
+export function ClipNote({ video }: { video: Parameters<typeof videoLabel>[0] }) {
+  const label = videoLabel(video);
+  return label ? <small className={label.watched ? styles.clipWatched : styles.clipCover} data-testid="compare-ai-clip">{label.text}</small> : null;
+}
+
+/** The set's line: how many of its video ads AI watched. A count of the ads on screen, not an AI figure. */
+export function ClipCoverage({ watched, videos }: { watched: number; videos: number }) {
+  return <p className={styles.clipCoverage} data-testid="compare-ai-clips">แกะคลิปได้ {watched} จาก {videos} แอดวิดีโอ · คลิปที่แกะได้ AI ดูภาพตามเวลาและฟังเสียง ที่เหลือเห็นแค่ภาพปก</p>;
+}
 
 function RowHead({ label, hint }: { label: string; hint: string }) {
   return <th scope="row" className={styles.aiDim}>{label}<small>{hint}</small></th>;

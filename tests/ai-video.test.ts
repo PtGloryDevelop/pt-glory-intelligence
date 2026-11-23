@@ -65,7 +65,8 @@ test('the estimate pays for the audio not transcribed before: a second over each
 });
 
 test('the page is told what AI saw of each clip, never a path', () => {
-  assert.deepEqual(videoContext('rival', 'VIDEO', row(), true), {status: 'ready', durationMs: 48000, processedMs: 48000, frames: 4, hasAudio: true, heard: true});
+  assert.deepEqual(videoContext('rival', 'VIDEO', row(), true, true), {status: 'ready', durationMs: 48000, processedMs: 48000, frames: 4, hasAudio: true, heard: true, speech: true});
+  assert.equal(videoContext('rival', 'VIDEO', row(), false, true)?.speech, null, 'speech is only known when the audio was heard');
   assert.equal(videoContext('rival', 'VIDEO', null, false)?.status, 'none', 'collected before the reader existed');
   assert.equal(videoContext('rival', 'VIDEO', row({status: 'expired', frames: []}), false)?.frames, 0);
   assert.equal(videoContext('rival', 'IMAGE', null, false), null);
@@ -118,4 +119,31 @@ test('transcription refuses to price by guess and turns provider errors into mes
     await assert.rejects(transcribeAudio(Buffer.from('mp3')), (error: unknown) => error instanceof AiError && /ถอดเสียง/.test(error.message));
   } finally { console.error = errors; }
   assert.equal(mmss(430060), '7:10');
+});
+
+test('each ad says in words what AI saw of its clip', async () => {
+  const {videoLabel} = await import('../lib/ai/compare-shared.ts');
+  const ready = {status: 'ready' as const, durationMs: 48000, processedMs: 48000, frames: 8, hasAudio: true, heard: true, speech: true};
+  assert.deepEqual(videoLabel(ready), {watched: true, text: 'AI ดูคลิป 0:00–0:48 · 8 ภาพ + เสียงพูด (ถอดโดย AI)'});
+  assert.equal(videoLabel({...ready, speech: false})?.text, 'AI ดูคลิป 0:00–0:48 · 8 ภาพ · ไม่พบเสียงพูด');
+  assert.equal(videoLabel({...ready, hasAudio: false, heard: false, speech: null})?.text, 'AI ดูคลิป 0:00–0:48 · 8 ภาพ · คลิปไม่มีเสียง');
+  assert.equal(videoLabel({...ready, heard: false, speech: null})?.text, 'AI ดูคลิป 0:00–0:48 · 8 ภาพ · ไม่ได้ฟังเสียง');
+  assert.equal(videoLabel({...ready, durationMs: 200000, processedMs: 120000})?.text, 'AI ดูคลิป 0:00–2:00 · 8 ภาพ + เสียงพูด (ถอดโดย AI) · ดูแค่ 2 นาทีแรกจาก 3:20');
+  const cover = (status: 'pending' | 'expired' | 'none' | 'too_large' | 'no_video' | 'failed' | 'owned') =>
+    videoLabel({status, durationMs: null, processedMs: null, frames: 0, hasAudio: null, heard: false, speech: null});
+  assert.deepEqual(cover('pending'), {watched: false, text: 'AI เห็นแค่ภาพปก · คลิปยังรอแกะ'});
+  assert.equal(cover('expired')?.text, 'AI เห็นแค่ภาพปก · ลิงก์คลิปหมดอายุก่อนแกะ');
+  assert.equal(cover('none')?.text, 'AI เห็นแค่ภาพปก · เก็บมาก่อนมีระบบแกะคลิป');
+  assert.equal(cover('owned')?.text, 'AI เห็นแค่ภาพปก · ยังดึงคลิปแอดเราไม่ได้ (เพจยังไม่ได้ให้สิทธิ์ระบบ)');
+  for (const status of ['too_large', 'no_video', 'failed'] as const) assert.match(cover(status)?.text ?? '', /^AI เห็นแค่ภาพปก · /);
+  assert.equal(videoLabel(null), null, 'not a video: no line');
+});
+
+test('"แกะคลิปได้ X จาก Y" counts the set: every video ad (ours too) against the ones AI watched', async () => {
+  const {videoCoverage} = await import('../lib/ai/compare-shared.ts');
+  const video = (status: 'ready' | 'owned' | 'expired') => ({video: {status, durationMs: null, processedMs: null, frames: 0, hasAudio: null, heard: false, speech: null}});
+  assert.deepEqual(videoCoverage([video('owned'), video('ready'), {video: null}]), {watched: 1, videos: 2});
+  assert.deepEqual(videoCoverage([video('ready'), video('expired')]), {watched: 1, videos: 2});
+  assert.equal(videoCoverage([{video: null}, {}]), null, 'no video ads: no line');
+  assert.equal(videoCoverage(undefined), null);
 });

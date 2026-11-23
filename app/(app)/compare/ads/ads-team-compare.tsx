@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { ADS_DIMS, ADS_DIM_HINT, ADS_DIM_LABEL, adRefId, fdaWatch, type AdsDim, type AdsReading, type AdsRun, type AiCell, type AiEstimate } from '@/lib/ai/compare-shared';
+import { ADS_DIMS, ADS_DIM_HINT, ADS_DIM_LABEL, adRefId, fdaWatch, type AdsDim, type AdsReading, type AdsRun, type AiCell, type AiEstimate, videoCoverage } from '@/lib/ai/compare-shared';
 import { thaiCodes } from '@/lib/ad-labels';
 import { UsageBars } from '@/components/UsageBars';
-import { Watch, compareId, nameOf, post, refOf, type CompareAd } from './ai-compare';
+import { ClipCoverage, ClipNote, Watch, compareId, nameOf, post, refOf, type CompareAd } from './ai-compare';
 import styles from './comparison.module.css';
 
 /** What the source itself says for a topic, shown beside AI's reading: the copy is a fact, the reading is not. */
@@ -72,6 +72,7 @@ export function AdsTeamCompare({ ads, onCopyLink, linkLabel, viewSwitch }: {
   const result = run?.key === key ? run.data : null;
   const failure = error?.key === key ? error.message : estimate.key === key && estimate.error ? estimate.error : null;
   const readingOf = (item: CompareAd): AdsReading | undefined => result?.ads[compareId(item)];
+  const coverage = videoCoverage(result?.context);
 
   async function copySummary() {
     if (!result) return;
@@ -99,9 +100,10 @@ export function AdsTeamCompare({ ads, onCopyLink, linkLabel, viewSwitch }: {
     <div className={styles.aiHeadRow}>
       <h2 id="compare-ai-heading">AI สรุปคู่นี้ · ทีมยิงแอด <span className={styles.aiBadge}>AI ตีความ</span></h2>
       {viewSwitch}
-      <span className={styles.muted}>แคปชั่น พาดหัว แนวคอนเทนต์ ภาพปก · วิดีโอ AI เห็นแค่ภาพปก ไม่ได้ดูทั้งคลิป</span>
+      <span className={styles.muted}>แคปชั่น พาดหัว แนวคอนเทนต์ ภาพปก · คลิปที่แกะได้ AI ดูภาพตามเวลาและฟังเสียง</span>
     </div>
 
+    {coverage ? <ClipCoverage watched={coverage.watched} videos={coverage.videos} /> : null}
     {!result ? <div className={styles.aiPending} role="status" data-testid="compare-ai-pending">
       {failure ? <><span>{failure}</span><button type="button" onClick={() => { tried.current = null; void analyze(); }} disabled={busy}>ลองอีกครั้ง</button></>
         : <span>{busy ? 'AI กำลังอ่านแคปชั่น พาดหัว และภาพปกของทั้งสองฝั่ง…' : 'กำลังเตรียมสรุป…'}</span>}
@@ -111,6 +113,7 @@ export function AdsTeamCompare({ ads, onCopyLink, linkLabel, viewSwitch }: {
         <table className={styles.aiTable} data-testid="compare-ads-table">
           <thead><tr><th scope="col" className={styles.aiDim}><span className={styles.srOnly}>หัวข้อ</span></th>{ads.map(item => <th scope="col" key={compareId(item)}>
             <span className={item.kind === 'own' ? styles.kindOurs : styles.kindRival}>{item.kind === 'own' ? 'แอดเรา' : 'คู่แข่ง'}</span>
+            <ClipNote video={result?.context?.find(context => context.id === compareId(item))?.video} />
             <strong className={styles.aiName}>{nameOf(item)}</strong>
           </th>)}</tr></thead>
           <tbody>{ADS_DIMS.map(dim => <tr key={dim}>

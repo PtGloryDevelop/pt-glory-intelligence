@@ -332,3 +332,9 @@
 .adsFactLine { display:block; overflow-wrap:anywhere; }
 .adsAi { margin-top:10px; padding-top:10px; border-top:1px dashed var(--line); }
 .adsCoverText { display:block; margin-top:6px; padding:6px 8px; border-radius:6px; background:var(--surface-sunken); font-weight:600; overflow-wrap:anywhere; }
+
+/* What AI saw of each clip (spec 2026-11-23): the words carry it, the tone only repeats them. */
+.clipWatched, .clipCover { flex-basis:100%; display:block; margin-top:2px; font-size:var(--fs-eyebrow); font-weight:400; line-height:1.5; white-space:normal; overflow-wrap:anywhere; }
+.clipWatched { color:var(--ink); }
+.clipCover { color:var(--muted); }
+.clipCoverage { margin:0 0 12px; color:var(--muted); font-size:var(--fs-meta); line-height:1.6; }

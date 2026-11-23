@@ -375,7 +375,9 @@ export async function runComparison(refs: AdRef[], dryRun: boolean, view: TeamVi
   const context = ads.map((ad, index) => {
     const heardKey = heardKeys[index];
     const heard = Boolean(heardKey && hit.has(heardKey.audio) && hit.has(heardKey.hook));
-    return {id: adRefId(ad.ref), ref: ad.ref, side: ad.side, label: ad.label, facts: ad.facts, video: videoContext(ad.ref.kind, ad.format, ad.video, heard)};
+    const said = (key: string) => String((hit.get(key) as {text?: unknown} | null)?.text ?? '').trim().length > 0;
+    const speech = heard && heardKey ? said(heardKey.audio) || said(heardKey.hook) : null;
+    return {id: adRefId(ad.ref), ref: ad.ref, side: ad.side, label: ad.label, facts: ad.facts, video: videoContext(ad.ref.kind, ad.format, ad.video, heard, speech)};
   });
   const run = {model: MODEL, cost, spent: {...budget, today: budget.today + cost, total: budget.total + cost}, summary: hit.get(setKey) as SetReading, context};
   return view === 'ads'

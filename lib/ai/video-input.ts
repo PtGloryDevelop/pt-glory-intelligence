@@ -56,12 +56,13 @@ export function videoParts(row: VideoRow, frames: {t_ms: number; dataUrl: string
 }
 
 /** What the page is told about each ad's clip (no paths, no links). */
-export function videoContext(kind: 'own' | 'rival', format: string, row: VideoRow | null, heard: boolean): VideoContext | null {
-  if (kind === 'own') return format === 'วิดีโอ' ? {status: 'owned', durationMs: null, processedMs: null, frames: 0, hasAudio: null, heard: false} : null;
+export function videoContext(kind: 'own' | 'rival', format: string, row: VideoRow | null, heard: boolean, speech: boolean | null = null): VideoContext | null {
+  const blank = {durationMs: null, processedMs: null, frames: 0, hasAudio: null, heard: false, speech: null};
+  if (kind === 'own') return format === 'วิดีโอ' ? {status: 'owned', ...blank} : null;
   if (format !== 'VIDEO') return null;
-  if (!row) return {status: 'none', durationMs: null, processedMs: null, frames: 0, hasAudio: null, heard: false};
+  if (!row) return {status: 'none', ...blank};
   return {
     status: row.status as VideoContext['status'], durationMs: row.duration_ms, processedMs: row.processed_ms,
-    frames: row.status === 'ready' ? row.frames.length : 0, hasAudio: row.has_audio, heard,
+    frames: row.status === 'ready' ? row.frames.length : 0, hasAudio: row.has_audio, heard, speech: heard ? speech : null,
   };
 }

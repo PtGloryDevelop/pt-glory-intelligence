@@ -48,10 +48,39 @@ export type AiEstimate = {model: string; cached: number; missing: number; setCac
 /**
  * What AI saw of an ad's clip (spec 2026-11-23). status: ready (frames, and audio if any), pending (not read yet),
  * expired / no_video / too_large / failed (the reader stopped), none (collected before the reader existed),
- * owned (our ad: the clip cannot be fetched yet). heard: the audio was transcribed for this reading.
+ * owned (our ad: the clip cannot be fetched yet). heard: the audio was transcribed for this reading;
+ * speech: the transcript has words (null when not heard).
  */
 export type VideoContext = {status: 'ready' | 'pending' | 'expired' | 'no_video' | 'too_large' | 'failed' | 'none' | 'owned';
-  durationMs: number | null; processedMs: number | null; frames: number; hasAudio: boolean | null; heard: boolean};
+  durationMs: number | null; processedMs: number | null; frames: number; hasAudio: boolean | null; heard: boolean; speech: boolean | null};
+
+const clock = (ms: number) => { const s = Math.round(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+const COVER_ONLY: Record<Exclude<VideoContext['status'], 'ready'>, string> = {
+  pending: 'คลิปยังรอแกะ', expired: 'ลิงก์คลิปหมดอายุก่อนแกะ', none: 'เก็บมาก่อนมีระบบแกะคลิป', too_large: 'ไฟล์คลิปใหญ่เกินกำหนด',
+  no_video: 'ไม่พบไฟล์วิดีโอ', failed: 'แกะคลิปไม่สำเร็จ', owned: 'ยังดึงคลิปแอดเราไม่ได้ (เพจยังไม่ได้ให้สิทธิ์ระบบ)',
+};
+
+/**
+ * One line under an ad: what AI saw of its clip, in words (spec 2026-11-23 §11). Null for an ad that is not a
+ * video. Every case says plainly whether AI watched the clip, heard it, or saw the cover only.
+ */
+export function videoLabel(video: VideoContext | null | undefined): {watched: boolean; text: string} | null {
+  if (!video) return null;
+  if (video.status !== 'ready') return {watched: false, text: `AI เห็นแค่ภาพปก · ${COVER_ONLY[video.status]}`};
+  const read = video.processedMs ?? 0, length = video.durationMs ?? read;
+  const sound = video.hasAudio === false ? 'คลิปไม่มีเสียง' : !video.heard ? 'ไม่ได้ฟังเสียง'
+    : video.speech ? null : 'ไม่พบเสียงพูด';
+  const parts = [`AI ดูคลิป 0:00–${clock(read)}`, sound ? `${video.frames} ภาพ` : `${video.frames} ภาพ + เสียงพูด (ถอดโดย AI)`];
+  if (sound) parts.push(sound);
+  if (length > read + 500) parts.push(`ดูแค่ 2 นาทีแรกจาก ${clock(length)}`);
+  return {watched: true, text: parts.join(' · ')};
+}
+
+/** "แกะคลิปได้ X จาก Y แอดวิดีโอ": Y counts every video ad in the set (ours too), X those AI watched. */
+export function videoCoverage(contexts: readonly {video?: VideoContext | null}[] | undefined): {watched: number; videos: number} | null {
+  const videos = (contexts ?? []).filter(context => context.video);
+  return videos.length ? {watched: videos.filter(context => context.video?.status === 'ready').length, videos: videos.length} : null;
+}
 export type AdContext = {id: string; ref: AdRef; side: string; label: string; facts: string; video?: VideoContext | null};
 export type AiRun = {model: string; cost: number; spent: AiSpent; ads: Record<string, AdReading>; summary: SetReading; context?: AdContext[]};
 
