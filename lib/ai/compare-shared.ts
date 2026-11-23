@@ -36,7 +36,8 @@ export const HOOK_REWRITE_BELOW = 7;
 export type ScoreCell = {score: number | null; why: string};
 export type Scores = Record<ScoreDim, ScoreCell>;
 
-export const AI_SOURCES = ['ข้อความ', 'ภาพ', 'ภาพ + ข้อความ', 'ไม่พบ'] as const;
+// 'เสียง' since the video reading (2026-11-23): evidence heard in a clip's transcript.
+export const AI_SOURCES = ['ข้อความ', 'ภาพ', 'ภาพ + ข้อความ', 'เสียง', 'ไม่พบ'] as const;
 export type AiCell = {value: string; source: (typeof AI_SOURCES)[number]; quote: string};
 export type AdReading = Record<AiDim, AiCell> & {claims: {items: {text: string; risky: boolean}[]; quote: string}; scores: Scores; fix: string};
 export type SetReading = {diffs: {text: string; ads: number[]}[]; ideas: {text: string; ads: number[]}[]; hooks: {text: string; why: string}[]};
@@ -44,7 +45,14 @@ export type AdRef = {kind: 'own'; account: string; ad: string} | {kind: 'rival';
 export type AiSpent = {today: number; total: number; dailyCap: number; totalCap: number};
 export type AiEstimate = {model: string; cached: number; missing: number; setCached: boolean; estimate: number; spent: AiSpent};
 /** What the model was told about each ad, in the order it was shown (the index answers cite). */
-export type AdContext = {id: string; ref: AdRef; side: string; label: string; facts: string};
+/**
+ * What AI saw of an ad's clip (spec 2026-11-23). status: ready (frames, and audio if any), pending (not read yet),
+ * expired / no_video / too_large / failed (the reader stopped), none (collected before the reader existed),
+ * owned (our ad: the clip cannot be fetched yet). heard: the audio was transcribed for this reading.
+ */
+export type VideoContext = {status: 'ready' | 'pending' | 'expired' | 'no_video' | 'too_large' | 'failed' | 'none' | 'owned';
+  durationMs: number | null; processedMs: number | null; frames: number; hasAudio: boolean | null; heard: boolean};
+export type AdContext = {id: string; ref: AdRef; side: string; label: string; facts: string; video?: VideoContext | null};
 export type AiRun = {model: string; cost: number; spent: AiSpent; ads: Record<string, AdReading>; summary: SetReading; context?: AdContext[]};
 
 /**

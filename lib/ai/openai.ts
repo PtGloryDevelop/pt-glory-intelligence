@@ -13,8 +13,14 @@ const MODELS: Record<string, {price: [number, number, number]; vision: boolean}>
   'gpt-6-luna': {price: [0.01, 0.1, 0.5], vision: true},
   'gpt-6.1-terra': {price: [0.05, 1, 5], vision: true},
 };
-/** Model names whose rows count against the OpenAI credit (see provider.ts). */
-export const PRICED_MODELS = Object.keys(MODELS);
+/**
+ * Speech to text for the video reading (spec 2026-11-23): USD per minute of audio, billed by the
+ * whole second OpenAI reports in usage.seconds (measured in Ticket 1: a 48.0 s clip was billed 49 s).
+ */
+export const TRANSCRIBE_MODEL = 'gpt-transcribe';
+export const TRANSCRIBE_USD_PER_MINUTE = 0.0045;
+/** Model names whose rows count against the OpenAI credit (see provider.ts), transcription included. */
+export const PRICED_MODELS = [...Object.keys(MODELS), TRANSCRIBE_MODEL];
 
 /**
  * Both models think before answering, and the thinking is billed as output. These calls fill in
@@ -38,6 +44,40 @@ export function callUsd(tokens: {cached: number; uncached: number; output: numbe
 export function estimateUsd(input: number, output: number) {
   const [, price, out] = modelConfig().price;
   return (input * price + output * out) / 1e6;
+}
+
+/**
+ * Thai speech to text for one MP3 cut by the video reader. The text is an AI transcription and is
+ * shown as one; empty text means no speech was heard (music only), never a guess.
+ */
+export async function transcribeAudio(bytes: Buffer): Promise<{text: string; seconds: number; usd: number}> {
+  const key = process.env.OPENAI_API_KEY;
+  if (!key) throw new AiError('ยังไม่ได้ตั้งค่าคีย์ OpenAI (OPENAI_API_KEY) บนเซิร์ฟเวอร์ แจ้งผู้ดูแลระบบ', 503);
+  const form = new FormData();
+  form.append('model', TRANSCRIBE_MODEL);
+  form.append('language', 'th');
+  form.append('file', new Blob([new Uint8Array(bytes)], {type: 'audio/mpeg'}), 'audio.mp3');
+  let response: Response;
+  try {
+    response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+      method: 'POST', signal: AbortSignal.timeout(120_000), headers: {Authorization: `Bearer ${key}`}, body: form,
+    });
+  } catch { throw new AiError('ติดต่อ OpenAI ไม่ได้ ลองใหม่อีกครั้ง', 502); }
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    const code = data?.error?.code ?? data?.error?.type;
+    if (response.status === 429 && code === 'insufficient_quota') throw new AiError('เครดิตในบัญชี OpenAI หมด', 402);
+    if (response.status === 401) throw new AiError('OPENAI_API_KEY ไม่ถูกต้อง', 503);
+    if (response.status === 429) throw new AiError('OpenAI จำกัดจำนวนครั้ง รอสักครู่แล้วลองใหม่', 429);
+    if (response.status >= 500) throw new AiError('OpenAI ขัดข้องชั่วคราว รอสักครู่แล้วลองใหม่', 503);
+    console.error('OpenAI transcription error', response.status, code);
+    throw new AiError('ถอดเสียงจากคลิปไม่สำเร็จ', 502);
+  }
+  if (typeof data?.text !== 'string') throw new AiError('อ่านผลถอดเสียงไม่ได้', 502);
+  // Billed by the second; without the usage figure nothing is priced by guess.
+  const seconds = Number(data?.usage?.type === 'duration' ? data.usage.seconds : NaN);
+  if (!Number.isFinite(seconds) || seconds < 0) throw new AiError('OpenAI ไม่ได้บอกความยาวเสียงที่คิดเงิน', 502);
+  return {text: data.text.trim(), seconds, usd: seconds / 60 * TRANSCRIBE_USD_PER_MINUTE};
 }
 
 /** One call. With a format the reply is held to that schema (strict); the caller still checks it. */

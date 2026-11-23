@@ -81,7 +81,7 @@ test('OpenAI answers by default; AI_PROVIDER=deepseek switches every call, its m
     const openai = await import(openaiPath) as typeof import('../lib/ai/provider.ts');
     assert.equal(openai.PROVIDER, 'openai');
     assert.equal(openai.MODEL, 'gpt-6-luna');
-    assert.deepEqual(openai.SPEND.models, ['gpt-6-luna', 'gpt-6.1-terra']);
+    assert.deepEqual(openai.SPEND.models, ['gpt-6-luna', 'gpt-6.1-terra', 'gpt-transcribe'], 'transcriptions spend the same credit');
     // The October gpt-4.1-mini rows were another account: neither its model nor its dates count.
     assert.equal(openai.SPEND.since, '2026-11-22T17:00:00.000Z');
     process.env.AI_PROVIDER = 'deepseek';

@@ -17,6 +17,9 @@ export const PROVIDER_LABEL = PROVIDER === 'deepseek' ? 'DeepSeek' : 'OpenAI';
 export const MODEL = client.MODEL;
 export const modelConfig = () => client.modelConfig();
 export const estimateUsd = (input: number, output: number) => client.estimateUsd(input, output);
+/** Speech to text is OpenAI's (gpt-transcribe); with DeepSeek on, clips are read from their frames only. */
+export const CAN_TRANSCRIBE = PROVIDER === 'openai';
+export {TRANSCRIBE_MODEL, TRANSCRIBE_USD_PER_MINUTE, transcribeAudio} from './openai.ts';
 export const callModel = (messages: Message[], maxTokens: number, format?: ReplyFormat): Promise<Call> =>
   PROVIDER === 'deepseek' ? deepseek.callDeepSeek(messages, maxTokens) : openai.callOpenAI(messages, maxTokens, format);
 

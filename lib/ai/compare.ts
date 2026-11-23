@@ -10,23 +10,29 @@ import {summarizeOwnedReport} from '../owned-ads/model.ts';
 import type {CompanyAd} from '../owned-ads/source-rows.ts';
 import type {Media} from '../media.ts';
 import {ADS_DIMS, AI_DIMS, AI_SOURCES, SCORE_DIMS, readAdReading, readAdsReading, readSetReading, type AdReading, type AdRef, type AdsReading, type AdsRun, type AiRun, type AiEstimate, type SetReading, type TeamView, adRefId} from './compare-shared.ts';
-import {AiError, MODEL, PROVIDER_LABEL, SPEND, callModel, estimateUsd, modelConfig, type Message} from './provider.ts';
+import {AiError, CAN_TRANSCRIBE, MODEL, PROVIDER_LABEL, SPEND, TRANSCRIBE_MODEL, TRANSCRIBE_USD_PER_MINUTE, callModel, estimateUsd, modelConfig, transcribeAudio, type Message} from './provider.ts';
 import type {ReplyFormat} from './call.ts';
 import {ADS_FORMAT, AD_FORMAT, SET_FORMAT} from './formats.ts';
+import {transcriptKey, transcriptionEstimateUsd, videoContext, videoMarker, videoParts, type Transcripts, type VideoRow} from './video-input.ts';
+import {videoDownloader} from '../media/store-supabase.ts';
 export {parseAdRefs} from './compare-shared.ts';
 export {AiError} from './provider.ts';
 
 // Tokens [input, output] for one ad (copy + low-detail image) and one set summary, measured on gpt-4.1-mini;
 // an order of magnitude shown before running. What is recorded is the provider's own count.
 const EST_AD = [3200, 700] as const, EST_SET = [2400, 500] as const;
+// A clip adds up to eight low-detail frames and a transcript to the input (an order of magnitude, as above).
+const EST_VIDEO_INPUT = 3200;
 // A ceiling, not a target (output is billed as used): Thai can take more tokens here than it did on OpenAI.
 const MAX_OUTPUT = 4000;
 const DAILY_CAP = Number(process.env.AI_DAILY_USD) || 1;
 const TOTAL_CAP = Number(process.env.AI_TOTAL_USD) || 4.5;
-const VERSION = 'v4'; // bump when AD_PROMPT changes (v4: DeepSeek JSON mode, shape in the prompt)
+const VERSION = 'v6'; // bump when AD_PROMPT changes (v6: video clips read from frames and transcript, sources defined)
 const SET_VERSION = 'v8'; // bump when SET_PROMPT changes (v8: DeepSeek JSON mode, shape in the prompt)
 
 type Loaded = {ref: AdRef; side: string; label: string; format: string; text: string; image: string | null; facts: string; owned?: CompanyAd;
+  /** The observation ad_detail chose, and its clip as the video reader left it (rival VIDEO ads only). */
+  observationId: string | null; video: VideoRow | null;
   /** The ad team's view names the headline and the caption apart, so the model knows which is which. */
   headline: string | null; caption: string};
 
@@ -48,7 +54,7 @@ async function loadAds(refs: AdRef[]): Promise<Loaded[]> {
       const roas = summarizeOwnedReport([ad]).roas.value;
       return {
         ref, side: 'แอดของเรา', label: ad.ad_name, format: ad.video_id ? 'วิดีโอ' : 'ภาพ',
-        text: [ad.title, ad.body_text].filter(Boolean).join('\n'), image: cachedOwnedImage(ad) ?? null, owned: ad,
+        text: [ad.title, ad.body_text].filter(Boolean).join('\n'), image: cachedOwnedImage(ad) ?? null, owned: ad, observationId: null, video: null,
         headline: ad.title ?? null, caption: ad.body_text ?? '',
         facts: `ค่าแอด ${ad.spend ?? '—'} ${ad.currency} · ROAS ${roas == null ? '—' : roas.toFixed(2)} · บทสนทนา ${ad.conversations ?? '—'}`,
       };
@@ -56,6 +62,12 @@ async function loadAds(refs: AdRef[]): Promise<Loaded[]> {
     const detail = await getAdDetail(ref.ad, ref.dataset);
     if (!detail) throw new AiError('ไม่พบแอดคู่แข่งที่เลือก', 404);
     const signed = await signArchivedPreviews([detail]);
+    const observationId = (detail as {ad_observation_id?: number | string | null}).ad_observation_id;
+    // RLS lets any signed-in role read it; a failure only means the clip is not used.
+    const reading = detail.display_format === 'VIDEO' && observationId != null
+      ? await db.from('ad_video_readings').select('status, duration_ms, processed_ms, has_audio, frames, audio_path, audio_sha256, hook_audio_path, hook_audio_sha256')
+        .eq('ad_observation_id', String(observationId)).maybeSingle()
+      : null;
     const media = resolveMedia(detail.display_format, detail.media as Media, {archivePath: detail.archive_path, archiveStatus: detail.archive_status, presentationUrl: detail.archive_path ? signed.get(detail.archive_path) ?? null : null});
     return {
       ref, side: 'คู่แข่ง', label: detail.page_name ?? detail.page_id, format: detail.display_format ?? 'ไม่ระบุ',
@@ -63,6 +75,8 @@ async function loadAds(refs: AdRef[]): Promise<Loaded[]> {
       image: 'src' in media ? media.src : null,
       headline: detail.title ?? null, caption: [detail.body_text, detail.link_description, detail.cta_text && `ปุ่ม: ${detail.cta_text}`].filter(Boolean).join('\n'),
       facts: `${detail.is_active ? 'กำลังแสดง' : detail.is_active === false ? 'ไม่แสดงแล้ว' : 'ไม่ทราบสถานะ'} · ยิงมา ${detail.ad_age_days} วัน · ไม่มีข้อมูลงบหรือยอดขายของคู่แข่ง`,
+      observationId: observationId == null ? null : String(observationId),
+      video: reading && !reading.error ? (reading.data as VideoRow | null) : null,
     };
   }));
 }
@@ -115,6 +129,13 @@ const AD_SHAPE = JSON.stringify({
 });
 const SET_SHAPE = JSON.stringify({diffs: [{text: '...', ads: [0, 1]}], ideas: [{text: '...', ads: [0]}], hooks: [{text: '...', why: '...'}]});
 
+/** How a clip is read, the same in both team views (spec 2026-11-23). */
+const VIDEO_RULES = `ถ้าแอดเป็นคลิปและได้รับ "ภาพจากคลิป" เรียงตามเวลาพร้อมบทพูดที่ AI ถอดจากเสียง ให้อ่านจากภาพทุกภาพ เสียง และข้อความรวมกัน
+ป้ายแหล่งที่มา: "ข้อความ" = เฉพาะส่วน "ข้อความในแอด" (แคปชั่น พาดหัว) · "เสียง" = เฉพาะบทพูดที่ถอดจากเสียงของคลิป · "ภาพ" = สิ่งที่เห็นหรือตัวหนังสือบนภาพ (ภาพจากคลิปให้บอกวินาทีไว้ท้าย value เช่น "(0:03)")
+quote ต้องคัดลอกตรงตัวจากแหล่งตามป้ายนั้น ถ้าเรื่องเดียวกันมีหลายแหล่ง ให้ใส่ป้ายตามแหล่งที่ quote คัดลอกมา คำที่ได้ยินในคลิปแต่ไม่มีในข้อความในแอด ต้องใช้ป้าย "เสียง" เสมอ
+คำเปิดของคลิปให้ดูจากภาพ 0:00–0:03 และบทพูด 5 วินาทีแรก คำอ้างที่ได้ยินในเสียงต้องอยู่ใน claims ด้วย
+ถ้าข้อมูลบอกว่าไม่ได้ฟังเสียง ห้ามสรุปว่าในเสียงมีหรือไม่มีคำอ้าง`;
+
 const AD_PROMPT = `คุณช่วยทีมการตลาดไทยอ่านโฆษณา Facebook ทีละตัว ตอบภาษาไทย สั้น ไม่เกิน 120 ตัวอักษรต่อช่อง
 ใช้เฉพาะสิ่งที่อยู่ในข้อความหรือภาพของแอดนี้ ห้ามเดา ถ้าไม่พบให้ value="ไม่พบในแอด" source="ไม่พบ" quote=""
 quote ต้องคัดลอกคำจริงจากข้อความหรือคำบนภาพ ไม่เกิน 80 ตัวอักษร
@@ -125,6 +146,7 @@ offer = ราคา จำนวน ของแถม ส่งฟรี เ�
 proof = หลักฐานความน่าเชื่อ เช่น รีวิว ผลทดสอบ เลข อย. ผู้เชี่ยวชาญ ส่วนผสม
 format = รูปแบบครีเอทีฟ (ภาพนิ่ง วิดีโอ หลายภาพ) และลักษณะที่เห็น
 claims = คำอ้างเรื่องสุขภาพหรือผลลัพธ์ทั้งหมด risky=true ถ้าเสี่ยงผิดเกณฑ์โฆษณา อย. เช่น รักษา หายขาด ถาวร ลดน้ำหนักเป็นตัวเลข อ้างแพทย์
+${VIDEO_RULES}
 ห้ามคาดเดายอดขาย งบ หรือผลลัพธ์ของแอด
 
 scores = ให้คะแนนคุณภาพครีเอทีฟ 0–10 (จำนวนเต็ม) แบบ creative director ที่เข้มงวด ไม่ใจดี ไม่ใช่การเดาผลลัพธ์
@@ -159,7 +181,7 @@ ads = index ของแอดที่เป็นหลักฐานขอ�
 ${SET_SHAPE}`;
 
 // ทีมยิงแอด: only the four topics the ad team works with, each its own prompt and cache.
-const ADS_VERSION = 'v1'; // bump when ADS_AD_PROMPT changes
+const ADS_VERSION = 'v3'; // bump when ADS_AD_PROMPT changes (v3: video clips, sources defined)
 const ADS_SET_VERSION = 'v1'; // bump when ADS_SET_PROMPT changes
 const ADS_SHAPE = JSON.stringify(Object.fromEntries(ADS_DIMS.map(dim => [dim, blank])));
 
@@ -169,7 +191,8 @@ quote ต้องคัดลอกคำจริงจากข้อคว�
 caption = โครงของแคปชั่น: เปิดด้วยอะไร ยาวหรือสั้น โทนภาษา (เป็นกันเอง ทางการ เร่งเร้า เล่าเรื่อง) และปิดท้ายชวนให้ทำอะไร quote = บรรทัดแรกของแคปชั่น
 headline = ข้อความพาดหัว คัดลอกตามจริงทุกตัวอักษร ถ้ามี "พาดหัว (Meta)" ให้ใช้อันนั้น source="ข้อความ" ถ้าไม่มีให้ใช้ตัวหนังสือที่ใหญ่ที่สุดบนภาพ source="ภาพ" quote = คำเดียวกับ value
 content = แนวคอนเทนต์ เลือกที่ตรงที่สุด เช่น พรีเซนเตอร์พูดกับกล้อง รีวิวลูกค้า ก่อน-หลัง สอนวิธีใช้ โปรโมชั่นและราคา คนดังหรืออินฟลู เล่าเรื่องหรือละครสั้น ภาพสินค้าล้วน แล้วต่อด้วยสิ่งที่เห็นสั้นๆ
-cover = ภาพหน้าปก: ในภาพมีอะไร (คน สินค้า ฉาก สีเด่น) quote = ตัวหนังสือทั้งหมดบนภาพปก คัดลอกตามจริง เรียงจากบนลงล่าง คั่นด้วย " / " ถ้าไม่มีภาพให้ value="ไม่มีภาพให้ดู" source="ไม่พบ" quote=""
+cover = ภาพหน้าปก: ในภาพมีอะไร (คน สินค้า ฉาก สีเด่น) quote = ตัวหนังสือทั้งหมดบนภาพปก คัดลอกตามจริง เรียงจากบนลงล่าง คั่นด้วย " / " ถ้าไม่มีภาพให้ value="ไม่มีภาพให้ดู" source="ไม่พบ" quote="" ถ้าเป็นคลิป ภาพปกคือภาพที่ 0:00
+${VIDEO_RULES}
 ห้ามคาดเดายอดขาย งบ หรือผลลัพธ์ของแอด
 source ใช้ได้แค่ ${AI_SOURCES.map(name => `"${name}"`).join(' ')}
 ตอบเป็น JSON object เดียว มีครบทุกช่องตามรูปแบบนี้ (... คือส่วนที่ให้เติม):
@@ -201,7 +224,7 @@ type ViewSpec = {
 };
 const VIEWS: Record<TeamView, ViewSpec> = {
   general: {
-    adKey: ad => `ad:${VERSION}:${MODEL}:${adRefId(ad.ref)}:${sha(ad.text)}`,
+    adKey: ad => `ad:${VERSION}:${MODEL}:${adRefId(ad.ref)}:${sha(ad.text + videoMarker(ad.video))}`,
     setKey: keys => `set:${SET_VERSION}:${MODEL}:${sha(keys.join('|'))}`,
     adPrompt: AD_PROMPT, setPrompt: SET_PROMPT, adFormat: AD_FORMAT,
     copy: ad => `ข้อความในแอด:\n${ad.text.slice(0, 4000) || '(ไม่มีข้อความ)'}`,
@@ -213,7 +236,7 @@ const VIEWS: Record<TeamView, ViewSpec> = {
     },
   },
   ads: {
-    adKey: ad => `adsteam:ad:${ADS_VERSION}:${MODEL}:${adRefId(ad.ref)}:${sha(adsCopy(ad))}`,
+    adKey: ad => `adsteam:ad:${ADS_VERSION}:${MODEL}:${adRefId(ad.ref)}:${sha(adsCopy(ad) + videoMarker(ad.video))}`,
     setKey: keys => `adsteam:set:${ADS_SET_VERSION}:${MODEL}:${sha(keys.join('|'))}`,
     adPrompt: ADS_AD_PROMPT, setPrompt: ADS_SET_PROMPT, adFormat: ADS_FORMAT,
     copy: adsCopy,
@@ -252,6 +275,16 @@ export async function withinBudget(estimate: number) {
   return budget;
 }
 
+/** A clip AI can be shown: the video reader finished it, and the model reads pictures. */
+const clipOf = (ad: Loaded, vision: boolean) =>
+  vision && ad.video?.status === 'ready' && ad.video.frames.length > 0 && ad.observationId ? ad.video : null;
+
+/** The clip's transcript cache keys, or null when it has no audio to hear or nothing here transcribes. */
+function transcriptKeysOf(ad: Loaded, clip: VideoRow | null) {
+  if (!clip?.has_audio || !CAN_TRANSCRIBE || !ad.observationId || !clip.audio_path || !clip.audio_sha256 || !clip.hook_audio_path || !clip.hook_audio_sha256) return null;
+  return {audio: transcriptKey(ad.observationId, 'audio', clip.audio_sha256), hook: transcriptKey(ad.observationId, 'hook', clip.hook_audio_sha256)};
+}
+
 /** dryRun: what is cached, what a run would cost, and what has been spent. Never calls the AI provider. */
 export async function runComparison(refs: AdRef[], dryRun: boolean, view: TeamView = 'general'): Promise<AiEstimate | AiRun | AdsRun> {
   const {vision} = modelConfig();
@@ -260,11 +293,21 @@ export async function runComparison(refs: AdRef[], dryRun: boolean, view: TeamVi
   const ads = await loadAds(refs);
   const keys = ads.map(spec.adKey);
   const setKey = spec.setKey(keys);
-  const cached = await db.from('ai_analyses').select('key,result').in('key', [...keys, setKey]);
+  const clips = ads.map(ad => clipOf(ad, vision));
+  const heardKeys = ads.map((ad, index) => transcriptKeysOf(ad, clips[index]));
+  const cached = await db.from('ai_analyses').select('key,result')
+    .in('key', [...keys, setKey, ...heardKeys.flatMap(key => key ? [key.audio, key.hook] : [])]);
   if (cached.error) throw new AiError('อ่านผลวิเคราะห์เดิมไม่สำเร็จ', 503);
   const hit = new Map((cached.data ?? []).map(row => [row.key as string, row.result]));
   const missing = ads.filter((_, index) => !hit.has(keys[index]));
-  const estimate = missing.length * estimateUsd(...EST_AD) + (hit.has(setKey) ? 0 : estimateUsd(...EST_SET));
+  // A clip read for the first time adds its frames and any audio not transcribed before.
+  const clipEstimate = ads.reduce((sum, _, index) => {
+    const clip = clips[index], key = heardKeys[index];
+    if (hit.has(keys[index]) || !clip) return sum;
+    const cachedParts = new Set((['audio', 'hook'] as const).filter(part => key && hit.has(key[part])));
+    return sum + estimateUsd(EST_VIDEO_INPUT, 0) + (key ? transcriptionEstimateUsd(clip, cachedParts, TRANSCRIBE_USD_PER_MINUTE) : 0);
+  }, 0);
+  const estimate = missing.length * estimateUsd(...EST_AD) + clipEstimate + (hit.has(setKey) ? 0 : estimateUsd(...EST_SET));
   const budget = await spent(db);
   if (dryRun) return {model: MODEL, cached: ads.length - missing.length, missing: missing.length, setCached: hit.has(setKey), estimate, spent: budget};
   if (estimate > 0 && (budget.today + estimate > DAILY_CAP || budget.total + estimate > TOTAL_CAP))
@@ -276,17 +319,50 @@ export async function runComparison(refs: AdRef[], dryRun: boolean, view: TeamVi
     const {error} = await db.from('ai_analyses').upsert({key, kind, model: MODEL, result: call.result, input_tokens: call.input, output_tokens: call.output, usd: call.usd.toFixed(6)});
     if (error) console.error('AI analysis not cached', error.message);
   };
+  const download = clips.some(Boolean) ? videoDownloader() : null;
+  /** One part's transcript: cached, or transcribed now and cached, so a clip's audio is paid for once. */
+  const transcript = async (key: string, path: string): Promise<string> => {
+    if (hit.has(key)) return String((hit.get(key) as {text?: unknown} | null)?.text ?? '');
+    const heard = await transcribeAudio(await download!(path));
+    cost += heard.usd;
+    hit.set(key, {text: heard.text, seconds: heard.seconds});
+    const {error} = await db.from('ai_analyses').upsert({key, kind: 'transcript', model: TRANSCRIBE_MODEL, result: {text: heard.text, seconds: heard.seconds}, input_tokens: 0, output_tokens: 0, usd: heard.usd.toFixed(6)});
+    if (error) console.error('Transcript not cached', error.message);
+    return heard.text;
+  };
   await Promise.all(ads.map(async (ad, index) => {
     if (hit.has(keys[index])) return;
-    // A model that cannot read pictures is not sent one (nor is Meta asked for it).
-    const image = vision ? await imageData(ad.owned ? await ownedImage(ad.owned) : ad.image) : null;
-    const content: Exclude<Message['content'], string> = [{type: 'text', text: `ฝั่ง: ${ad.side}\nชื่อ: ${ad.label}\nรูปแบบ: ${ad.format}\n${image ? '' : 'ไม่มีภาพประกอบ อ่านจากข้อความเท่านั้น\n'}${spec.copy(ad)}`}];
-    if (image) content.push({type: 'image_url', image_url: {url: image, detail: 'low'}});
+    const header = `ฝั่ง: ${ad.side}\nชื่อ: ${ad.label}\nรูปแบบ: ${ad.format}\n`;
+    let content: Exclude<Message['content'], string> | null = null, seen = false, key = keys[index];
+    const clip = clips[index], heardKey = heardKeys[index];
+    if (clip) {
+      try {
+        const frames = await Promise.all(clip.frames.map(async frame =>
+          ({t_ms: frame.t_ms, dataUrl: `data:image/jpeg;base64,${(await download!(frame.path)).toString('base64')}`})));
+        const transcripts: Transcripts | null = !clip.has_audio ? {audio: null, hook: null}
+          : heardKey ? {hook: await transcript(heardKey.hook, clip.hook_audio_path!), audio: await transcript(heardKey.audio, clip.audio_path!)} : null;
+        content = [{type: 'text', text: `${header}${spec.copy(ad)}`}, ...videoParts(clip, frames, transcripts)];
+        seen = frames.length > 0;
+      } catch (error) {
+        // The team must see a transcription refusal (no credit, a bad key); a storage hiccup falls back to the cover.
+        if (error instanceof AiError) throw error;
+        console.error('Clip not used', {ad: adRefId(ad.ref), error: error instanceof Error ? error.name : 'unknown'});
+        // Kept under the key of a reading without the clip, so the next run reads the clip.
+        key = spec.adKey({...ad, video: null});
+      }
+    }
+    if (!content) {
+      // A model that cannot read pictures is not sent one (nor is Meta asked for it).
+      const image = vision ? await imageData(ad.owned ? await ownedImage(ad.owned) : ad.image) : null;
+      content = [{type: 'text', text: `${header}${image ? '' : 'ไม่มีภาพประกอบ อ่านจากข้อความเท่านั้น\n'}${spec.copy(ad)}`}];
+      if (image) content.push({type: 'image_url', image_url: {url: image, detail: 'low'}});
+      seen = Boolean(image);
+    }
     const call = await callModel([{role: 'system', content: spec.adPrompt}, {role: 'user', content}], MAX_OUTPUT, spec.adFormat);
-    const reading = spec.read(call.result, Boolean(image));
+    const reading = spec.read(call.result, seen);
     if (!reading) throw new AiError('AI ตอบไม่ครบตามรูปแบบ ลองใหม่อีกครั้ง', 502);
     hit.set(keys[index], reading);
-    await save(keys[index], 'ad', {...call, result: reading});
+    await save(key, 'ad', {...call, result: reading});
   }));
   if (!hit.has(setKey)) {
     const input = ads.map((ad, index) => ({index, side: ad.side, name: ad.label, facts: ad.facts, reading: hit.get(keys[index])}));
@@ -296,7 +372,11 @@ export async function runComparison(refs: AdRef[], dryRun: boolean, view: TeamVi
     hit.set(setKey, summary);
     await save(setKey, 'set', {...call, result: summary});
   }
-  const context = ads.map(ad => ({id: adRefId(ad.ref), ref: ad.ref, side: ad.side, label: ad.label, facts: ad.facts}));
+  const context = ads.map((ad, index) => {
+    const heardKey = heardKeys[index];
+    const heard = Boolean(heardKey && hit.has(heardKey.audio) && hit.has(heardKey.hook));
+    return {id: adRefId(ad.ref), ref: ad.ref, side: ad.side, label: ad.label, facts: ad.facts, video: videoContext(ad.ref.kind, ad.format, ad.video, heard)};
+  });
   const run = {model: MODEL, cost, spent: {...budget, today: budget.today + cost, total: budget.total + cost}, summary: hit.get(setKey) as SetReading, context};
   return view === 'ads'
     ? {...run, view, ads: Object.fromEntries(ads.map((ad, index) => [adRefId(ad.ref), hit.get(keys[index]) as AdsReading]))}

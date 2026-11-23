@@ -92,6 +92,16 @@ export function videoUploader(): (path: string, bytes: Buffer, mimeType: string)
   };
 }
 
+/** Reads files back from the video bucket on the server (frames and audio sent to AI). Never a URL to the client. */
+export function videoDownloader(): (path: string) => Promise<Buffer> {
+  const client = serviceClient();
+  return async (path) => {
+    const { data, error } = await client.storage.from(VIDEO_BUCKET).download(path);
+    if (error || !data) throw error ?? new Error("video file missing");
+    return Buffer.from(await data.arrayBuffer());
+  };
+}
+
 export async function ensurePreviewBucket(): Promise<void> {
   const client = serviceClient();
   const { data } = await client.storage.getBucket(PREVIEW_BUCKET);
