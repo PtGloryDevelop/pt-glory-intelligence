@@ -104,7 +104,7 @@ async function stateOf(client: pg.Client, id: string) {
     started_at: string | null; finished_at: string | null; error_class: string | null;
     error_detail: string | null; requires_admin: boolean; next_check_at: string | null;
     result_charged_items: number | null;
-    lease_owner: string | null; cost_reserved_usd: string; start_attempted_at: string | null;
+    lease_owner: string | null; cost_reserved_usd: string | null; start_attempted_at: string | null;
   }>(
     `select status, provider_run_id, provider_dataset_id, started_at, finished_at, error_class,
             error_detail, requires_admin, next_check_at, lease_owner, cost_reserved_usd,
@@ -173,6 +173,11 @@ test("the machine moves one step at a time", { skip }, async (t) => {
     assert.equal(state.status, "failed");
     assert.equal(state.error_class, "provider_start_failed");
     assert.ok(state.finished_at, "a terminal request carries a finish time");
+    // No run exists, so nothing can be charged: the hold is let go, and its amount stays on the record.
+    assert.equal(state.cost_reserved_usd, null, "a refused start holds no money");
+    const { rows: [failed] } = await client.query<{ after: { released_hold_usd: string | null } }>(
+      "select after from public.audit_logs where entity_id = $1 and action = 'collection.failed'", [id]);
+    assert.equal(failed.after.released_hold_usd, "0.100000");
 
     // Nothing claims a terminal request again.
     const again = await advance(id, { provider: mock, worker: "w2" });

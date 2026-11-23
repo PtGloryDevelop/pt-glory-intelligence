@@ -322,10 +322,13 @@ async function startOnce(
     });
   }
   if (outcome.outcome === "refused") {
+    // A refusal is proven to come before any actor work (or nothing was sent at all), so no run
+    // exists and nothing can be charged: the reservation is let go here, as a queued request holds
+    // none. Before this, it stayed held for good and ate the month's budget.
     return finish(requestId, request, {
       action: "start_refused", status: "failed", audit: "collection.failed",
       errorClass: outcome.reason === "not_configured" ? "provider_unreachable" : "provider_start_failed",
-      detail: outcome.detail,
+      detail: outcome.detail, releaseHold: true,
     });
   }
   // Unknown: a run may exist. Never start again; reconcile by reading.
@@ -450,6 +453,8 @@ async function finish(
     /** Only a fail-closed stop replaces a class that is already recorded. */
     overwriteErrorClass?: boolean;
     clearStartMarker?: boolean;
+    /** Only a start the provider refused: no run, so the reservation is cleared and its amount audited. */
+    releaseHold?: boolean;
   },
 ): Promise<AdvanceOutcome> {
   const terminal = outcome.status === "failed" || outcome.status === "succeeded";
@@ -482,6 +487,10 @@ async function finish(
               -- It is never a settlement condition and never an accounting
               -- figure: C10 owns cost, and C01-B showed this number lags.
               result_charged_items = coalesce(result_charged_items, $15),
+              -- Null is what a queued request holds: no paid start, so no money aside.
+              -- Never for a request with an identified run, whose cost C10 settles.
+              cost_reserved_usd = case when $17 and provider_run_id is null and $4::text is null
+                                       then null else cost_reserved_usd end,
               error_detail = coalesce($10, error_detail),
               requires_admin = case when $11 then true else requires_admin end,
               start_attempted_at = case when $12 then null else start_attempted_at end,
@@ -508,12 +517,15 @@ async function finish(
         outcome.overwriteErrorClass === true,
         outcome.run?.usage.chargedItems ?? null,
         outcome.run?.terminal === true && outcome.run.runId !== "",
+        outcome.releaseHold === true,
       ],
     );
     if (outcome.audit) {
       await audit(client, request.requested_by, outcome.audit, requestId, {
         from: request.status, to: outcome.status,
         ...(outcome.errorClass ? { error_class: outcome.errorClass } : {}),
+        // What was held, kept on the record: clearing it is not a claim about any other cost.
+        ...(outcome.releaseHold ? { released_hold_usd: request.cost_reserved_usd ?? null } : {}),
       });
     }
   });

@@ -466,3 +466,16 @@ test("no price and no C01 figure is baked into the arithmetic", () => {
   assert.ok(!source.includes("finished_at"), "finished_at must not decide attribution");
   assert.ok(!source.includes("cost_finalized_at"), "cost_finalized_at must not decide attribution");
 });
+
+test("a start the provider refused holds nothing once its reservation is cleared, and frees the budget it held", () => {
+  // 13 Nov 2026: three starts refused with HTTP 401 kept USD 2.24535 held, and a USD 5 budget read as spent.
+  const refused = (amount: string | null) => request({status: "failed", cost_status: "reserved", cost_reserved_usd: amount, started_at: null});
+  const settled = request({cost_status: "final", cost_final_usd: "2.754650"});
+  const before = commitmentOf([settled, refused("1.000000"), refused("1.000000"), refused("0.245350")]);
+  assert.equal(availableBudgetMicros(5n * MICROS_PER_USD, before), 0n, "the bug: the refused holds used up the budget");
+  // What the machine now writes at a refusal (and migration 0079 wrote for those three).
+  const after = commitmentOf([settled, refused(null), refused(null), refused(null)]);
+  assert.equal(after.heldReservationMicros, 0n);
+  assert.equal(microsToUsd(availableBudgetMicros(5n * MICROS_PER_USD, after)), "2.245350");
+  assert.deepEqual(contributionOf(refused(null)), {actualMicros: 0n, heldMicros: 0n});
+});
