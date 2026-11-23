@@ -35,7 +35,10 @@ test("the talk is held to the comparison's facts and the FDA rules", () => {
   // Every call spends within the shared caps, and is recorded with its cost.
   assert.match(rounds, /await withinBudget\(estimateUsd\(\.\.\.EST_ASK\)\)/);
   assert.match(rounds, /await withinBudget\(estimateUsd\(\.\.\.EST_NOTE\)\)/);
-  assert.match(read("lib/ai/compare.ts"), /from\('compare_messages'\)\.select\('usd,created_at'\)/, "the talk counts toward the caps");
+  // Both tables are read through the same provider filter: the talk counts toward the caps.
+  const compare = read("lib/ai/compare.ts");
+  assert.match(compare, /db\.from\(table\)\.select\('usd,created_at'\)\.in\('model', SPEND\.models\)/);
+  assert.match(compare, /Promise\.all\(\[rows\('ai_analyses'\), rows\('compare_messages'\)\]\)/, "the talk counts toward the caps");
 });
 
 test("rounds are for analysts, and the tables are not public", () => {

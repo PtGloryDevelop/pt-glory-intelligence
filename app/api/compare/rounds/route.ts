@@ -1,7 +1,7 @@
 import {NextResponse} from 'next/server';
 import {AuthorizationError, requireRole} from '@/lib/auth/roles';
 import {parseAdRefs} from '@/lib/ai/compare';
-import {AiError} from '@/lib/ai/deepseek';
+import {AiError} from '@/lib/ai/provider';
 import {createRound, listRounds} from '@/lib/ai/rounds';
 
 export const runtime = 'nodejs';

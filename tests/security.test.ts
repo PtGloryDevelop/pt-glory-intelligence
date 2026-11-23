@@ -80,16 +80,20 @@ test("the provider client is server-only, and its token has no second path", () 
   }
 });
 
-test("the AI provider client is server-only, and its key has one reader", () => {
-  const deepseek = readFileSync(join("lib", "ai", "deepseek.ts"), "utf8");
-  assert.match(deepseek, /^import 'server-only';/m);
-  assert.match(deepseek, /Authorization: `Bearer \${key}`/);
-  const readers = ["lib", "app", "components"]
-    .flatMap((dir) => (existsSync(dir) ? walk(dir) : []))
-    .filter((path) => /.tsx?$/.test(path))
-    .filter((path) => readFileSync(path, "utf8").includes("DEEPSEEK_API_KEY"));
-  assert.deepEqual(readers, [join("lib", "ai", "deepseek.ts")]);
-  assert.doesNotMatch(deepseek, /NEXT_PUBLIC_/);
+test("each AI provider client is server-only, and its key has one reader", () => {
+  for (const [file, key] of [["deepseek.ts", "DEEPSEEK_API_KEY"], ["openai.ts", "OPENAI_API_KEY"]]) {
+    const client = readFileSync(join("lib", "ai", file), "utf8");
+    assert.match(client, /^import 'server-only';/m, file);
+    assert.match(client, /Authorization: `Bearer \${key}`/, file);
+    const readers = ["lib", "app", "components"]
+      .flatMap((dir) => (existsSync(dir) ? walk(dir) : []))
+      .filter((path) => /.tsx?$/.test(path))
+      .filter((path) => readFileSync(path, "utf8").includes(key));
+    assert.deepEqual(readers, [join("lib", "ai", file)], key);
+    assert.doesNotMatch(client, /NEXT_PUBLIC_/, file);
+  }
+  // The switch between them is server-only too.
+  assert.match(readFileSync(join("lib", "ai", "provider.ts"), "utf8"), /^import 'server-only';/m);
 });
 
 test("no test or fixture points at the provider's API host", () => {

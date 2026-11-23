@@ -10,12 +10,14 @@ import {summarizeOwnedReport} from '../owned-ads/model.ts';
 import type {CompanyAd} from '../owned-ads/source-rows.ts';
 import type {Media} from '../media.ts';
 import {ADS_DIMS, AI_DIMS, AI_SOURCES, SCORE_DIMS, readAdReading, readAdsReading, readSetReading, type AdReading, type AdRef, type AdsReading, type AdsRun, type AiRun, type AiEstimate, type SetReading, type TeamView, adRefId} from './compare-shared.ts';
-import {AiError, MODEL, callDeepSeek, estimateUsd, modelConfig, type Message} from './deepseek.ts';
+import {AiError, MODEL, PROVIDER_LABEL, SPEND, callModel, estimateUsd, modelConfig, type Message} from './provider.ts';
+import type {ReplyFormat} from './call.ts';
+import {ADS_FORMAT, AD_FORMAT, SET_FORMAT} from './formats.ts';
 export {parseAdRefs} from './compare-shared.ts';
-export {AiError} from './deepseek.ts';
+export {AiError} from './provider.ts';
 
 // Tokens [input, output] for one ad (copy + low-detail image) and one set summary, measured on gpt-4.1-mini;
-// an order of magnitude shown before running. What is recorded is DeepSeek's own count.
+// an order of magnitude shown before running. What is recorded is the provider's own count.
 const EST_AD = [3200, 700] as const, EST_SET = [2400, 500] as const;
 // A ceiling, not a target (output is billed as used): Thai can take more tokens here than it did on OpenAI.
 const MAX_OUTPUT = 4000;
@@ -86,7 +88,7 @@ async function ownedImage(row: CompanyAd): Promise<string | null> {
 }
 
 const supabaseHost = (() => { try { return new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').hostname; } catch { return ''; } })();
-/** Fetch the still ourselves (allowlisted hosts only) so DeepSeek never needs to reach a signed or expiring URL. */
+/** Fetch the still ourselves (allowlisted hosts only) so the AI provider never needs to reach a signed or expiring URL. */
 async function imageData(url: string | null): Promise<string | null> {
   if (!url) return null;
   let parsed: URL;
@@ -102,7 +104,8 @@ async function imageData(url: string | null): Promise<string | null> {
   } catch { return null; }
 }
 
-// DeepSeek's JSON mode takes no schema: the prompt shows the shape, and readAdReading/readSetReading enforce it.
+// The prompt shows the shape (DeepSeek's JSON mode takes no schema); OpenAI is also held to the matching
+// strict schema in formats.ts. Either way readAdReading/readSetReading check the reply before it is kept.
 const blank = {value: '...', source: 'ข้อความ', quote: '...'};
 const AD_SHAPE = JSON.stringify({
   ...Object.fromEntries(AI_DIMS.map(dim => [dim, blank])),
@@ -191,7 +194,7 @@ const adsCopy = (ad: Loaded) => `พาดหัว (Meta): ${ad.headline?.trim(
 
 /** What differs between team views: prompts, cache keys, the copy the model is shown, and how its reply is checked. */
 type ViewSpec = {
-  adKey: (ad: Loaded) => string; setKey: (keys: string[]) => string; adPrompt: string; setPrompt: string;
+  adKey: (ad: Loaded) => string; setKey: (keys: string[]) => string; adPrompt: string; setPrompt: string; adFormat: ReplyFormat;
   copy: (ad: Loaded) => string;
   /** `seen` is false when the model was sent no picture: whatever it said about one is replaced. */
   read: (raw: unknown, seen: boolean) => AdReading | AdsReading | null;
@@ -200,7 +203,7 @@ const VIEWS: Record<TeamView, ViewSpec> = {
   general: {
     adKey: ad => `ad:${VERSION}:${MODEL}:${adRefId(ad.ref)}:${sha(ad.text)}`,
     setKey: keys => `set:${SET_VERSION}:${MODEL}:${sha(keys.join('|'))}`,
-    adPrompt: AD_PROMPT, setPrompt: SET_PROMPT,
+    adPrompt: AD_PROMPT, setPrompt: SET_PROMPT, adFormat: AD_FORMAT,
     copy: ad => `ข้อความในแอด:\n${ad.text.slice(0, 4000) || '(ไม่มีข้อความ)'}`,
     read: (raw, seen) => {
       const reading = readAdReading(raw);
@@ -212,7 +215,7 @@ const VIEWS: Record<TeamView, ViewSpec> = {
   ads: {
     adKey: ad => `adsteam:ad:${ADS_VERSION}:${MODEL}:${adRefId(ad.ref)}:${sha(adsCopy(ad))}`,
     setKey: keys => `adsteam:set:${ADS_SET_VERSION}:${MODEL}:${sha(keys.join('|'))}`,
-    adPrompt: ADS_AD_PROMPT, setPrompt: ADS_SET_PROMPT,
+    adPrompt: ADS_AD_PROMPT, setPrompt: ADS_SET_PROMPT, adFormat: ADS_FORMAT,
     copy: adsCopy,
     read: (raw, seen) => {
       const reading = readAdsReading(raw);
@@ -224,12 +227,13 @@ const VIEWS: Record<TeamView, ViewSpec> = {
 
 async function spent(db: Awaited<ReturnType<typeof dbUser>>) {
   // ponytail: sums every row in JS; fine for thousands of calls, move to SQL if the table grows large.
-  // DeepSeek rows only: the caps and the credit bar track the DeepSeek balance; older OpenAI rows were another account.
+  // This provider's rows only (provider.ts SPEND): the caps and the credit bar track its own balance.
   // Readings and the compare-round talk (questions, note drafts) share one budget.
-  const [readings, talk] = await Promise.all([
-    db.from('ai_analyses').select('usd,created_at').like('model', 'deepseek%'),
-    db.from('compare_messages').select('usd,created_at').like('model', 'deepseek%'),
-  ]);
+  const rows = (table: 'ai_analyses' | 'compare_messages') => {
+    const query = db.from(table).select('usd,created_at').in('model', SPEND.models);
+    return SPEND.since ? query.gte('created_at', SPEND.since) : query;
+  };
+  const [readings, talk] = await Promise.all([rows('ai_analyses'), rows('compare_messages')]);
   if (readings.error) throw new AiError('อ่านค่าใช้จ่าย AI ไม่สำเร็จ', 503);
   // Before migration 0077 there is no talk to count, and nothing can be added to it either.
   if (talk.error) console.error('Compare talk cost unreadable', talk.error.code);
@@ -248,7 +252,7 @@ export async function withinBudget(estimate: number) {
   return budget;
 }
 
-/** dryRun: what is cached, what a run would cost, and what has been spent. Never calls DeepSeek. */
+/** dryRun: what is cached, what a run would cost, and what has been spent. Never calls the AI provider. */
 export async function runComparison(refs: AdRef[], dryRun: boolean, view: TeamView = 'general'): Promise<AiEstimate | AiRun | AdsRun> {
   const {vision} = modelConfig();
   const spec = VIEWS[view];
@@ -278,17 +282,17 @@ export async function runComparison(refs: AdRef[], dryRun: boolean, view: TeamVi
     const image = vision ? await imageData(ad.owned ? await ownedImage(ad.owned) : ad.image) : null;
     const content: Exclude<Message['content'], string> = [{type: 'text', text: `ฝั่ง: ${ad.side}\nชื่อ: ${ad.label}\nรูปแบบ: ${ad.format}\n${image ? '' : 'ไม่มีภาพประกอบ อ่านจากข้อความเท่านั้น\n'}${spec.copy(ad)}`}];
     if (image) content.push({type: 'image_url', image_url: {url: image, detail: 'low'}});
-    const call = await callDeepSeek([{role: 'system', content: spec.adPrompt}, {role: 'user', content}], MAX_OUTPUT);
+    const call = await callModel([{role: 'system', content: spec.adPrompt}, {role: 'user', content}], MAX_OUTPUT, spec.adFormat);
     const reading = spec.read(call.result, Boolean(image));
-    if (!reading) throw new AiError('DeepSeek ตอบไม่ครบตามรูปแบบ ลองใหม่อีกครั้ง', 502);
+    if (!reading) throw new AiError('AI ตอบไม่ครบตามรูปแบบ ลองใหม่อีกครั้ง', 502);
     hit.set(keys[index], reading);
     await save(keys[index], 'ad', {...call, result: reading});
   }));
   if (!hit.has(setKey)) {
     const input = ads.map((ad, index) => ({index, side: ad.side, name: ad.label, facts: ad.facts, reading: hit.get(keys[index])}));
-    const call = await callDeepSeek([{role: 'system', content: spec.setPrompt}, {role: 'user', content: JSON.stringify(input)}], MAX_OUTPUT);
+    const call = await callModel([{role: 'system', content: spec.setPrompt}, {role: 'user', content: JSON.stringify(input)}], MAX_OUTPUT, SET_FORMAT);
     const summary = readSetReading(call.result, ads.length);
-    if (!summary) throw new AiError('DeepSeek ตอบไม่ครบตามรูปแบบ ลองใหม่อีกครั้ง', 502);
+    if (!summary) throw new AiError('AI ตอบไม่ครบตามรูปแบบ ลองใหม่อีกครั้ง', 502);
     hit.set(setKey, summary);
     await save(setKey, 'set', {...call, result: summary});
   }
@@ -301,5 +305,5 @@ export async function runComparison(refs: AdRef[], dryRun: boolean, view: TeamVi
 
 /** What AI calls have cost (as recorded per call), for the usage bars. */
 export async function aiUsage() {
-  return {...await spent(await dbUser()), model: MODEL, creditUsd: Number(process.env.DEEPSEEK_CREDIT_USD) || 5};
+  return {...await spent(await dbUser()), model: MODEL, provider: PROVIDER_LABEL, creditUsd: SPEND.creditUsd};
 }

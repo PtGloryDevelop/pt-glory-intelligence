@@ -1,6 +1,6 @@
 import {NextResponse} from 'next/server';
 import {AuthorizationError, requireRole} from '@/lib/auth/roles';
-import {AiError} from '@/lib/ai/deepseek';
+import {AiError} from '@/lib/ai/provider';
 import {draftNote, saveNote} from '@/lib/ai/rounds';
 import {isUuid} from '@/lib/read/request';
 

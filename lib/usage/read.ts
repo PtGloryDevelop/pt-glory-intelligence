@@ -20,6 +20,6 @@ export async function readUsage(actor: Actor): Promise<Usage> {
       heldUsd: collector ? Number(collector.heldReservationUsd) : null,
       windowEnd: collector?.window?.end ?? null,
     },
-    ai: ai && {usedUsd: ai.total, todayUsd: ai.today, dailyCapUsd: ai.dailyCap, stopAtUsd: ai.totalCap, creditUsd: ai.creditUsd, model: ai.model},
+    ai: ai && {usedUsd: ai.total, todayUsd: ai.today, dailyCapUsd: ai.dailyCap, stopAtUsd: ai.totalCap, creditUsd: ai.creditUsd, model: ai.model, provider: ai.provider},
   };
 }

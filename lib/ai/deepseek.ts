@@ -1,6 +1,7 @@
 import 'server-only';
 
-export class AiError extends Error { status: number; constructor(message: string, status: number) { super(message); this.status = status; } }
+import {AiError, type Call, type Message} from './call.ts';
+export {AiError, type Message} from './call.ts';
 
 // ponytail: one model for every call; set DEEPSEEK_MODEL to change it (cached rows are per model).
 export const MODEL = process.env.DEEPSEEK_MODEL || 'deepseek-flash';
@@ -13,6 +14,8 @@ const MODELS: Record<string, {price: [number, number, number]; vision: boolean}>
   'deepseek-flash': {price: [0.006, 0.3, 1.2], vision: true},
   'deepseek-v4-pro': {price: [0.044, 1.32, 3.96], vision: false},
 };
+/** Model names whose rows count against the DeepSeek credit (see provider.ts). */
+export const PRICED_MODELS = Object.keys(MODELS);
 
 export function modelConfig() {
   const config = MODELS[MODEL];
@@ -40,10 +43,8 @@ export function estimateUsd(input: number, output: number) {
   return (input * miss + output * out) / 1e6;
 }
 
-export type Message = {role: 'system' | 'user' | 'assistant'; content: string | ({type: 'text'; text: string} | {type: 'image_url'; image_url: {url: string; detail: 'low'}})[]};
-
-/** One JSON-mode call. DeepSeek only guarantees the reply parses as JSON; the caller checks its shape. */
-export async function callDeepSeek(messages: Message[], maxTokens: number): Promise<{result: unknown; input: number; output: number; usd: number}> {
+/** One JSON-mode call. DeepSeek takes no schema and only guarantees the reply parses as JSON: the prompt shows the shape and the caller checks it. */
+export async function callDeepSeek(messages: Message[], maxTokens: number): Promise<Call> {
   const key = process.env.DEEPSEEK_API_KEY;
   if (!key) throw new AiError('ยังไม่ได้ตั้งค่าคีย์ DeepSeek (DEEPSEEK_API_KEY) บนเซิร์ฟเวอร์ แจ้งผู้ดูแลระบบ', 503);
   modelConfig();

@@ -8,5 +8,5 @@ export type Usage = {
     heldUsd: number | null;
     windowEnd: string | null;
   };
-  ai: {usedUsd: number; todayUsd: number; dailyCapUsd: number; stopAtUsd: number; creditUsd: number; model: string} | null;
+  ai: {usedUsd: number; todayUsd: number; dailyCapUsd: number; stopAtUsd: number; creditUsd: number; model: string; provider: string} | null;
 };

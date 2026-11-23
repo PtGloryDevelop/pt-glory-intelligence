@@ -2,7 +2,8 @@ import 'server-only';
 import {dbUser} from '../db/user.ts';
 import {adRefId, type AdContext, type AdRef, type AdsRun, type AiRun, type SetReading, type TeamView} from './compare-shared.ts';
 import {runComparison, withinBudget} from './compare.ts';
-import {AiError, MODEL, callDeepSeek, estimateUsd, type Message} from './deepseek.ts';
+import {AiError, MODEL, callModel, estimateUsd, type Message} from './provider.ts';
+import {ANSWER_FORMAT, NOTE_FORMAT} from './formats.ts';
 import {cleanNote, readAnswer, readNoteDraft, type NoteDraft, type NoteItem} from './rounds-shared.ts';
 import {CHAT_PROMPT, NOTE_PROMPT} from './round-prompts.ts';
 export type {NoteDraft, NoteItem} from './rounds-shared.ts';
@@ -125,13 +126,13 @@ export async function ask(roundId: string, question: string): Promise<RoundMessa
   const history: Message[] = round.messages.slice(-HISTORY).map(message => ({
     role: message.role, content: message.role === 'assistant' ? JSON.stringify({answer: message.content, ads: message.ads}) : message.content,
   }));
-  const call = await callDeepSeek([
+  const call = await callModel([
     {role: 'system', content: CHAT_PROMPT},
     {role: 'user', content: `ข้อมูลของรอบนี้:\n${JSON.stringify(input)}`},
     {role: 'assistant', content: JSON.stringify({answer: 'รับทราบ ถามเรื่องแอดชุดนี้ได้เลย', ads: []})},
     ...history,
     {role: 'user', content: question},
-  ], MAX_OUTPUT);
+  ], MAX_OUTPUT, ANSWER_FORMAT);
   const answer = readAnswer(call.result, round.ads.length);
   if (!answer) throw new AiError('AI ตอบไม่ครบตามรูปแบบ ลองถามใหม่อีกครั้ง', 502);
   const saved = await record(round.id, [
@@ -148,10 +149,10 @@ export async function draftNote(roundId: string): Promise<NoteDraft> {
   await withinBudget(estimateUsd(...EST_NOTE));
   const input = await roundInput(round);
   const talk = round.messages.slice(-20).map(message => ({from: message.role === 'user' ? 'ทีม' : 'AI', text: message.content}));
-  const call = await callDeepSeek([
+  const call = await callModel([
     {role: 'system', content: NOTE_PROMPT},
     {role: 'user', content: JSON.stringify({...input, talk})},
-  ], MAX_OUTPUT);
+  ], MAX_OUTPUT, NOTE_FORMAT);
   const draft = readNoteDraft(call.result);
   if (!draft) throw new AiError('AI ร่างสรุปไม่ครบ ลองใหม่อีกครั้ง', 502);
   await record(round.id, [{role: 'note', content: JSON.stringify(draft), call}]);
