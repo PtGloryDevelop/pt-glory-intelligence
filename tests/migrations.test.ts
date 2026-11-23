@@ -510,3 +510,28 @@ test("0040 adds the admin settlement and cost-window reopen instants", () => {
   assert.match(down, /drop column result_settle_reopened_at/);
   assert.match(down, /drop column cost_window_reopened_at/);
 });
+
+test("ad_video_readings owns the observation, has RLS with no client write policy, and keeps no source link", () => {
+  // Same rule as media_assets (I1): a newer run must never change what an older dataset shows.
+  const sql = read("0080_ad_video_readings.sql");
+  assert.match(sql, /ad_observation_id bigint not null unique\s+references public\.ad_observations\(id\) on delete cascade/);
+  assert.doesNotMatch(sql, /references public\.ads\(/, "readings belong to observations");
+  assert.match(sql, /alter table public\.ad_video_readings enable row level security/);
+  assert.match(sql, /create policy ad_video_readings_read on public\.ad_video_readings\s+for select to authenticated/);
+  assert.doesNotMatch(sql, /for (insert|update|delete) to authenticated/, "only the privileged video reader writes");
+  // The signed link stays in ad_observations.media; this table records what was done with it.
+  assert.doesNotMatch(sql, /source_url/);
+  assert.match(sql, /check \(status in \('pending', 'ready', 'no_video', 'expired', 'too_large', 'failed'\)\)/);
+});
+
+test("0080 recreates ad_detail with its grants, adding only the observation it chose", () => {
+  const sql = read("0080_ad_video_readings.sql"), down = read("0080_ad_video_readings.down.sql");
+  for (const text of [sql, down]) {
+    assert.match(text, /revoke all on function %s from anon/);
+    assert.match(text, /grant execute on function %s to authenticated/);
+  }
+  assert.match(sql, /collection_run_id uuid, ad_observation_id bigint\)/);
+  assert.match(sql, /o\.observed_at, o\.collection_run_id, o\.id\n  from public\.ads a/);
+  assert.match(down, /observed_at timestamp with time zone, collection_run_id uuid\)/, "down restores the previous result columns");
+  assert.match(sql, /check \(kind in \('ad', 'set', 'transcript'\)\)/);
+});
