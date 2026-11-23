@@ -37,3 +37,11 @@ node --env-file=.env.local --experimental-strip-types scripts/refresh-owned-page
 
 - Focused tests cover explicit missing names, duplicate-name identity, Page-scoped metadata enrichment, provider denial, returned-ID mismatch, selected-account scope and retained known names. Existing source-row/performance tests pass.
 - Production build and privileged-import check pass. Browser check uses real stored Page choices and filters; its partial-refresh result is an explicit fixture to avoid another batch of Graph calls before Page access is assigned. No claim that the missing names have already been resolved.
+
+## 12 November 2026 — Pancake as a third name source
+
+The Menova Page `1493716097156932` (U2) showed as `ยังไม่มีชื่อเพจ` in the owned-performance filter. Read-only checks on 12 November: the Page is in the Ads Management directory with no name; Graph answered code 10 for it, as for 44 of the directory's 170 Pages; ADS_INSIGHTS is assigned only 8 Page assets (`me/accounts`), none of the 7 unnamed Pages then in the snapshot. Having the ad account assigned (as for TEST B-Ring) does not make its Page readable.
+
+Pancake carries the team's Page chats and orders, and its Pages list (`GET https://pages.fm/api/v1/pages?fields=activated{id,name}` with the Pancake token Ads Management already stores in `report_pancake_connection`, encrypted with the same source key as the Meta token) named 6 of those 7 Pages. The name reader now asks Pancake last, for Pages still unnamed after the directory and Graph, and only for Pages of the selected accounts: Meta stays the Page's own record when it answers. A Pancake failure leaves the names as they were (`report.pancake.error`). Measured: 126 → 132 named of 170; D'Lellise `534211349769146` is in neither source and still needs the Page assigned to ADS_INSIGHTS.
+
+Names reach the snapshot through the same paths as before: each owned sync (the VPS container runs this reader, so it needs the new image) and the local name-only refresh. The in-app "อัปเดตชื่อเพจ" button still needs the local bridge, which production (Vercel) does not have.
