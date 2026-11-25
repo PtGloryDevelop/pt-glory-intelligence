@@ -199,6 +199,9 @@ export function OwnedPerformance({ home = "overview", canSync = false }: { home?
   const fallingTotal = center.data ? center.data.falling_counts.reduce((sum, row) => sum + row.count, 0) : null;
   const unassigned = unitData.data?.unassigned.totals?.ad_count ?? null;
   const activeUnit = params.get("unit") ?? "";
+  const unitName = activeUnit ? rail.find(unit => unit.id === activeUnit)?.name ?? "ยูนิตที่เลือก" : "";
+  // The chosen page when it has no spend in this period under the unit (0081): an empty list then says so, and where it spent.
+  const idlePage = pageChoices.find(page => page.id === params.get("pageId") && !page.in_period) ?? null;
   // Close the data-status panel on a click elsewhere or Escape, as a menu would.
   const statusRef = useRef<HTMLDetailsElement>(null);
   useEffect(() => {
@@ -266,7 +269,7 @@ export function OwnedPerformance({ home = "overview", canSync = false }: { home?
     {data ? <div className={styles.kpis}><KPIRow testId="performance-kpis"><KPIStat label="ยอดขาย (Meta)" value={<><span className={styles.figure}>{whole(group?.purchase_value)}</span>{group?.purchase_value != null ? <small className={styles.currency}>{group.currency}</small> : null}</>} helper="มูลค่าซื้อที่ Meta รายงาน" testId="performance-sales" /><KPIStat label="ทัก" value={<span className={styles.figure}>{number(group?.conversations)}</span>} helper="บทสนทนาที่เริ่มต้นจากแอด" testId="performance-conversations" /><KPIStat label="ROAS (Meta)" value={<span className={styles.figure}>{number(group?.roas)}</span>} helper={`ค่าแอด ${whole(group?.spend)}${group?.spend == null ? "" : ` ${group.currency}`}`} testId="performance-roas" /><KPIStat label="%ปิด (Meta)" value={<span className={styles.figure}>{percent(group ? closeRate(group, MIN_CHATS) : null)}</span>} helper="ออเดอร์ที่ Meta รายงาน ÷ ทัก" testId="performance-close" /></KPIRow></div> : null}
     {tab === "rank" ? center.error ? <p className={styles.fallingError} role="status" data-testid="falling-error">
       เปิดจัดอันดับด่วนไม่สำเร็จ <button type="button" onClick={() => setCenterRetry(value => value + 1)}>ลองใหม่</button>
-    </p> : center.data ? <QuickRankings data={center.data} scope={activeUnit ? rail.find(unit => unit.id === activeUnit)?.name ?? "ยูนิตที่เลือก" : ""} onPick={ad => { setSelectedGroup(null); setSelected(ad); }} />
+    </p> : center.data ? <QuickRankings data={center.data} scope={unitName} onPick={ad => { setSelectedGroup(null); setSelected(ad); }} />
       : <p className={styles.notice} role="status">กำลังจัดอันดับสื่อ…</p> : null}
     {/* Said, not swallowed: a missing strip would read as "nothing is falling". */}
     {tab === "rank" ? null : center.error ? <p className={styles.fallingError} role="status" data-testid="falling-error">
@@ -320,7 +323,12 @@ export function OwnedPerformance({ home = "overview", canSync = false }: { home?
           <div className={styles.cardActions}><button type="button" onClick={() => open(ad)}>{(ad.ad_count ?? 1) > 1 ? `ดู ${number(ad.ad_count)} แอดของสื่อนี้` : "ดูรายละเอียด"}</button><Link href={compareHref(ad)} data-cta data-testid={`performance-compare-${ad.ad_id}`}>เลือกเทียบ</Link></div>
         </div>
       </article>)}</div> : null}
-      {data.ready && !total ? <div className={styles.empty}><h3>ยังไม่มีแอดพร้อมผลลัพธ์ในช่วงนี้</h3><p>ลองเลือกวันที่ที่อยู่ในช่วงข้อมูล หรือเปิดคลังทั้งหมดเพื่อดูสื่อที่ยังไม่มีค่าแอด</p><button type="button" onClick={() => change({ period: "all", unit: "", pageId: "", q: "", status: "", from: "", to: "" })}>ดูผลลัพธ์ทั้งหมดที่นำเข้า</button> <Link href="/owned-ads?spend=all">เปิดคลังแอดทั้งหมด</Link></div> : null}
+      {data.ready && !total && idlePage ? <div className={styles.empty} data-testid="performance-page-empty"><h3>เพจ “{idlePage.name ?? idlePage.id}” ไม่มีค่าแอด{unitName ? `ใน ${unitName}` : ""} ช่วง {date(data.period.from)} — {date(data.period.to)}</h3>
+        <p>{idlePage.elsewhere.length ? `ช่วงนี้แอดของเพจนี้นับอยู่ใน ${idlePage.elsewhere.map(unit => unit.id ? unit.name ?? "ยูนิตอื่น" : "ยังไม่ผูกยูนิต").join(", ")} · ยูนิตของแต่ละเพจตั้งใน Ads Management` : "ลองเลือกช่วงวันที่อื่น หรือดูทุกเพจที่มีค่าแอดในช่วงนี้"}</p>
+        <div className={styles.emptyActions}><button type="button" onClick={() => change({ pageId: "" })}>ดูทุกเพจ{unitName ? `ใน ${unitName}` : ""}</button>
+          {idlePage.elsewhere.map(unit => <button key={unit.id ?? "none"} type="button" onClick={() => change({ unit: unit.id ?? "" })}>{unit.id ? `ดูเพจนี้ใน ${unit.name ?? "ยูนิตอื่น"}` : "ดูเพจนี้ทุกยูนิต"}</button>)}</div>
+      </div> : null}
+      {data.ready && !total && !idlePage ? <div className={styles.empty}><h3>ยังไม่มีแอดพร้อมผลลัพธ์ในช่วงนี้</h3><p>ลองเลือกวันที่ที่อยู่ในช่วงข้อมูล หรือเปิดคลังทั้งหมดเพื่อดูสื่อที่ยังไม่มีค่าแอด</p><button type="button" onClick={() => change({ period: "all", unit: "", pageId: "", q: "", status: "", from: "", to: "" })}>ดูผลลัพธ์ทั้งหมดที่นำเข้า</button> <Link href="/owned-ads?spend=all">เปิดคลังแอดทั้งหมด</Link></div> : null}
       {total ? <div className={styles.pager}><span>หน้า {number(page + 1)} / {number(Math.ceil(total / pageSize))}</span><div><button type="button" data-testid="performance-prev" disabled={page === 0} onClick={() => change({ page: String(page - 1) })}>ก่อนหน้า</button><button type="button" data-testid="performance-next" disabled={(page + 1) * pageSize >= total} onClick={() => change({ page: String(page + 1) })}>ถัดไป</button></div></div> : null}
       <section className={styles.summary} aria-labelledby="performance-summary-title"><div><span className={styles.eyebrow}>สรุปจากข้อมูลจริง</span><h2 id="performance-summary-title">ข้อมูลพร้อมใช้วางแผน</h2></div><div className={styles.findings}><p><strong>{number(group?.ad_count)} แอด · {group?.currency ?? "—"}</strong><br />ตรงกับยูนิต เพจ คำค้น และช่วงวันที่ที่เลือก</p><p><strong>ค่าแอดต่อทัก {money(group?.cost_per_conversation)}</strong><br />ค่าแอดรวม ÷ จำนวนบทสนทนา · ใช้ดูอันดับค่าทักเพื่อเลือกสื่อตรวจต่อ</p><p><strong>Hook rate {group?.hook_rate == null ? "—" : `${number(group.hook_rate * 100)}%`}</strong><br />เปรียบเทียบการดึงความสนใจของวิดีโอในช่วงเดียวกัน</p></div><p className={styles.note}>%ปิด (Meta) ใช้ออเดอร์ที่ Meta รายงาน ไม่ใช่ยอดปิดจริงจากระบบขาย · ยังสรุปกำไรจริงไม่ได้ · การวิเคราะห์ AI ยังไม่เปิดใช้งาน</p><div className={styles.summaryLinks}><button type="button" className={styles.linkButton} onClick={() => change({ tab: "rank" })}>ดูจัดอันดับด่วน →</button><Link href="/competitors">ดูสื่อคู่แข่งเพื่อเทียบแนวทาง →</Link></div></section>
     </> : null}
