@@ -19,6 +19,18 @@ const data = async query => {
   if (result.error) throw new Error(`Source read unavailable (${result.error.code ?? "network"})`);
   return result.data;
 };
+// The name each Page had in the last completed snapshot, for a Page this run cannot name. 25 November:
+// a failed name read rebuilt the snapshot with no Graph or Pancake names, so U24's Zenova Page lost the
+// Pancake name it had. The source has no name for such Pages, so nothing else would bring it back.
+async function previousPageNames(client) {
+  try {
+    const { rows } = await client.query(`select distinct on (d.page_id) d.page_id, d.page_name
+      from owned_library_daily d join owned_library_syncs s on s.id = d.sync_id
+      where s.status = 'completed' and d.page_id is not null and d.page_name is not null
+      order by d.page_id, s.finished_at desc`);
+    return new Map(rows.map(row => [row.page_id, row.page_name]));
+  } catch { return new Map(); }
+}
 try {
   const actor = (await lock.query("select role from user_roles where user_id=$1", [requestedBy])).rows[0];
   if (!actor || !["admin","analyst"].includes(actor.role)) throw new Error("Analyst authorization required");
@@ -61,8 +73,9 @@ try {
     const fields = ["spend","impressions","link_clicks","action_conv_started","action_purchases","action_purchase_value","video_3s","video_thruplay","action_video_views"];
     // Optional metadata: denied Page access must never block the ad/financial import.
     let pageNames = new Map();
-    try { const result = await readOwnedPageNames(); pageNames=result.names;console.log(JSON.stringify({pageNames:result.report})); }
-    catch { console.warn("Page names unavailable; retaining stored source names"); }
+    const carriedNames = await previousPageNames(lock);
+    try { const result = await readOwnedPageNames(); pageNames=result.names;console.log(JSON.stringify({pageNames:result.report,carried:carriedNames.size})); }
+    catch (error) { console.warn(JSON.stringify({pageNames:{error:String(error?.message ?? error).slice(0,160)},carried:carriedNames.size})); }
     const metric = value => {
       if (value === null || value === undefined) return null;
       if ((typeof value !== "number" && typeof value !== "string") || String(value).trim()==="") throw new Error("Invalid daily metric");
@@ -91,7 +104,7 @@ try {
       // zero-spend ads) does not fit the free database twice over; no screen ranks a never-spent ad.
       const delivered = new Set(loaded.rows.filter(row=>Number(row.spend)>0).map(row=>row.meta_entity_id));
       // Keep the existing inventory/report's 30-day totals unchanged.
-      const rows = companyRows({metaAccountId:account.meta_account_id,name:account.name ?? account.meta_account_id,currency:account.currency},inventory,metadata.filter(r=>r.level!=="ad"),loaded.rows.filter(row=>row.insight_date>=start),pageNames)
+      const rows = companyRows({metaAccountId:account.meta_account_id,name:account.name ?? account.meta_account_id,currency:account.currency},inventory,metadata.filter(r=>r.level!=="ad"),loaded.rows.filter(row=>row.insight_date>=start),pageNames,carriedNames)
         .filter(row=>delivered.has(row.ad_id))
         .map(row=>({...row,creative_id:adMetadata.get(row.ad_id)?.creative_id??null,video_id:adMetadata.get(row.ad_id)?.creative_video_id??null,created_time:adMetadata.get(row.ad_id)?.created_time??null}));
       const daily = loaded.rows.map(row=>{
@@ -100,7 +113,7 @@ try {
         return {
           account_id:account.meta_account_id,ad_id:row.meta_entity_id,insight_date:row.insight_date,
           ad_name:adMetadata.get(row.meta_entity_id)?.name??row.entity_name??row.meta_entity_id,currency:account.currency,
-          page_id:row.pageId??null,page_name:pageNames.get(row.pageId)??row.pageName??null,unit_id:row.unitId??null,unit_name:row.unitName??null,
+          page_id:row.pageId??null,page_name:pageNames.get(row.pageId)??row.pageName??carriedNames.get(row.pageId)??null,unit_id:row.unitId??null,unit_name:row.unitName??null,
           spend:metric(row.spend),impressions:metric(row.impressions),clicks:metric(row.link_clicks),
           conversations:metric(row.action_conv_started),purchases:metric(row.action_purchases),purchase_value:metric(row.action_purchase_value),
           video_3s:metric(row.video_3s),thruplays:metric(row.video_thruplay),video_views:metric(row.action_video_views),

@@ -8,20 +8,26 @@ import {sourceEnv} from './owned-source.mjs';
 
 // Same local source bridge as the owned-media worker. No source, Meta or Pancake writes.
 // `decrypt` replaces the source's own token decryption (tests); by default it is loaded from the source checkout.
-export async function readOwnedPageNames({decrypt}={}) {
+// `wait` replaces the pause between tries (tests).
+export async function readOwnedPageNames({decrypt,wait=ms=>new Promise(done=>setTimeout(done,ms))}={}) {
  const sourcePath=process.env.OWNED_MANAGEMENT_PROJECT_PATH;
  const email=process.env.OWNED_MANAGEMENT_AUTHORIZED_EMAIL;
  if(!sourcePath||!email)throw Error('Source configuration unavailable');
  const env=await sourceEnv(sourcePath);
  const db=createClient(env.SUPABASE_URL??env.NEXT_PUBLIC_SUPABASE_URL,env.SUPABASE_SERVICE_ROLE_KEY,{auth:{persistSession:false}});
- const member=await db.from('workspace_members').select('role,status').eq('normalized_email',email).single();
- if(member.error||member.data?.role!=='admin'||member.data?.status!=='active')throw Error('Source authorization required');
- const config=await db.from('workspace_config').select('primary_connection_id').eq('singleton',true).single();
- if(config.error)throw Error('Source configuration unavailable');
- const accounts=await db.from('meta_ad_accounts').select('id').eq('connection_id',config.data.primary_connection_id).eq('is_selected',true);
- if(accounts.error||!accounts.data.length)throw Error('Selected source accounts unavailable');
- const directory=await db.from('meta_account_page_directory').select('page_id,page_name').in('ad_account_id',accounts.data.map(a=>a.id));
- if(directory.error||directory.data.length>=1000)throw Error('Source page directory incomplete');
+ // 25 November: most syncs logged "Page names unavailable" while the same read passed a second later: one
+ // failed source read cost every Graph and Pancake name of that snapshot. Each read gets three tries, and
+ // a failure that stays names its code. A wrong answer (not admin, too many rows) is not retried.
+ const sourceRead=async make=>{for(let attempt=1;;attempt++){const result=await make();if(!result.error||attempt>=3)return result;await wait(1000*attempt);}};
+ const code=result=>result.error?` (${result.error.code??'network'})`:'';
+ const member=await sourceRead(()=>db.from('workspace_members').select('role,status').eq('normalized_email',email).single());
+ if(member.error||member.data?.role!=='admin'||member.data?.status!=='active')throw Error(`Source authorization required${code(member)}`);
+ const config=await sourceRead(()=>db.from('workspace_config').select('primary_connection_id').eq('singleton',true).single());
+ if(config.error)throw Error(`Source configuration unavailable${code(config)}`);
+ const accounts=await sourceRead(()=>db.from('meta_ad_accounts').select('id').eq('connection_id',config.data.primary_connection_id).eq('is_selected',true));
+ if(accounts.error||!accounts.data.length)throw Error(`Selected source accounts unavailable${code(accounts)}`);
+ const directory=await sourceRead(()=>db.from('meta_account_page_directory').select('page_id,page_name').in('ad_account_id',accounts.data.map(a=>a.id)));
+ if(directory.error||directory.data.length>=1000)throw Error(`Source page directory incomplete${code(directory)}`);
  const names=new Map();const ids=new Set();
  for(const page of directory.data){
   if(!/^\d{1,32}$/.test(page.page_id??''))throw Error('Invalid source page identity');
@@ -45,8 +51,8 @@ export async function readOwnedPageNames({decrypt}={}) {
   if(matches.length!==1||matches[0].length<50)throw Error('Invalid token file');token=matches[0];
  }catch(error){if(error.code!=='ENOENT'||process.env.OWNED_MANAGEMENT_ACCESS_TOKEN_FILE)throw error}
  if(!token){
-  const connection=await db.from('meta_connections').select('token_ciphertext').eq('id',config.data.primary_connection_id).eq('status','active').single();
-  if(connection.error)throw Error('Source connection unavailable');
+  const connection=await sourceRead(()=>db.from('meta_connections').select('token_ciphertext').eq('id',config.data.primary_connection_id).eq('status','active').single());
+  if(connection.error)throw Error(`Source connection unavailable${code(connection)}`);
   token=await decryptWith(connection.data.token_ciphertext);
  }
  const failures={};const missing=[...ids].filter(id=>!names.has(id));

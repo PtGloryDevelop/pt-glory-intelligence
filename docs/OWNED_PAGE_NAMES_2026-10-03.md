@@ -45,3 +45,19 @@ The Menova Page `1493716097156932` (U2) showed as `ยังไม่มีช�
 Pancake carries the team's Page chats and orders, and its Pages list (`GET https://pages.fm/api/v1/pages?fields=activated{id,name}` with the Pancake token Ads Management already stores in `report_pancake_connection`, encrypted with the same source key as the Meta token) named 6 of those 7 Pages. The name reader now asks Pancake last, for Pages still unnamed after the directory and Graph, and only for Pages of the selected accounts: Meta stays the Page's own record when it answers. A Pancake failure leaves the names as they were (`report.pancake.error`). Measured: 126 → 132 named of 170; D'Lellise `534211349769146` is in neither source and still needs the Page assigned to ADS_INSIGHTS.
 
 Names reach the snapshot through the same paths as before: each owned sync (the VPS container runs this reader, so it needs the new image) and the local name-only refresh. The in-app "อัปเดตชื่อเพจ" button still needs the local bridge, which production (Vercel) does not have.
+
+## 25 November 2026 — a failed name read no longer empties the names
+
+U24's Zenova Page `1311785362028060` showed `ยังไม่มีชื่อเพจ`, bound to U24 since 1 November. Read-only checks: no name in the
+Ads Management directory, Graph code 10, Pancake names it `Zenova - ซอฟต์เจลปรับสมดุลไขมัน เพื่อสุขภาพ`. The latest snapshot
+(02:02 UTC) held no name in its 756 daily rows.
+
+Cause: most owned syncs logged `Page names unavailable`. Run by hand in the container, the reader threw
+`Source page directory incomplete` once and passed seconds later, naming this Page from Pancake: one failed source read,
+reason never logged, and the sync rebuilt the snapshot with no Graph or Pancake names at all, since the source holds none.
+
+Fix: each source read in the name reader gets three tries (1 s, 2 s) and a failure that stays names its PostgREST code; the
+sync logs that reason; and a Page this run cannot name keeps the name the last completed snapshot had
+(`previousPageNames`, after this run's reader and the source rows). Measured on the live destination: that query
+returns 73 named Pages in about a second. A snapshot already without the name carries nothing, so this Page needs one
+successful read, or the name-only refresh, after the new image.

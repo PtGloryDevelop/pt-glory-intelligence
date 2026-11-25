@@ -70,6 +70,54 @@ test('Page lookup stays in selected source scope, validates returned identity an
  }
 });
 
+// 25 November: U24's Zenova Page (1311785362028060) read "ยังไม่มีชื่อเพจ" although Pancake names it. Most
+// syncs logged "Page names unavailable": one failed directory read threw, and the snapshot was rebuilt
+// with no Graph or Pancake name at all. A transient failure is retried, and a name the last snapshot had
+// is kept for a Page this run cannot name.
+const readerHarness=(directory:Array<{error?:{code:string};data?:unknown}>)=>{
+ const source=readFileSync('scripts/owned-page-names.mjs','utf8').replace(/^import .*;\r?\n/gm,'').replace('export async function','async function');
+ const tables:Record<string,unknown>={workspace_members:{role:'admin',status:'active'},workspace_config:{primary_connection_id:'connection'},meta_ad_accounts:[{id:'account'}]};
+ let directoryReads=0;const waits:number[]=[];
+ const db={from:(table:string)=>{
+  const answer=()=>{if(table!=='meta_account_page_directory')return {data:tables[table]};const next=directory[Math.min(directoryReads,directory.length-1)];directoryReads++;return next;};
+  const query={select:()=>query,eq:()=>query,in:()=>query,single:async()=>answer(),maybeSingle:async()=>answer(),then:(accept:(result:unknown)=>unknown)=>Promise.resolve(answer()).then(accept)};return query;
+ }};
+ const run=()=>runInNewContext(`(async()=>{${source}\nreturn readOwnedPageNames({decrypt:x=>x,wait:async ms=>{waits.push(ms)}})})()`,{
+  URL,AbortSignal,ownedPageName,waits,process:{env:{OWNED_MANAGEMENT_PROJECT_PATH:'source',OWNED_MANAGEMENT_AUTHORIZED_EMAIL:'admin'}},
+  resolve:(...args:string[])=>args.join('/'),parseEnv:()=>({}),sourceEnv:async()=>({SUPABASE_URL:'https://source.test',SUPABASE_SERVICE_ROLE_KEY:'test'}),
+  readFile:async()=>'EAA'+'a'.repeat(60),createClient:()=>db,
+  fetch:async(url:URL)=>{const id=url.pathname.split('/').at(-1)!;return {ok:true,status:200,json:async()=>({id,name:'Resolved '+id})};},
+ });
+ return {run,reads:()=>directoryReads,waits};
+};
+
+test('a transient directory failure is retried instead of costing every Page name',async()=>{
+ const harness=readerHarness([{error:{code:'57014'}},{data:[{page_id:'100',page_name:null}]}]);
+ const result=await harness.run();
+ assert.equal(harness.reads(),2);assert.equal(harness.waits.length,1,'one short wait before the second try');
+ assert.equal(result.names.get('100'),'Resolved 100');
+});
+
+test('a directory that keeps failing says why, so the sync log is no longer a bare "unavailable"',async()=>{
+ const harness=readerHarness([{error:{code:'57014'}}]);
+ await assert.rejects(harness.run(),/Source page directory incomplete \(57014\)/);
+ assert.equal(harness.reads(),3,'three tries, then it gives up');
+ const sync=readFileSync('scripts/sync-owned-library.mjs','utf8');
+ assert.doesNotMatch(sync,/catch \{ console\.warn\("Page names unavailable/,'the reason reaches the log');
+});
+
+test('a Page this run cannot name keeps the name the last snapshot had; a fresh name always wins',()=>{
+ const carried=new Map([['100','Old 100'],['200','Old 200'],['300','Old 300']]);
+ const rows=companyRows({metaAccountId:'act_1',name:'Account',currency:'THB'},[
+  {meta_entity_id:'1',page_id:'100'},{meta_entity_id:'2',page_id:'200',page_name:'Source 200'},{meta_entity_id:'3',page_id:'300'},{meta_entity_id:'4',page_id:'400'},
+ ],[],[],new Map([['100','Fresh 100']]),carried);
+ assert.deepEqual(rows.map(row=>row.page_name),['Fresh 100','Source 200','Old 300',null]);
+ const sync=readFileSync('scripts/sync-owned-library.mjs','utf8');
+ assert.match(sync,/const carriedNames = await previousPageNames\(lock\)/,'read from the last completed snapshot before it is replaced');
+ assert.match(sync,/companyRows\([^;]*pageNames,carriedNames\)/,'inventory rows fall back to it');
+ assert.match(sync,/page_name:pageNames\.get\(row\.pageId\)\?\?row\.pageName\?\?carriedNames\.get\(row\.pageId\)\?\?null/,'daily rows too, last');
+});
+
 test('a name refresh rebuilds the whole-window totals, so the all-days view shows the new names too',()=>{
  const refresh=readFileSync('scripts/refresh-owned-page-names.mjs','utf8');
  // Only when names changed, and only where 0078 exists; inside the refresh's own transaction, before commit.

@@ -9,8 +9,11 @@ export type CompanyAd = OwnedAdRow & {
 type Entity = { meta_entity_id: string; name?: string | null; parent_meta_id?: string | null; status?: string | null; effective_status?: string | null; page_id?: string | null; page_name?: string | null; creative_title?: string | null; creative_body?: string | null; creative_thumbnail_url?: string | null };
 type Day = { meta_entity_id: string; entity_name?: string | null; campaignId?: string | null; adSetId?: string | null; pageId?: string | null; pageName?: string | null; [key: string]: unknown };
 
-/** Inventory plus orphan delivery ads. Never fabricate zero for absent delivery. */
-export function companyRows(account: { metaAccountId: string; name: string; currency: string }, ads: Entity[], parents: Entity[], days: Day[], pageNames: ReadonlyMap<string, string> = new Map()): CompanyAd[] {
+/**
+ * Inventory plus orphan delivery ads. Never fabricate zero for absent delivery. A Page name comes from this
+ * run's reader, then the source rows, and last from `carriedNames`, the name the previous snapshot had.
+ */
+export function companyRows(account: { metaAccountId: string; name: string; currency: string }, ads: Entity[], parents: Entity[], days: Day[], pageNames: ReadonlyMap<string, string> = new Map(), carriedNames: ReadonlyMap<string, string> = new Map()): CompanyAd[] {
   const metadata = new Map(ads.map(ad => [ad.meta_entity_id, ad]));
   const ancestry = new Map(parents.map(row => [row.meta_entity_id,row]));
   const byAd = new Map<string, Day[]>();
@@ -33,7 +36,7 @@ export function companyRows(account: { metaAccountId: string; name: string; curr
       ad_id: id, ad_name: ad?.name ?? day?.entity_name ?? id,
       campaign_name: (campaignId ? ancestry.get(campaignId)?.name : null) ?? campaignId ?? "ไม่ทราบแคมเปญ",
       adset_name: adset?.name ?? adsetId ?? null, status: ad?.effective_status ?? ad?.status ?? null,
-      page_id: pageId, page_name: (pageId ? pageNames.get(pageId) : null) ?? ad?.page_name ?? (pageId === day?.pageId ? day?.pageName : null) ?? null,
+      page_id: pageId, page_name: (pageId ? pageNames.get(pageId) : null) ?? ad?.page_name ?? (pageId === day?.pageId ? day?.pageName : null) ?? (pageId ? carriedNames.get(pageId) : null) ?? null,
       title: ad?.creative_title ?? null, body_text: ad?.creative_body ?? null,
       creative_url: ad?.creative_thumbnail_url ?? null, destination_url: null,
       spend: sum(rows,"spend"), impressions: sum(rows,"impressions"), clicks: sum(rows,"link_clicks"),
