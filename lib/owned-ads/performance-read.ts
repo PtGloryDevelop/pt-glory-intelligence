@@ -6,11 +6,14 @@ import {
   ownedSortArg, parseOwnedPerformanceQuery, ownedPerformancePeriod, previousOwnedPerformancePeriod, OwnedPerformanceQueryError, OWNED_MEDIA_KEY,
   type OwnedMediaMembers, type OwnedPerformanceData, type OwnedPerformancePeriod,
 } from "./performance.ts";
+import type { OwnedPageOption } from "./page-names.ts";
 
 type OwnedPerformancePage = Pick<OwnedPerformanceData, "filters" | "summary" | "rows" | "total">;
 // A page of one snapshot takes about 2 s the first time and only changes when names are patched in, so it is kept. Shared across callers is safe: only analyst/admin reach this (every caller checks) and owned data is role-scoped, not per-user.
 // Image links expire, so they are added on every answer, never kept.
 const pages = sharedCache<OwnedPerformancePage>("owned-performance-pages", 30 * 60);
+// The page filter list depends only on the snapshot, period, unit and chosen page, so it is kept on its own key.
+const pageChoices = sharedCache<OwnedPageOption[]>("owned-page-choices", 30 * 60);
 
 /** JWT/RLS read only. Reused by the API and exact-snapshot comparison; no source/provider calls. */
 export async function getOwnedPerformance(params: URLSearchParams, snapshotId?: string): Promise<OwnedPerformanceData> {
@@ -49,10 +52,19 @@ export async function getOwnedPerformance(params: URLSearchParams, snapshotId?: 
       return result.data as OwnedPerformancePage;
     });
   };
-  const [current, prior] = await Promise.all([read(period, query.page), previous ? read(previous, 0) : Promise.resolve(null)]);
+  // The RPCs' own `filters.pages` covers the whole snapshot, so a page that had left the unit stayed listed and
+  // emptied the view when picked (0081). This list holds the pages with spend in the period under the unit, plus the chosen one.
+  const choicesArgs = { p_sync: stored!.id, p_from: period.from, p_to: period.to, p_unit: query.unit, p_page_id: query.pageId };
+  const readChoices = () => pageChoices(JSON.stringify(choicesArgs), async () => {
+    const result = await db.rpc("owned_page_choices", choicesArgs);
+    if (result.error) throw new Error("Owned page choices unavailable", { cause: result.error });
+    return result.data as OwnedPageOption[];
+  });
+  const [current, prior, choices] = await Promise.all([read(period, query.page), previous ? read(previous, 0) : Promise.resolve(null), readChoices()]);
   const lastPage = Math.max(0, Math.ceil(current.total / output.pageSize) - 1);
   if (query.page > lastPage) Object.assign(output, await read(period, lastPage), { page: lastPage });
   else Object.assign(output, current);
+  output.filters = { ...output.filters, pages: choices };
   output.rows = output.rows.map(row => ({ ...row, creative_url: cachedOwnedImage(row) ?? null }));
   if (previous && prior) output.previous = { period: previous, summary: prior.summary };
   return output;

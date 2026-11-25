@@ -1,5 +1,6 @@
 import type { CompanyAd } from "./source-rows.ts";
 import type { OwnedMetric } from "./model.ts";
+import type { OwnedPageOption } from "./page-names.ts";
 import { OWNED_LIBRARY_STATUSES } from "./library-query.ts";
 
 export const OWNED_PERIOD_PRESETS = ["3d", "7d", "14d", "this-month", "last-month", "all", "custom", "today", "yesterday"] as const;
@@ -39,7 +40,8 @@ export type OwnedPerformanceData = {
   ready: boolean;
   snapshot: { id: string; finished_at: string; source_snapshot_at: string | null; ad_count: number; date_start: string; date_end: string } | null;
   coverage: OwnedPerformancePeriod | null; period: OwnedPerformancePeriod;
-  filters: { units: { id: string; name: string }[]; pages: { id: string; name: string }[] };
+  /** `pages` is owned_page_choices (0081): pages with spend in this period under the chosen unit, plus the chosen page. */
+  filters: { units: { id: string; name: string }[]; pages: OwnedPageOption[] };
   summary: OwnedPerformanceSummary[]; rows: OwnedPerformanceRow[]; total: number; page: number; pageSize: number;
   previous?: { period: OwnedPerformancePeriod; summary: OwnedPerformanceSummary[] };
 };
