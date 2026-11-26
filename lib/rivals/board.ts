@@ -15,9 +15,10 @@ export type RivalBoard={units:RivalUnit[];unitsWithoutKeywords:{id:string;name:s
 
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
-// Matching a unit's keywords reads the text of every ad, about 300 ms a unit, and the answer only moves with a new
-// round. Every role reads the same ads, so it is kept per round and keywords.
-const keywordPages=sharedCache<RivalPage[]>('rival-keyword-pages',30*60);
+// Matching keywords reads the text of every ad, and the answer only moves with a new round or a changed keyword.
+// Every role reads the same ads, so it is kept per round and keywords: one answer for all units, from one read
+// (migration 0082). Asking per unit, all at once, passed the 8 s statement limit with 16 units (2026-11-26).
+const keywordPages=sharedCache<Record<string,RivalPage[]>>('rival-keyword-pages-by-unit',30*60);
 
 /** Our units (analysts only: owned data). Names follow the latest import; viewers see units that already have keywords.
  * Read through the unit totals, which are kept per import: grouping a month of daily rows here took most of this board's time. */
@@ -113,15 +114,16 @@ export async function getRivalBoard(actor:Actor,{withUnits=true}:{withUnits?:boo
   }
   // A unit the team gave rivals from a search, with no keyword of its own, is on the board too.
   for(const row of relations.data??[])if(!byUnit.has(row.unit_id))byUnit.set(row.unit_id,{name:row.unit_name as string,keywords:[]});
-  const matchedByUnit=new Map(await Promise.all([...byUnit].map(async([id,entry])=>{
-    if(!entry.keywords.length)return [id,[] as RivalPage[]] as const;
-    const words=entry.keywords.map(k=>k.keyword);
-    return [id,await keywordPages(`${collected.stamp}:${JSON.stringify([...words].sort())}`,async()=>{
-      const {data,error}=await db.rpc('rival_keyword_pages',{p_keywords:words});
-      if(error)throw new Error('Rival suggestions unavailable');
-      return data as RivalPage[];
-    })] as const;
-  })));
+  // Sorted, so the same keywords are the same kept answer whatever order they were saved in.
+  const asked=[...byUnit].filter(([,entry])=>entry.keywords.length)
+    .map(([unit,entry])=>({unit,keywords:entry.keywords.map(k=>k.keyword).sort()}))
+    .sort((a,b)=>a.unit<b.unit?-1:a.unit>b.unit?1:0);
+  const matched=asked.length?await keywordPages(`${collected.stamp}:${JSON.stringify(asked)}`,async()=>{
+    const {data,error}=await db.rpc('rival_keyword_pages_by_unit',{p_units:asked});
+    if(error){console.error('Rival suggestions unavailable',error.code);throw new Error('Rival suggestions unavailable');}
+    return data as Record<string,RivalPage[]>;
+  }):{};
+  const matchedByUnit=new Map([...byUnit.keys()].map(id=>[id,matched[id]??[]] as const));
   // Pages the team decided on stay whether or not a keyword still finds them: read those by id, once for every unit.
   const decided=(relations.data??[]).filter(row=>!(matchedByUnit.get(row.unit_id)??[]).some(page=>page.page_id===row.page_id));
   const decidedIds=[...new Set(decided.map(row=>row.page_id as string))].slice(0,200);
