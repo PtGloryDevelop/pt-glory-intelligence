@@ -535,3 +535,20 @@ test("0080 recreates ad_detail with its grants, adding only the observation it c
   assert.match(down, /observed_at timestamp with time zone, collection_run_id uuid\)/, "down restores the previous result columns");
   assert.match(sql, /check \(kind in \('ad', 'set', 'transcript'\)\)/);
 });
+
+test("0083 asks for the caller's role once per statement on the four rival read policies, and changes nothing else", () => {
+  // Without the scalar subquery the role lookup ran for every row read (about 20,000 a call on 2026-11-26).
+  // Comments out, runs of spaces to one: the statements as Postgres reads them.
+  const code = (file: string) => read(file).replace(/--.*$/gm, "").replace(/\s+/g, " ");
+  const sql = code("0083_rival_read_policies_role_once.sql"), down = code("0083_rival_read_policies_role_once.down.sql");
+  for (const table of ["pages", "page_observations", "ads", "ad_observations"]) {
+    assert.ok(sql.includes(`alter policy ${table}_read on public.${table} using ((select public.current_user_role()) is not null);`), `${table}: role asked once`);
+    assert.ok(down.includes(`alter policy ${table}_read on public.${table} using (public.current_user_role() is not null);`), `${table}: down restores 0016's condition`);
+  }
+  for (const text of [sql, down]) {
+    assert.equal(text.match(/alter policy/g)?.length, 4, "only the four read policies");
+    // The condition itself stays "has a role row": no new policy, no grant, no way around RLS.
+    assert.doesNotMatch(text, /\b(create policy|drop policy|grant|revoke|row level security|security definer)\b/i);
+    assert.match(text, /set local lock_timeout = '3s'/, "never queue readers behind a waiting ALTER");
+  }
+});
