@@ -552,3 +552,19 @@ test("0083 asks for the caller's role once per statement on the four rival read 
     assert.match(text, /set local lock_timeout = '3s'/, "never queue readers behind a waiting ALTER");
   }
 });
+
+test("0084 does the same for dataset_ads, media_assets and audit_logs, and audit_logs stays admin-only", () => {
+  const code = (file: string) => read(file).replace(/--.*$/gm, "").replace(/\s+/g, " ");
+  const sql = code("0084_more_read_policies_role_once.sql"), down = code("0084_more_read_policies_role_once.down.sql");
+  // Each table keeps the condition its own migration gave it (0016, 0023); only where the role is asked moves.
+  const conditions = { dataset_ads: "is not null", media_assets: "is not null", audit_logs: "= 'admin'" };
+  for (const [table, condition] of Object.entries(conditions)) {
+    assert.ok(sql.includes(`alter policy ${table}_read on public.${table} using ((select public.current_user_role()) ${condition});`), `${table}: role asked once`);
+    assert.ok(down.includes(`alter policy ${table}_read on public.${table} using (public.current_user_role() ${condition});`), `${table}: down restores the original condition`);
+  }
+  for (const text of [sql, down]) {
+    assert.equal(text.match(/alter policy/g)?.length, 3, "only the three read policies");
+    assert.doesNotMatch(text, /\b(create policy|drop policy|grant|revoke|row level security|security definer)\b/i);
+    assert.match(text, /set local lock_timeout = '3s'/);
+  }
+});
