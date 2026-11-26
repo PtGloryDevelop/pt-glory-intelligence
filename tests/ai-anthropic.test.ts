@@ -42,8 +42,10 @@ test('cost: each model at its own rates, cache reads and writes apart', () => {
   assert.ok(near(attemptUsd('claude-sonnet-5-5', million), 12));
   assert.ok(near(attemptUsd('claude-haiku-5-5', {input_tokens: 50_000, output_tokens: 1e6}), 0.005 + 0.5));
   assert.ok(near(attemptUsd('claude-opus-5-5', {input_tokens: 0, output_tokens: 0, cache_read_input_tokens: 1e6, cache_creation_input_tokens: 1e6}), 0.2 + 5));
-  // The estimate shown before a run assumes no cache: 3200 in + 700 out on Claude Opus 5.5.
-  assert.ok(near(estimateUsd(3200, 700), (3200 * 4 + 700 * 20) / 1e6));
+  // The estimate shown before a run: the callers' 3200 in + 700 out, times what Claude was measured to
+  // take above them. One ad on Claude Opus 5.5 averaged 0.058 USD in the evaluation; this says 0.070.
+  assert.ok(near(estimateUsd(3200, 700), 2.6 * (3200 * 4 + 700 * 20) / 1e6));
+  assert.ok(estimateUsd(3200, 700) >= 0.058);
   assert.deepEqual(PRICED_MODELS, ['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-5-5']);
 });
 

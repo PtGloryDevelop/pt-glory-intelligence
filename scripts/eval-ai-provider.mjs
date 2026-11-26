@@ -78,11 +78,15 @@ async function transcriptOf(db, ref) {
   return rows.length ? rows.map(row => row.text ?? '').join('\n') : null;
 }
 
+/** The figures of two digits or more in a text, without thousands separators: "1,180.-" is 1180. */
+const numbersIn = text => (String(text ?? '').match(/\d[\d,]*(?:\.\d+)?/g) ?? []).map(number => number.replace(/,/g, '').replace(/\.0+$/, '')).filter(number => number.length >= 2);
+
 /** What a person should look at in one set's reply; empty when nothing tripped. */
 async function checksFor(db, set, body, voice = {quotes: 0}) {
-  const checks = [];
+  const checks = [], ownNumbers = new Set();
   for (const [index, ref] of set.ads.entries()) {
-    const id = body.context[index].id, reading = body.ads[id], copy = squash(await adCopy(db, ref));
+    const id = body.context[index].id, reading = body.ads[id], written = await adCopy(db, ref), copy = squash(written);
+    if (ref.kind === 'own') for (const number of numbersIn(written)) ownNumbers.add(number);
     const video = body.context[index].video ?? null, heard = squash(await transcriptOf(db, ref));
     const cells = Object.entries(reading).filter(([, cell]) => cell && typeof cell === 'object' && 'source' in cell);
     for (const [dim, cell] of cells) {
@@ -113,6 +117,11 @@ async function checksFor(db, set, body, voice = {quotes: 0}) {
   }
   for (const item of body.summary.ideas) if (suggests(item.text)) checks.push(`idea suggests a forbidden claim: "${item.text}"`);
   for (const item of body.summary.hooks) if (FDA.test(item.text)) checks.push(`headline uses a forbidden claim: "${item.text}"`);
+  // A headline is written for our ad from our ad's own facts: a price or figure in it must be in our copy.
+  for (const item of body.summary.hooks) {
+    const invented = numbersIn(item.text).filter(number => !ownNumbers.has(number));
+    if (invented.length) checks.push(`headline uses a number that is not in our ad (${invented.join(', ')}): "${item.text}"`);
+  }
   for (const item of [...body.summary.diffs, ...body.summary.ideas]) if (RIVAL_RESULT.test(item.text)) checks.push(`summary claims a rival result: "${item.text}"`);
   if (OTHER_SCRIPT.test(JSON.stringify(body.summary))) checks.push('summary slips out of Thai');
   return checks;

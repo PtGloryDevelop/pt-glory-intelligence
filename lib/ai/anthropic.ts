@@ -60,10 +60,17 @@ export function attemptUsd(model: string, tokens: Tokens) {
     + tokens.input_tokens * input + tokens.output_tokens * output) / 1e6;
 }
 
-/** Before a call: no cache hits, so the estimate is not lower than the bill (thinking is extra output). */
+/**
+ * The callers' token estimates were measured on OpenAI, which reads a picture at a flat low-detail
+ * rate. Claude counts a picture by its size and thinks before it answers: over 36 readings per model
+ * on 2026-11-26 a call took about 2.5 times those estimates, in and out (docs/AI_PROVIDER_CLAUDE_2026-11-26.md).
+ */
+const ESTIMATE_FACTOR = 2.6;
+
+/** Before a call: no cache hits and the measured factor, so the estimate is not lower than the usual bill. */
 export function estimateUsd(input: number, output: number) {
   const [, , price, out] = modelConfig().price;
-  return (input * price + output * out) / 1e6;
+  return ESTIMATE_FACTOR * (input * price + output * out) / 1e6;
 }
 
 type Part = Exclude<Message['content'], string>[number];
