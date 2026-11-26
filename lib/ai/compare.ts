@@ -10,7 +10,7 @@ import {summarizeOwnedReport} from '../owned-ads/model.ts';
 import type {CompanyAd} from '../owned-ads/source-rows.ts';
 import type {Media} from '../media.ts';
 import {ADS_DIMS, AI_DIMS, AI_SOURCES, SCORE_DIMS, readAdReading, readAdsReading, readSetReading, type AdReading, type AdRef, type AdsReading, type AdsRun, type AiRun, type AiEstimate, type SetReading, type TeamView, adRefId} from './compare-shared.ts';
-import {AiError, CAN_TRANSCRIBE, MODEL, PROVIDER_LABEL, SPEND, TRANSCRIBE_MODEL, TRANSCRIBE_USD_PER_MINUTE, callModel, estimateUsd, modelConfig, transcribeAudio, type Message} from './provider.ts';
+import {AiError, CAN_TRANSCRIBE, MODEL, PROVIDER_LABEL, SPEND, TRANSCRIBE_MODEL, TRANSCRIBE_SPEND, TRANSCRIBE_USD_PER_MINUTE, callModel, estimateUsd, modelConfig, transcribeAudio, type Message} from './provider.ts';
 import type {ReplyFormat} from './call.ts';
 import {ADS_FORMAT, AD_FORMAT, SET_FORMAT} from './formats.ts';
 import {transcriptKey, transcriptionEstimateUsd, videoContext, videoMarker, videoParts, type Transcripts, type VideoRow} from './video-input.ts';
@@ -26,7 +26,8 @@ const EST_VIDEO_INPUT = 3200;
 // A ceiling, not a target (output is billed as used): Thai can take more tokens here than it did on OpenAI.
 const MAX_OUTPUT = 4000;
 const DAILY_CAP = Number(process.env.AI_DAILY_USD) || 1;
-const TOTAL_CAP = Number(process.env.AI_TOTAL_USD) || 4.5;
+// The calls stop a little before the credit does: nine tenths of it (4.5 of OpenAI's 5), unless AI_TOTAL_USD says otherwise.
+const TOTAL_CAP = Number(process.env.AI_TOTAL_USD) || SPEND.creditUsd * 0.9;
 const VERSION = 'v6'; // bump when AD_PROMPT changes (v6: video clips read from frames and transcript, sources defined)
 const SET_VERSION = 'v8'; // bump when SET_PROMPT changes (v8: DeepSeek JSON mode, shape in the prompt)
 
@@ -248,13 +249,12 @@ const VIEWS: Record<TeamView, ViewSpec> = {
   },
 };
 
-async function spent(db: Awaited<ReturnType<typeof dbUser>>) {
+/** What one account's rows add up to (provider.ts): readings and the compare-round talk share its money. */
+async function spentBy(db: Awaited<ReturnType<typeof dbUser>>, spend: typeof SPEND) {
   // ponytail: sums every row in JS; fine for thousands of calls, move to SQL if the table grows large.
-  // This provider's rows only (provider.ts SPEND): the caps and the credit bar track its own balance.
-  // Readings and the compare-round talk (questions, note drafts) share one budget.
   const rows = (table: 'ai_analyses' | 'compare_messages') => {
-    const query = db.from(table).select('usd,created_at').in('model', SPEND.models);
-    return SPEND.since ? query.gte('created_at', SPEND.since) : query;
+    const query = db.from(table).select('usd,created_at').in('model', spend.models);
+    return spend.since ? query.gte('created_at', spend.since) : query;
   };
   const [readings, talk] = await Promise.all([rows('ai_analyses'), rows('compare_messages')]);
   if (readings.error) throw new AiError('อ่านค่าใช้จ่าย AI ไม่สำเร็จ', 503);
@@ -264,7 +264,12 @@ async function spent(db: Awaited<ReturnType<typeof dbUser>>) {
   const since = dayStart.getTime() - 7 * 3600e3; // Bangkok midnight
   let total = 0, today = 0;
   for (const row of [...readings.data ?? [], ...talk.data ?? []]) { const usd = Number(row.usd); total += usd; if (Date.parse(row.created_at) >= since) today += usd; }
-  return {today, total, dailyCap: DAILY_CAP, totalCap: TOTAL_CAP};
+  return {today, total};
+}
+
+// This provider's rows only (provider.ts SPEND): the caps and the credit bar track its own balance.
+async function spent(db: Awaited<ReturnType<typeof dbUser>>) {
+  return {...await spentBy(db, SPEND), dailyCap: DAILY_CAP, totalCap: TOTAL_CAP};
 }
 
 /** Refuses a call that would pass the daily or total AI cap; returns what has been spent. */
@@ -313,7 +318,8 @@ export async function runComparison(refs: AdRef[], dryRun: boolean, view: TeamVi
   if (estimate > 0 && (budget.today + estimate > DAILY_CAP || budget.total + estimate > TOTAL_CAP))
     throw new AiError(`เกินเพดานค่าใช้จ่าย AI (วันนี้ ${budget.today.toFixed(3)}/${DAILY_CAP} USD · รวม ${budget.total.toFixed(3)}/${TOTAL_CAP} USD)`, 429);
 
-  let cost = 0;
+  // heardCost: what hearing clips cost. With Claude reading, that is OpenAI's money, not this provider's.
+  let cost = 0, heardCost = 0;
   const save = async (key: string, kind: 'ad' | 'set', call: {result: unknown; input: number; output: number; usd: number}) => {
     cost += call.usd;
     const {error} = await db.from('ai_analyses').upsert({key, kind, model: MODEL, result: call.result, input_tokens: call.input, output_tokens: call.output, usd: call.usd.toFixed(6)});
@@ -324,7 +330,7 @@ export async function runComparison(refs: AdRef[], dryRun: boolean, view: TeamVi
   const transcript = async (key: string, path: string): Promise<string> => {
     if (hit.has(key)) return String((hit.get(key) as {text?: unknown} | null)?.text ?? '');
     const heard = await transcribeAudio(await download!(path));
-    cost += heard.usd;
+    cost += heard.usd; heardCost += heard.usd;
     hit.set(key, {text: heard.text, seconds: heard.seconds});
     const {error} = await db.from('ai_analyses').upsert({key, kind: 'transcript', model: TRANSCRIBE_MODEL, result: {text: heard.text, seconds: heard.seconds}, input_tokens: 0, output_tokens: 0, usd: heard.usd.toFixed(6)});
     if (error) console.error('Transcript not cached', error.message);
@@ -379,7 +385,9 @@ export async function runComparison(refs: AdRef[], dryRun: boolean, view: TeamVi
     const speech = heard && heardKey ? said(heardKey.audio) || said(heardKey.hook) : null;
     return {id: adRefId(ad.ref), ref: ad.ref, side: ad.side, label: ad.label, facts: ad.facts, video: videoContext(ad.ref.kind, ad.format, ad.video, heard, speech)};
   });
-  const run = {model: MODEL, cost, spent: {...budget, today: budget.today + cost, total: budget.total + cost}, summary: hit.get(setKey) as SetReading, context};
+  // The run's whole cost is shown; only the part this provider's credit paid moves its totals.
+  const own = TRANSCRIBE_SPEND ? cost - heardCost : cost;
+  const run = {model: MODEL, cost, spent: {...budget, today: budget.today + own, total: budget.total + own}, summary: hit.get(setKey) as SetReading, context};
   return view === 'ads'
     ? {...run, view, ads: Object.fromEntries(ads.map((ad, index) => [adRefId(ad.ref), hit.get(keys[index]) as AdsReading]))}
     : {...run, ads: Object.fromEntries(ads.map((ad, index) => [adRefId(ad.ref), hit.get(keys[index]) as AdReading]))};
@@ -387,5 +395,11 @@ export async function runComparison(refs: AdRef[], dryRun: boolean, view: TeamVi
 
 /** What AI calls have cost (as recorded per call), for the usage bars. */
 export async function aiUsage() {
-  return {...await spent(await dbUser()), model: MODEL, provider: PROVIDER_LABEL, creditUsd: SPEND.creditUsd};
+  const db = await dbUser();
+  const [own, heard] = await Promise.all([spent(db), TRANSCRIBE_SPEND ? spentBy(db, TRANSCRIBE_SPEND) : null]);
+  return {
+    ...own, model: MODEL, provider: PROVIDER_LABEL, creditUsd: SPEND.creditUsd,
+    // Hearing clips on another account's credit (OpenAI, while Claude reads): its own total, or null when it is all one credit.
+    transcribe: heard && TRANSCRIBE_SPEND ? {usedUsd: heard.total, creditUsd: TRANSCRIBE_SPEND.creditUsd} : null,
+  };
 }

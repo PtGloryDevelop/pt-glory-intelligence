@@ -19,6 +19,8 @@ const MODELS: Record<string, {price: [number, number, number]; vision: boolean}>
  */
 export const TRANSCRIBE_MODEL = 'gpt-transcribe';
 export const TRANSCRIBE_USD_PER_MINUTE = 0.0045;
+/** Whether this deployment holds an OpenAI key at all. The key is read in this file only. */
+export const keySet = () => Boolean(process.env.OPENAI_API_KEY);
 /** Model names whose rows count against the OpenAI credit (see provider.ts), transcription included. */
 export const PRICED_MODELS = [...Object.keys(MODELS), TRANSCRIBE_MODEL];
 

@@ -92,6 +92,16 @@ test("each AI provider client is server-only, and its key has one reader", () =>
     assert.deepEqual(readers, [join("lib", "ai", file)], key);
     assert.doesNotMatch(client, /NEXT_PUBLIC_/, file);
   }
+  // Claude is called through Anthropic's SDK, which is handed the key; the same rules hold.
+  const claude = readFileSync(join("lib", "ai", "anthropic.ts"), "utf8");
+  assert.match(claude, /^import 'server-only';/m);
+  assert.ok(claude.includes("new Anthropic({apiKey: key,"), "the key goes to the SDK client and nowhere else");
+  assert.doesNotMatch(claude, /NEXT_PUBLIC_/);
+  const claudeReaders = ["lib", "app", "components"]
+    .flatMap((dir) => (existsSync(dir) ? walk(dir) : []))
+    .filter((path) => /.tsx?$/.test(path))
+    .filter((path) => readFileSync(path, "utf8").includes("ANTHROPIC_API_KEY"));
+  assert.deepEqual(claudeReaders, [join("lib", "ai", "anthropic.ts")], "ANTHROPIC_API_KEY");
   // The switch between them is server-only too.
   assert.match(readFileSync(join("lib", "ai", "provider.ts"), "utf8"), /^import 'server-only';/m);
 });

@@ -97,3 +97,37 @@ test('OpenAI answers by default; AI_PROVIDER=deepseek switches every call, its m
     }
   }
 });
+
+test('AI_PROVIDER=anthropic hands the reading to Claude on its own credit; hearing clips stays on OpenAI\'s, counted apart', async () => {
+  const names = ['AI_PROVIDER', 'ANTHROPIC_MODEL', 'ANTHROPIC_CREDIT_USD', 'OPENAI_MODEL', 'OPENAI_CREDIT_USD', 'OPENAI_API_KEY'] as const;
+  const saved = Object.fromEntries(names.map(name => [name, process.env[name]]));
+  for (const name of names) delete process.env[name];
+  try {
+    process.env.AI_PROVIDER = 'anthropic'; process.env.OPENAI_API_KEY = 'test-key';
+    // A query string loads a fresh copy, which reads the environment again.
+    const claudePath = '../lib/ai/provider.ts?claude';
+    const claude = await import(claudePath) as typeof import('../lib/ai/provider.ts');
+    assert.equal(claude.PROVIDER, 'anthropic');
+    assert.equal(claude.PROVIDER_LABEL, 'Claude');
+    assert.equal(claude.MODEL, 'claude-opus-5-5');
+    assert.deepEqual(claude.SPEND, {models: ['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-5-5'], since: null, creditUsd: 200});
+    // Claude takes pictures and text, not sound: the clip is still heard by gpt-transcribe, on OpenAI's money.
+    assert.equal(claude.CAN_TRANSCRIBE, true);
+    assert.deepEqual(claude.TRANSCRIBE_SPEND, {models: ['gpt-6-luna', 'gpt-6.1-terra', 'gpt-transcribe'], since: '2026-11-22T17:00:00.000Z', creditUsd: 5});
+    assert.ok(!claude.SPEND.models.includes('gpt-transcribe'), 'a transcription never counts against Claude\'s caps');
+
+    delete process.env.OPENAI_API_KEY;
+    const deafPath = '../lib/ai/provider.ts?claude-without-openai';
+    const deaf = await import(deafPath) as typeof import('../lib/ai/provider.ts');
+    assert.equal(deaf.CAN_TRANSCRIBE, false, 'no OpenAI key: clips are read from their frames and shown as not heard');
+    assert.equal(deaf.TRANSCRIBE_SPEND, null);
+
+    delete process.env.AI_PROVIDER; process.env.OPENAI_API_KEY = 'test-key';
+    const onePath = '../lib/ai/provider.ts?one-credit';
+    const one = await import(onePath) as typeof import('../lib/ai/provider.ts');
+    assert.equal(one.PROVIDER, 'openai', 'still the default: deploying the code changes nothing until AI_PROVIDER is set');
+    assert.equal(one.TRANSCRIBE_SPEND, null, 'with OpenAI reading too it is all one credit');
+  } finally {
+    for (const name of names) { if (saved[name] === undefined) delete process.env[name]; else process.env[name] = saved[name]; }
+  }
+});

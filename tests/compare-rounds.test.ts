@@ -37,7 +37,8 @@ test("the talk is held to the comparison's facts and the FDA rules", () => {
   assert.match(rounds, /await withinBudget\(estimateUsd\(\.\.\.EST_NOTE\)\)/);
   // Both tables are read through the same provider filter: the talk counts toward the caps.
   const compare = read("lib/ai/compare.ts");
-  assert.match(compare, /db\.from\(table\)\.select\('usd,created_at'\)\.in\('model', SPEND\.models\)/);
+  assert.ok(compare.includes("db.from(table).select('usd,created_at').in('model', spend.models)"));
+  assert.ok(compare.includes("...await spentBy(db, SPEND), dailyCap: DAILY_CAP, totalCap: TOTAL_CAP"), "the caps count this provider's rows");
   assert.match(compare, /Promise\.all\(\[rows\('ai_analyses'\), rows\('compare_messages'\)\]\)/, "the talk counts toward the caps");
 });
 

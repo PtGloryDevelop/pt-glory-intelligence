@@ -1,8 +1,9 @@
-// Golden questions for the compare-round chat and note draft (lib/ai/rounds.ts), asked of each OpenAI
-// model directly with the prompts, reply formats and readers the app uses. Nothing is written to the
-// database. The round input comes from a saved eval-ai-provider.mjs result, so both models see the
+// Golden questions for the compare-round chat and note draft (lib/ai/rounds.ts), asked of each model
+// directly with the prompts, reply formats and readers the app uses. Nothing is written to the
+// database. The round input comes from a saved eval-ai-provider.mjs result, so every model sees the
 // same readings:
 //   node --conditions=react-server --experimental-strip-types --env-file=.env.local scripts/eval-ai-chat.mjs --readings <eval.json> --out <file.json>
+// A model named claude-… is asked through lib/ai/anthropic.ts (ANTHROPIC_API_KEY), any other through lib/ai/openai.ts.
 import {readFileSync, writeFileSync} from 'node:fs';
 import {CHAT_PROMPT, NOTE_PROMPT} from '../lib/ai/round-prompts.ts';
 import {ANSWER_FORMAT, NOTE_FORMAT} from '../lib/ai/formats.ts';
@@ -28,12 +29,14 @@ const QUESTIONS = [
 
 const sets = JSON.parse(readFileSync(readings, 'utf8')).filter(row => row.status === 200 && row.view === 'general').slice(0, 2);
 const results = [];
-// --model asks one model only (the one in production); both by default.
-for (const model of arg('model') ? [arg('model')] : ['gpt-6-luna', 'gpt-6.1-terra']) {
-  process.env.OPENAI_MODEL = model;
-  // A query string loads a fresh copy of the client, which reads OPENAI_MODEL again.
-  const fresh = `../lib/ai/openai.ts?${model}`;
-  const {callOpenAI} = await import(fresh);
+// --model asks the models named (comma separated); the two OpenAI models by default.
+for (const model of arg('model') ? arg('model').split(',') : ['gpt-6-luna', 'gpt-6.1-terra']) {
+  const claude = model.startsWith('claude-');
+  process.env[claude ? 'ANTHROPIC_MODEL' : 'OPENAI_MODEL'] = model;
+  // A query string loads a fresh copy of the client, which reads its model from the environment again.
+  const fresh = `../lib/ai/${claude ? 'anthropic' : 'openai'}.ts?${model}`;
+  const client = await import(fresh);
+  const callOpenAI = claude ? client.callClaude : client.callOpenAI;
   for (const set of sets) {
     const input = {
       ads: set.body.context.map((ad, index) => ({index, side: ad.side, name: ad.label, facts: ad.facts, reading: set.body.ads[ad.id] ?? null})),

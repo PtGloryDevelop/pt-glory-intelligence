@@ -20,6 +20,7 @@
     "test:visual": "playwright test --project=visual"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.14.0",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.45.4",
     "next": "^16.3.0",

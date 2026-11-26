@@ -43,7 +43,8 @@ export function UsageBars({show, refresh = 0}: {show: ('collect' | 'ai')[]; refr
         : null : null}
     {show.includes('ai') && ai
       ? <Bar label={`วิเคราะห์ด้วย AI (${ai.provider})`} used={ai.usedUsd} limit={ai.creditUsd} stop={ai.stopAtUsd}
-          note={`นับจากที่ระบบบันทึกไว้ทุกครั้งที่เรียก · ระบบหยุดเรียกที่ ${usd(ai.stopAtUsd)} · วันนี้ ${usd(ai.todayUsd)} / ${usd(ai.dailyCapUsd)} · ${ai.model}`}/>
+          note={`นับจากที่ระบบบันทึกไว้ทุกครั้งที่เรียก · ระบบหยุดเรียกที่ ${usd(ai.stopAtUsd)} · วันนี้ ${usd(ai.todayUsd)} / ${usd(ai.dailyCapUsd)} · ${ai.model}`
+            + (ai.transcribe ? ` · ถอดเสียงคลิปจ่ายจากเครดิต OpenAI แยกต่างหาก: ใช้ไป ${usd(ai.transcribe.usedUsd)} / ${usd(ai.transcribe.creditUsd)} USD` : '')}/>
       : null}
   </div>;
 }

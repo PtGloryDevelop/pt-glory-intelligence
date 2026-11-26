@@ -8,5 +8,9 @@ export type Usage = {
     heldUsd: number | null;
     windowEnd: string | null;
   };
-  ai: {usedUsd: number; todayUsd: number; dailyCapUsd: number; stopAtUsd: number; creditUsd: number; model: string; provider: string} | null;
+  ai: {
+    usedUsd: number; todayUsd: number; dailyCapUsd: number; stopAtUsd: number; creditUsd: number; model: string; provider: string;
+    /** Hearing clips when it is paid from another account's credit (OpenAI, while Claude reads); null when it is all one credit. */
+    transcribe: {usedUsd: number; creditUsd: number} | null;
+  } | null;
 };
