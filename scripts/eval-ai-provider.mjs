@@ -51,7 +51,8 @@ const suggests = text => FDA.test(text) && !REMOVING.test(text);
 // Claims about a rival's results the system has no data for ("คู่แข่งไม่มีข้อมูลงบ" is the honest version).
 const RIVAL_RESULT = /คู่แข่ง(?:(?!ไม่)[^\n]){0,30}(ขายดี|ขายได้|ยอดขาย|ได้ผลกว่า|ใช้งบ)/;
 // Letters, marks and digits only: a quote that leaves out a ✔ or an emoji between words is still the copy.
-const squash = text => String(text ?? '').replace(/[^\p{L}\p{M}\p{N}]+/gu, '').toLowerCase();
+// (An emoji's invisible parts are marks too, so they go first; the same rule as lib/ai/labels-shared.ts.)
+const squash = text => String(text ?? '').replace(/[︀-️‍⃣]/g, '').replace(/[^\p{L}\p{M}\p{N}]+/gu, '').toLowerCase();
 
 async function adCopy(db, ref) {
   if (ref.kind === 'rival') {
